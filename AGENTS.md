@@ -14,7 +14,7 @@
 - Estructura directiva: 3 "deportivos" + Eva (secretaria) + Mónica (tesorera) + Sol (tienda). No hay presidente.
 - Roles modulares: cualquier persona puede tener varios. Los directivos también son padres.
 - Mixto hasta Infantil, masculino desde Cadete (4 chicas juegan en Cadete masculino por excepción).
-- Competición FNCV (autonómica).
+- Competición FNCV (autonómica): liga + copa + torneos.
 - Temporada septiembre → julio.
 - Sin pagos en la app: el cierre mensual se envía por email a la tesorera como Excel.
 
@@ -35,44 +35,40 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 1 — Estructura deportiva. COMPLETADA, commiteada y operativa.** Ver `docs/planning/15-phase-1-summary.md` para el detalle.
+**Fase 2 — Entrenamientos y partidos. COMPLETADA, commiteada y validada.** Ver `docs/planning/17-phase-2-summary.md` para el detalle.
 
 Pendiente para probar en el cloud:
-- Aplicar las 6 migraciones + seed (consolidado en chat)
-- Login con `galvillo9@gmail.com` y la password que ya cambiaste
-- Ir a `/admin` y empezar a crear equipos + importar jugadores
+- Aplicar las 8 migraciones de Fase 2 (consolidado en chat)
+- Login con `galvillo9@gmail.com` y tu password
+- Ir a `/admin/trainings` para crear un bloque de entrenamientos
+- Ir a `/admin/matches` para crear un partido
+- Ver el calendario y las notificaciones in-app
 
-Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convocatoria, partidos).
+Próxima fase: **Fase 3 — Estadísticas y rankings** (rankings públicos, pichichi, exclusión, asistencia, MVP, histórico).
 
-### Lo que ya está implementado (Fase 0 + 1)
+### Lo que ya está implementado (Fase 0 + 1 + 2)
 
 **Fase 0:**
 - Scaffold Next.js 16 + TS strict + Tailwind v4
 - Diseño system con tokens del club + 12 pictogramas custom
 - Componentes UI base + AppShell con bottom nav
 - Auth: login, reset, cambio obligatorio
-- PWA: manifest, service worker, iconos del tiburón
-- CI: lint, typecheck, build, test
+- PWA: manifest, service worker, iconos
 
 **Fase 1:**
-- 5 migraciones de BD + 1 fix (seasons, teams, team_staff, team_rosters, profiles extend)
-- Seed con 3 temporadas (2024/25 archivada, 2025/26 archivada, 2026/27 actual)
-- 187 tests pasando + 22 de integración skippeados sin env vars (187 unit + integration puros)
-- 6 funciones de dominio (categories, teams, seasons)
-- Zod schemas extraídos a `lib/domain/admin-schemas.ts` (testeables sin Supabase)
-- Parser de import extraído a `lib/domain/import-schema.mjs` (testeable sin Supabase)
-- Panel admin completo (`/admin`) con 6 secciones
-- Vistas públicas: `/team`, `/team/[id]`, dashboard actualizado
+- 8 migraciones + seed con 3 temporadas
+- Panel admin completo (6 secciones)
+- Vistas públicas: /team, /team/[id], dashboard
 - Profile switcher con "Mi perfil" + "Familia"
-- Import desde Excel (xlsx) idempotente
+- Import desde Excel
 
-**Tests por tipo:**
-- `tests/unit/`: 75 tests (categories, seasons, teams, cn, UI primitives). Siempre corren, sin Supabase.
-- `tests/integration/`: 112 tests + 22 skippeados sin env vars:
-  - `import-zod.test.ts` (38): Zod schema y helpers del script de import. Sin env vars.
-  - `admin-actions.test.ts` (72): Zod schemas de server actions. Sin env vars.
-  - `rls.test.ts` (13 skip sin env): RLS policies. Necesita Supabase real.
-  - `query-helpers.test.ts` (9 skip sin env): Query helpers. Necesita Supabase real.
+**Fase 2:**
+- 8 migraciones (training_blocks, training_sessions, training_attendance, matches, match_availability, match_callups, match_stats, notifications)
+- 5 funciones de dominio (training, callups, stats, attendance, calendar)
+- Server actions: training (8), matches (11), availability (2), notifications (3)
+- Panel: /admin/trainings + /admin/matches (con convocatoria sugerida)
+- Vistas: /calendar (month view), /matches/[id] (con RSVP), /profile (con disponibilidad), /notifications (buzón)
+- Bottom nav 5 tabs: Inicio, Calendario, Equipo, Tienda, Yo
 
 ### Decisiones cerradas (ver `docs/planning/00-decisions-log.md`)
 
@@ -81,12 +77,17 @@ Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convoc
 - Nombre visible de la app: "Morvedre Core".
 - Idioma: solo castellano.
 - Foto del jugador: visible para todos los miembros del club (sin opt-out).
-- Datos personales (teléfono, email): privados (protegidos por RLS de `profiles`).
+- Datos personales (teléfono, email): privados.
 - Rankings públicos para todo el club.
 - Notificaciones configurables por usuario.
 - Tono: cercano y directo, segunda persona.
 - `team_type` enum: `competitive | school`.
 - `canRosterPlayer` asimétrica: el equipo puede estar 1 categoría por encima del jugador, sin límite hacia abajo.
+- `requireCoachOf(teamId)` además de `requireAdmin()`: los coaches gestionan sus propios equipos.
+- `competition_type` enum para partidos: `league | cup | tournament | friendly`.
+- 13 jugadores por defecto en convocatoria (configurable).
+- Dorsal automático desde `profile.cap_number`, con resolución de conflictos.
+- Notificaciones in-app primero, push real en Fase 9.
 
 ## Convenciones de trabajo
 
@@ -99,11 +100,11 @@ Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convoc
 - **TypeScript strict siempre.**
 - **Cero comentarios en código** salvo que el usuario los pida explícitamente.
 - **Tono cercano, segunda persona.** Nunca "Se convoca al jugador..." en mensajes.
-- **Tests de integración que tocan Supabase se saltan si faltan env vars.** Nunca fallan en CI. Opt-in local via `.env.test.local` (gitignored) o shell.
+- **Triggers en DB** para protecciones de columnas que RLS no puede expresar.
 
 ## Próximo paso acordado
 
-**Fase 2 — Entrenamientos y partidos**: sesiones, pasar lista, convocatoria, partidos.
+**Fase 3 — Estadísticas y rankings**: pichichi, exclusión, asistencia, MVP, histórico de rivales, sección "Leyendas".
 
 ## Documentos disponibles
 
@@ -120,16 +121,18 @@ Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convoc
 - `docs/planning/10-design-direction.md` — dirección de diseño
 - `docs/planning/11-feature-suggestions.md` — features sugeridos (rechazados)
 - `docs/planning/12-phase-0-summary.md` — resumen Fase 0
-- `docs/planning/13-lessons-learned.md` — errores a no repetir (Fase 0 + 1)
+- `docs/planning/13-lessons-learned.md` — errores a no repetir
 - `docs/planning/14-phase-1-plan.md` — plan detallado Fase 1
 - `docs/planning/15-phase-1-summary.md` — resumen Fase 1
+- `docs/planning/16-phase-2-plan.md` — plan detallado Fase 2
+- `docs/planning/17-phase-2-summary.md` — resumen Fase 2
 
 ## Si dudas
 
-- **Sobre requisitos**: vuelve al SRS original del usuario (primer mensaje de la conversación).
+- **Sobre requisitos**: vuelve al SRS original del usuario (primer mensaje de la conversación). Está en el chat, no en archivos.
 - **Sobre el modelo de datos**: `03-architecture.md` § 2.
 - **Sobre las fases**: `04-roadmap.md`.
 - **Sobre decisiones tomadas**: `00-decisions-log.md`.
 - **Sobre estilo visual**: `06-visual-identity.md` y `10-design-direction.md`.
-- **Sobre la estructura de una fase**: `12-phase-0-summary.md` o `15-phase-1-summary.md`.
+- **Sobre la estructura de una fase**: `12-phase-0-summary.md`, `15-phase-1-summary.md` o `17-phase-2-summary.md`.
 - **Sobre errores a evitar**: `13-lessons-learned.md`.

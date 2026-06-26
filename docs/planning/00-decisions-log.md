@@ -189,15 +189,20 @@ Documentada en `10-design-direction.md`. Resumen:
 
 Si el usuario quiere tocar algo, los puntos abiertos son: tipografía, paleta exacta, estilo de cards, tono de empty states, bottom nav, densidad de información. Confirmado y documentado en `10-design-direction.md`.
 
+## 2026-06-26 — Decisiones de Fase 2
+
+- **`competition_type` enum** para partidos: `'league' | 'cup' | 'tournament' | 'friendly'`. Decidido en discovery (sept 2025). El club participa en varias competiciones autonómicas.
+- **Convocatorias**: 13 jugadores por defecto (configurable via parámetro `max` en `suggestCallup`). Decidido por normativa waterpolo + lógica del SRS.
+- **Dorsal automático**: la app usa `profile.cap_number` como dorsal por defecto. Si hay conflicto (otro jugador ya tiene ese número en el mismo partido), busca el siguiente libre. El coach puede override manual.
+- **Cancelación de entrenamientos**: WhatsApp-first, app refleja el estado. Decidido en Fase 1. La acción `cancelTrainingSession` crea notificaciones in-app para los jugadores del roster.
+- **Notificaciones in-app primero, push real después**: en Fase 2 se crea el buzón in-app (bell icon + página /notifications). Push notifications reales con VAPID se implementan en Fase 9 polish. La tabla `notifications` ya soporta ambos.
+- **`requireCoachOf(teamId)`** además de `requireAdmin()`: el SRS dice "los coaches gestionan sus equipos". Implementamos un helper paralelo que valida `is_coach_of(team_id)`. Los coaches pueden crear/cancelar entrenamientos y gestionar convocatorias de sus equipos sin ser admin.
+- **Trigger `match_callups_protect_rsvp_columns`**: un jugador puede actualizar su propia fila de convocatoria, pero NO puede cambiar `cap_number` ni `source_team_id` (esas son decisiones del coach). Trigger BEFORE UPDATE que chequea las columnas y rechaza cambios si el actor no es admin/coach.
+- **`safeInferCategory`**: variante de `inferCategory` que devuelve `null` en lugar de throw para años inválidos (futuro, muy antiguo). Usado en server actions para manejar datos sucios.
+- **Calendario en zona horaria local**: las sesiones se guardan como `timestamptz` en UTC, pero se muestran en la zona del usuario (España por defecto). Helper `localDateOnly` extrae YYYY-MM-DD usando métodos locales del Date.
+- **Stats MVP**: solo goles, exclusiones totales, MVP. No se desglosa por tipo de exclusión (simple/doble/penalti). Se puede extender en Fase 3.
+
 ## 2026-06-26 — Refinamientos post-Fase 1
-
-- **Tienda como 5ª tab del bottom nav**, aunque la feature no esté implementada (placeholder en `/shop`). El icono está presente desde Fase 1 para reservar el espacio y que la navegación no salte cuando llegue la feature.
-- **Perfil rediseñado**: `app/(app)/profile/page.tsx` es ahora vista de solo lectura con avatar, stats y botón "Editar perfil". El formulario se movió a `app/(app)/profile/edit/page.tsx`. El usuario entra al perfil para VER, no para EDITAR directamente.
-- **`license_active` solo editable por admin/directiva**. El form de usuario (`/profile/edit`) ya no incluye este campo. Solo `updatePlayer` (server action admin) puede cambiarlo. Los usuarios normales no tocan su licencia.
-- **Tienda pictograma** añadido al set (`components/brand/pictograms/tienda.tsx`): bolsa de compra con asa en naranja de marca.
-- **Bottom nav reordenado** con 5 destinos: Inicio, Calendario, Equipo, Tienda, Yo.
-
-## 2026-06-26 — Última ronda de clarificación
 
 ### Competición: Liga + Copa + Torneos
 - El club participa en **múltiples tipos de competición** además de la liga regular.

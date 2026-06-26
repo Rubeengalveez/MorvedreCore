@@ -328,3 +328,267 @@ export function makeRosterSchema() {
     joined_at: isoDate.optional(),
   });
 }
+
+export const trainingKindSchema = z.enum(["water", "dry", "physical", "technical", "mixed"]);
+
+export const createTrainingBlockSchema = z
+  .object({
+    team_id: z.string().uuid("Equipo inválido."),
+    label: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
+    weekdays: z.array(z.number().int().min(1).max(7)).min(1, "Selecciona al menos un día."),
+    start_date: isoDate,
+    end_date: isoDate,
+    start_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inicio inválida (HH:MM)."),
+    end_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora fin inválida (HH:MM)."),
+    location: z.preprocess(
+      emptyToNull,
+      z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
+    ),
+    kind: trainingKindSchema.optional(),
+  })
+  .refine((data) => data.end_date >= data.start_date, {
+    message: "La fecha de fin debe ser igual o posterior a la fecha de inicio.",
+    path: ["end_date"],
+  })
+  .refine((data) => data.end_time > data.start_time, {
+    message: "La hora de fin debe ser posterior a la hora de inicio.",
+    path: ["end_time"],
+  });
+
+export const updateTrainingBlockSchema = z
+  .object({
+    team_id: z.string().uuid("Equipo inválido.").optional(),
+    label: z
+      .string()
+      .trim()
+      .min(2, "Mínimo 2 caracteres.")
+      .max(100, "Máximo 100 caracteres.")
+      .optional(),
+    weekdays: z
+      .array(z.number().int().min(1).max(7))
+      .min(1, "Selecciona al menos un día.")
+      .optional(),
+    start_date: isoDate.optional(),
+    end_date: isoDate.optional(),
+    start_time: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, "Hora inicio inválida (HH:MM).")
+      .optional(),
+    end_time: z
+      .string()
+      .regex(/^\d{2}:\d{2}$/, "Hora fin inválida (HH:MM).")
+      .optional(),
+    location: z.preprocess(
+      emptyToNull,
+      z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
+    ),
+    kind: trainingKindSchema.optional(),
+  })
+  .refine(
+    (data) =>
+      data.start_date == null || data.end_date == null || data.end_date >= data.start_date,
+    {
+      message: "La fecha de fin debe ser igual o posterior a la fecha de inicio.",
+      path: ["end_date"],
+    },
+  )
+  .refine(
+    (data) =>
+      data.start_time == null || data.end_time == null || data.end_time > data.start_time,
+    {
+      message: "La hora de fin debe ser posterior a la hora de inicio.",
+      path: ["end_time"],
+    },
+  )
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "No hay cambios para guardar.",
+  });
+
+export const cancelTrainingSessionSchema = z.object({
+  session_id: z.string().uuid("Sesión inválida."),
+  reason: z.string().trim().min(2, "Indica un motivo.").max(500, "Máximo 500 caracteres."),
+});
+
+export const competitionTypeSchema = z.enum(["league", "cup", "tournament", "friendly"]);
+
+export const matchStatusSchema = z.enum([
+  "scheduled",
+  "in_progress",
+  "played",
+  "cancelled",
+  "postponed",
+]);
+
+export const callupStatusSchema = z.enum([
+  "called",
+  "confirmed",
+  "declined",
+  "withdrawn",
+  "no_show",
+]);
+
+export const createMatchSchema = z.object({
+  season_id: z.string().uuid("Temporada inválida."),
+  team_id: z.string().uuid("Equipo inválido."),
+  opponent: z
+    .string()
+    .trim()
+    .min(2, "Mínimo 2 caracteres.")
+    .max(100, "Máximo 100 caracteres."),
+  competition_type: competitionTypeSchema.optional(),
+  is_home: z.boolean().optional(),
+  location: z.preprocess(
+    emptyToNull,
+    z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
+  ),
+  pool_name: z.preprocess(
+    emptyToNull,
+    z.string().trim().max(100, "Máximo 100 caracteres.").nullable().optional(),
+  ),
+  scheduled_at: z.string().datetime({ offset: true, message: "Fecha inválida (ISO con offset)." }),
+  logistics_enabled: z.boolean().optional(),
+  notes: z.preprocess(
+    emptyToNull,
+    z.string().trim().max(2000, "Máximo 2000 caracteres.").nullable().optional(),
+  ),
+});
+
+export const updateMatchSchema = z
+  .object({
+    season_id: z.string().uuid("Temporada inválida.").optional(),
+    team_id: z.string().uuid("Equipo inválido.").optional(),
+    opponent: z
+      .string()
+      .trim()
+      .min(2, "Mínimo 2 caracteres.")
+      .max(100, "Máximo 100 caracteres.")
+      .optional(),
+    competition_type: competitionTypeSchema.optional(),
+    is_home: z.boolean().optional(),
+    location: z.preprocess(
+      emptyToNull,
+      z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
+    ),
+    pool_name: z.preprocess(
+      emptyToNull,
+      z.string().trim().max(100, "Máximo 100 caracteres.").nullable().optional(),
+    ),
+    scheduled_at: z
+      .string()
+      .datetime({ offset: true, message: "Fecha inválida (ISO con offset)." })
+      .optional(),
+    status: matchStatusSchema.optional(),
+    logistics_enabled: z.boolean().optional(),
+    notes: z.preprocess(
+      emptyToNull,
+      z.string().trim().max(2000, "Máximo 2000 caracteres.").nullable().optional(),
+    ),
+    final_score_us: z
+      .number()
+      .int("Resultado entero.")
+      .min(0, "Mínimo 0.")
+      .max(99, "Máximo 99.")
+      .nullable()
+      .optional(),
+    final_score_them: z
+      .number()
+      .int("Resultado entero.")
+      .min(0, "Mínimo 0.")
+      .max(99, "Máximo 99.")
+      .nullable()
+      .optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "No hay cambios para guardar.",
+  });
+
+export const createCallupSchema = z.object({
+  match_id: z.string().uuid("Partido inválido."),
+  player_id: z.string().uuid("Jugador inválido."),
+  cap_number: z
+    .number()
+    .int("Dorsal entero.")
+    .min(0, "Mínimo 0.")
+    .max(99, "Máximo 99.")
+    .nullable()
+    .optional(),
+  source_team_id: z.string().uuid("Equipo de origen inválido.").nullable().optional(),
+});
+
+export const updateCallupSchema = z
+  .object({
+    callup_id: z.string().uuid("Convocatoria inválida."),
+    cap_number: z
+      .number()
+      .int("Dorsal entero.")
+      .min(0, "Mínimo 0.")
+      .max(99, "Máximo 99.")
+      .nullable()
+      .optional(),
+    status: callupStatusSchema.optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: "No hay cambios para guardar.",
+  });
+
+export const recordMatchStatSchema = z.object({
+  match_id: z.string().uuid("Partido inválido."),
+  player_id: z.string().uuid("Jugador inválido."),
+  goals: z.number().int("Goles enteros.").min(0, "Mínimo 0.").max(20, "Máximo 20.").optional(),
+  exclusions: z
+    .number()
+    .int("Exclusiones enteras.")
+    .min(0, "Mínimo 0.")
+    .max(20, "Máximo 20.")
+    .optional(),
+  mvp: z.boolean().optional(),
+});
+
+export const validateMatchStatsSchema = z.object({
+  match_id: z.string().uuid("Partido inválido."),
+});
+
+export const setAvailabilitySchema = z.object({
+  date: isoDate,
+  available: z.boolean(),
+  reason: z.preprocess(
+    emptyToNull,
+    z.string().trim().max(500, "Máximo 500 caracteres.").nullable().optional(),
+  ),
+});
+
+export const markAttendanceSchema = z.object({
+  session_id: z.string().uuid("Sesión inválida."),
+  rows: z
+    .array(
+      z.object({
+        player_id: z.string().uuid("Jugador inválido."),
+        present: z.boolean(),
+        reason: z.preprocess(
+          emptyToNull,
+          z.string().trim().max(500, "Máximo 500 caracteres.").nullable().optional(),
+        ),
+      }),
+    )
+    .min(0)
+    .max(50),
+});
+
+export const setMatchStatusSchema = z.object({
+  match_id: z.string().uuid("Partido inválido."),
+  status: matchStatusSchema,
+  final_score_us: z
+    .number()
+    .int("Resultado entero.")
+    .min(0, "Mínimo 0.")
+    .max(99, "Máximo 99.")
+    .nullable()
+    .optional(),
+  final_score_them: z
+    .number()
+    .int("Resultado entero.")
+    .min(0, "Mínimo 0.")
+    .max(99, "Máximo 99.")
+    .nullable()
+    .optional(),
+});

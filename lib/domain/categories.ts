@@ -64,3 +64,13 @@ export function inferCategory(birthYear: number, currentYear: number): CategoryC
   if (age <= 19) return "juvenil";
   return "absoluto";
 }
+
+export function safeInferCategory(
+  birthYear: number,
+  currentYear: number,
+): CategoryCode | null {
+  const age = ageIndex(birthYear, currentYear);
+  if (age < 0) return null;
+  if (age > MAX_AGE_THRESHOLD) return null;
+  return inferCategory(birthYear, currentYear);
+}
