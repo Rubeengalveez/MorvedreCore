@@ -1,0 +1,17 @@
+node_modules
+.next
+out
+build
+dist
+coverage
+playwright-report
+test-results
+pnpm-lock.yaml
+public/sw.js
+public/sw.js.map
+public/workbox-*.js
+public/workbox-*.js.map
+public/brand/icon-*.png
+public/brand/logo-original.png
+public/favicon.ico
+public/icons/*
