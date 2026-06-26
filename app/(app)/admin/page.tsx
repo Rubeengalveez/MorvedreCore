@@ -1,6 +1,15 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowRight, Users, Shield, UserPlus, FileUp, CalendarRange } from "lucide-react";
+import {
+  ArrowRight,
+  Users,
+  Shield,
+  UserPlus,
+  FileUp,
+  CalendarRange,
+  Trophy,
+  Volleyball,
+} from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
@@ -98,6 +107,18 @@ const SHORTCUTS = [
     title: "Personal",
     description: "Asignaciones de entrenadores y delegados.",
     Icon: Users,
+  },
+  {
+    href: "/admin/trainings",
+    title: "Entrenamientos",
+    description: "Bloques, sesiones y lista de asistencia.",
+    Icon: Volleyball,
+  },
+  {
+    href: "/admin/matches",
+    title: "Partidos",
+    description: "Convocatorias, actas y resultados.",
+    Icon: Trophy,
   },
   {
     href: "/admin/players/import",

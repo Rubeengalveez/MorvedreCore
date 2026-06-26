@@ -340,6 +340,488 @@ export type Database = {
           },
         ];
       };
+      training_blocks: {
+        Row: {
+          id: string;
+          team_id: string;
+          label: string;
+          weekdays: number[];
+          start_date: string;
+          end_date: string;
+          start_time: string;
+          end_time: string;
+          location: string | null;
+          kind: string;
+          is_active: boolean;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          team_id: string;
+          label: string;
+          weekdays: number[];
+          start_date: string;
+          end_date: string;
+          start_time: string;
+          end_time: string;
+          location?: string | null;
+          kind?: string;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          team_id?: string;
+          label?: string;
+          weekdays?: number[];
+          start_date?: string;
+          end_date?: string;
+          start_time?: string;
+          end_time?: string;
+          location?: string | null;
+          kind?: string;
+          is_active?: boolean;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_blocks_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_blocks_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_sessions: {
+        Row: {
+          id: string;
+          block_id: string | null;
+          team_id: string;
+          scheduled_at: string;
+          duration_minutes: number;
+          location: string | null;
+          cancelled: boolean;
+          cancellation_reason: string | null;
+          cancelled_by: string | null;
+          cancelled_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          block_id?: string | null;
+          team_id: string;
+          scheduled_at: string;
+          duration_minutes?: number;
+          location?: string | null;
+          cancelled?: boolean;
+          cancellation_reason?: string | null;
+          cancelled_by?: string | null;
+          cancelled_at?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          block_id?: string | null;
+          team_id?: string;
+          scheduled_at?: string;
+          duration_minutes?: number;
+          location?: string | null;
+          cancelled?: boolean;
+          cancellation_reason?: string | null;
+          cancelled_by?: string | null;
+          cancelled_at?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_sessions_block_id_fkey";
+            columns: ["block_id"];
+            isOneToOne: false;
+            referencedRelation: "training_blocks";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_sessions_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_sessions_cancelled_by_fkey";
+            columns: ["cancelled_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_attendance: {
+        Row: {
+          session_id: string;
+          player_id: string;
+          present: boolean;
+          reason: string | null;
+          marked_by: string | null;
+          marked_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          session_id: string;
+          player_id: string;
+          present?: boolean;
+          reason?: string | null;
+          marked_by?: string | null;
+          marked_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          session_id?: string;
+          player_id?: string;
+          present?: boolean;
+          reason?: string | null;
+          marked_by?: string | null;
+          marked_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_attendance_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "training_sessions";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_attendance_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_attendance_marked_by_fkey";
+            columns: ["marked_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      matches: {
+        Row: {
+          id: string;
+          season_id: string;
+          team_id: string;
+          opponent: string;
+          competition_type: string;
+          is_home: boolean;
+          location: string | null;
+          pool_name: string | null;
+          scheduled_at: string;
+          status: string;
+          logistics_enabled: boolean;
+          notes: string | null;
+          final_score_us: number | null;
+          final_score_them: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          season_id: string;
+          team_id: string;
+          opponent: string;
+          competition_type?: string;
+          is_home?: boolean;
+          location?: string | null;
+          pool_name?: string | null;
+          scheduled_at: string;
+          status?: string;
+          logistics_enabled?: boolean;
+          notes?: string | null;
+          final_score_us?: number | null;
+          final_score_them?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          season_id?: string;
+          team_id?: string;
+          opponent?: string;
+          competition_type?: string;
+          is_home?: boolean;
+          location?: string | null;
+          pool_name?: string | null;
+          scheduled_at?: string;
+          status?: string;
+          logistics_enabled?: boolean;
+          notes?: string | null;
+          final_score_us?: number | null;
+          final_score_them?: number | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "matches_season_id_fkey";
+            columns: ["season_id"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "matches_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      match_availability: {
+        Row: {
+          player_id: string;
+          date: string;
+          available: boolean;
+          reason: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          player_id: string;
+          date: string;
+          available?: boolean;
+          reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          player_id?: string;
+          date?: string;
+          available?: boolean;
+          reason?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "match_availability_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      match_callups: {
+        Row: {
+          match_id: string;
+          player_id: string;
+          cap_number: number | null;
+          status: string;
+          confirmed_at: string | null;
+          source_team_id: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          match_id: string;
+          player_id: string;
+          cap_number?: number | null;
+          status?: string;
+          confirmed_at?: string | null;
+          source_team_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          match_id?: string;
+          player_id?: string;
+          cap_number?: number | null;
+          status?: string;
+          confirmed_at?: string | null;
+          source_team_id?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "match_callups_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "match_callups_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "match_callups_source_team_id_fkey";
+            columns: ["source_team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      match_stats: {
+        Row: {
+          match_id: string;
+          player_id: string;
+          goals: number;
+          exclusions: number;
+          mvp: boolean;
+          entered_by: string | null;
+          entered_at: string;
+          validated_by: string | null;
+          validated_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          match_id: string;
+          player_id: string;
+          goals?: number;
+          exclusions?: number;
+          mvp?: boolean;
+          entered_by?: string | null;
+          entered_at?: string;
+          validated_by?: string | null;
+          validated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          match_id?: string;
+          player_id?: string;
+          goals?: number;
+          exclusions?: number;
+          mvp?: boolean;
+          entered_by?: string | null;
+          entered_at?: string;
+          validated_by?: string | null;
+          validated_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "match_stats_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "match_stats_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "match_stats_entered_by_fkey";
+            columns: ["entered_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "match_stats_validated_by_fkey";
+            columns: ["validated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      notifications: {
+        Row: {
+          id: string;
+          recipient_id: string;
+          kind: string;
+          title: string;
+          body: string | null;
+          href: string | null;
+          read_at: string | null;
+          related_match_id: string | null;
+          related_training_session_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          recipient_id: string;
+          kind: string;
+          title: string;
+          body?: string | null;
+          href?: string | null;
+          read_at?: string | null;
+          related_match_id?: string | null;
+          related_training_session_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          recipient_id?: string;
+          kind?: string;
+          title?: string;
+          body?: string | null;
+          href?: string | null;
+          read_at?: string | null;
+          related_match_id?: string | null;
+          related_training_session_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_recipient_id_fkey";
+            columns: ["recipient_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_related_match_id_fkey";
+            columns: ["related_match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_related_training_session_id_fkey";
+            columns: ["related_training_session_id"];
+            isOneToOne: false;
+            referencedRelation: "training_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       profiles_public: {
@@ -367,11 +849,11 @@ export type Database = {
       parent_relation: "mother" | "father" | "legal_guardian" | "other";
       notification_type:
         | "convocatoria"
-        | "entrenamiento_cancelado"
-        | "pedido_pendiente"
-        | "noticia_fijada"
-        | "resultado_publicado"
-        | "cierre_mensual";
+        | "match_reminder"
+        | "training_cancelled"
+        | "news_pinned"
+        | "result_published"
+        | "monthly_close";
       category_code:
         | "benjamin"
         | "alevin"

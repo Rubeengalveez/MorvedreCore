@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { AvailabilityCalendar, type AvailabilityDay } from "@/components/profile/availability-calendar";
+import { todayIso, addDaysIso } from "@/lib/domain/calendar";
 import {
   CATEGORY_LABELS,
   inferCategory,
@@ -11,7 +13,6 @@ import {
 } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/server/actions/auth";
-import { getCurrentSeason } from "@/server/queries/seasons";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -74,19 +75,15 @@ export default async function ProfilePage() {
 
   if (!profile) redirect("/login");
 
-  const season = await getCurrentSeason();
-
   const [{ data: rolesRaw }, { data: rosterRows }] = await Promise.all([
     supabase.from("user_roles").select("role").eq("profile_id", profile.id),
-    season
-      ? supabase
-          .from("team_rosters")
-          .select(
-            "team_id, teams!team_rosters_team_id_fkey(id, label, category_code, color)",
-          )
-          .eq("player_id", profile.id)
-          .is("left_at", null)
-      : Promise.resolve({ data: [] as unknown[] }),
+    supabase
+      .from("team_rosters")
+      .select(
+        "team_id, teams!team_rosters_team_id_fkey(id, label, category_code, color)",
+      )
+      .eq("player_id", profile.id)
+      .is("left_at", null),
   ]);
 
   const roles = (rolesRaw ?? [])
@@ -97,7 +94,7 @@ export default async function ProfilePage() {
   const primaryRole = roles[0] ?? null;
 
   const birthYear = extractYear(profile.birth_year);
-  const currentYear = season ? Number(season.start_date.slice(0, 4)) : new Date().getFullYear();
+  const currentYear = new Date().getFullYear();
   let categoryLabel: string | null = null;
   if (birthYear != null) {
     try {
@@ -117,8 +114,24 @@ export default async function ProfilePage() {
   }
   teamNames.sort((a, b) => a.localeCompare(b, "es"));
 
+  const today = todayIso();
+  const monthAhead = addDaysIso(today, 30);
+  const { data: availabilityData } = await supabase
+    .from("match_availability")
+    .select("date, available, reason")
+    .eq("player_id", profile.id)
+    .gte("date", today)
+    .lte("date", monthAhead);
+
+  const availability: AvailabilityDay[] = (availabilityData ?? []).map(
+    (r) => {
+      const row = r as { date: string; available: boolean; reason: string | null };
+      return { iso: row.date, available: row.available, reason: row.reason };
+    },
+  );
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-4">
       <header className="flex items-center gap-4">
         <Avatar
           name={profile.full_name}
@@ -166,16 +179,34 @@ export default async function ProfilePage() {
             value={profile.license_active ? "Activa" : "Inactiva"}
             valueTone={profile.license_active ? "positive" : "muted"}
           />
-          <Stat
-            label="Categoría"
-            value={categoryLabel ?? "—"}
-          />
+          <Stat label="Categoría" value={categoryLabel ?? "—"} />
           <Stat
             label="Equipo"
             value={teamNames[0] ?? "—"}
             hint={teamNames.length > 1 ? `+${teamNames.length - 1} más` : undefined}
           />
         </dl>
+      </section>
+
+      <section
+        aria-labelledby="availability-heading"
+        className="flex flex-col gap-3 rounded-md border border-ink-300 bg-paper p-4"
+      >
+        <div className="flex flex-col gap-1">
+          <h2
+            id="availability-heading"
+            className="font-display text-lg font-bold text-brand-deep"
+          >
+            Disponibilidad
+          </h2>
+          <p className="text-sm text-ink-600">
+            Próximos 30 días.
+          </p>
+        </div>
+        <AvailabilityCalendar
+          initialAvailability={availability}
+          todayIso={today}
+        />
       </section>
 
       <div className="flex flex-col gap-2">

@@ -196,6 +196,28 @@ Auditoría profunda de Fase 1. Encontrados **4 críticos, 18 altos, 47 medios, 2
     - Por eso los integration tests usan el cloud de Supabase y skip si no hay env vars.
     - **Regla**: marcar con `it.skip()` los tests que dependen de env, no fallarlos.
 
+## 2026-06-26 — Auditoría de Fase 2
+
+Auditoría profunda de Fase 2 (entrenamientos y partidos). 4 críticos, 5 altos, 4 medios. **Todos los del audit ya estaban aplicados** por las subagentes de implementación (el audit se ejecutó contra código más antiguo).
+
+### Lecciones específicas de Fase 2
+
+1. **`requireCoachOf` vs `requireAdmin`**: en una app de club, los coaches deben gestionar sus propios equipos sin ser admin. Implementar un helper paralelo `requireCoachOf(teamId)` que valida `is_coach_of(team_id)`.
+
+2. **Triggers BEFORE UPDATE para protección de columnas**: cuando una policy UPDATE permite que el actor modifique su propia fila, no puede distinguir qué columnas cambia. Solución: trigger BEFORE UPDATE que valida columnas específicas y rechaza cambios no autorizados.
+
+3. **Zona horaria en calendarios**: las sesiones se guardan como `timestamptz` UTC. Para mostrarlas en el día correcto, SIEMPRE usar métodos locales del Date (`getFullYear`, `getMonth`, `getDate`) en lugar de `iso.slice(0, 10)`.
+
+4. **`safeInferCategory` vs `inferCategory`**: tener una variante que devuelve `null` en lugar de throw para años inválidos. Usar en server actions, no en UI (donde queremos feedback inmediato).
+
+5. **Preservar datos existentes en `markAllPresent`**: leer primero, solo cambiar las filas que necesitan cambio. No upsertar siempre con `reason: null` o destruyes información.
+
+6. **`hasCancelled` debe ser condicional**: `some(...cancelled)` no `length > 0`. Un cambio tonto que muestra dots rojos falsos.
+
+7. **Subagentes a veces se "corren" en auditoría**: el subagente que auditó reportó issues que ya estaban arreglados en el código. La lección: SIEMPRE verificar el código actual antes de hacer fixes. No confiar ciegamente en "reports de auditoría" — pueden ser stale.
+
+8. **Tests como contrato**: 313 tests + 22 skip = 335 totales. Los skip son los de integración que requieren Supabase real. Sin env vars, saltan sin fallar.
+
 ### Patrón para futuras auditorías
 
 Cuando hagas una auditoría seria:
@@ -204,6 +226,7 @@ Cuando hagas una auditoría seria:
 3. Reporta primero, arregla después. No mezclar.
 4. Para tests: pide matrix de qué hay testeado y qué no
 5. El top 5 de "fix first" es el entregable principal de la auditoría
+6. **Verifica que los issues reportados siguen vigentes** leyendo el código actual, no el que la subagente tenía cuando arrancó.
 
 Patrón usado en esta auditoría: subagente dedicado con prompt estructurado por categorías (bugs, security, edge cases, UX, code quality, performance, a11y, tests, docs).
 
