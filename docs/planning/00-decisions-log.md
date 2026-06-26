@@ -189,6 +189,14 @@ Documentada en `10-design-direction.md`. Resumen:
 
 Si el usuario quiere tocar algo, los puntos abiertos son: tipografía, paleta exacta, estilo de cards, tono de empty states, bottom nav, densidad de información. Confirmado y documentado en `10-design-direction.md`.
 
+## 2026-06-26 — Refinamientos post-Fase 1
+
+- **Tienda como 5ª tab del bottom nav**, aunque la feature no esté implementada (placeholder en `/shop`). El icono está presente desde Fase 1 para reservar el espacio y que la navegación no salte cuando llegue la feature.
+- **Perfil rediseñado**: `app/(app)/profile/page.tsx` es ahora vista de solo lectura con avatar, stats y botón "Editar perfil". El formulario se movió a `app/(app)/profile/edit/page.tsx`. El usuario entra al perfil para VER, no para EDITAR directamente.
+- **`license_active` solo editable por admin/directiva**. El form de usuario (`/profile/edit`) ya no incluye este campo. Solo `updatePlayer` (server action admin) puede cambiarlo. Los usuarios normales no tocan su licencia.
+- **Tienda pictograma** añadido al set (`components/brand/pictograms/tienda.tsx`): bolsa de compra con asa en naranja de marca.
+- **Bottom nav reordenado** con 5 destinos: Inicio, Calendario, Equipo, Tienda, Yo.
+
 ## 2026-06-26 — Última ronda de clarificación
 
 ### Competición: Liga + Copa + Torneos

@@ -26,7 +26,7 @@ Seed con 3 temporadas (24/25 archived, 25/26 archived, 26/27 actual).
 
 ### Tests
 
-**187 tests pasando + 22 skip (sin env vars de Supabase) = 209 totales**
+**197 tests pasando + 22 skip (sin env vars de Supabase) = 219 totales**
 
 - `tests/unit/categories.test.ts` — 15 tests (boundary 11/12, todas las edades, validaciones, hex, labels)
 - `tests/unit/teams.test.ts` — 20 tests (cubre cada categoría, regla asimétrica, escuela, colores, géneros)
@@ -34,7 +34,7 @@ Seed con 3 temporadas (24/25 archived, 25/26 archived, 26/27 actual).
 - `tests/unit/example.test.ts` — 3 tests del helper `cn()`
 - `tests/unit/ui-primitives.test.tsx` — 22 tests (Button, Input, Avatar, Select, Alert, WaterDivider)
 - `tests/integration/import-zod.test.ts` — 38 tests (Zod schema del import)
-- `tests/integration/admin-actions.test.ts` — 72 tests (schemas de todas las server actions)
+- `tests/integration/admin-actions.test.ts` — 82 tests (schemas de todas las server actions, incluido el nuevo updateProfileSchema sin license_active)
 - `tests/integration/rls.test.ts` — 14 tests (13 skip sin env, verifica policies)
 - `tests/integration/query-helpers.test.ts` — 10 tests (9 skip sin env)
 
@@ -106,9 +106,36 @@ build:       18 rutas, 0 errores
 ## Estado en producción (cloud)
 
 - Proyecto Supabase: `hzplkjtfejqfulhhnlya`
-- Migraciones Fase 1: **pendientes de aplicar** (el usuario las pega en el dashboard de Supabase)
-- Seed con 3 temporadas: **pendiente de aplicar**
+- Migraciones Fase 1 aplicadas: 0001-0010
+- Seed con 3 temporadas aplicado: 2024/25 y 2025/26 archivadas, 2026/27 actual
 - Admin ya creado: `galvillo9@gmail.com` con rol `admin`
+
+## Auditoría y correcciones post-Fase 1
+
+Después de cerrar la fase, se hizo una auditoría profunda. Se encontraron **4 críticos, 18 altos, 47 medios, 25 bajos**. Todos los críticos y los altos prioritarios arreglados en commits separados.
+
+**Críticos corregidos**:
+- `must_change_password` siempre se persistía como `true` (bug en el toggle del form)
+- `next.config.ts` faltaba `images.remotePatterns` (avatares externos reventaban)
+- `CategoryBadge` blanco sobre blanco en escuela (contraste WCAG)
+- RLS de `profiles` revisada — la restrictiva rompía flujos de club; se mantuvo la abierta con view `profiles_public` para uso futuro
+
+**Altos corregidos**:
+- Confirmaciones en archiveSeason, unroster, unassign, unlink
+- `setCurrentSeason` ahora atómico via RPC
+- `canRosterPlayer` usa el año de la season del equipo (no el actual)
+- Import con errores por fila visibles, narrow catch
+- Forms con `notes` y `license_active` (admin)
+- Errores visibles en pages de admin
+- `updateProfileSchema` extraída a `lib/domain/admin-schemas.ts` (sin `license_active`)
+
+**Refinamientos UX** tras feedback del usuario:
+- Pictograma de Tienda + 5ª tab en bottom nav (placeholder `/shop`)
+- Perfil: read-only en `/profile` (avatar + stats + Editar/Cerrar sesión), edit en `/profile/edit`
+- `license_active` removido del form de usuario (solo admin/directiva pueden editarlo)
+- Mobile scroll: padding/gap/font-size reducidos en dashboard, admin, team, calendar
+
+**Tests: 53 → 197 pasando + 22 skip = 219 totales**
 
 ## Cómo probar
 
