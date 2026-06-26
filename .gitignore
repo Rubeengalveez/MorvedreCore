@@ -55,3 +55,6 @@ next-env.d.ts
 # Misc
 .turbo/
 *.tgz
+
+# Local seed state
+.seed-batch.json

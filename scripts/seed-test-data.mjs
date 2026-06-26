@@ -125,9 +125,10 @@ async function createAuthUser(email) {
   return data.user.id;
 }
 
-async function createProfile(id, profile) {
+async function createProfile(id, profile, authUserId) {
   await admin.from("profiles").upsert({
     id,
+    auth_user_id: authUserId,
     full_name: profile.full_name,
     birth_year: profile.birth_year ?? null,
     gender: profile.gender ?? "male",
@@ -220,20 +221,20 @@ async function main() {
       const birthYear = baseAge + (p % 3);
       const email = `seed-${playerId.slice(0, 8)}@example.com`;
       try {
-        await createAuthUser(email);
+        const authUserId = await createAuthUser(email);
+        await createProfile(playerId, {
+          full_name: fullName(i * 100 + p, isFemale ? "female" : "male"),
+          birth_year: CURRENT_YEAR - birthYear,
+          gender: isFemale ? "female" : "male",
+          cap_number: t.capMin + (p % (t.capMax - t.capMin + 1)),
+          license_active: Math.random() > 0.05,
+          team_color: t.color,
+          role: "player",
+        }, authUserId);
       } catch (e) {
         console.error(`[seed] Failed to create auth user ${email}: ${e.message}`);
         continue;
       }
-      await createProfile(playerId, {
-        full_name: fullName(i * 100 + p, isFemale ? "female" : "male"),
-        birth_year: CURRENT_YEAR - birthYear,
-        gender: isFemale ? "female" : "male",
-        cap_number: t.capMin + (p % (t.capMax - t.capMin + 1)),
-        license_active: Math.random() > 0.05,
-        team_color: t.color,
-        role: "player",
-      });
       await admin.from("team_rosters").upsert({
         team_id: teamId, player_id: playerId, squad_number: t.capMin + (p % (t.capMax - t.capMin + 1)), joined_at: "2026-09-01",
       }, { onConflict: "team_id,player_id" });
@@ -247,10 +248,10 @@ async function main() {
   for (const c of COACHES) {
     const id = randomUUID();
     const email = `seed-coach-${id.slice(0, 8)}@example.com`;
-    await createAuthUser(email);
+    const coachAuthId = await createAuthUser(email);
     await createProfile(id, {
       full_name: c.name, birth_year: CURRENT_YEAR - 38, gender: "male", license_active: true, role: "coach",
-    });
+    }, coachAuthId);
     batch.profileIds.push(id);
     for (const label of c.teamLabels) {
       const teamId = teamIdByLabel.get(label);
@@ -267,10 +268,10 @@ async function main() {
   for (const d of DIRECTIVA) {
     const id = randomUUID();
     const email = `seed-dir-${id.slice(0, 8)}@example.com`;
-    await createAuthUser(email);
+    const dirAuthId = await createAuthUser(email);
     await createProfile(id, {
       full_name: d.name, birth_year: CURRENT_YEAR - 45, gender: "female", license_active: false, role: "directiva",
-    });
+    }, dirAuthId);
     batch.profileIds.push(id);
   }
   console.log(`[seed] Directiva: ${DIRECTIVA.length}`);
@@ -279,10 +280,10 @@ async function main() {
   for (const d of DELEGATES) {
     const id = randomUUID();
     const email = `seed-del-${id.slice(0, 8)}@example.com`;
-    await createAuthUser(email);
+    const delAuthId = await createAuthUser(email);
     await createProfile(id, {
       full_name: d.name, birth_year: CURRENT_YEAR - 40, gender: "male", license_active: true, role: "delegate", scope_team_id: teamIdByLabel.get(d.teamLabel),
-    });
+    }, delAuthId);
     batch.profileIds.push(id);
     const teamId = teamIdByLabel.get(d.teamLabel);
     if (teamId) {
