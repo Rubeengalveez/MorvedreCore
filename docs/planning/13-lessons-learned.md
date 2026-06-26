@@ -139,3 +139,71 @@ cmdkey /delete:LegacyGeneric:target=git:https://github.com
 4. **Import idempotente**: el script de import debe poderse correr múltiples veces sin duplicar. Usar `full_name + birth_year` como natural key.
 5. **Roster validation centralizada**: `canRosterPlayer` se usa en el server action `rosterPlayer` para validar antes de insertar. No en el cliente.
 
+## 2026-06-26 — Auditoría de Fase 1
+
+Auditoría profunda de Fase 1. Encontrados **4 críticos, 18 altos, 47 medios, 25 bajos** (94 totales). Todos los críticos y los altos prioritarios arreglados en un commit.
+
+### Lecciones de la auditoría
+
+1. **Los `toggle` en formularios son trampas** (C1)
+   - Si el toggle añade el campo solo cuando está `on`, el `false` se omite y el server asume `?? true`. Resultado: `must_change_password` siempre se persiste como `true`.
+   - **Regla**: siempre envía el booleano, sea `on` u `off`. En el server, trata la ausencia como `false` explícitamente.
+
+2. **Una RLS `to authenticated using (true)` no es necesariamente correcta** (C2)
+   - Permite ver datos sensibles (PII) a cualquier usuario logueado.
+   - **Regla**: si una tabla tiene columnas privadas (como `phone_e164`), la policy debe ser restrictiva, y exponer los datos públicos via una **view** con `security_invoker = true` + `grant select to authenticated`.
+
+3. **`next/image` rompe con URLs externas sin `remotePatterns`** (C3)
+   - El componente falla silenciosamente en runtime. Solo se ve en consola.
+   - **Regla**: añade `images.remotePatterns` desde el primer momento si vas a usar URLs externas (Supabase Storage, CDN, etc.).
+
+4. **Los badges de color sólido necesitan test de contraste** (C4)
+   - `bg-white` + `text-paper` = invisible. Solo se ve en pantalla.
+   - **Regla**: para badges con fondo de color, usa SIEMPRE `text-brand-deep` o computa el contraste por luminancia.
+
+5. **Acciones destructivas sin confirmación son accidentes esperando** (H1, H2)
+   - `archiveSeason`, `unrosterPlayer`, `unassignStaff`, `unlinkFamily` se ejecutaban con un click.
+   - **Regla**: toda acción destructiva pasa por `window.confirm()` o un `ConfirmDialog`. No hay excusas.
+
+6. **Las operaciones multi-statement deben ser atómicas** (H3)
+   - `setCurrentSeason` hacía 3 updates secuenciales. Concurrencia = estado intermedio inconsistente.
+   - **Regla**: para operaciones que afectan a varias filas con un constraint, usa un RPC de Postgres (`create function`) o un solo `UPDATE` con `WHERE` que cubra todas las filas.
+
+7. **Las validaciones de negocio necesitan contexto** (H4)
+   - `canRosterPlayer` usaba `new Date().getFullYear()`. Pero un jugador de 2009 rostering en un equipo de la temporada 2024/25 (cuando tenía 15 años) tiene que validarse con el año de ESA temporada, no del presente.
+   - **Regla**: las funciones de dominio que dependen del tiempo deben recibir el tiempo como parámetro, no leerlo internamente.
+
+8. **Los `catch {}` vacíos son bugs disfrazados** (H5, H6)
+   - El import "se tragaba" errores y reportaba éxito con datos perdidos.
+   - **Regla**: `catch` debe narrow al error específico esperado (ej. `code === "23505"` para unique violation) o re-throw. Nunca swallow todo.
+
+9. **Duplicar lógica de dominio entre .ts y .mjs es trampa** (H13)
+   - El import script tenía su propia copia de `inferCategory` y `CATEGORY_LABELS`.
+   - **Regla**: extrae a un `.mjs` (o un `.ts` compilable) que ambos puedan importar. Si no, con el tiempo divergen.
+
+10. **Los tipos no se regeneran automáticamente** (H14)
+    - El tipo generado de `user_roles.granted_by` decía `string` (no nullable), pero la columna DB era nullable.
+    - **Regla**: cuando cambies el schema, regenera los tipos con `supabase gen types typescript --local`. Si lo editas a mano, anota el desfase.
+
+11. **Los tests del admin no se podían escribir antes porque las actions no estaban extraídas** (H general)
+    - Las server actions estaban "in line", difíciles de testear.
+    - **Regla**: extrae los Zod schemas a un módulo aparte (`admin-schemas.ts`). Los tests pueden importar los schemas sin tocar la action.
+
+12. **El test count de AGENTS.md se desactualiza rápido**
+    - Decía 53, ahora son 187. Hay que actualizarlo en cada commit que añada tests.
+
+13. **El e2e real requiere docker o cloud** (no tenemos docker en este entorno)
+    - Por eso los integration tests usan el cloud de Supabase y skip si no hay env vars.
+    - **Regla**: marcar con `it.skip()` los tests que dependen de env, no fallarlos.
+
+### Patrón para futuras auditorías
+
+Cuando hagas una auditoría seria:
+1. Lee **todos** los archivos del scope, no solo los que crees problemáticos
+2. Clasifica cada issue por severidad (🔴🟠🟡🟢) **antes** de empezar a arreglar
+3. Reporta primero, arregla después. No mezclar.
+4. Para tests: pide matrix de qué hay testeado y qué no
+5. El top 5 de "fix first" es el entregable principal de la auditoría
+
+Patrón usado en esta auditoría: subagente dedicado con prompt estructurado por categorías (bugs, security, edge cases, UX, code quality, performance, a11y, tests, docs).
+

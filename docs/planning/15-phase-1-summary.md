@@ -26,11 +26,25 @@ Seed con 3 temporadas (24/25 archived, 25/26 archived, 26/27 actual).
 
 ### Tests
 
-53 tests unitarios pasando:
+**187 tests pasando + 22 skip (sin env vars de Supabase) = 209 totales**
+
 - `tests/unit/categories.test.ts` — 15 tests (boundary 11/12, todas las edades, validaciones, hex, labels)
 - `tests/unit/teams.test.ts` — 20 tests (cubre cada categoría, regla asimétrica, escuela, colores, géneros)
 - `tests/unit/seasons.test.ts` — 15 tests (todas las funciones, bordes de temporada, meses críticos)
 - `tests/unit/example.test.ts` — 3 tests del helper `cn()`
+- `tests/unit/ui-primitives.test.tsx` — 22 tests (Button, Input, Avatar, Select, Alert, WaterDivider)
+- `tests/integration/import-zod.test.ts` — 38 tests (Zod schema del import)
+- `tests/integration/admin-actions.test.ts` — 72 tests (schemas de todas las server actions)
+- `tests/integration/rls.test.ts` — 14 tests (13 skip sin env, verifica policies)
+- `tests/integration/query-helpers.test.ts` — 10 tests (9 skip sin env)
+
+Para correr los tests de integración con Supabase real:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_...
+SUPABASE_SERVICE_ROLE_KEY=sb_secret_...
+pnpm test:run
+```
 
 ### Server Actions
 
