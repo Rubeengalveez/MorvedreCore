@@ -19,6 +19,7 @@
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
     "bootstrap": "node scripts/bootstrap-admin.mjs",
+    "import:players": "node scripts/import-players.mjs",
     "icons:generate": "node scripts/generate-icons.mjs",
     "icons:favicon": "node scripts/generate-favicon.mjs"
   },
@@ -56,6 +57,7 @@
     "supabase": "^2.107.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.9",
+    "xlsx": "^0.18.5"
   }
 }

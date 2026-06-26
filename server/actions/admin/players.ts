@@ -1,109 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
+import {
+  createPlayerSchema,
+  idSchema,
+  linkSchema,
+  roleAssignmentSchema,
+  unlinkSchema,
+  updatePlayerSchema,
+} from "@/lib/domain/admin-schemas";
 
 import { requireAdmin } from "./_helpers";
 import { rosterPlayer, unrosterPlayer } from "./teams";
 
 export type Player = Tables<"profiles", "Row">;
-
-const genderEnum = z.enum(["male", "female", "other", "prefer_not_to_say"]);
-const userRoleEnum = z.enum(["admin", "coach", "delegate", "directiva", "parent", "player"]);
-const parentRelationEnum = z.enum(["mother", "father", "legal_guardian", "other"]);
-
-const hexColor = z
-  .string()
-  .regex(/^#[0-9A-Fa-f]{6}$/, "Color inválido. Usa el formato #RRGGBB.")
-  .optional();
-
-const emptyToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
-
-const phoneSchema = z
-  .string()
-  .regex(/^\+[1-9]\d{6,14}$/, "Formato E.164: +34612345678")
-  .optional();
-
-const createPlayerSchema = z.object({
-  full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
-  birth_year: z
-    .number()
-    .int("Año entero.")
-    .min(1900, "Año entre 1900 y 2100.")
-    .max(2100, "Año entre 1900 y 2100."),
-  gender: genderEnum.optional(),
-  cap_number: z.number().int("Dorsal entero.").min(0, "Mínimo 0.").max(99, "Máximo 99.").optional(),
-  phone_e164: phoneSchema,
-  email_contact: z.string().email("Email inválido.").optional(),
-  photo_url: z.string().url("URL inválida.").optional(),
-  team_color: hexColor,
-  school_enrolled: z.boolean().optional(),
-  school_payment_paid: z.boolean().optional(),
-  must_change_password: z.boolean().optional(),
-});
-
-const updatePlayerSchema = z
-  .object({
-    full_name: z
-      .string()
-      .trim()
-      .min(2, "Mínimo 2 caracteres.")
-      .max(100, "Máximo 100 caracteres.")
-      .optional(),
-    birth_year: z
-      .number()
-      .int("Año entero.")
-      .min(1900, "Año entre 1900 y 2100.")
-      .max(2100, "Año entre 1900 y 2100.")
-      .nullable()
-      .optional(),
-    gender: genderEnum.optional(),
-    cap_number: z
-      .number()
-      .int("Dorsal entero.")
-      .min(0, "Mínimo 0.")
-      .max(99, "Máximo 99.")
-      .nullable()
-      .optional(),
-    phone_e164: z.preprocess(
-      emptyToNull,
-      z
-        .string()
-        .regex(/^\+[1-9]\d{6,14}$/)
-        .nullable(),
-    ),
-    email_contact: z.preprocess(emptyToNull, z.string().email("Email inválido.").nullable()),
-    photo_url: z.preprocess(emptyToNull, z.string().url("URL inválida.").nullable()),
-    team_color: z.preprocess(emptyToNull, hexColor.nullable()),
-    school_enrolled: z.boolean().optional(),
-    school_payment_paid: z.boolean().optional(),
-    notes: z.preprocess(emptyToNull, z.string().max(2000, "Máximo 2000 caracteres.").nullable()),
-  })
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "No hay cambios para guardar.",
-  });
-
-const linkSchema = z.object({
-  parent_profile_id: z.string().uuid("Tutor inválido."),
-  child_profile_id: z.string().uuid("Hijo inválido."),
-  relation: parentRelationEnum,
-});
-
-const unlinkSchema = z.object({
-  parent_profile_id: z.string().uuid("Tutor inválido."),
-  child_profile_id: z.string().uuid("Hijo inválido."),
-});
-
-const roleAssignmentSchema = z.object({
-  profile_id: z.string().uuid("Persona inválida."),
-  role: userRoleEnum,
-  scope_team_id: z.string().uuid("Equipo inválido.").nullable().optional(),
-});
-
-const idSchema = z.object({ id: z.string().uuid("Identificador inválido.") });
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
@@ -123,6 +36,8 @@ export async function createPlayer(input: {
   school_enrolled?: boolean;
   school_payment_paid?: boolean;
   must_change_password?: boolean;
+  license_active?: boolean;
+  notes?: string | null;
 }): Promise<Player> {
   await requireAdmin();
 
@@ -146,7 +61,9 @@ export async function createPlayer(input: {
       team_color: parsed.data.team_color ?? null,
       school_enrolled: parsed.data.school_enrolled ?? false,
       school_payment_paid: parsed.data.school_payment_paid ?? false,
-      must_change_password: parsed.data.must_change_password ?? true,
+      must_change_password: parsed.data.must_change_password ?? false,
+      license_active: parsed.data.license_active ?? false,
+      notes: parsed.data.notes ?? null,
     })
     .select("*")
     .single();
@@ -175,6 +92,7 @@ export async function updatePlayer(
     team_color?: string | null;
     school_enrolled?: boolean;
     school_payment_paid?: boolean;
+    license_active?: boolean;
     notes?: string | null;
   },
 ): Promise<Player> {
@@ -305,6 +223,19 @@ export async function assignRole(input: {
 
   if (parsed.data.role === "coach" && parsed.data.scope_team_id == null) {
     throw new Error("El rol de entrenador requiere un equipo asociado.");
+  }
+
+  if (parsed.data.scope_team_id) {
+    const supabase = await createClient();
+    const { data: team, error: teamError } = await supabase
+      .from("teams")
+      .select("id")
+      .eq("id", parsed.data.scope_team_id)
+      .maybeSingle();
+    throwIfError(teamError, "No pudimos verificar el equipo.");
+    if (!team) {
+      throw new Error("El equipo seleccionado no existe.");
+    }
   }
 
   const supabase = await createClient();

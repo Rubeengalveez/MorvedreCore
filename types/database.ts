@@ -299,21 +299,21 @@ export type Database = {
           profile_id: string;
           role: Database["public"]["Enums"]["user_role"];
           scope_team_id: string | null;
-          granted_by: string;
+          granted_by: string | null;
           granted_at: string;
         };
         Insert: {
           profile_id: string;
           role: Database["public"]["Enums"]["user_role"];
           scope_team_id?: string | null;
-          granted_by: string;
+          granted_by?: string | null;
           granted_at?: string;
         };
         Update: {
           profile_id?: string;
           role?: Database["public"]["Enums"]["user_role"];
           scope_team_id?: string | null;
-          granted_by?: string;
+          granted_by?: string | null;
           granted_at?: string;
         };
         Relationships: [
@@ -342,10 +342,24 @@ export type Database = {
       };
     };
     Views: {
-      [_ in never]: never;
+      profiles_public: {
+        Row: {
+          id: string;
+          full_name: string;
+          photo_url: string | null;
+          birth_year: number | null;
+          gender: Database["public"]["Enums"]["gender"];
+          cap_number: number | null;
+          license_active: boolean;
+        };
+        Relationships: [];
+      };
     };
     Functions: {
-      [_ in never]: never;
+      swap_current_season: {
+        Args: { target_id: string };
+        Returns: void;
+      };
     };
     Enums: {
       user_role: "admin" | "coach" | "delegate" | "directiva" | "parent" | "player";

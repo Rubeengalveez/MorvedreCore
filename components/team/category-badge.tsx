@@ -7,18 +7,11 @@ export interface CategoryBadgeProps {
   tone?: "solid" | "soft";
 }
 
-const SOLID_TEXT: Partial<Record<CategoryCode, string>> = {
-  alevin: "text-brand-deep",
-  escuela: "text-brand-deep",
-};
-
 export function CategoryBadge({ code, className, tone = "soft" }: CategoryBadgeProps) {
   const label = CATEGORY_LABELS[code as CategoryCode] ?? code;
   const colorHex = categoryAccent(code);
   const isSolid = tone === "solid";
-  const textColor = isSolid
-    ? (SOLID_TEXT[code as CategoryCode] ?? "text-paper")
-    : "text-brand-deep";
+  const textColor = isSolid ? "text-brand-deep" : "text-brand-deep";
 
   return (
     <span
@@ -30,7 +23,7 @@ export function CategoryBadge({ code, className, tone = "soft" }: CategoryBadgeP
       )}
       style={
         isSolid
-          ? { backgroundColor: colorHex }
+          ? { backgroundColor: colorHex, color: "#0A2E5C" }
           : { backgroundColor: "transparent", borderColor: colorHex, color: colorHex }
       }
     >

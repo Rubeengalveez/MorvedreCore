@@ -253,3 +253,23 @@ Ejecutar el scaffold de la Fase 0:
 6. Instalar shadcn/ui y crear la primera pantalla (login)
 7. Configurar `.env.example` con las variables de Supabase, VAPID, Resend
 8. Migración inicial con tabla `profiles` + bootstrap admin
+
+## 2026-06-26 — Decisiones de la Fase 1
+
+### Modelo de datos
+
+- **`team_type` enum (`competitive | school`)**: distingue los 7 equipos competitivos de la "Escuela" (3 niños, sin ficha federativa, 100€/temporada, sin partidos). Documentado en `04-roadmap.md` § Fase 1.
+- **`category_code = 'escuela'`**: añadido al enum de categorías para que la Escuela sea un equipo más en la matriz de ascensos, pero con validación relajada (`canRosterPlayer` siempre devuelve `true` para `escuela`).
+- **`cap_number` vs `squad_number`**: aclaración de nomenclatura. `profiles.cap_number` es el "dorsal del jugador" (lo lleva siempre, en bañador). `team_rosters.squad_number` es el "dorsal temporal del equipo" (puede cambiar si el jugador cambia de equipo dentro de la temporada). En el MVP ambos se editan manualmente y se mantienen sincronizados, pero conceptualmente son distintos.
+- **`parent_child_links` RLS**: solo el propio padre, el propio hijo o un admin pueden ver un vínculo familiar. Esto protege la estructura parental de la divulgación no autorizada.
+
+### Lógica de dominio
+
+- **`canRosterPlayer` asimétrica**: un jugador puede ser `1` categoría por encima de la del equipo (ej: Benjamín en Alevín), pero no hay límite hacia abajo (un Cadete puede jugar en Benjamín si la situación lo requiere). Se valida en el servidor usando el año de la temporada del equipo, no el año actual del calendario.
+- **`inferCategory` deriva, nunca se almacena**: el cálculo de categoría es siempre función pura de `birth_year` y el año de la temporada. No hay columna `category` en `profiles` ni en `team_rosters`.
+
+### Privacidad
+
+- **Visibilidad del roster**: cualquier miembro del club puede ver qué jugadores están en cada equipo (`team_rosters` SELECT abierto). Esto es intencional — los equipos son información pública interna. La PII sensible (teléfono, email) reside en `profiles` y está protegida por RLS.
+- **Visibilidad del staff**: cualquier miembro del club puede ver quién entrena cada equipo (`team_staff` SELECT abierto). Intencional — los entrenadores son visibles.
+

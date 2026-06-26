@@ -57,12 +57,22 @@ Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convoc
 **Fase 1:**
 - 5 migraciones de BD + 1 fix (seasons, teams, team_staff, team_rosters, profiles extend)
 - Seed con 3 temporadas (2024/25 archivada, 2025/26 archivada, 2026/27 actual)
-- 53 tests unitarios pasando
+- 187 tests pasando + 22 de integración skippeados sin env vars (187 unit + integration puros)
 - 6 funciones de dominio (categories, teams, seasons)
+- Zod schemas extraídos a `lib/domain/admin-schemas.ts` (testeables sin Supabase)
+- Parser de import extraído a `lib/domain/import-schema.mjs` (testeable sin Supabase)
 - Panel admin completo (`/admin`) con 6 secciones
 - Vistas públicas: `/team`, `/team/[id]`, dashboard actualizado
 - Profile switcher con "Mi perfil" + "Familia"
 - Import desde Excel (xlsx) idempotente
+
+**Tests por tipo:**
+- `tests/unit/`: 75 tests (categories, seasons, teams, cn, UI primitives). Siempre corren, sin Supabase.
+- `tests/integration/`: 112 tests + 22 skippeados sin env vars:
+  - `import-zod.test.ts` (38): Zod schema y helpers del script de import. Sin env vars.
+  - `admin-actions.test.ts` (72): Zod schemas de server actions. Sin env vars.
+  - `rls.test.ts` (13 skip sin env): RLS policies. Necesita Supabase real.
+  - `query-helpers.test.ts` (9 skip sin env): Query helpers. Necesita Supabase real.
 
 ### Decisiones cerradas (ver `docs/planning/00-decisions-log.md`)
 
@@ -71,7 +81,7 @@ Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convoc
 - Nombre visible de la app: "Morvedre Core".
 - Idioma: solo castellano.
 - Foto del jugador: visible para todos los miembros del club (sin opt-out).
-- Datos personales (teléfono, email): privados.
+- Datos personales (teléfono, email): privados (protegidos por RLS de `profiles`).
 - Rankings públicos para todo el club.
 - Notificaciones configurables por usuario.
 - Tono: cercano y directo, segunda persona.
@@ -89,6 +99,7 @@ Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convoc
 - **TypeScript strict siempre.**
 - **Cero comentarios en código** salvo que el usuario los pida explícitamente.
 - **Tono cercano, segunda persona.** Nunca "Se convoca al jugador..." en mensajes.
+- **Tests de integración que tocan Supabase se saltan si faltan env vars.** Nunca fallan en CI. Opt-in local via `.env.test.local` (gitignored) o shell.
 
 ## Próximo paso acordado
 

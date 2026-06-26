@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
   CATEGORY_LABELS,
@@ -28,30 +29,57 @@ export const metadata = {
   title: "Equipos — Admin — Morvedre Core",
 };
 
-async function loadData(): Promise<{
-  seasons: Season[];
-  currentSeasonId: string | null;
-  teamsBySeason: Map<string, TeamCardData[]>;
-}> {
+type LoadResult =
+  | {
+      ok: true;
+      seasons: Season[];
+      currentSeasonId: string | null;
+      teamsBySeason: Map<string, TeamCardData[]>;
+      error: null;
+    }
+  | {
+      ok: false;
+      seasons: Season[];
+      currentSeasonId: null;
+      teamsBySeason: Map<string, TeamCardData[]>;
+      error: string;
+    };
+
+async function loadData(): Promise<LoadResult> {
   const supabase = await createClient();
 
-  const [{ data: seasonsData }, { data: teamsData }, { data: staffData }, { data: rostersData }] =
-    await Promise.all([
-      supabase
-        .from("seasons")
-        .select("id, label, start_date, end_date, is_current, archived_at, created_at, updated_at")
-        .order("start_date", { ascending: false }),
-      supabase
-        .from("teams")
-        .select("id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at"),
-      supabase
-        .from("team_staff")
-        .select("team_id, profile_id, role, profiles!team_staff_profile_id_fkey(full_name)"),
-      supabase
-        .from("team_rosters")
-        .select("team_id, player_id")
-        .is("left_at", null),
-    ]);
+  const [
+    { data: seasonsData, error: seasonsError },
+    { data: teamsData, error: teamsError },
+    { data: staffData },
+    { data: rostersData },
+  ] = await Promise.all([
+    supabase
+      .from("seasons")
+      .select("id, label, start_date, end_date, is_current, archived_at, created_at, updated_at")
+      .order("start_date", { ascending: false }),
+    supabase
+      .from("teams")
+      .select("id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at"),
+    supabase
+      .from("team_staff")
+      .select("team_id, profile_id, role, profiles!team_staff_profile_id_fkey(full_name)"),
+    supabase
+      .from("team_rosters")
+      .select("team_id, player_id")
+      .is("left_at", null),
+  ]);
+
+  const firstError = seasonsError ?? teamsError;
+  if (firstError) {
+    return {
+      ok: false,
+      seasons: (seasonsData ?? []) as Season[],
+      currentSeasonId: null,
+      teamsBySeason: new Map(),
+      error: firstError.message,
+    };
+  }
 
   const seasons = (seasonsData ?? []) as Season[];
   const currentSeason = seasons.find((s) => s.is_current) ?? null;
@@ -95,14 +123,16 @@ async function loadData(): Promise<{
   }
 
   return {
+    ok: true,
     seasons,
     currentSeasonId: currentSeason?.id ?? seasons[0]?.id ?? null,
     teamsBySeason,
+    error: null,
   };
 }
 
 export default async function TeamsPage() {
-  const { seasons, currentSeasonId, teamsBySeason } = await loadData();
+  const { seasons, currentSeasonId, teamsBySeason, error } = await loadData();
 
   if (seasons.length === 0) {
     return (
@@ -149,6 +179,12 @@ export default async function TeamsPage() {
           }
         />
       </header>
+
+      {error ? (
+        <Alert variant="danger" title="No pudimos cargar los equipos">
+          {error}
+        </Alert>
+      ) : null}
 
       <TeamsGrid
         seasons={seasons}

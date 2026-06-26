@@ -18,14 +18,14 @@ export default function Home() {
               Morvedre Core
             </h1>
             <p className="font-mono text-xs font-medium uppercase tracking-widest text-ink-600">
-              Fase 0 — Cimientos
+              La app del club
             </p>
           </div>
         </div>
 
         <p className="text-base leading-relaxed text-ink-600">
-          La app del Waterpolo Morvedre se está construyendo. Cada fase
-          desbloqueará nuevas pantallas.
+          Gestiona equipos, jugadores, staff y familias del Waterpolo Morvedre
+          desde un único sitio.
         </p>
 
         <nav className="flex w-full flex-col gap-3">
@@ -34,6 +34,9 @@ export default function Home() {
           </Button>
           <Button asChild size="lg" variant="secondary" className="w-full">
             <Link href={"/dashboard" as Route}>Ir al dashboard</Link>
+          </Button>
+          <Button asChild size="lg" variant="ghost" className="w-full">
+            <Link href={"/admin" as Route}>Panel de administración</Link>
           </Button>
         </nav>
       </div>

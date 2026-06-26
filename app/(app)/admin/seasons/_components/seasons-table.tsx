@@ -105,11 +105,18 @@ function RowActions({ season }: { season: Season }) {
                 size="lg"
                 className="w-full justify-start"
                 disabled={pending}
-                onClick={() =>
+                onClick={() => {
+                  if (
+                    !window.confirm(
+                      `¿Archivar la temporada ${season.label}? Esta acción no se puede deshacer.`,
+                    )
+                  ) {
+                    return;
+                  }
                   startTransition(async () => {
                     await archiveSeason(season.id);
-                  })
-                }
+                  });
+                }}
               >
                 Archivar
               </Button>

@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import type { Season } from "@/server/actions/admin";
@@ -14,7 +15,11 @@ export const metadata = {
   title: "Temporadas — Admin — Morvedre Core",
 };
 
-async function loadSeasons(): Promise<Season[]> {
+type LoadResult =
+  | { ok: true; seasons: Season[]; error: null }
+  | { ok: false; seasons: []; error: string };
+
+async function loadSeasons(): Promise<LoadResult> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("seasons")
@@ -22,14 +27,14 @@ async function loadSeasons(): Promise<Season[]> {
     .order("start_date", { ascending: false });
 
   if (error) {
-    return [];
+    return { ok: false, seasons: [], error: error.message };
   }
 
-  return (data ?? []) as Season[];
+  return { ok: true, seasons: (data ?? []) as Season[], error: null };
 }
 
 export default async function SeasonsPage() {
-  const seasons = await loadSeasons();
+  const result = await loadSeasons();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
@@ -53,7 +58,13 @@ export default async function SeasonsPage() {
         />
       </header>
 
-      <SeasonsTable seasons={seasons} />
+      {result.ok ? null : (
+        <Alert variant="danger" title="No pudimos cargar las temporadas">
+          {result.error}
+        </Alert>
+      )}
+
+      <SeasonsTable seasons={result.ok ? result.seasons : []} />
     </div>
   );
 }

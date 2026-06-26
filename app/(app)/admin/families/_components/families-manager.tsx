@@ -301,6 +301,13 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
   const [, startTransition] = useTransition();
 
   function handleRemove(row: FamilyRow) {
+    if (
+      !window.confirm(
+        `¿Eliminar el vínculo entre ${row.parent_name} y ${row.child_name}?`,
+      )
+    ) {
+      return;
+    }
     const key = `${row.parent_id}-${row.child_id}`;
     setPendingKey(key);
     startTransition(async () => {

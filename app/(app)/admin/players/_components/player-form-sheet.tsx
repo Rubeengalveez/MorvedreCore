@@ -80,6 +80,8 @@ const playerFormSchema = z.object({
     .optional()
     .refine((v) => !v || urlPattern.test(v), "URL inválida."),
   must_change_password: z.boolean(),
+  license_active: z.boolean().optional(),
+  notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
 });
 
 type PlayerFormValues = z.infer<typeof playerFormSchema>;
@@ -108,7 +110,9 @@ async function submitAction(
       phone_e164: String(formData.get("phone_e164") ?? "") || undefined,
       email_contact: String(formData.get("email_contact") ?? "") || undefined,
       photo_url: String(formData.get("photo_url") ?? "") || undefined,
-      must_change_password: formData.get("must_change_password") === "on",
+      must_change_password: formData.get("must_change_password") === "true",
+      license_active: formData.get("license_active") === "true",
+      notes: String(formData.get("notes") ?? "") || undefined,
     });
     return { ok: true };
   } catch (err) {
@@ -190,6 +194,8 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
       email_contact: "",
       photo_url: "",
       must_change_password: true,
+      license_active: false,
+      notes: "",
     },
   });
 
@@ -210,7 +216,9 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
     if (values.phone_e164) fd.append("phone_e164", values.phone_e164);
     if (values.email_contact) fd.append("email_contact", values.email_contact);
     if (values.photo_url) fd.append("photo_url", values.photo_url);
-    if (values.must_change_password) fd.append("must_change_password", "on");
+    fd.append("must_change_password", values.must_change_password ? "true" : "false");
+    fd.append("license_active", values.license_active ? "true" : "false");
+    if (values.notes && values.notes.trim() !== "") fd.append("notes", values.notes);
     startTransition(() => {
       formAction(fd);
     });
@@ -419,6 +427,45 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
                       label="Deberá cambiar la contraseña"
                       description="Recomendado al dar de alta un jugador nuevo."
                     />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="license_active"
+                render={({ field }) => (
+                  <FormItem>
+                    <Toggle
+                      value={field.value ?? false}
+                      onChange={field.onChange}
+                      label="Licencia federativa activa"
+                      description="Marca si el jugador tiene ficha federativa en vigor."
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="notes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Notas internas (opcional)</FormLabel>
+                    <FormControl>
+                      <textarea
+                        rows={4}
+                        placeholder="Información útil para el club: alergias, observaciones, etc."
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                        className="flex w-full rounded border border-ink-300 bg-paper px-4 py-3 text-base text-ink-900 placeholder:text-ink-600/70 transition-colors focus-visible:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

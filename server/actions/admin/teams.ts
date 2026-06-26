@@ -1,97 +1,23 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 import { canRosterPlayer, defaultTeamColor } from "@/lib/domain/teams";
 import type { CategoryCode, TeamGender } from "@/lib/domain/categories";
+import {
+  createTeamSchema,
+  idSchema,
+  makeRosterSchema,
+  staffSchema,
+  unrosterSchema,
+  updateTeamSchema,
+} from "@/lib/domain/admin-schemas";
 
 import { requireAdmin } from "./_helpers";
 
 export type Team = Tables<"teams", "Row">;
-
-const categoryEnum = z.enum([
-  "benjamin",
-  "alevin",
-  "infantil",
-  "cadete",
-  "juvenil",
-  "absoluto",
-  "escuela",
-]);
-
-const teamGenderEnum = z.enum(["male", "female", "mixed"]);
-const teamTypeEnum = z.enum(["competitive", "school"]);
-const staffRoleEnum = z.enum(["head_coach", "assistant_coach", "delegate", "physical_trainer"]);
-
-const hexColor = z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color inválido. Usa el formato #RRGGBB.");
-
-const isoDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida. Usa el formato AAAA-MM-DD.")
-  .optional();
-
-const createTeamSchema = z.object({
-  season_id: z.string().uuid("Temporada inválida."),
-  category_code: categoryEnum,
-  label: z
-    .string()
-    .trim()
-    .min(1, "El nombre del equipo es obligatorio.")
-    .max(50, "Máximo 50 caracteres."),
-  gender: teamGenderEnum,
-  team_type: teamTypeEnum.optional(),
-  color: hexColor.optional(),
-  home_pool: z.string().trim().max(100, "Máximo 100 caracteres.").optional(),
-  notes: z.string().trim().max(1000, "Máximo 1000 caracteres.").optional(),
-});
-
-const updateTeamSchema = z
-  .object({
-    season_id: z.string().uuid("Temporada inválida.").optional(),
-    category_code: categoryEnum.optional(),
-    label: z
-      .string()
-      .trim()
-      .min(1, "El nombre del equipo es obligatorio.")
-      .max(50, "Máximo 50 caracteres.")
-      .optional(),
-    gender: teamGenderEnum.optional(),
-    team_type: teamTypeEnum.optional(),
-    color: hexColor.optional(),
-    home_pool: z.string().trim().max(100, "Máximo 100 caracteres.").nullable().optional(),
-    notes: z.string().trim().max(1000, "Máximo 1000 caracteres.").nullable().optional(),
-  })
-  .refine((data) => Object.keys(data).length > 0, {
-    message: "No hay cambios para guardar.",
-  });
-
-const staffSchema = z.object({
-  team_id: z.string().uuid("Equipo inválido."),
-  profile_id: z.string().uuid("Persona inválida."),
-  role: staffRoleEnum,
-});
-
-const rosterSchema = z.object({
-  team_id: z.string().uuid("Equipo inválido."),
-  player_id: z.string().uuid("Jugador inválido."),
-  squad_number: z
-    .number()
-    .int("Dorsal entero.")
-    .min(0, "Mínimo 0.")
-    .max(99, "Máximo 99.")
-    .optional(),
-  joined_at: isoDate,
-});
-
-const unrosterSchema = z.object({
-  team_id: z.string().uuid("Equipo inválido."),
-  player_id: z.string().uuid("Jugador inválido."),
-});
-
-const idSchema = z.object({ id: z.string().uuid("Identificador inválido.") });
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
@@ -269,6 +195,7 @@ export async function rosterPlayer(input: {
 }): Promise<void> {
   await requireAdmin();
 
+  const rosterSchema = makeRosterSchema();
   const parsed = rosterSchema.safeParse(input);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
@@ -278,7 +205,7 @@ export async function rosterPlayer(input: {
 
   const { data: team, error: teamError } = await supabase
     .from("teams")
-    .select("id, category_code")
+    .select("id, category_code, season_id, seasons(start_date, end_date)")
     .eq("id", parsed.data.team_id)
     .maybeSingle();
 
@@ -302,8 +229,12 @@ export async function rosterPlayer(input: {
     throw new Error("El jugador no tiene año de nacimiento. Edítalo antes de asignarlo.");
   }
 
-  const currentYear = new Date().getFullYear();
-  if (!canRosterPlayer(player.birth_year, team.category_code, currentYear)) {
+  const seasonRow = (team as { seasons?: { start_date?: string } | null }).seasons;
+  const seasonYear = seasonRow?.start_date
+    ? new Date(seasonRow.start_date).getFullYear()
+    : new Date().getFullYear();
+
+  if (!canRosterPlayer(player.birth_year, team.category_code, seasonYear)) {
     throw new Error(
       "El jugador no encaja en la categoría del equipo (admite como máximo un año de diferencia).",
     );

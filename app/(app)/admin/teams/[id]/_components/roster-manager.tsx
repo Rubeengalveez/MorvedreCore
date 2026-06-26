@@ -247,7 +247,10 @@ export function RosterList({ teamId, rows }: RosterListProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  function handleRemove(playerId: string) {
+  function handleRemove(playerId: string, name: string) {
+    if (!window.confirm(`¿Quitar a ${name} de este equipo?`)) {
+      return;
+    }
     setPendingId(playerId);
     startTransition(async () => {
       try {
@@ -290,7 +293,7 @@ export function RosterList({ teamId, rows }: RosterListProps) {
             className="h-12 w-12 p-0 text-danger hover:bg-danger/10"
             aria-label={`Quitar a ${r.full_name}`}
             disabled={pendingId === r.player_id}
-            onClick={() => handleRemove(r.player_id)}
+            onClick={() => handleRemove(r.player_id, r.full_name)}
           >
             {pendingId === r.player_id ? (
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />

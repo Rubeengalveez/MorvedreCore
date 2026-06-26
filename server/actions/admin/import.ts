@@ -2,15 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { read, utils } from "xlsx";
-import { z } from "zod";
+
+import { xlsxRowSchema, RELATION_VALUES_XLSX } from "@/lib/domain/admin-schemas";
 
 import { requireAdmin } from "./_helpers";
 import { createClient } from "@/lib/supabase/server";
-import { rosterPlayer } from "./teams";
-import { linkParentChild } from "./players";
 
-const RELATION_VALUES = ["mother", "father", "legal_guardian", "other"] as const;
-type Relation = (typeof RELATION_VALUES)[number];
+type Relation = (typeof RELATION_VALUES_XLSX)[number];
 
 export type PreviewRow = {
   rowNumber: number;
@@ -24,53 +22,23 @@ export type PreviewRow = {
   relation: Relation;
 };
 
+export type ImportError = {
+  rowNumber: number;
+  message: string;
+  full_name: string | null;
+};
+
 export type ImportPreview = {
   totalRows: number;
   preview: PreviewRow[];
-  errors: Array<{ rowNumber: number; message: string; full_name: string | null }>;
+  errors: ImportError[];
 };
 
 export type ImportResult = {
   created: number;
   skipped: number;
-  errors: Array<{ rowNumber: number; message: string; full_name: string | null }>;
+  errors: ImportError[];
 };
-
-const rowSchema = z.object({
-  nombre_completo: z.string().trim().min(1),
-  ano_nacimiento: z.coerce.number().int(),
-  dorsal: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : Number(v)),
-    z.coerce.number().int().min(0).max(99).optional(),
-  ),
-  nombre_equipo: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z.string().optional(),
-  ),
-  email_tutor: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z.string().email().optional(),
-  ),
-  nombre_tutor: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z.string().optional(),
-  ),
-  telefono_tutor: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z.string().optional(),
-  ),
-  relacion: z.preprocess(
-    (v) => {
-      if (v == null || v === "") return "legal_guardian";
-      const lower = String(v).toLowerCase().trim();
-      if (RELATION_VALUES.includes(lower as Relation)) return lower;
-      return "legal_guardian";
-    },
-    z.enum(RELATION_VALUES),
-  ),
-});
-
-type ParsedRow = z.infer<typeof rowSchema>;
 
 function readFile(formData: FormData): File {
   const file = formData.get("file");
@@ -80,7 +48,12 @@ function readFile(formData: FormData): File {
   return file;
 }
 
-async function parseFile(formData: FormData): Promise<PreviewRow[]> {
+type ParsedFileResult = {
+  rows: PreviewRow[];
+  errors: ImportError[];
+};
+
+async function parseFile(formData: FormData): Promise<ParsedFileResult> {
   const file = readFile(formData);
   const arrayBuffer = await file.arrayBuffer();
   const workbook = read(arrayBuffer, { type: "array" });
@@ -94,15 +67,30 @@ async function parseFile(formData: FormData): Promise<PreviewRow[]> {
     raw: true,
   });
 
-  const out: PreviewRow[] = [];
+  const rows: PreviewRow[] = [];
+  const errors: ImportError[] = [];
   for (let i = 0; i < raw.length; i++) {
     const r = raw[i]!;
     const rowNumber = i + 2;
-    const parsed = rowSchema.safeParse(r);
-    if (!parsed.success) continue;
-    const data: ParsedRow = parsed.data;
+    const fullNameRaw = r["nombre_completo"];
+    const fullNameStr =
+      typeof fullNameRaw === "string" ? fullNameRaw.trim() : null;
+
+    const parsed = xlsxRowSchema.safeParse(r);
+    if (!parsed.success) {
+      const issues = parsed.error.issues
+        .map((iss) => `${iss.path.join(".") || "fila"}: ${iss.message}`)
+        .join("; ");
+      errors.push({
+        rowNumber,
+        message: issues,
+        full_name: fullNameStr && fullNameStr !== "" ? fullNameStr : null,
+      });
+      continue;
+    }
+    const data = parsed.data;
     if (!data.nombre_completo || data.ano_nacimiento == null) continue;
-    out.push({
+    rows.push({
       rowNumber,
       full_name: data.nombre_completo,
       birth_year: data.ano_nacimiento,
@@ -114,24 +102,13 @@ async function parseFile(formData: FormData): Promise<PreviewRow[]> {
       relation: data.relacion,
     });
   }
-  return out;
+  return { rows, errors };
 }
 
 export async function previewImport(formData: FormData): Promise<ImportPreview> {
   await requireAdmin();
 
-  const rows = await parseFile(formData);
-  const errors: ImportPreview["errors"] = [];
-
-  for (const r of rows) {
-    if (r.birth_year < 1900 || r.birth_year > 2100) {
-      errors.push({
-        rowNumber: r.rowNumber,
-        message: "Año de nacimiento fuera de rango (1900-2100).",
-        full_name: r.full_name,
-      });
-    }
-  }
+  const { rows, errors } = await parseFile(formData);
 
   return {
     totalRows: rows.length,
@@ -143,9 +120,9 @@ export async function previewImport(formData: FormData): Promise<ImportPreview> 
 export async function commitImport(formData: FormData): Promise<ImportResult> {
   await requireAdmin();
 
-  const rows = await parseFile(formData);
+  const { rows, errors: parseErrors } = await parseFile(formData);
   const supabase = await createClient();
-  const result: ImportResult = { created: 0, skipped: 0, errors: [] };
+  const result: ImportResult = { created: 0, skipped: 0, errors: [...parseErrors] };
 
   const { data: currentSeason } = await supabase
     .from("seasons")
@@ -239,14 +216,22 @@ export async function commitImport(formData: FormData): Promise<ImportResult> {
       if (r.team_label) {
         const teamId = await getTeamId(r.team_label);
         if (teamId) {
-          try {
-            await rosterPlayer({
-              team_id: teamId,
-              player_id: playerId,
-              squad_number: r.squad_number ?? undefined,
+          const { error: rosterError } = await supabase
+            .from("team_rosters")
+            .upsert(
+              {
+                team_id: teamId,
+                player_id: playerId,
+                squad_number: r.squad_number ?? null,
+              },
+              { onConflict: "team_id,player_id" },
+            );
+          if (rosterError && rosterError.code !== "23505") {
+            result.errors.push({
+              rowNumber: r.rowNumber,
+              message: `Roster: ${rosterError.message}`,
+              full_name: r.full_name,
             });
-          } catch {
-            // ignore duplicate rosters
           }
         }
       }
@@ -254,14 +239,22 @@ export async function commitImport(formData: FormData): Promise<ImportResult> {
       if (r.parent_email) {
         const parentId = await getOrCreateParentId(r.parent_email, r.parent_name);
         if (parentId) {
-          try {
-            await linkParentChild({
-              parent_profile_id: parentId,
-              child_profile_id: playerId,
-              relation: r.relation,
+          const { error: linkError } = await supabase
+            .from("parent_child_links")
+            .upsert(
+              {
+                parent_profile_id: parentId,
+                child_profile_id: playerId,
+                relation: r.relation,
+              },
+              { onConflict: "parent_profile_id,child_profile_id" },
+            );
+          if (linkError && linkError.code !== "23505") {
+            result.errors.push({
+              rowNumber: r.rowNumber,
+              message: `Vínculo familiar: ${linkError.message}`,
+              full_name: r.full_name,
             });
-          } catch {
-            // ignore duplicate links
           }
         }
       }

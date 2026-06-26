@@ -226,7 +226,10 @@ export function StaffList({ teamId, staff }: StaffListProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  function handleRemove(profileId: string, role: StaffValues["role"]) {
+  function handleRemove(profileId: string, role: StaffValues["role"], name: string) {
+    if (!window.confirm(`¿Quitar a ${name} del equipo?`)) {
+      return;
+    }
     const key = `${profileId}-${role}`;
     setPendingId(key);
     startTransition(async () => {
@@ -269,7 +272,7 @@ export function StaffList({ teamId, staff }: StaffListProps) {
               className="h-12 w-12 p-0 text-danger hover:bg-danger/10"
               aria-label={`Quitar ${s.full_name}`}
               disabled={pendingId === key}
-              onClick={() => handleRemove(s.profile_id, s.role)}
+              onClick={() => handleRemove(s.profile_id, s.role, s.full_name)}
             >
               {pendingId === key ? (
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />

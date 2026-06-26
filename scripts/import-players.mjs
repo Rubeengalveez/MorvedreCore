@@ -1,8 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
-import { z } from 'zod';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import xlsxPkg from 'xlsx';
+
+import { CATEGORY_LABELS, inferCategory } from '../lib/domain/categories.mjs';
+import {
+  makeRowSchema,
+  parseImportRow,
+} from '../lib/domain/import-schema.mjs';
 
 const { readFile, utils: xlsxUtils } = xlsxPkg;
 
@@ -43,111 +48,6 @@ if (!url || !serviceKey) {
 const admin = createClient(url, serviceKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-
-const CATEGORY_LABELS = {
-  benjamin: 'Benjamín',
-  alevin: 'Alevín',
-  infantil: 'Infantil',
-  cadete: 'Cadete',
-  juvenil: 'Juvenil',
-  absoluto: 'Absoluto',
-  escuela: 'Escuela',
-};
-
-const RELATION_VALUES = ['mother', 'father', 'legal_guardian', 'other'];
-
-function inferCategory(birthYear, currentYear) {
-  if (birthYear > currentYear) {
-    throw new Error(
-      `birthYear (${birthYear}) cannot be in the future (currentYear: ${currentYear})`,
-    );
-  }
-  if (birthYear < currentYear - 25) {
-    throw new Error(
-      `birthYear (${birthYear}) is too old for the roster (currentYear: ${currentYear})`,
-    );
-  }
-  const age = currentYear - birthYear;
-  if (age <= 11) return 'benjamin';
-  if (age <= 13) return 'alevin';
-  if (age <= 15) return 'infantil';
-  if (age <= 17) return 'cadete';
-  if (age <= 19) return 'juvenil';
-  return 'absoluto';
-}
-
-function emptyToUndefined(v) {
-  if (v === null || v === undefined) return undefined;
-  if (typeof v === 'string' && v.trim() === '') return undefined;
-  return v;
-}
-
-function makeRowSchema(currentYear) {
-  return z.object({
-    nombre_completo: z
-      .string({ invalid_type_error: 'nombre_completo debe ser texto' })
-      .trim()
-      .min(1, 'nombre_completo es obligatorio'),
-    ano_nacimiento: z.coerce
-      .number({ invalid_type_error: 'ano_nacimiento debe ser numérico' })
-      .int('ano_nacimiento debe ser un entero')
-      .gte(currentYear - 25, `ano_nacimiento debe ser >= ${currentYear - 25}`)
-      .lte(currentYear + 1, `ano_nacimiento debe ser <= ${currentYear + 1}`),
-    dorsal: z.preprocess(
-      emptyToUndefined,
-      z.coerce
-        .number({ invalid_type_error: 'dorsal debe ser numérico' })
-        .int('dorsal debe ser entero')
-        .min(0, 'dorsal debe ser >= 0')
-        .max(99, 'dorsal debe ser <= 99')
-        .optional(),
-    ),
-    email_tutor: z.preprocess(
-      emptyToUndefined,
-      z
-        .string({ invalid_type_error: 'email_tutor debe ser texto' })
-        .trim()
-        .email('email_tutor no es un email válido')
-        .optional(),
-    ),
-    nombre_tutor: z.preprocess(
-      emptyToUndefined,
-      z.string().trim().optional(),
-    ),
-    telefono_tutor: z.preprocess(
-      emptyToUndefined,
-      z.string().trim().optional(),
-    ),
-    relacion: z.enum(RELATION_VALUES).default('legal_guardian'),
-    nombre_equipo: z.preprocess(
-      emptyToUndefined,
-      z.string().trim().optional(),
-    ),
-  });
-}
-
-function normalizeRow(raw) {
-  const out = {};
-  for (const [key, value] of Object.entries(raw)) {
-    if (value === null || value === undefined) {
-      out[key] = undefined;
-    } else if (typeof value === 'string') {
-      const trimmed = value.trim();
-      out[key] = trimmed === '' ? undefined : trimmed;
-    } else {
-      out[key] = value;
-    }
-  }
-  return out;
-}
-
-function isRowEmpty(row) {
-  return Object.values(row).every((v) => v === undefined);
-}
-
-function isRowIncomplete(row) {
-  return row.nombre_completo === undefined || row.ano_nacimiento === undefined;
-}
 
 async function getCurrentSeason() {
   const { data, error } = await admin
@@ -246,22 +146,9 @@ async function linkParent({ parentId, childId, relation }) {
 }
 
 async function processRow(rawRow, rowNumber, ctx) {
-  const row = normalizeRow(rawRow);
-
-  if (isRowEmpty(row)) {
-    return { status: 'empty' };
-  }
-
-  if (isRowIncomplete(row)) {
-    return { status: 'incomplete' };
-  }
-
-  const parsed = ctx.rowSchema.safeParse(row);
-  if (!parsed.success) {
-    const issues = parsed.error.issues
-      .map((i) => `${i.path.join('.') || 'fila'}: ${i.message}`)
-      .join('; ');
-    return { status: 'error', reason: issues, name: row.nombre_completo };
+  const parsed = parseImportRow(rawRow, ctx.currentYear);
+  if (parsed.status !== 'ok') {
+    return parsed;
   }
 
   const data = parsed.data;

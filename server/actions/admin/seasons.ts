@@ -1,54 +1,18 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
+import {
+  createSeasonSchema,
+  idSchema,
+  updateSeasonSchema,
+} from "@/lib/domain/admin-schemas";
 
 import { requireAdmin } from "./_helpers";
 
 export type Season = Tables<"seasons", "Row">;
-
-const isoDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida. Usa el formato AAAA-MM-DD.");
-
-const createSeasonSchema = z
-  .object({
-    label: z
-      .string()
-      .trim()
-      .min(3, "La etiqueta debe tener al menos 3 caracteres.")
-      .max(50, "Máximo 50 caracteres."),
-    start_date: isoDate,
-    end_date: isoDate,
-  })
-  .refine((data) => data.start_date < data.end_date, {
-    message: "La fecha de fin debe ser posterior a la fecha de inicio.",
-    path: ["end_date"],
-  });
-
-const updateSeasonSchema = z
-  .object({
-    label: z
-      .string()
-      .trim()
-      .min(3, "La etiqueta debe tener al menos 3 caracteres.")
-      .max(50, "Máximo 50 caracteres.")
-      .optional(),
-    start_date: isoDate.optional(),
-    end_date: isoDate.optional(),
-  })
-  .refine(
-    (data) => data.start_date == null || data.end_date == null || data.start_date < data.end_date,
-    {
-      message: "La fecha de fin debe ser posterior a la fecha de inicio.",
-      path: ["end_date"],
-    },
-  );
-
-const idSchema = z.object({ id: z.string().uuid("Identificador inválido.") });
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
@@ -151,20 +115,13 @@ export async function setCurrentSeason(id: string): Promise<void> {
     throw new Error("La temporada no existe.");
   }
 
-  const { error: clearError } = await supabase
-    .from("seasons")
-    .update({ is_current: false })
-    .neq("id", parsedId.data.id)
-    .eq("is_current", true);
+  const { error: swapError } = await supabase.rpc("swap_current_season", {
+    target_id: parsedId.data.id,
+  });
 
-  throwIfError(clearError, "No pudimos actualizar las temporadas anteriores.");
-
-  const { error: setError } = await supabase
-    .from("seasons")
-    .update({ is_current: true })
-    .eq("id", parsedId.data.id);
-
-  throwIfError(setError, "No pudimos activar la temporada.");
+  if (swapError) {
+    throwIfError(swapError, "No pudimos activar la temporada.");
+  }
 
   revalidatePath("/admin/seasons");
   revalidatePath("/");
