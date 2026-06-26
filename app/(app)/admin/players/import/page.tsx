@@ -1,0 +1,25 @@
+import { ImportPlayersPanel } from "./_components/import-players-panel";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export const metadata = {
+  title: "Importar jugadores — Admin — Morvedre Core",
+};
+
+export default function ImportPlayersPage() {
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
+      <header className="flex flex-col gap-2">
+        <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+          Importar jugadores
+        </h1>
+        <p className="text-sm text-ink-600">
+          Carga una lista de jugadores desde un archivo Excel. Revisa la
+          previsualización antes de confirmar.
+        </p>
+      </header>
+      <ImportPlayersPanel />
+    </div>
+  );
+}

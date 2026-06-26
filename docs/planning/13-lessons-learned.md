@@ -82,3 +82,60 @@ cmdkey /delete:LegacyGeneric:target=git:https://github.com
 5. **Subagente de validación dedicado al final** que ejecute todas las pruebas y reporte issues
 6. **Renombrar cosas deprecated desde el principio** (middleware → proxy en Next 16)
 7. **Comprobar credenciales de git ANTES de empezar** a trabajar
+
+## 2026-06-26 — Fase 1
+
+### 1. Los subagentes no comparten estado de archivos
+
+**Lo que pasó**: lancé dos subagentes de Wave 1 (DB migrations y domain functions) en paralelo. El segundo (UI redesign) dependía de assets que el primero estaba creando. Cuando el segundo revisó, no encontró los archivos y se paró "esperando".
+
+**Lo correcto**: Wave 1 de Fase 1 lo arreglé lanzando primero DB+Domain (independientes), y luego Wave 2 con Admin UI (que lee los assets de Wave 1). Pero el rediseño de Fase 0 lo pifié.
+
+**Regla**: el prompt del subagente debe decir explícitamente "verifica que X existe antes de empezar, si no espera" o "asume que Y ya está hecho por otro subagente".
+
+### 2. La regla `canRosterPlayer` no es simétrica
+
+**Lo que pasó**: la spec del SRS decía "matriz de ascensos" con reglas N-1, N, N+1. Pero los tests del usuario (que él mencionó antes) implicaban que un Cadete puede jugar en Benjamín, lo que requiere N-3. La regla real del waterpolo español es asimétrica: un mayor puede bajar a categorías inferiores libremente, pero solo puede subir 1 categoría.
+
+**Lo correcto**: el subagente de tests lo detectó y preguntó. La regla final: el equipo puede estar como mucho 1 categoría por encima del jugador, sin límite hacia abajo. Documentado en `lib/domain/teams.ts`.
+
+**Regla**: cuando el SRS tiene una regla que parece no cuadrar con casos reales, el subagente debe marcarlo y proponer la regla correcta con justificación.
+
+### 3. El subagente que verifica "pre-existing errors" mentía a veces
+
+**Lo que pasó**: el subagente de Wave 3 dijo "3 pre-existing errors en untracked admin code". Al verificar yo mismo, el typecheck estaba limpio.
+
+**Lo correcto**: no confiar en los reportes de "errores pre-existentes" sin verificar. Hacer typecheck yo mismo al final de cada wave.
+
+### 4. La política `profiles_insert_admin` faltaba en la migración 0001
+
+**Lo que pasó**: la migración 0001 solo permite insert en `profiles` al `service_role`. Pero queríamos que el admin pudiera crear profiles directamente con su sesión autenticada (no vía service role client).
+
+**Lo correcto**: añadir migración 0008 con la policy `profiles_insert_admin`. Si no, el subagente habría tenido que usar el service role client en todas las acciones admin, lo cual es un anti-pattern.
+
+### 5. `xlsx` no tiene `exports` field
+
+**Lo que pasó**: `import { read, utils } from 'xlsx'` falla porque el paquete xlsx no define `exports` en su package.json. Solo `main` (CJS). El import con nombre falla.
+
+**Lo correcto**: usar `import xlsx from 'xlsx'` (default import) y luego `xlsx.read(...)`, `xlsx.utils.sheet_to_json(...)`. Documentado en el script.
+
+### 6. La query `getActiveProfileContext` no estaba clara
+
+**Lo que pasó**: tenía que resolver el perfil activo (el usuario + sus hijos + el hijo seleccionado por cookie). El subagente lo hizo bien pero el patrón se repitió en varios sitios.
+
+**Lo correcto**: extraer un helper `getActiveProfileContext()` en `server/queries/active-profile.ts` que devuelve `{ ownProfile, activeProfile, linkedProfiles }`. Usar en todos los sitios que necesiten el contexto.
+
+### 7. El dashboard inicial no manejaba bien perfiles "huérfanos"
+
+**Lo que pasó**: si un padre no tiene `parent_child_links` configurados, el dashboard fallaba al intentar cargar el "active child".
+
+**Lo correcto**: manejar los null con `??` o condicionales. Si no hay hijos, mostrar un empty state "Configura los vínculos familiares desde el panel admin".
+
+## Patrones específicos de Fase 1 a recordar
+
+1. **Seed mínimo útil**: 3 temporadas (pasada, presente, futura) con `is_current` en la futura. El admin no debería tener que crear la temporada actual manualmente.
+2. **Categoría calculada, no almacenada**: usar `inferCategory(birth_year, current_year)` en cada render. No en DB.
+3. **Color del equipo propagado**: cuando se crea un equipo, copiar su `color` al `team_color` del profile al asignar. La UI lo puede hacer vía trigger o app code.
+4. **Import idempotente**: el script de import debe poderse correr múltiples veces sin duplicar. Usar `full_name + birth_year` como natural key.
+5. **Roster validation centralizada**: `canRosterPlayer` se usa en el server action `rosterPlayer` para validar antes de insertar. No en el cliente.
+

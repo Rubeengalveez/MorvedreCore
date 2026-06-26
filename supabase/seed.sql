@@ -1,20 +1,8 @@
--- Seed: datos iniciales para el primer arranque.
--- El admin se crea desde scripts/bootstrap-admin.mjs usando la service role key.
--- Las tablas de referencia (categories_config, treasury_concepts, seasons) llegan
--- en migraciones posteriores, no se siembran aquí.
+-- Seed inicial minimo.
+-- El primer admin (galvillo9@gmail.com) se crea con `pnpm bootstrap`.
+-- Sembramos 3 temporadas para que el admin tenga contexto historico y actual.
 
--- Próximas tablas a crear en migraciones siguientes:
---   - categories_config (mapeo birth_year_offset → category_code)
---   - treasury_concepts (kind, periodicity, default_amount_cents)
---   - seasons (con índice parcial único sobre is_current)
---   - teams, team_staff, team_rosters
---   - training_blocks, training_sessions, training_attendance
---   - matches, match_availability, match_callups, match_stats
---   - news_posts, news_reactions
---   - shop_products, shop_orders, shop_order_items
---   - treasury_period_closures, treasury_lines
---   - travel_offers, travel_reservations
---   - historical_player_stats, historical_team_matchups, audit_log
-
--- El admin (galvillo9@gmail.com) se crea al ejecutar `pnpm bootstrap`.
--- No insertamos nada aquí para no duplicar el auth_user_id.
+insert into public.seasons (label, start_date, end_date, is_current, archived_at) values
+  ('2024/2025', '2024-09-01', '2025-07-31', false, '2025-08-15T00:00:00Z'::timestamptz),
+  ('2025/2026', '2025-09-01', '2026-07-31', false, '2026-06-30T00:00:00Z'::timestamptz),
+  ('2026/2027', '2026-09-01', '2027-07-31', true, null);
