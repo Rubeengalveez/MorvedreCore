@@ -366,7 +366,7 @@ function RsvpControls({
     <div className="flex flex-col gap-1">
       <div className="flex flex-wrap gap-2">
         <Button
-          size="sm"
+          size="md"
           variant="primary"
           disabled={pending || currentStatus === "confirmed"}
           onClick={() => send("confirmed")}
@@ -375,7 +375,7 @@ function RsvpControls({
           Confirmo
         </Button>
         <Button
-          size="sm"
+          size="md"
           variant="danger"
           disabled={pending || currentStatus === "declined"}
           onClick={() => send("declined")}
@@ -383,7 +383,7 @@ function RsvpControls({
           No puedo
         </Button>
         <Button
-          size="sm"
+          size="md"
           variant="secondary"
           disabled={pending}
           onClick={() => send("withdrawn")}

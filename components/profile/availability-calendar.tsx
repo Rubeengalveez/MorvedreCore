@@ -154,7 +154,6 @@ export function AvailabilityCalendar({
       </div>
 
       <div
-        role="grid"
         aria-label="Calendario de disponibilidad"
         className="grid grid-cols-7 gap-1"
       >
@@ -171,7 +170,6 @@ export function AvailabilityCalendar({
             <button
               key={cell.iso}
               type="button"
-              role="gridcell"
               onClick={() => toggleDay(cell.iso)}
               disabled={isDisabled}
               aria-pressed={isUnavailable}

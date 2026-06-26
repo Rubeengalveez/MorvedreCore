@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import * as React from "react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
@@ -141,18 +142,21 @@ function Toggle({
   label: string;
   description?: string;
 }) {
+  const id = React.useId();
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="flex flex-col gap-0.5">
+      <label htmlFor={id} className="flex cursor-pointer flex-col gap-0.5">
         <span className="text-sm font-semibold text-ink-900">{label}</span>
         {description ? (
           <span className="text-xs text-ink-600">{description}</span>
         ) : null}
-      </div>
+      </label>
       <button
+        id={id}
         type="button"
         role="switch"
         aria-checked={value}
+        aria-label={label}
         onClick={() => onChange(!value)}
         className={
           "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper " +

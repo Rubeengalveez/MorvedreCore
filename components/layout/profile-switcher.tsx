@@ -31,7 +31,7 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 
 function setActiveCookie(id: string) {
   if (typeof document === "undefined") return;
-  document.cookie = `${ACTIVE_COOKIE}=${id}; Path=/; Max-Age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
+  document.cookie = `${ACTIVE_COOKIE}=${id}; Path=/; Max-Age=${ONE_YEAR_SECONDS}; SameSite=Lax; Secure`;
 }
 
 function categoryLabel(birthYear: number | null | undefined): string | null {
@@ -170,6 +170,7 @@ function SwitchRow({
       type="button"
       onClick={() => onSelect(profile.id)}
       disabled={disabled}
+      aria-label={`${title}${subtitle ? `, ${subtitle}` : ""}${isActive ? ", activo" : ""}`}
       className={cn(
         "flex items-center gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-brand-foam disabled:opacity-50",
         isActive ? "bg-brand-foam" : "",
@@ -185,7 +186,7 @@ function SwitchRow({
       {isActive ? (
         <Check
           className="h-5 w-5 text-brand-blue"
-          aria-label="Perfil activo"
+          aria-hidden="true"
         />
       ) : null}
     </button>

@@ -15,9 +15,17 @@ const emailSchema = z.object({
   email: z.string().email("Introduce un email válido."),
 });
 
+const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{10,}$/;
+
 const updatePasswordSchema = z
   .object({
-    newPassword: z.string().min(10, "Mínimo 10 caracteres."),
+    newPassword: z
+      .string()
+      .min(10, "Mínimo 10 caracteres.")
+      .regex(
+        PASSWORD_REGEX,
+        "La contraseña debe tener al menos una letra y un número.",
+      ),
     confirmPassword: z.string().min(1, "Confirma la contraseña."),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {

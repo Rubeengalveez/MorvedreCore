@@ -122,7 +122,6 @@ export function MonthView({
         ))}
       </div>
       <div
-        role="grid"
         aria-label={`Mes de ${monthLabel({ year, month } as YearMonth)}`}
         className="grid grid-cols-7 gap-1"
       >
@@ -143,7 +142,6 @@ export function MonthView({
             <button
               key={cell.iso}
               type="button"
-              role="gridcell"
               onClick={() => onDayClick(cell.iso)}
               aria-label={cell.iso}
               aria-pressed={isSelected}
