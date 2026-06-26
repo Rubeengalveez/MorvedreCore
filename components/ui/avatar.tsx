@@ -7,6 +7,7 @@ export interface AvatarProps {
   name: string;
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
 }
 
 function getInitials(name: string): string {
@@ -18,7 +19,7 @@ function getInitials(name: string): string {
     .join("");
 }
 
-export function Avatar({ src, name, size = 40, className }: AvatarProps) {
+export function Avatar({ src, name, size = 40, className, style }: AvatarProps) {
   const initials = getInitials(name) || "?";
   const fontSize = Math.max(11, Math.round(size * 0.4));
 

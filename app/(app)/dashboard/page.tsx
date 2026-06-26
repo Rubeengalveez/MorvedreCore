@@ -1,326 +1,296 @@
-import type { Route } from "next";
 import { redirect } from "next/navigation";
+import Link from "next/link";
+import type { Route } from "next";
+import { UserPlus, Calendar, Users, FileUp, Volleyball, Trophy, Activity, Settings } from "lucide-react";
 
-import {
-  Balon,
-  Gorro,
-  Ola,
-  SilbatoActivo,
-  Usuario,
-} from "@/components/brand/pictograms";
-import { ActionCard } from "@/components/ui/action-card";
-import { PictogramTile } from "@/components/ui/pictogram-tile";
-import { WaterDivider } from "@/components/ui/water-divider";
-import { formatLongDate, formatTimeOfDay } from "@/lib/domain/calendar";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { getNextEventForProfile } from "@/server/queries/calendar";
-import { getCurrentSeason } from "@/server/queries/seasons";
+import { getCalendarData } from "@/server/queries/calendar";
+import { getDashboardData, type DashboardWeekEvent } from "@/server/queries/dashboard";
+import { getTeamsForProfileInSeason } from "@/server/queries/teams";
+import { inferCategory, type CategoryCode } from "@/lib/domain/categories";
+
+type AppRole = "admin" | "coach" | "delegate" | "directiva" | "parent" | "player";
+
+async function userHasRole(supabase: Awaited<ReturnType<typeof createClient>>, profileId: string, role: AppRole): Promise<boolean> {
+  const { data } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("profile_id", profileId)
+    .eq("role", role)
+    .is("scope_team_id", null)
+    .maybeSingle();
+  return data != null;
+}
+
+const isUserAdmin = (supabase: Awaited<ReturnType<typeof createClient>>, profileId: string) => userHasRole(supabase, profileId, "admin");
+
 import {
-  getTeamsForProfileInSeason,
-  isProfilePlayerInSeason,
-  isProfileStaffInSeason,
-} from "@/server/queries/teams";
+  ActivityItem,
+  DashboardHero,
+  NextEventCard,
+  TeamCard,
+  WeekEventCard,
+} from "@/components/dashboard/dashboard-blocks";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
   title: "Inicio — Morvedre Core",
-  description: "Tu partido, tu equipo, tu actividad.",
+  description: "Tu resumen del día en el Waterpolo Morvedre.",
 };
 
-interface NextEventView {
-  kind: "training" | "match";
-  id: string;
-  scheduled_at: string;
-  cancelled: boolean;
-  team_label: string;
-  team_color: string;
-  opponent: string | null;
-  location: string | null;
-  pool_name: string | null;
-  href: string;
-  cancellation_reason: string | null;
-}
-
-function extractJoined<T>(value: T | T[] | null | undefined): T | null {
-  if (value == null) return null;
-  if (Array.isArray(value)) return value[0] ?? null;
-  return value;
-}
-
-async function loadNextEvent(
-  profileId: string,
-  teamIds: string[],
-): Promise<NextEventView | null> {
-  if (teamIds.length === 0) return null;
-  const next = await getNextEventForProfile({
-    teamIds,
-    profileId,
-  });
-  if (!next) return null;
-
-  const supabase = await createClient();
-  if (next.kind === "training") {
-    const { data } = await supabase
-      .from("training_sessions")
-      .select(
-        "id, scheduled_at, cancelled, cancellation_reason, location, teams!training_sessions_team_id_fkey(label, color)",
-      )
-      .eq("id", next.id)
-      .maybeSingle();
-    if (!data) return null;
-    const team = extractJoined(
-      (data as { teams: unknown }).teams,
-    ) as { label?: string; color?: string } | null;
-    return {
-      kind: "training",
-      id: (data as { id: string }).id,
-      scheduled_at: (data as { scheduled_at: string }).scheduled_at,
-      cancelled: (data as { cancelled: boolean }).cancelled,
-      cancellation_reason: (data as { cancellation_reason: string | null }).cancellation_reason,
-      team_label: team?.label ?? "tu equipo",
-      team_color: team?.color ?? "var(--brand-blue)",
-      opponent: null,
-      location: (data as { location: string | null }).location,
-      pool_name: null,
-      href: "/calendar",
-    };
-  }
-
-  const { data } = await supabase
-    .from("matches")
-    .select(
-      "id, scheduled_at, status, opponent, location, pool_name, teams!matches_team_id_fkey(label, color)",
-    )
-    .eq("id", next.id)
-    .maybeSingle();
-  if (!data) return null;
-  const team = extractJoined(
-    (data as { teams: unknown }).teams,
-  ) as { label?: string; color?: string } | null;
-  const status = (data as { status: string }).status;
-  return {
-    kind: "match",
-    id: (data as { id: string }).id,
-    scheduled_at: (data as { scheduled_at: string }).scheduled_at,
-    cancelled: status === "cancelled",
-    cancellation_reason: null,
-    team_label: team?.label ?? "tu equipo",
-    team_color: team?.color ?? "var(--brand-action)",
-    opponent: (data as { opponent: string }).opponent,
-    location: (data as { location: string | null }).location,
-    pool_name: (data as { pool_name: string | null }).pool_name,
-    href: `/matches/${(data as { id: string }).id}` as Route,
-  };
-}
-
 export default async function DashboardPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
+  const { activeProfile, ownProfile } = ctx;
 
-  const { activeProfile } = ctx;
-  const firstName = activeProfile.full_name.split(" ")[0] ?? activeProfile.full_name;
+  const isAdmin = ownProfile ? await isUserAdmin(supabase, ownProfile.id) : false;
+  // isCoach/isPlayer reserved for future use (only isAdmin drives the shortcuts today)
 
-  const season = await getCurrentSeason();
-  const inSeason = season != null;
-  const [isPlayer, isCoach] = inSeason
-    ? await Promise.all([
-        isProfilePlayerInSeason(activeProfile.id, season!.id),
-        isProfileStaffInSeason(activeProfile.id, season!.id),
-      ])
-    : [false, false];
+  const { data: seasonRow } = await supabase
+    .from("seasons")
+    .select("id, label, is_current")
+    .eq("is_current", true)
+    .maybeSingle();
 
-  const showPlayerStats = isPlayer;
-  const showCoachView = !isPlayer && isCoach;
+  const seasonId = seasonRow?.id ?? null;
 
-  const teams = inSeason
-    ? await getTeamsForProfileInSeason(activeProfile.id, season!.id)
+  const calendarTeams = seasonId
+    ? await getTeamsForProfileInSeason(activeProfile.id, seasonId)
     : [];
-  const teamIds = teams.map((t) => t.id);
-  const nextEvent = await loadNextEvent(activeProfile.id, teamIds);
+
+  const teamIds = calendarTeams.map((t) => t.id);
+  const hasTeam = teamIds.length > 0;
+
+  const now = new Date();
+  const todayIso = now.toISOString().slice(0, 10);
+  const monthAhead = new Date(now);
+  monthAhead.setDate(monthAhead.getDate() + 30);
+  const startIso = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0).toISOString();
+  const endIso = monthAhead.toISOString();
+
+  const [eventsByDay, dashboardData, { data: unread }] = await Promise.all([
+    teamIds.length > 0
+      ? getCalendarData({ teamIds, startIso, endIso, profileId: activeProfile.id })
+      : Promise.resolve(new Map()),
+    teamIds.length > 0
+      ? getDashboardData({ teamIds, profileId: activeProfile.id, now })
+      : Promise.resolve({ weekEvents: [], teamInfo: null, recentActivity: [] }),
+    supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("recipient_id", activeProfile.id)
+      .is("read_at", null),
+  ]);
+
+  const availabilityByDay = new Map<string, boolean>();
+  const nextEvent: DashboardWeekEvent | null =
+    dashboardData.weekEvents.find((e) => !e.cancelled) ?? null;
+
+  const birthYear: number | null = ownProfile?.birth_year ?? null;
+  let categoryLabel: string | null = null;
+  if (birthYear != null) {
+    try {
+      categoryLabel = inferCategory(birthYear, now.getFullYear());
+    } catch {
+      categoryLabel = null;
+    }
+  }
+
+  const teamColor = dashboardData.teamInfo?.color ?? null;
 
   return (
-    <div className="flex w-full flex-col">
-      <div className="mx-auto w-full max-w-2xl px-4 pb-3 pt-4">
-        <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
-          Hola, {firstName}
-        </h1>
-        {showCoachView ? (
-          <p className="mt-1 text-sm leading-relaxed text-ink-600">
-            Tienes a tu cargo los equipos que verás en &ldquo;Tu equipo&rdquo;.
-            Pasa por allí para ver la plantilla y el cuerpo técnico.
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
+      <DashboardHero
+        profile={{
+          full_name: activeProfile.full_name,
+          team_color: teamColor,
+        }}
+        now={now}
+        unreadNotifications={unread?.length ?? 0}
+        isAdmin={isAdmin}
+        hasTeam={hasTeam}
+      />
+
+      <section aria-labelledby="next-event-heading">
+        <h2
+          id="next-event-heading"
+          className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
+        >
+          Tu próximo evento
+        </h2>
+        <NextEventCard event={nextEvent} now={now} />
+      </section>
+
+      {hasTeam && dashboardData.teamInfo ? (
+        <section aria-labelledby="your-team-heading">
+          <div className="mb-2 flex items-center justify-between">
+            <h2
+              id="your-team-heading"
+              className="text-[10px] font-bold uppercase tracking-wider text-ink-600"
+            >
+              Tu equipo
+            </h2>
+            <Link
+              href={"/calendar" as Route}
+              className="text-xs font-bold text-brand-blue hover:underline"
+            >
+              Ver calendario completo
+            </Link>
+          </div>
+          <TeamCard team={dashboardData.teamInfo} />
+        </section>
+      ) : !hasTeam ? (
+        <section
+          aria-labelledby="no-team-heading"
+          className="rounded-lg border-2 border-dashed border-ink-300 bg-paper p-6 text-center"
+        >
+          <Users className="mx-auto h-10 w-10 text-ink-300" />
+          <h2
+            id="no-team-heading"
+            className="mt-3 font-display text-lg font-extrabold text-brand-deep"
+          >
+            Aún no formas parte de un equipo
+          </h2>
+          <p className="mt-1 text-sm text-ink-600">
+            Cuando el admin te asigne a un equipo esta temporada, tus entrenos y
+            partidos aparecerán aquí.
           </p>
-        ) : null}
-      </div>
+        </section>
+      ) : null}
 
-      <WaterDivider fill="var(--brand-foam)" height={24} />
+      {dashboardData.weekEvents.length > 1 ? (
+        <section aria-labelledby="this-week-heading">
+          <h2
+            id="this-week-heading"
+            className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
+          >
+            Esta semana
+          </h2>
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+            {dashboardData.weekEvents.slice(0, 10).map((e) => (
+              <WeekEventCard key={e.id} event={e} now={now} />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
-      <div className="mx-auto w-full max-w-2xl px-4 py-4">
-        {nextEvent ? (
-          <ActionCard
-            accentColor={
-              nextEvent.cancelled ? "var(--danger)" : nextEvent.team_color
-            }
-            pictogram={
-              <Ola
-                className="h-[50px] w-[50px]"
-                accent={
-                  nextEvent.cancelled
-                    ? "var(--danger)"
-                    : "var(--brand-action)"
-                }
-              />
-            }
-            title={
-              nextEvent.cancelled
-                ? "Evento cancelado"
-                : nextEventTitle(nextEvent)
-            }
-            subtitle={nextEventSubtitle(nextEvent)}
-            meta={
-              nextEvent.cancelled && nextEvent.cancellation_reason
-                ? `Motivo: ${nextEvent.cancellation_reason}`
-                : nextEventLocation(nextEvent)
-            }
-            cta={{
-              label:
-                nextEvent.kind === "match" ? "Ver partido" : "Ir al calendario",
-              href: nextEvent.href,
-            }}
-          />
+      {dashboardData.recentActivity.length > 0 ? (
+        <section aria-labelledby="activity-heading">
+          <h2
+            id="activity-heading"
+            className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
+          >
+            Actividad reciente
+          </h2>
+          <div className="flex flex-col gap-3 rounded-lg border border-ink-300 bg-paper p-4">
+            {dashboardData.recentActivity.slice(0, 6).map((a) => (
+              <ActivityItem key={a.id} activity={a} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {isAdmin ? (
+        <section aria-labelledby="admin-shortcuts-heading">
+          <h2
+            id="admin-shortcuts-heading"
+            className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
+          >
+            Atajos de admin
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            <AdminLink
+              href="/admin/seasons"
+              icon={<Calendar className="h-4 w-4" />}
+              label="Temporadas"
+            />
+            <AdminLink
+              href="/admin/teams"
+              icon={<Users className="h-4 w-4" />}
+              label="Equipos"
+            />
+            <AdminLink
+              href="/admin/players"
+              icon={<UserPlus className="h-4 w-4" />}
+              label="Jugadores"
+            />
+            <AdminLink
+              href="/admin/matches"
+              icon={<Trophy className="h-4 w-4" />}
+              label="Partidos"
+            />
+            <AdminLink
+              href="/admin/trainings"
+              icon={<Volleyball className="h-4 w-4" />}
+              label="Entrenamientos"
+            />
+            <AdminLink
+              href="/admin/players/import"
+              icon={<FileUp className="h-4 w-4" />}
+              label="Importar"
+            />
+          </div>
+        </section>
+      ) : null}
+
+      <section
+        aria-label="Enlaces rápidos"
+        className="grid grid-cols-2 gap-2 border-t border-ink-300 pt-3"
+      >
+        <Link
+          href={"/profile" as Route}
+          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper text-xs font-bold text-ink-900 transition-colors hover:bg-brand-foam"
+        >
+          <Settings className="h-3.5 w-3.5" />
+          Mi perfil
+        </Link>
+        {hasTeam ? (
+          <Link
+            href={"/calendar" as Route}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper text-xs font-bold text-ink-900 transition-colors hover:bg-brand-foam"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            Calendario
+          </Link>
         ) : (
-          <ActionCard
-            accentColor={
-              showCoachView ? "var(--brand-aqua)" : "var(--brand-blue)"
-            }
-            pictogram={
-              <Ola
-                className="h-[50px] w-[50px]"
-                accent="var(--brand-action)"
-              />
-            }
-            title={
-              showCoachView
-                ? "Tu próximo partido con el equipo"
-                : "Tu primer partido está al caer"
-            }
-            subtitle={
-              showCoachView
-                ? "Cuando convoques a tus jugadores, aparecerá aquí."
-                : "Vitaliy está preparando la convocatoria."
-            }
-            meta="Las convocatorias se activan en la siguiente fase."
-            cta={{ label: "Ir al calendario", href: "/calendar" as Route }}
-          />
+          <Link
+            href={"/team" as Route}
+            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper text-xs font-bold text-ink-900 transition-colors hover:bg-brand-foam"
+          >
+            <Users className="h-3.5 w-3.5" />
+            Mi equipo
+          </Link>
         )}
-      </div>
-
-      <WaterDivider fill="var(--brand-foam)" height={24} variant="footer" />
-
-      <div className="mx-auto w-full max-w-2xl px-4 py-4">
-        <div className="grid grid-cols-3 divide-x divide-ink-300 overflow-hidden rounded-md border border-ink-300 bg-paper">
-          <Stat
-            pictogram={
-              <Balon className="h-6 w-6" accent="var(--brand-ball)" />
-            }
-            value={showPlayerStats ? "0" : "—"}
-            label="Goles esta temporada"
-          />
-          <Stat
-            pictogram={
-              <Gorro className="h-6 w-6" accent="var(--brand-blue)" />
-            }
-            value="—"
-            label="% Asistencia"
-          />
-          <Stat
-            pictogram={<Usuario className="h-6 w-6" />}
-            value={
-              showPlayerStats && activeProfile.cap_number != null
-                ? `#${activeProfile.cap_number}`
-                : "—"
-            }
-            label="Tu dorsal"
-          />
-        </div>
-      </div>
-
-      <WaterDivider fill="var(--brand-foam)" height={24} />
-
-      <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <PictogramTile
-            icon={
-              <SilbatoActivo
-                className="h-9 w-9"
-                accent="var(--brand-aqua)"
-              />
-            }
-            title={showCoachView ? "Tus equipos" : "Tu equipo"}
-            description={
-              showCoachView
-                ? "Plantilla, cuerpo técnico y convocatorias"
-                : "Plantilla, cuerpo técnico y próximos partidos"
-            }
-            href="/team"
-          />
-          <PictogramTile
-            icon={
-              <Ola className="h-9 w-9" accent="var(--brand-aqua)" />
-            }
-            title="Tu actividad"
-            description="Tus próximos eventos y resultados"
-            href="/calendar"
-          />
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
 
-function nextEventTitle(e: NextEventView): string {
-  if (e.kind === "match") {
-    return e.opponent
-      ? `Tu próximo partido: vs ${e.opponent}`
-      : "Tu próximo partido";
-  }
-  return `Tu próximo entreno con ${e.team_label}`;
-}
-
-function nextEventSubtitle(e: NextEventView): string {
-  if (e.cancelled) return "Tu entrenador lo ha cancelado.";
-  const day = formatLongDate(e.scheduled_at);
-  const time = formatTimeOfDay(e.scheduled_at);
-  return `${day} · ${time}`;
-}
-
-function nextEventLocation(e: NextEventView): string {
-  if (e.cancelled) return "Confirma con tu entrenador si hay alternativa.";
-  if (e.kind === "match") {
-    if (e.pool_name && e.location) return `${e.location} · ${e.pool_name}`;
-    return e.pool_name ?? e.location ?? "";
-  }
-  return e.location ?? "";
-}
-
-function Stat({
-  pictogram,
-  value,
+function AdminLink({
+  href,
+  icon,
   label,
 }: {
-  pictogram: React.ReactNode;
-  value: string;
+  href: string;
+  icon: React.ReactNode;
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 px-2 py-4 text-center">
-      <div className="shrink-0">{pictogram}</div>
-      <span className="font-mono text-[28px] font-bold leading-none text-brand-deep">
-        {value}
-      </span>
-      <span className="text-xs font-medium text-ink-600">{label}</span>
-    </div>
+    <Link
+      href={href as Route}
+      className="inline-flex h-10 items-center gap-2 rounded-md border border-ink-300 bg-paper px-3 text-xs font-bold text-ink-900 transition-colors hover:border-brand-blue hover:bg-brand-foam"
+    >
+      {icon}
+      {label}
+    </Link>
   );
 }
