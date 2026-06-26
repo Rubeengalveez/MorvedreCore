@@ -209,7 +209,7 @@ export function WeekView({
                       : `${d.iso} ${hourLabel(h)}`
                   }
                   className={cn(
-                    "relative min-h-10 border-t border-l border-ink-300/50 bg-paper p-1 text-left transition-colors hover:bg-brand-foam/50",
+                    "relative min-h-11 border-t border-l border-ink-300/50 bg-paper p-1 text-left transition-colors hover:bg-brand-foam/50",
                     selectedIso === d.iso ? "bg-brand-foam" : "",
                   )}
                 >

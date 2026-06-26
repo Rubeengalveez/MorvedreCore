@@ -21,7 +21,7 @@ export function AppShell({
         activeProfile={activeProfile}
         linkedProfiles={linkedProfiles}
       />
-      <main className="flex-1 pb-16">{children}</main>
+      <main id="main-content" className="flex-1 pb-16">{children}</main>
       <BottomNav />
     </div>
   );

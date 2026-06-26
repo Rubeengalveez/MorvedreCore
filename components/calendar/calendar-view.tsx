@@ -158,7 +158,7 @@ export function CalendarView({
               aria-selected={viewMode === "month"}
               onClick={() => setViewMode("month")}
               className={cn(
-                "inline-flex h-8 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
+                "inline-flex h-11 min-h-11 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
                 viewMode === "month"
                   ? "bg-brand-blue text-paper"
                   : "text-ink-600 hover:text-ink-900",
@@ -173,7 +173,7 @@ export function CalendarView({
               aria-selected={viewMode === "week"}
               onClick={() => setViewMode("week")}
               className={cn(
-                "inline-flex h-8 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
+                "inline-flex h-11 min-h-11 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
                 viewMode === "week"
                   ? "bg-brand-blue text-paper"
                   : "text-ink-600 hover:text-ink-900",

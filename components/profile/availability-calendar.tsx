@@ -180,7 +180,7 @@ export function AvailabilityCalendar({
               className={cn(
                 "relative flex h-12 min-h-12 flex-col items-center justify-center gap-1 rounded-md border text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:h-14",
                 isDisabled
-                  ? "cursor-not-allowed border-transparent bg-transparent text-ink-300"
+                  ? "cursor-not-allowed border-transparent bg-transparent text-ink-600 opacity-60"
                   : isUnavailable
                     ? "border-danger bg-danger/10 font-bold text-danger hover:bg-danger/20"
                     : "border-ink-300 bg-paper text-ink-900 hover:bg-brand-foam hover:border-brand-blue",
