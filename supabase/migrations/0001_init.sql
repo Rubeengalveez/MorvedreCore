@@ -40,7 +40,7 @@ create table public.user_roles (
   scope_team_id uuid,
   granted_by uuid references public.profiles(id),
   granted_at timestamptz not null default now(),
-  primary key (profile_id, role, scope_team_id)
+  unique (profile_id, role, scope_team_id)
 );
 
 create index user_roles_profile_id_idx on public.user_roles (profile_id);
