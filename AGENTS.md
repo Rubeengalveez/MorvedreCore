@@ -35,9 +35,31 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 0 — Cimientos. Sin ejecutar todavía.** El usuario aprobó la planificación y la base sólida, pendiente de dar luz verde para empezar a ejecutar.
+**Fase 0 — Cimientos. COMPLETADA y commiteada en `main`.** Ver `docs/planning/12-phase-0-summary.md` para el detalle.
 
-Hechos confirmados:
+Pendiente para arrancar el dev real:
+- Crear proyecto en Supabase Cloud
+- Rellenar `.env.local` con las credenciales reales
+- `pnpm db:push` para aplicar la migración al proyecto
+- `pnpm bootstrap` para crear el primer admin (`galvillo9@gmail.com`)
+
+Próxima fase: **Fase 1 — Estructura deportiva** (temporadas, equipos, jugadores, roles).
+
+### Lo que ya está implementado (Fase 0)
+
+- Scaffold Next.js 16 + TS strict + Tailwind v4
+- Diseño system con tokens del club
+- Componentes UI base (Button, Input, Card, Form, Alert, Sheet, Label)
+- App shell: topbar + bottom nav + profile switcher
+- Auth: login, reset password, cambio obligatorio de primer login
+- Página de perfil editable
+- Migración inicial con 4 tablas + 16 RLS policies
+- Bootstrap script para el primer admin
+- PWA: manifest, service worker, iconos
+- CI: lint, typecheck, build, test
+
+### Decisiones cerradas (ver `docs/planning/00-decisions-log.md`)
+
 - Logo del club copiado a `public/brand/logo-original.png` (2.2MB, optimizar).
 - Paleta: azul profundo `#0A2E5C` + naranja `#FF6B35` + amarillo balón `#F4C430`.
 - Nombre visible de la app: "Morvedre Core".
@@ -47,7 +69,7 @@ Hechos confirmados:
 - Rankings públicos para todo el club.
 - Notificaciones configurables por usuario (todo por defecto).
 - Tono: cercano y directo, segunda persona ("Tienes un partido mañana").
-- Bootstrap del primer admin: script SQL con `galvillo9@gmail.com`.
+- Bootstrap del primer admin: script Node con `galvillo9@gmail.com`.
 - Sin seed de equipos: el admin los crea desde la UI.
 - Modelo de género: `teams.gender` configurado, pero la matriz de ascensos no filtra por género.
 - `team_type` enum: `competitive | school` (para la Escuela).
@@ -66,15 +88,12 @@ Hechos confirmados:
 
 ## Próximo paso acordado
 
-Ejecutar el **scaffold del proyecto** según `02-tech-stack.md` § 7:
+**Fase 1 — Estructura deportiva**: temporadas, equipos, jugadores, roles.
 
-1. `pnpm create next-app@latest` con TypeScript + App Router + Tailwind + ESLint
-2. Instalar dependencias (Supabase, shadcn, RHF, Zod, TanStack, Serwist, etc.)
-3. Configurar `lib/supabase/*` y `middleware.ts`
-4. Configurar PWA base
-5. Generar tokens de diseño y layouts
-6. Instalar shadcn/ui y crear la primera pantalla (login)
-7. Configurar `.env.example` y bootstrap del primer admin
+## Documentos nuevos en Fase 0
+
+- `docs/planning/12-phase-0-summary.md` — qué se hizo
+- `docs/planning/13-lessons-learned.md` — errores a no repetir
 
 ## Si dudas
 
@@ -84,3 +103,5 @@ Ejecutar el **scaffold del proyecto** según `02-tech-stack.md` § 7:
 - **Sobre decisiones tomadas**: `00-decisions-log.md`.
 - **Sobre preguntas pendientes no bloqueantes**: `09-remaining-questions.md`.
 - **Sobre estilo visual**: `06-visual-identity.md` y el logo en `public/brand/`.
+- **Sobre la estructura de la Fase 0**: `12-phase-0-summary.md`.
+- **Sobre errores a evitar**: `13-lessons-learned.md`.
