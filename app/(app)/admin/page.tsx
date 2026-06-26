@@ -111,12 +111,12 @@ export default async function AdminHomePage() {
   const counts = await loadCounts();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+      <header className="flex flex-col gap-1">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
           Panel de administración
         </h1>
-        <p className="text-base leading-relaxed text-ink-600">
+        <p className="text-sm leading-relaxed text-ink-600">
           Gestiona la estructura deportiva del club. Empieza creando la temporada
           actual si aún no la tienes.
         </p>
@@ -124,15 +124,15 @@ export default async function AdminHomePage() {
 
       <section
         aria-labelledby="admin-stats-heading"
-        className="rounded-md border border-ink-300 bg-paper p-5"
+        className="rounded-md border border-ink-300 bg-paper p-4"
       >
         <h2
           id="admin-stats-heading"
-          className="font-display text-lg font-bold text-brand-deep"
+          className="font-display text-base font-bold text-brand-deep"
         >
           Resumen
         </h2>
-        <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <dl className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <Stat
             label="Temporada actual"
             value={counts.currentSeasonLabel ?? "—"}
@@ -148,14 +148,14 @@ export default async function AdminHomePage() {
           <Stat label="Personal" value={String(counts.staff)} />
         </dl>
         {counts.byCategory.length > 0 ? (
-          <div className="mt-5 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             {counts.byCategory.map((c) => (
               <span
                 key={c.code}
-                className="inline-flex h-7 items-center gap-1.5 rounded-full border border-ink-300 bg-paper px-3 text-xs font-semibold text-ink-900"
+                className="inline-flex h-6 items-center gap-1.5 rounded-full border border-ink-300 bg-paper px-2.5 text-[11px] font-semibold text-ink-900"
               >
                 {CATEGORY_LABELS[c.code]}
-                <span className="font-mono text-[11px] text-ink-600">{c.count}</span>
+                <span className="font-mono text-[10px] text-ink-600">{c.count}</span>
               </span>
             ))}
           </div>
@@ -164,34 +164,34 @@ export default async function AdminHomePage() {
 
       <section
         aria-labelledby="admin-shortcuts-heading"
-        className="flex flex-col gap-3"
+        className="flex flex-col gap-2"
       >
         <h2
           id="admin-shortcuts-heading"
-          className="font-display text-lg font-bold text-brand-deep"
+          className="font-display text-base font-bold text-brand-deep"
         >
           Accesos rápidos
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {SHORTCUTS.map(({ href, title, description, Icon }) => (
             <Link
               key={href}
               href={href as Route}
-              className="group flex items-start gap-3 rounded-md border border-ink-300 bg-paper p-4 transition-colors hover:border-brand-blue hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+              className="group flex items-start gap-3 rounded-md border border-ink-300 bg-paper p-3 transition-colors hover:border-brand-blue hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             >
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-brand-foam text-brand-deep">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded bg-brand-foam text-brand-deep">
                 <Icon className="h-5 w-5" aria-hidden="true" />
               </span>
-              <span className="flex flex-1 flex-col gap-1">
-                <span className="font-display text-base font-bold text-brand-deep">
+              <span className="flex flex-1 flex-col gap-0.5">
+                <span className="font-display text-sm font-bold text-brand-deep">
                   {title}
                 </span>
-                <span className="text-sm leading-relaxed text-ink-600">
+                <span className="text-xs leading-snug text-ink-600">
                   {description}
                 </span>
               </span>
               <ArrowRight
-                className="mt-1 h-5 w-5 shrink-0 text-ink-600 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-blue"
+                className="mt-1 h-4 w-4 shrink-0 text-ink-600 transition-transform group-hover:translate-x-0.5 group-hover:text-brand-blue"
                 aria-hidden="true"
               />
             </Link>

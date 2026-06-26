@@ -9,5 +9,6 @@ export { Ola } from "./ola";
 export { Porteria } from "./porteria";
 export { Silbato } from "./silbato";
 export { SilbatoActivo } from "./silbato-activo";
+export { Tienda } from "./tienda";
 export { Usuario } from "./usuario";
 export type { PictogramProps } from "./types";

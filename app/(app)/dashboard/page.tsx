@@ -47,21 +47,21 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex w-full flex-col">
-      <div className="mx-auto w-full max-w-2xl px-4 pb-6 pt-6">
-        <h1 className="font-display text-[32px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-3 pt-4">
+        <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
           Hola, {firstName}
         </h1>
         {showCoachView ? (
-          <p className="mt-2 text-base leading-relaxed text-ink-600">
+          <p className="mt-1 text-sm leading-relaxed text-ink-600">
             Tienes a tu cargo los equipos que verás en &ldquo;Tu equipo&rdquo;.
             Pasa por allí para ver la plantilla y el cuerpo técnico.
           </p>
         ) : null}
       </div>
 
-      <WaterDivider fill="var(--brand-foam)" height={40} />
+      <WaterDivider fill="var(--brand-foam)" height={24} />
 
-      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+      <div className="mx-auto w-full max-w-2xl px-4 py-4">
         <ActionCard
           accentColor={showCoachView ? "var(--brand-aqua)" : "var(--brand-blue)"}
           pictogram={
@@ -85,9 +85,9 @@ export default async function DashboardPage() {
         />
       </div>
 
-      <WaterDivider fill="var(--brand-foam)" height={40} variant="footer" />
+      <WaterDivider fill="var(--brand-foam)" height={24} variant="footer" />
 
-      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+      <div className="mx-auto w-full max-w-2xl px-4 py-4">
         <div className="grid grid-cols-3 divide-x divide-ink-300 overflow-hidden rounded-md border border-ink-300 bg-paper">
           <Stat
             pictogram={
@@ -115,9 +115,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <WaterDivider fill="var(--brand-foam)" height={40} />
+      <WaterDivider fill="var(--brand-foam)" height={24} />
 
-      <div className="mx-auto w-full max-w-2xl px-4 pb-12 pt-6">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-8 pt-4">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <PictogramTile
             icon={
@@ -157,9 +157,9 @@ function Stat({
   label: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 px-2 py-5 text-center">
+    <div className="flex flex-col items-center gap-1.5 px-2 py-4 text-center">
       <div className="shrink-0">{pictogram}</div>
-      <span className="font-mono text-[32px] font-bold leading-none text-brand-deep">
+      <span className="font-mono text-[28px] font-bold leading-none text-brand-deep">
         {value}
       </span>
       <span className="text-xs font-medium text-ink-600">{label}</span>

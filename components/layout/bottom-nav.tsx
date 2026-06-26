@@ -8,6 +8,7 @@ import {
   Calendario,
   Equipo,
   Inicio,
+  Tienda,
   Usuario,
 } from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
@@ -16,6 +17,7 @@ const items = [
   { href: "/dashboard", label: "Inicio", Pictogram: Inicio },
   { href: "/calendar", label: "Calendario", Pictogram: Calendario },
   { href: "/team", label: "Equipo", Pictogram: Equipo },
+  { href: "/shop", label: "Tienda", Pictogram: Tienda },
   { href: "/profile", label: "Yo", Pictogram: Usuario },
 ] as const;
 

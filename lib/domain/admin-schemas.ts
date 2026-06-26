@@ -130,6 +130,9 @@ export const parentRelationEnum = z.enum([
 export const emptyToNull = (v: unknown) =>
   typeof v === "string" && v.trim() === "" ? null : v;
 
+export const nullIfEmpty = (v: unknown) =>
+  v == null || (typeof v === "string" && v.trim() === "") ? null : v;
+
 export const phoneSchema = z
   .string()
   .regex(/^\+[1-9]\d{6,14}$/, "Formato E.164: +34612345678")
@@ -196,6 +199,50 @@ export const updatePlayerSchema = z
   .refine((data) => Object.keys(data).length > 0, {
     message: "No hay cambios para guardar.",
   });
+
+export const updateProfileSchema = z.object({
+  full_name: z
+    .string()
+    .trim()
+    .min(2, "Mínimo 2 caracteres.")
+    .max(100, "Máximo 100 caracteres."),
+  photo_url: z.preprocess(
+    nullIfEmpty,
+    z.string().url("URL inválida.").nullable(),
+  ),
+  birth_year: z.preprocess(
+    nullIfEmpty,
+    z.preprocess(
+      (v) => (v == null ? null : Number(v)),
+      z
+        .number()
+        .int("Año entero.")
+        .min(1900, "Año entre 1900 y 2100.")
+        .max(2100, "Año entre 1900 y 2100.")
+        .nullable(),
+    ),
+  ),
+  cap_number: z.preprocess(
+    nullIfEmpty,
+    z.preprocess(
+      (v) => (v == null ? null : Number(v)),
+      z
+        .number()
+        .int("Dorsal entero.")
+        .min(0, "Mínimo 0.")
+        .max(99, "Máximo 99.")
+        .nullable(),
+    ),
+  ),
+  phone_e164: z.preprocess(
+    nullIfEmpty,
+    z.string().regex(/^\+[1-9]\d{6,14}$/, "Formato E.164: +34612345678").nullable(),
+  ),
+  email_contact: z.preprocess(
+    nullIfEmpty,
+    z.string().email("Email inválido.").nullable(),
+  ),
+});
 
 export const linkSchema = z.object({
   parent_profile_id: z.string().uuid("Tutor inválido."),

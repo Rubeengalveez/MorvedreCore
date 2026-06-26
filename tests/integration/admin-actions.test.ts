@@ -20,6 +20,7 @@ import {
   unlinkSchema,
   unrosterSchema,
   updatePlayerSchema,
+  updateProfileSchema,
   updateSeasonSchema,
   updateTeamSchema,
   userRoleEnum,
@@ -428,6 +429,114 @@ describe("updatePlayerSchema", () => {
         notes: "",
       }).success,
     ).toBe(false);
+  });
+});
+
+describe("updateProfileSchema", () => {
+  const basePayload = {
+    full_name: "Jugador Ejemplo",
+  };
+
+  it("accepts a minimal payload with only full_name", () => {
+    const result = updateProfileSchema.safeParse(basePayload);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.full_name).toBe("Jugador Ejemplo");
+      expect(result.data.photo_url).toBeNull();
+      expect(result.data.birth_year).toBeNull();
+      expect(result.data.cap_number).toBeNull();
+      expect(result.data.phone_e164).toBeNull();
+      expect(result.data.email_contact).toBeNull();
+    }
+  });
+
+  it("coerces empty strings to null for nullable fields", () => {
+    const result = updateProfileSchema.safeParse({
+      full_name: "Jugador Ejemplo",
+      photo_url: "",
+      birth_year: "",
+      cap_number: "",
+      phone_e164: "",
+      email_contact: "",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.photo_url).toBeNull();
+      expect(result.data.birth_year).toBeNull();
+      expect(result.data.cap_number).toBeNull();
+      expect(result.data.phone_e164).toBeNull();
+      expect(result.data.email_contact).toBeNull();
+    }
+  });
+
+  it("coerces birth_year and cap_number strings to numbers", () => {
+    const result = updateProfileSchema.safeParse({
+      full_name: "Jugador Ejemplo",
+      birth_year: "2010",
+      cap_number: "7",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.birth_year).toBe(2010);
+      expect(result.data.cap_number).toBe(7);
+    }
+  });
+
+  it("rejects birth_year outside the [1900, 2100] range", () => {
+    expect(
+      updateProfileSchema.safeParse({ ...basePayload, birth_year: "1899" }).success,
+    ).toBe(false);
+    expect(
+      updateProfileSchema.safeParse({ ...basePayload, birth_year: "2101" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects cap_number out of range", () => {
+    expect(
+      updateProfileSchema.safeParse({ ...basePayload, cap_number: "-1" }).success,
+    ).toBe(false);
+    expect(
+      updateProfileSchema.safeParse({ ...basePayload, cap_number: "100" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a too-short full_name", () => {
+    expect(
+      updateProfileSchema.safeParse({ full_name: "A" }).success,
+    ).toBe(false);
+  });
+
+  it("accepts a valid E.164 phone", () => {
+    expect(
+      updateProfileSchema.safeParse({
+        ...basePayload,
+        phone_e164: "+34612345678",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects an invalid email", () => {
+    expect(
+      updateProfileSchema.safeParse({
+        ...basePayload,
+        email_contact: "not-an-email",
+      }).success,
+    ).toBe(false);
+  });
+
+  it("does not include license_active in the schema", () => {
+    const result = updateProfileSchema.safeParse({
+      ...basePayload,
+      license_active: true,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect("license_active" in result.data).toBe(false);
+    }
+  });
+
+  it("differs from updatePlayerSchema: updateProfileSchema rejects empty objects", () => {
+    expect(updateProfileSchema.safeParse({}).success).toBe(false);
   });
 });
 

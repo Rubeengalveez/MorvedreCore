@@ -94,7 +94,7 @@ export default async function StaffPage() {
   const { rows, teams, people } = await loadData();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <StaffClient rows={rows} teams={teams} people={people} />
     </div>
   );

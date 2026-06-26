@@ -26,12 +26,12 @@ export default async function TeamPage() {
 
   if (!season) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
-        <header className="flex flex-col gap-2">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+        <header className="flex flex-col gap-1">
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
             Tu equipo
           </h1>
-          <p className="text-base leading-relaxed text-ink-600">
+          <p className="text-sm leading-relaxed text-ink-600">
             La temporada activa aún no está configurada.
           </p>
         </header>
@@ -44,19 +44,19 @@ export default async function TeamPage() {
 
   return (
     <div className="flex w-full flex-col">
-      <div className="mx-auto w-full max-w-2xl px-4 pb-6 pt-6">
-        <h1 className="font-display text-[32px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-3 pt-4">
+        <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
           Tu equipo
         </h1>
-        <p className="mt-2 text-base leading-relaxed text-ink-600">
+        <p className="mt-1 text-sm leading-relaxed text-ink-600">
           Hola, {firstName}. Aquí verás la plantilla y el cuerpo técnico de tu
           equipo esta temporada.
         </p>
       </div>
 
-      <WaterDivider fill="var(--brand-foam)" height={40} />
+      <WaterDivider fill="var(--brand-foam)" height={24} />
 
-      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+      <div className="mx-auto w-full max-w-2xl px-4 py-4">
         {teams.length === 0 ? (
           <EmptyTeamState
             pictogram={

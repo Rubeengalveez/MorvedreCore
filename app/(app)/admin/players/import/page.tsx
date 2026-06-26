@@ -9,9 +9,9 @@ export const metadata = {
 
 export default function ImportPlayersPage() {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+      <header className="flex flex-col gap-1">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
           Importar jugadores
         </h1>
         <p className="text-sm text-ink-600">

@@ -2,6 +2,8 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
 import { useActionState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
@@ -19,7 +21,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils/cn";
 import {
   updateProfile,
   type UpdateProfileState,
@@ -65,7 +66,6 @@ const profileFormSchema = z.object({
         (dorsalPattern.test(v) && Number(v) >= 0 && Number(v) <= 99),
       "Dorsal entre 0 y 99.",
     ),
-  license_active: z.boolean(),
   phone_e164: z
     .string()
     .trim()
@@ -110,7 +110,6 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       photo_url: profile.photo_url ?? "",
       birth_year: profile.birth_year?.toString() ?? "",
       cap_number: profile.cap_number?.toString() ?? "",
-      license_active: profile.license_active,
       phone_e164: profile.phone_e164 ?? "",
       email_contact: profile.email_contact ?? "",
     },
@@ -122,7 +121,6 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     fd.append("photo_url", values.photo_url ?? "");
     fd.append("birth_year", values.birth_year ?? "");
     fd.append("cap_number", values.cap_number ?? "");
-    fd.append("license_active", values.license_active ? "on" : "");
     fd.append("phone_e164", values.phone_e164 ?? "");
     fd.append("email_contact", values.email_contact ?? "");
     startTransition(() => {
@@ -250,40 +248,6 @@ export function ProfileForm({ profile }: ProfileFormProps) {
 
         <FormField
           control={form.control}
-          name="license_active"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Licencia federativa</FormLabel>
-              <FormControl>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={field.value}
-                  onClick={() => field.onChange(!field.value)}
-                  className={cn(
-                    "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
-                    field.value ? "bg-brand-blue" : "bg-ink-300",
-                  )}
-                >
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "inline-block h-5 w-5 rounded-full bg-paper transition-transform",
-                      field.value ? "translate-x-6" : "translate-x-1",
-                    )}
-                  />
-                </button>
-              </FormControl>
-              <FormDescription>
-                Marca si tu licencia federativa está activa esta temporada.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
           name="phone_e164"
           render={({ field }) => (
             <FormItem>
@@ -335,7 +299,15 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           )}
         />
 
-        <SubmitButton />
+        <div className="flex flex-col gap-3">
+          <SubmitButton />
+          <Link
+            href={"/profile" as Route}
+            className="text-center text-sm font-semibold text-brand-blue hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            Volver a mi perfil
+          </Link>
+        </div>
       </form>
     </Form>
   );

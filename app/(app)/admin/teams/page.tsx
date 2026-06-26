@@ -136,11 +136,11 @@ export default async function TeamsPage() {
 
   if (seasons.length === 0) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
           Equipos
         </h1>
-        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
+        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-5 text-center">
           <p className="text-base font-semibold text-brand-deep">
             Primero crea una temporada.
           </p>
@@ -158,10 +158,10 @@ export default async function TeamsPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
             Equipos
           </h1>
           <p className="text-sm text-ink-600">

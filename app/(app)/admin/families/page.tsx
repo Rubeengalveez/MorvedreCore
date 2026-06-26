@@ -71,10 +71,10 @@ export default async function FamiliesPage() {
   const { rows, parents, children } = await loadData();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+        <div className="flex flex-col gap-0.5">
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
             Familias
           </h1>
           <p className="text-sm text-ink-600">
