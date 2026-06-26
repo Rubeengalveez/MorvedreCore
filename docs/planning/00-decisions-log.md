@@ -191,6 +191,7 @@ Si el usuario quiere tocar algo, los puntos abiertos son: tipografía, paleta ex
 
 ## 2026-06-26 — Decisiones de Fase 2
 
+- **Perfiles visibles entre sí (PII pública)**: por diseño del usuario ("en una app de club los miembros se ven entre sí"), la RLS de `profiles` permite SELECT a todos los autenticados. Los campos verdaderamente privados (phone_e164, email_contact) son responsabilidad del código de aplicación: nunca se seleccionan en vistas compartidas (team, dashboard, etc.). Decisión consciente del usuario. El `profiles_public` view existe como medida defensiva futura.
 - **`competition_type` enum** para partidos: `'league' | 'cup' | 'tournament' | 'friendly'`. Decidido en discovery (sept 2025). El club participa en varias competiciones autonómicas.
 - **Convocatorias**: 13 jugadores por defecto (configurable via parámetro `max` en `suggestCallup`). Decidido por normativa waterpolo + lógica del SRS.
 - **Dorsal automático**: la app usa `profile.cap_number` como dorsal por defecto. Si hay conflicto (otro jugador ya tiene ese número en el mismo partido), busca el siguiente libre. El coach puede override manual.

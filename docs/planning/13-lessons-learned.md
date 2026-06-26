@@ -196,6 +196,63 @@ Auditoría profunda de Fase 1. Encontrados **4 críticos, 18 altos, 47 medios, 2
     - Por eso los integration tests usan el cloud de Supabase y skip si no hay env vars.
     - **Regla**: marcar con `it.skip()` los tests que dependen de env, no fallarlos.
 
+## 2026-06-26 — Auditoría de seguridad y accesibilidad (Fase 1.1)
+
+Auditoría de Fase 2 en producción. 0 críticos, 5 medios seguridad, 7 medios a11y.
+
+### Lecciones aprendidas
+
+1. **El bug de `method="post"` se propaga a TODOS los formularios** (login, change-password, reset-password, profile-edit, player-create, etc.). Cualquier form con credenciales debe tener `method="post"` SIEMPRE, no solo cuando RHF parece "funcionar".
+
+2. **El calendario de disponibilidad requería mejor UX**: el componente original tenía disabled states poco visibles, sin feedback de pending, sin manejo de error visible, y sin title attribute explicativo. Cuando un componente "funciona" técnicamente pero el usuario no lo entiende, hay que reescribirlo.
+
+3. **Colores para eventos** (lo que el usuario pidió):
+   - Entreno normal: brand-blue (`#1E5AA8`)
+   - Entreno cancelado: danger (`#EF4444`)
+   - Partido liga/copa: brand-ball (`#F4C430`)
+   - Partido amistoso: brand-aqua (`#3FBAC2`)
+   - Torneo: brand-action (`#FF6B35`)
+   - Partido cancelado: danger
+   - No disponible: ink-300 con ring para distinguir de día vacío
+   - El icono del evento indica el tipo: gorro (training), silbato (training), silueta (match), etc.
+
+4. **Vista mes + vista semana** (lo que el usuario pidió):
+   - Vista mes: cuadrícula 7×6, dots por evento
+   - Vista semana: 7 columnas × horas (8-22h), eventos como bloques posicionados por hora
+   - Toggle entre vistas con tabs ARIA
+   - Click en evento de semana navega al partido
+   - Botón "Hoy" para volver al día actual
+
+5. **Feed iCal** (preparado para Google Calendar):
+   - `/api/calendar/feed.ics` con autenticación
+   - Soporta `?team=ID` y `?from=YYYY-MM-DD&to=YYYY-MM-DD`
+   - Formato iCal estándar (compatible con Google Calendar, Apple Calendar, Outlook)
+   - El usuario podrá añadirlo a su Google Calendar cuando quiera
+   - Pendiente: generar un token específico para que no requiera sesión iniciada (futuro)
+
+6. **Seed de datos** para testear:
+   - `pnpm seed:test` crea 1 temporada actual, 8 equipos, 53 jugadores, 3 entrenadores, ~340 sesiones, ~28 partidos
+   - Todo con prefijo `morvedre-seed-2026-` para limpieza fácil
+   - Idempotente: re-ejecutable, borra y re-crea
+   - El usuario debe limpiar la BD antes de producción (quitar el prefijo de los IDs)
+
+7. **Pendientes de seguridad** (no urgentes pero documentados):
+   - S1: `profiles` SELECT policy expone PII (phone, email) a todos los autenticados. Decisión deliberada del usuario: "los miembros se ven entre sí". Documentar en `00-decisions-log.md` que es por diseño.
+   - S2: Coach puede re-editar match_stats que él mismo validó. Pendiente: añadir `validated_at is null` a la policy `with check`.
+   - S6: `ACTIVE_COOKIE` no tiene `Secure`. Pendiente: añadir flag.
+   - S7: Sin política de password complexity. Pendiente: añadir regex.
+
+8. **Pendientes de a11y** (no urgentes):
+   - A5, A6, A7: Labels de switches y role=grid sin keyboard navigation
+   - A8-A12: refinements de form messages, role=alert, aria-busy
+   - Botones RSVP del event-sheet aún son `size="sm"` (40px) en algunos casos
+
+9. **Patrón de test e2e**: usar `getByLabel` o `getByRole` (no `getByText` para botones) para selectores robustos.
+
+10. **Patrón de iCal feed** para Google Calendar (futuro): generar un token específico por usuario (UUID) que se guarda en `profile.calendar_token` (campo futuro), y la URL del feed sería `/api/calendar/feed/[token].ics` para que Google Calendar pueda acceder sin sesión. Por ahora con sesión funciona; para producción añadir el token.
+
+11. **Lección general**: las auditorías revelan issues reales aunque la app "funcione". Hacer auditorías periódicas (no solo al final de cada fase) habría prevenido bugs como el del login.
+
 ## 2026-06-26 — Bug crítico de login descubierto por el usuario
 
 **El bug**: el form de login no tenía `method="post"`, así que cuando el usuario enviaba el form sin que React hubiera interceptado (o con JS deshabilitado), el browser hacía GET a `/login` con `?email=...&password=...` en la URL. Las contraseñas quedaban expuestas en el historial del navegador.
