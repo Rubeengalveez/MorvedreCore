@@ -189,6 +189,40 @@ Documentada en `10-design-direction.md`. Resumen:
 
 Si el usuario quiere tocar algo, los puntos abiertos son: tipografía, paleta exacta, estilo de cards, tono de empty states, bottom nav, densidad de información. Confirmado y documentado en `10-design-direction.md`.
 
+## 2026-06-26 — Última ronda de clarificación
+
+### Competición: Liga + Copa + Torneos
+- El club participa en **múltiples tipos de competición** además de la liga regular.
+- Implicación: `matches.competition_type: enum('league', 'cup', 'tournament', 'friendly')` para distinguirlas.
+- El SRS solo mencionaba "liga" — esto se amplia.
+
+### Cancelación de entrenamientos
+- **HOY** se hace por WhatsApp (grupo de directiva → decisión → grupo del equipo).
+- **La app NO es el canal principal** para cancelaciones urgentes.
+- **La app SÍ refleja el estado** de la sesión (`training_sessions.cancelled` + `cancellation_reason`).
+- Implicación: el entrenador puede marcar la sesión como cancelada en la app para que conste, pero el aviso inmediato va por WhatsApp. La app es el "registro oficial" que el delegado y el jugador consultan después.
+
+### Documentos oficiales
+- El club SÍ gestiona fichas federativas y certificados médicos, pero **NO en esta app**.
+- No hay módulo de documentos en el MVP.
+- Eva (secretaria) sigue gestionándolos como hasta ahora.
+
+### Sugerencias de features nuevas
+- Se propusieron 6 features Tier 1 + varias Tier 2 (historias del club, end of season report, muro del equipo, reto del mes, notificación de cumpleaños, historial de rivalidades).
+- **El usuario ha rechazado todas**. Mensaje literal: "no quiero meter cosas basura que realmente no sirvan".
+- Implicación: la especificación se ciñe al SRS + lo extraído en discovery. No metemos feature creep.
+- Sugerencias documentadas en `11-feature-suggestions.md` como histórico, todas marcadas como "rechazadas".
+
+## Ajustes al modelo de datos
+
+- `matches.competition_type: enum('league', 'cup', 'tournament', 'friendly')` (añadir a `03-architecture.md`)
+- No se añade tabla `documents` (Eva los gestiona fuera)
+- No se añade tabla `team_photos`, `challenges`, ni nada fuera del SRS + discovery
+
+## Próximo paso
+
+Ejecutar **Fase 0** (scaffold del proyecto). El alcance está cerrado.
+
 ### Lo que NO se hace
 
 - ❌ **Pagos en la app** (ni tarjeta ni Bizum directo). El cierre se envía a tesorera por email.

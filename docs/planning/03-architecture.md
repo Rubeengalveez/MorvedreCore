@@ -130,8 +130,16 @@ training_sessions
    duration_minutes (smallint)
    location (text)
    cancelled (boolean, default false)
-   cancellation_reason (text, nullable)
+   cancellation_reason (text, nullable)        -- texto del motivo, según proceso WhatsApp-first
+   cancelled_by (fk → profiles, nullable)       -- quién marcó la cancelación
+   cancelled_at (timestamptz, nullable)
    notes (text, nullable)
+
+-- Flujo de cancelación (ver 00-decisions-log.md 2026-06-26):
+--   1. Aviso inmediato va por WhatsApp (grupo de directiva → grupo del equipo)
+--   2. El entrenador (o quien decida) marca la sesión como cancelada en la app
+--   3. La app registra cancellation_reason + cancelled_by + cancelled_at
+--   4. Opcional: push notification confirmatoria a los jugadores (NO es el canal principal)
 
 training_attendance
    session_id (fk)
@@ -151,6 +159,7 @@ matches
    season_id (fk)
    team_id (fk)
    opponent (text)
+   competition_type (enum: league, cup, tournament, friendly)  -- añadido 2026-06-26: el club participa en varias competiciones
    is_home (boolean)
    location (text)
    pool_name (text, nullable)
