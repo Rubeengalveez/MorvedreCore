@@ -1,13 +1,17 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Balon,
+  Gorro,
+  Ola,
+  SilbatoActivo,
+  Usuario,
+} from "@/components/brand/pictograms";
+import { ActionCard } from "@/components/ui/action-card";
+import { PictogramTile } from "@/components/ui/pictogram-tile";
+import { WaterDivider } from "@/components/ui/water-divider";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -53,53 +57,100 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+    <div className="flex w-full flex-col">
+      <div className="mx-auto w-full max-w-2xl px-4 pb-6 pt-6">
+        <h1 className="font-display text-[32px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
           Hola, {firstName}
         </h1>
-        <p className="text-base leading-relaxed text-ink-600">
-          Tu primer partido está al caer. Pronto tendrás todo aquí.
-        </p>
-      </header>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tu próxima aventura</CardTitle>
-          <CardDescription>
-            Tu próximo partido o entreno aparecerá aquí.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed text-ink-600">
-            Aún no tienes partidos esta temporada. Cuando los haya, aparecerán
-            primero aquí.
-          </p>
-        </CardContent>
-      </Card>
+      <WaterDivider fill="var(--brand-foam)" height={40} />
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Últimas noticias</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed text-ink-600">
-            Sin novedades en el club. Cuando las haya, aparecerán aquí primero.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+        <ActionCard
+          accentColor="var(--brand-blue)"
+          pictogram={
+            <Ola
+              className="h-[50px] w-[50px]"
+              accent="var(--brand-action)"
+            />
+          }
+          title="Tu primer partido está al caer"
+          subtitle="Vitaliy está preparando la convocatoria"
+          meta="Cuando esté lista, aparecerá aquí"
+          cta={{ label: "Ir al calendario", href: "/calendar" as Route }}
+        />
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tu actividad</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm leading-relaxed text-ink-600">
-            Tu historial se construirá con cada partido. Sé el primero en
-            aparecer en el Pichichi.
-          </p>
-        </CardContent>
-      </Card>
+      <WaterDivider fill="var(--brand-foam)" height={40} variant="footer" />
+
+      <div className="mx-auto w-full max-w-2xl px-4 py-6">
+        <div className="grid grid-cols-3 divide-x divide-ink-300 overflow-hidden rounded-md border border-ink-300 bg-paper">
+          <Stat
+            pictogram={
+              <Balon className="h-6 w-6" accent="var(--brand-ball)" />
+            }
+            value="0"
+            label="Goles esta temporada"
+          />
+          <Stat
+            pictogram={
+              <Gorro className="h-6 w-6" accent="var(--brand-blue)" />
+            }
+            value="—"
+            label="% Asistencia"
+          />
+          <Stat
+            pictogram={<Usuario className="h-6 w-6" />}
+            value="—"
+            label="Tu dorsal"
+          />
+        </div>
+      </div>
+
+      <WaterDivider fill="var(--brand-foam)" height={40} />
+
+      <div className="mx-auto w-full max-w-2xl px-4 pb-12 pt-6">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <PictogramTile
+            icon={
+              <SilbatoActivo
+                className="h-9 w-9"
+                accent="var(--brand-aqua)"
+              />
+            }
+            title="Últimas noticias"
+            description="Aquí verás los avisos del club"
+          />
+          <PictogramTile
+            icon={
+              <Ola className="h-9 w-9" accent="var(--brand-aqua)" />
+            }
+            title="Tu actividad"
+            description="Tus próximos eventos y resultados"
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Stat({
+  pictogram,
+  value,
+  label,
+}: {
+  pictogram: React.ReactNode;
+  value: string;
+  label: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 px-2 py-5 text-center">
+      <div className="shrink-0">{pictogram}</div>
+      <span className="font-mono text-[32px] font-bold leading-none text-brand-deep">
+        {value}
+      </span>
+      <span className="text-xs font-medium text-ink-600">{label}</span>
     </div>
   );
 }

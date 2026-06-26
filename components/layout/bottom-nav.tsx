@@ -1,17 +1,22 @@
 "use client";
 
-import { CalendarDays, Home, User, Users } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
 
+import {
+  Calendario,
+  Equipo,
+  Inicio,
+  Usuario,
+} from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
 
 const items = [
-  { href: "/dashboard", label: "Inicio", icon: Home },
-  { href: "/calendar", label: "Calendario", icon: CalendarDays },
-  { href: "/team", label: "Equipo", icon: Users },
-  { href: "/profile", label: "Yo", icon: User },
+  { href: "/dashboard", label: "Inicio", Pictogram: Inicio },
+  { href: "/calendar", label: "Calendario", Pictogram: Calendario },
+  { href: "/team", label: "Equipo", Pictogram: Equipo },
+  { href: "/profile", label: "Yo", Pictogram: Usuario },
 ] as const;
 
 export function BottomNav() {
@@ -24,7 +29,7 @@ export function BottomNav() {
     >
       <ul className="mx-auto flex h-16 max-w-md items-stretch">
         {items.map((item) => {
-          const Icon = item.icon;
+          const Pictogram = item.Pictogram;
           const href = item.href;
           const isActive =
             pathname === href || pathname.startsWith(`${href}/`);
@@ -34,14 +39,32 @@ export function BottomNav() {
                 href={href as Route}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-full w-full flex-col items-center justify-center gap-1 text-xs transition-colors",
-                  isActive
-                    ? "font-display font-bold text-brand-blue"
-                    : "font-medium text-ink-600 hover:text-brand-deep",
+                  "flex h-full w-full flex-col items-center justify-center gap-1 px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                  isActive ? "text-brand-blue" : "text-ink-600",
                 )}
               >
-                <Icon className="h-5 w-5" aria-hidden="true" />
-                <span>{item.label}</span>
+                <Pictogram
+                  className="h-7 w-7"
+                  accent={isActive ? "#1E5AA8" : "currentColor"}
+                />
+                <span
+                  aria-hidden="true"
+                  className="flex h-1.5 w-1.5 items-center justify-center"
+                >
+                  {isActive ? (
+                    <span className="block h-1.5 w-1.5 rounded-full bg-brand-ball" />
+                  ) : null}
+                </span>
+                <span
+                  className={cn(
+                    "text-xs leading-none",
+                    isActive
+                      ? "font-display font-bold"
+                      : "font-medium",
+                  )}
+                >
+                  {item.label}
+                </span>
               </Link>
             </li>
           );

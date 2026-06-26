@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 import { cn } from "@/lib/utils/cn";
 
 export type LogoSize = number | "sm" | "md" | "lg" | "xl";
@@ -16,6 +18,8 @@ const sizeMap: Record<"sm" | "md" | "lg" | "xl", number> = {
   xl: 80,
 };
 
+const SMALL_THRESHOLD = 48;
+
 function resolveSize(size: LogoSize): number {
   if (typeof size === "number") return size;
   return sizeMap[size];
@@ -29,7 +33,7 @@ export function Logo({
 }: LogoProps) {
   const px = resolveSize(size);
   const showText = withText || withWordmark;
-  const letterSize = Math.max(10, Math.round(px * 0.5));
+  const src = px <= SMALL_THRESHOLD ? "/brand/shark-256.png" : "/brand/shark-512.png";
   const gap = Math.max(8, Math.round(px * 0.25));
   const textSize = Math.max(14, Math.round(px * 0.3));
 
@@ -38,18 +42,14 @@ export function Logo({
       className={cn("inline-flex items-center", className)}
       style={{ gap: `${gap}px` }}
     >
-      <span
-        aria-hidden="true"
-        className="inline-flex shrink-0 items-center justify-center rounded-full bg-brand-blue text-paper"
-        style={{ width: `${px}px`, height: `${px}px` }}
-      >
-        <span
-          className="font-display font-extrabold leading-none"
-          style={{ fontSize: `${letterSize}px` }}
-        >
-          M
-        </span>
-      </span>
+      <Image
+        src={src}
+        alt="Escudo Waterpolo Morvedre"
+        width={px}
+        height={px}
+        priority={px >= 80}
+        className="shrink-0"
+      />
       {showText ? (
         <span
           className="font-display font-extrabold uppercase tracking-wider text-brand-deep"

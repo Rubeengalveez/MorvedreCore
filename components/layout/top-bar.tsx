@@ -13,8 +13,8 @@ export interface TopBarProps {
 
 export function TopBar({ activeProfile, linkedProfiles }: TopBarProps) {
   return (
-    <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b border-ink-300 bg-paper px-4 pt-[env(safe-area-inset-top)]">
-      <Logo size="md" withText />
+    <header className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-2 border-b border-ink-300 bg-paper px-4 pt-[env(safe-area-inset-top)]">
+      <Logo size="sm" withWordmark />
       <div className="flex items-center gap-1">
         <button
           type="button"

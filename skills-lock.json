@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "brand-designer": {
+      "source": "daffy0208/ai-dev-standards",
+      "sourceType": "github",
+      "skillPath": "skills/brand-designer/SKILL.md",
+      "computedHash": "4848bb14290d7bc7b9264cab5fca3c42453a32f88a03bdb1cc4b5357117490e1"
+    },
     "customer-discovery": {
       "source": "guia-matthieu/clawfu-skills",
       "sourceType": "github",
@@ -24,6 +30,12 @@
       "sourceType": "github",
       "skillPath": "plugins/mobile-first-design/skills/mobile-first-design/SKILL.md",
       "computedHash": "5f7a038065c988351dd0928f1026ffc60bd79c74d81fcf70931ca1b711667ace"
+    },
+    "redesign": {
+      "source": "arjunkshah/design-skill",
+      "sourceType": "github",
+      "skillPath": "skills/redesign/SKILL.md",
+      "computedHash": "ef8dab2db378d1299c47ac86792a9f13d65d23842eb3cb35d7501b10074b48a9"
     },
     "supabase": {
       "source": "supabase/agent-skills",
