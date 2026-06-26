@@ -1,6 +1,8 @@
 # Identidad visual — propuesta inicial
 
 > Estado: logo real recibido, paleta confirmada, identidad de marca validada con el club.
+>
+> **Dirección de diseño detallada**: ver `10-design-direction.md`. Ahí está la estética final, componentes signature, anti-defaults y arquitectura de información que se usarán en Fase 0.
 
 ## Logo real
 

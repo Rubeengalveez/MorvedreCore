@@ -173,6 +173,22 @@ Sol (la del equipaje) será la responsable principal de gestionar el catálogo. 
 - Ejemplos: "Tienes un partido mañana a las 10:00. ¡Confirma!" / "Tu hijo Carlos no ha confirmado la convocatoria aún".
 - NO formal/institucional: "Se convoca al jugador Carlos García..." queda descartado para mensajes a jugadores, aunque puede mantenerse en emails oficiales (cierre mensual).
 
+## 2026-06-26 — Dirección de diseño
+
+Documentada en `10-design-direction.md`. Resumen:
+
+- **Tesis emocional**: orgullo de pertenencia. "Esto es MI club, MI equipo, MI gente".
+- **Tipografía**: Manrope (display) + Inter (body) + JetBrains Mono (números).
+- **Color**: paleta confirmada, con `--team-color` dinámico por equipo.
+- **Pictogramas custom** de waterpolo (gorro, balón, ola, silbato) como firma visual.
+- **Componentes signature**: MatchCard, RankingRow, PlayerCard, bottom nav 4 destinos, sheet selector de perfil.
+- **Anti-defaults explícitos**: NO panel admin genérico, NO minimalismo vacío, NO sombras pesadas, NO emojis, NO gradientes AI-default.
+- **Empty states** con voz motivadora de club, no "No hay datos".
+- **Animación contenida**: View Transitions + feedback táctil + números animados, respetando `prefers-reduced-motion`.
+- **Densidad**: ni minimalista vacío ni saturado. Para todas las edades.
+
+Si el usuario quiere tocar algo, los puntos abiertos son: tipografía, paleta exacta, estilo de cards, tono de empty states, bottom nav, densidad de información. Confirmado y documentado en `10-design-direction.md`.
+
 ### Lo que NO se hace
 
 - ❌ **Pagos en la app** (ni tarjeta ni Bizum directo). El cierre se envía a tesorera por email.
