@@ -9,6 +9,7 @@ export type AppShellProps = TopBarProps & {
 };
 
 export function AppShell({
+  ownProfile,
   activeProfile,
   linkedProfiles,
   children,
@@ -16,6 +17,7 @@ export function AppShell({
   return (
     <div className="flex min-h-dvh flex-col bg-paper">
       <TopBar
+        ownProfile={ownProfile}
         activeProfile={activeProfile}
         linkedProfiles={linkedProfiles}
       />

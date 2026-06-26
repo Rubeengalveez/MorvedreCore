@@ -1,6 +1,5 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
 import type { Route } from "next";
+import { redirect } from "next/navigation";
 
 import {
   Balon,
@@ -12,49 +11,39 @@ import {
 import { ActionCard } from "@/components/ui/action-card";
 import { PictogramTile } from "@/components/ui/pictogram-tile";
 import { WaterDivider } from "@/components/ui/water-divider";
-import { createClient } from "@/lib/supabase/server";
+import { getActiveProfileContext } from "@/server/queries/active-profile";
+import { getCurrentSeason } from "@/server/queries/seasons";
+import {
+  isProfilePlayerInSeason,
+  isProfileStaffInSeason,
+} from "@/server/queries/teams";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-const ACTIVE_COOKIE = "morvedre_active_profile_id";
+export const metadata = {
+  title: "Inicio — Morvedre Core",
+  description: "Tu partido, tu equipo, tu actividad.",
+};
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
+  const ctx = await getActiveProfileContext();
+  if (!ctx) redirect("/login");
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  const { activeProfile } = ctx;
+  const firstName = activeProfile.full_name.split(" ")[0] ?? activeProfile.full_name;
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!profile) redirect("/login");
+  const season = await getCurrentSeason();
+  const inSeason = season != null;
+  const [isPlayer, isCoach] = inSeason
+    ? await Promise.all([
+        isProfilePlayerInSeason(activeProfile.id, season.id),
+        isProfileStaffInSeason(activeProfile.id, season.id),
+      ])
+    : [false, false];
 
-  const cookieStore = await cookies();
-  const activeId = cookieStore.get(ACTIVE_COOKIE)?.value ?? null;
-
-  let firstName = profile.full_name.split(" ")[0] ?? profile.full_name;
-
-  if (activeId && activeId !== profile.id) {
-    const { data: link } = await supabase
-      .from("parent_child_links")
-      .select("profiles!parent_child_links_child_profile_id_fkey(full_name)")
-      .eq("parent_profile_id", profile.id)
-      .eq("child_profile_id", activeId)
-      .maybeSingle();
-
-    if (link) {
-      const child = Array.isArray(link.profiles) ? link.profiles[0] : link.profiles;
-      if (child && typeof child === "object" && "full_name" in child) {
-        const name = (child as { full_name: string }).full_name;
-        firstName = name.split(" ")[0] ?? name;
-      }
-    }
-  }
+  const showPlayerStats = isPlayer;
+  const showCoachView = !isPlayer && isCoach;
 
   return (
     <div className="flex w-full flex-col">
@@ -62,22 +51,36 @@ export default async function DashboardPage() {
         <h1 className="font-display text-[32px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
           Hola, {firstName}
         </h1>
+        {showCoachView ? (
+          <p className="mt-2 text-base leading-relaxed text-ink-600">
+            Tienes a tu cargo los equipos que verás en &ldquo;Tu equipo&rdquo;.
+            Pasa por allí para ver la plantilla y el cuerpo técnico.
+          </p>
+        ) : null}
       </div>
 
       <WaterDivider fill="var(--brand-foam)" height={40} />
 
       <div className="mx-auto w-full max-w-2xl px-4 py-6">
         <ActionCard
-          accentColor="var(--brand-blue)"
+          accentColor={showCoachView ? "var(--brand-aqua)" : "var(--brand-blue)"}
           pictogram={
             <Ola
               className="h-[50px] w-[50px]"
               accent="var(--brand-action)"
             />
           }
-          title="Tu primer partido está al caer"
-          subtitle="Vitaliy está preparando la convocatoria"
-          meta="Cuando esté lista, aparecerá aquí"
+          title={
+            showCoachView
+              ? "Tu próximo partido con el equipo"
+              : "Tu primer partido está al caer"
+          }
+          subtitle={
+            showCoachView
+              ? "Cuando convoques a tus jugadores, aparecerá aquí."
+              : "Vitaliy está preparando la convocatoria."
+          }
+          meta="Las convocatorias se activan en la siguiente fase."
           cta={{ label: "Ir al calendario", href: "/calendar" as Route }}
         />
       </div>
@@ -90,7 +93,7 @@ export default async function DashboardPage() {
             pictogram={
               <Balon className="h-6 w-6" accent="var(--brand-ball)" />
             }
-            value="0"
+            value={showPlayerStats ? "0" : "—"}
             label="Goles esta temporada"
           />
           <Stat
@@ -102,7 +105,11 @@ export default async function DashboardPage() {
           />
           <Stat
             pictogram={<Usuario className="h-6 w-6" />}
-            value="—"
+            value={
+              showPlayerStats && activeProfile.cap_number != null
+                ? `#${activeProfile.cap_number}`
+                : "—"
+            }
             label="Tu dorsal"
           />
         </div>
@@ -119,8 +126,13 @@ export default async function DashboardPage() {
                 accent="var(--brand-aqua)"
               />
             }
-            title="Últimas noticias"
-            description="Aquí verás los avisos del club"
+            title={showCoachView ? "Tus equipos" : "Tu equipo"}
+            description={
+              showCoachView
+                ? "Plantilla, cuerpo técnico y convocatorias"
+                : "Plantilla, cuerpo técnico y próximos partidos"
+            }
+            href="/team"
           />
           <PictogramTile
             icon={

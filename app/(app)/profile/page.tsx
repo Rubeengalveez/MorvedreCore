@@ -24,7 +24,7 @@ export default async function ProfilePage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, must_change_password, created_at, updated_at",
+      "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, team_color, school_enrolled, school_payment_paid, must_change_password, created_at, updated_at",
     )
     .eq("auth_user_id", user.id)
     .maybeSingle();
@@ -34,10 +34,10 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
       <header className="flex flex-col gap-2">
-        <h1 className="font-display text-3xl font-extrabold tracking-tight text-brand-deep">
+        <h1 className="font-display text-brand-deep text-3xl font-extrabold tracking-tight">
           Tu perfil
         </h1>
-        <p className="text-base leading-relaxed text-ink-600">
+        <p className="text-ink-600 text-base leading-relaxed">
           Mantén tus datos al día. Los demás solo verán lo que tú decidas.
         </p>
       </header>
@@ -47,7 +47,7 @@ export default async function ProfilePage() {
       <div className="flex flex-col items-center gap-2 pt-2">
         <Link
           href={"/change-password" as Route}
-          className="text-sm font-semibold text-brand-blue hover:underline focus-visible:underline focus-visible:outline-none"
+          className="text-brand-blue text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
         >
           Cambiar contraseña
         </Link>

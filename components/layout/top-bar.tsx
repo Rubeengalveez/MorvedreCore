@@ -7,11 +7,12 @@ import {
 } from "@/components/layout/profile-switcher";
 
 export interface TopBarProps {
+  ownProfile: ProfileSummary;
   activeProfile: ProfileSummary;
   linkedProfiles: ProfileSummary[];
 }
 
-export function TopBar({ activeProfile, linkedProfiles }: TopBarProps) {
+export function TopBar({ ownProfile, activeProfile, linkedProfiles }: TopBarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-2 border-b border-ink-300 bg-paper px-4 pt-[env(safe-area-inset-top)]">
       <Logo size="sm" withWordmark />
@@ -24,6 +25,7 @@ export function TopBar({ activeProfile, linkedProfiles }: TopBarProps) {
           <Bell className="h-5 w-5" aria-hidden="true" />
         </button>
         <ProfileSwitcher
+          ownProfile={ownProfile}
           activeProfile={activeProfile}
           linkedProfiles={linkedProfiles}
         />
