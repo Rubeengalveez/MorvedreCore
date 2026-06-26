@@ -19,6 +19,7 @@
     "db:push": "supabase db push",
     "db:diff": "supabase db diff",
     "bootstrap": "node scripts/bootstrap-admin.mjs",
+    "seed:test": "node scripts/seed-test-data.mjs",
     "import:players": "node scripts/import-players.mjs",
     "icons:generate": "node scripts/generate-icons.mjs",
     "icons:favicon": "node scripts/generate-favicon.mjs"

@@ -11,7 +11,7 @@ import {
 } from "@/server/queries/calendar";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
-import { currentYearMonth, daysInMonth } from "@/lib/domain/calendar";
+import { currentYearMonth, daysInMonth, todayIso, addDaysIso } from "@/lib/domain/calendar";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -100,6 +100,22 @@ export default async function CalendarPage() {
       })
     : new Map();
 
+  const supabase = await createClient();
+  const today = todayIso();
+  const monthAhead = addDaysIso(today, 30);
+  const { data: availabilityData } = await supabase
+    .from("match_availability")
+    .select("date, available, reason")
+    .eq("player_id", activeProfile.id)
+    .gte("date", today)
+    .lte("date", monthAhead);
+
+  const availabilityByDay = new Map<string, boolean>();
+  for (const row of availabilityData ?? []) {
+    const r = row as { date: string; available: boolean };
+    availabilityByDay.set(r.date, r.available);
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-1">
@@ -124,6 +140,7 @@ export default async function CalendarPage() {
           teams={calendarTeams}
           defaultTeamId={calendarTeams[0]?.id ?? null}
           eventsByDay={eventsByDay}
+          availabilityByDay={availabilityByDay}
           isCoach={isCoach}
           isAdmin={isAdmin}
           activeProfileId={activeProfile.id}
