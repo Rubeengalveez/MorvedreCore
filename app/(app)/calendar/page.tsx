@@ -116,6 +116,17 @@ export default async function CalendarPage() {
     availabilityByDay.set(r.date, r.available);
   }
 
+  const { data: attendanceData } = await supabase
+    .from("training_attendance")
+    .select("session_id, present")
+    .eq("player_id", activeProfile.id)
+    .gte("marked_at", new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString());
+  const userAttendanceBySession = new Map<string, boolean>();
+  for (const a of attendanceData ?? []) {
+    const ar = a as { session_id: string; present: boolean };
+    userAttendanceBySession.set(ar.session_id, ar.present);
+  }
+
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-1">
@@ -144,6 +155,8 @@ export default async function CalendarPage() {
           isCoach={isCoach}
           isAdmin={isAdmin}
           activeProfileId={activeProfile.id}
+          userAttendanceBySession={userAttendanceBySession}
+          showAttendance
         />
       )}
 

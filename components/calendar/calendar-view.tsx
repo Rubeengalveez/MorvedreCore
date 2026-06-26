@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, List } from "lucide-react";
+import type { Route } from "next";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -11,6 +13,7 @@ import {
   addMonths,
   currentYearMonth,
   daysInMonth,
+  isoDateFromDate,
   monthLabel,
   weekdayShort,
   type YearMonth,
@@ -18,6 +21,7 @@ import {
 import type { CalendarData } from "@/server/queries/calendar";
 import type { Tables } from "@/types/database";
 
+import { AgendaView } from "./agenda-view";
 import { EventSheet } from "./event-sheet";
 import { MonthView } from "./month-view";
 import { WeekView } from "./week-view";
@@ -36,15 +40,17 @@ export interface CalendarViewProps {
   isAdmin: boolean;
   activeProfileId: string;
   availabilityByDay: Map<string, boolean>;
+  userAttendanceBySession?: Map<string, boolean>;
+  showAttendance?: boolean;
 }
 
-type ViewMode = "month" | "week";
+type ViewMode = "month" | "week" | "agenda";
 
 function startOfWeekIso(d: Date): string {
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   return addDaysIso(
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`,
+    isoDateFromDate(d),
     diff,
   );
 }
@@ -57,6 +63,8 @@ export function CalendarView({
   isAdmin,
   activeProfileId,
   availabilityByDay,
+  userAttendanceBySession,
+  showAttendance,
 }: CalendarViewProps) {
   const [yearMonth, setYearMonth] = useState<YearMonth>(() => currentYearMonth());
   const [weekStartIso, setWeekStartIso] = useState<string>(() =>
@@ -90,19 +98,27 @@ export function CalendarView({
     return out;
   }, [availabilityByDay, teamFilter]);
 
+  const now = new Date();
+  const agendaStartIso = isoDateFromDate(new Date(now.getFullYear(), now.getMonth(), 1));
+  const agendaEndIso = isoDateFromDate(new Date(now.getFullYear(), now.getMonth() + 1, daysInMonth(now.getFullYear(), now.getMonth())));
+
   function goPrev() {
     if (viewMode === "month") {
       setYearMonth(addMonths(yearMonth, -1));
-    } else {
+    } else if (viewMode === "week") {
       setWeekStartIso(addDaysIso(weekStartIso, -7));
+    } else {
+      setYearMonth(addMonths(yearMonth, -1));
     }
   }
 
   function goNext() {
     if (viewMode === "month") {
       setYearMonth(addMonths(yearMonth, 1));
-    } else {
+    } else if (viewMode === "week") {
       setWeekStartIso(addDaysIso(weekStartIso, 7));
+    } else {
+      setYearMonth(addMonths(yearMonth, 1));
     }
   }
 
@@ -120,20 +136,22 @@ export function CalendarView({
             variant="secondary"
             size="sm"
             onClick={goPrev}
-            aria-label={viewMode === "month" ? "Mes anterior" : "Semana anterior"}
+            aria-label={viewMode === "week" ? "Semana anterior" : viewMode === "agenda" ? "Mes anterior" : "Mes anterior"}
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="font-display text-lg font-bold text-brand-deep">
             {viewMode === "month"
               ? monthLabel(yearMonth)
-              : `Semana del ${weekStartIso}`}
+              : viewMode === "week"
+                ? `Semana del ${weekStartIso}`
+                : monthLabel(yearMonth)}
           </span>
           <Button
             variant="secondary"
             size="sm"
             onClick={goNext}
-            aria-label={viewMode === "month" ? "Mes siguiente" : "Semana siguiente"}
+            aria-label={viewMode === "week" ? "Semana siguiente" : viewMode === "agenda" ? "Mes siguiente" : "Mes siguiente"}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -150,7 +168,7 @@ export function CalendarView({
           <div
             role="tablist"
             aria-label="Modo de vista"
-            className="inline-flex h-9 items-center rounded-md border border-ink-300 bg-paper p-0.5"
+            className="inline-flex h-11 min-h-11 items-center rounded-md border border-ink-300 bg-paper p-0.5"
           >
             <button
               type="button"
@@ -182,12 +200,27 @@ export function CalendarView({
               <CalendarIcon className="h-3.5 w-3.5" />
               Semana
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === "agenda"}
+              onClick={() => setViewMode("agenda")}
+              className={cn(
+                "inline-flex h-11 min-h-11 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
+                viewMode === "agenda"
+                  ? "bg-brand-blue text-paper"
+                  : "text-ink-600 hover:text-ink-900",
+              )}
+            >
+              <List className="h-3.5 w-3.5" />
+              Agenda
+            </button>
           </div>
           {teams.length > 0 ? (
             <div className="flex w-full flex-col gap-1 sm:w-56">
               <label
                 htmlFor="calendar-team-filter"
-                className="text-xs font-semibold uppercase tracking-wider text-ink-600"
+                className="text-[10px] font-bold uppercase tracking-wider text-ink-600"
               >
                 Equipo
               </label>
@@ -220,7 +253,7 @@ export function CalendarView({
           }}
           selectedIso={selectedIso ?? undefined}
         />
-      ) : (
+      ) : viewMode === "week" ? (
         <WeekView
           startIso={weekStartIso}
           eventsByDay={filteredEvents}
@@ -236,6 +269,16 @@ export function CalendarView({
             }
           }}
           selectedIso={selectedIso ?? undefined}
+        />
+      ) : (
+        <AgendaView
+          eventsByDay={filteredEvents}
+          rangeStartIso={agendaStartIso}
+          rangeEndIso={agendaEndIso}
+          activeProfileId={activeProfileId}
+          showAttendance={showAttendance}
+          userAttendanceBySession={userAttendanceBySession}
+          emptyMessage="No hay eventos en este mes. Cambia el filtro de equipo o navega a otro mes."
         />
       )}
 
