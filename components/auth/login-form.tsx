@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useActionState } from "react";
+import { useActionState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -47,6 +47,7 @@ export interface LoginFormProps {
 
 export function LoginForm({ next }: LoginFormProps) {
   const [state, formAction] = useActionState<SignInState, FormData>(signIn, null);
+  const [, startTransition] = useTransition();
 
   const form = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -58,7 +59,9 @@ export function LoginForm({ next }: LoginFormProps) {
     fd.append("email", values.email);
     fd.append("password", values.password);
     if (next) fd.append("next", next);
-    formAction(fd);
+    startTransition(() => {
+      formAction(fd);
+    });
   });
 
   return (

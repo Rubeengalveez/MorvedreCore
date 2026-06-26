@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useActionState } from "react";
+import { useActionState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -101,6 +101,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     updateProfile,
     null,
   );
+  const [, startTransition] = useTransition();
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -124,7 +125,9 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     fd.append("license_active", values.license_active ? "on" : "");
     fd.append("phone_e164", values.phone_e164 ?? "");
     fd.append("email_contact", values.email_contact ?? "");
-    formAction(fd);
+    startTransition(() => {
+      formAction(fd);
+    });
   });
 
   return (

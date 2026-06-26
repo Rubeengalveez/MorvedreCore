@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useActionState } from "react";
+import { useActionState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -48,6 +48,7 @@ export function ChangePasswordForm() {
     updatePassword,
     null,
   );
+  const [, startTransition] = useTransition();
 
   const form = useForm<ChangePasswordValues>({
     resolver: zodResolver(changePasswordSchema),
@@ -58,7 +59,9 @@ export function ChangePasswordForm() {
     const fd = new FormData();
     fd.append("newPassword", values.newPassword);
     fd.append("confirmPassword", values.confirmPassword);
-    formAction(fd);
+    startTransition(() => {
+      formAction(fd);
+    });
   });
 
   return (

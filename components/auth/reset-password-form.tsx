@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useActionState } from "react";
+import { useActionState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -42,6 +42,7 @@ export function ResetPasswordForm() {
     requestPasswordReset,
     null,
   );
+  const [, startTransition] = useTransition();
 
   const form = useForm<EmailValues>({
     resolver: zodResolver(emailSchema),
@@ -51,7 +52,9 @@ export function ResetPasswordForm() {
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
     fd.append("email", values.email);
-    formAction(fd);
+    startTransition(() => {
+      formAction(fd);
+    });
   });
 
   if (state?.success) {
