@@ -5,6 +5,9 @@ import type { Route } from "next";
 import { ProfileForm } from "@/app/(app)/profile/profile-form";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata = {
   title: "Tu perfil — Morvedre Core",
   description: "Edita tu información personal.",

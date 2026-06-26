@@ -10,6 +10,9 @@ import {
 } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 const ACTIVE_COOKIE = "morvedre_active_profile_id";
 
 export default async function DashboardPage() {
