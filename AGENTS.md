@@ -35,28 +35,34 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 0 — Cimientos. COMPLETADA y commiteada en `main`.** Ver `docs/planning/12-phase-0-summary.md` para el detalle.
+**Fase 1 — Estructura deportiva. COMPLETADA, commiteada y operativa.** Ver `docs/planning/15-phase-1-summary.md` para el detalle.
 
-Pendiente para arrancar el dev real:
-- Crear proyecto en Supabase Cloud
-- Rellenar `.env.local` con las credenciales reales
-- `pnpm db:push` para aplicar la migración al proyecto
-- `pnpm bootstrap` para crear el primer admin (`galvillo9@gmail.com`)
+Pendiente para probar en el cloud:
+- Aplicar las 6 migraciones + seed (consolidado en chat)
+- Login con `galvillo9@gmail.com` y la password que ya cambiaste
+- Ir a `/admin` y empezar a crear equipos + importar jugadores
 
-Próxima fase: **Fase 1 — Estructura deportiva** (temporadas, equipos, jugadores, roles).
+Próxima fase: **Fase 2 — Entrenamientos y partidos** (sesiones, lista, convocatoria, partidos).
 
-### Lo que ya está implementado (Fase 0)
+### Lo que ya está implementado (Fase 0 + 1)
 
+**Fase 0:**
 - Scaffold Next.js 16 + TS strict + Tailwind v4
-- Diseño system con tokens del club
-- Componentes UI base (Button, Input, Card, Form, Alert, Sheet, Label)
-- App shell: topbar + bottom nav + profile switcher
-- Auth: login, reset password, cambio obligatorio de primer login
-- Página de perfil editable
-- Migración inicial con 4 tablas + 16 RLS policies
-- Bootstrap script para el primer admin
-- PWA: manifest, service worker, iconos
+- Diseño system con tokens del club + 12 pictogramas custom
+- Componentes UI base + AppShell con bottom nav
+- Auth: login, reset, cambio obligatorio
+- PWA: manifest, service worker, iconos del tiburón
 - CI: lint, typecheck, build, test
+
+**Fase 1:**
+- 5 migraciones de BD + 1 fix (seasons, teams, team_staff, team_rosters, profiles extend)
+- Seed con 3 temporadas (2024/25 archivada, 2025/26 archivada, 2026/27 actual)
+- 53 tests unitarios pasando
+- 6 funciones de dominio (categories, teams, seasons)
+- Panel admin completo (`/admin`) con 6 secciones
+- Vistas públicas: `/team`, `/team/[id]`, dashboard actualizado
+- Profile switcher con "Mi perfil" + "Familia"
+- Import desde Excel (xlsx) idempotente
 
 ### Decisiones cerradas (ver `docs/planning/00-decisions-log.md`)
 
@@ -65,14 +71,12 @@ Próxima fase: **Fase 1 — Estructura deportiva** (temporadas, equipos, jugador
 - Nombre visible de la app: "Morvedre Core".
 - Idioma: solo castellano.
 - Foto del jugador: visible para todos los miembros del club (sin opt-out).
-- Datos personales (teléfono, email): privados. Solo el usuario, admin y coaches de su equipo.
+- Datos personales (teléfono, email): privados.
 - Rankings públicos para todo el club.
-- Notificaciones configurables por usuario (todo por defecto).
-- Tono: cercano y directo, segunda persona ("Tienes un partido mañana").
-- Bootstrap del primer admin: script Node con `galvillo9@gmail.com`.
-- Sin seed de equipos: el admin los crea desde la UI.
-- Modelo de género: `teams.gender` configurado, pero la matriz de ascensos no filtra por género.
-- `team_type` enum: `competitive | school` (para la Escuela).
+- Notificaciones configurables por usuario.
+- Tono: cercano y directo, segunda persona.
+- `team_type` enum: `competitive | school`.
+- `canRosterPlayer` asimétrica: el equipo puede estar 1 categoría por encima del jugador, sin límite hacia abajo.
 
 ## Convenciones de trabajo
 
@@ -88,20 +92,33 @@ Próxima fase: **Fase 1 — Estructura deportiva** (temporadas, equipos, jugador
 
 ## Próximo paso acordado
 
-**Fase 1 — Estructura deportiva**: temporadas, equipos, jugadores, roles.
+**Fase 2 — Entrenamientos y partidos**: sesiones, pasar lista, convocatoria, partidos.
 
-## Documentos nuevos en Fase 0
+## Documentos disponibles
 
-- `docs/planning/12-phase-0-summary.md` — qué se hizo
-- `docs/planning/13-lessons-learned.md` — errores a no repetir
+- `docs/planning/00-decisions-log.md` — decisiones tomadas
+- `docs/planning/01-gap-analysis.md` — huecos del SRS
+- `docs/planning/02-tech-stack.md` — stack
+- `docs/planning/03-architecture.md` — modelo de datos
+- `docs/planning/04-roadmap.md` — roadmap completo
+- `docs/planning/05-decisions-needed.md` — preguntas iniciales
+- `docs/planning/06-visual-identity.md` — identidad visual
+- `docs/planning/07-discovery-process.md` — proceso de descubrimiento
+- `docs/planning/08-hypotheses-tracker.md` — hipótesis
+- `docs/planning/09-remaining-questions.md` — preguntas pendientes
+- `docs/planning/10-design-direction.md` — dirección de diseño
+- `docs/planning/11-feature-suggestions.md` — features sugeridos (rechazados)
+- `docs/planning/12-phase-0-summary.md` — resumen Fase 0
+- `docs/planning/13-lessons-learned.md` — errores a no repetir (Fase 0 + 1)
+- `docs/planning/14-phase-1-plan.md` — plan detallado Fase 1
+- `docs/planning/15-phase-1-summary.md` — resumen Fase 1
 
 ## Si dudas
 
-- **Sobre requisitos**: vuelve al SRS original del usuario (primer mensaje de la conversación). Está en el chat, no en archivos.
+- **Sobre requisitos**: vuelve al SRS original del usuario (primer mensaje de la conversación).
 - **Sobre el modelo de datos**: `03-architecture.md` § 2.
 - **Sobre las fases**: `04-roadmap.md`.
 - **Sobre decisiones tomadas**: `00-decisions-log.md`.
-- **Sobre preguntas pendientes no bloqueantes**: `09-remaining-questions.md`.
-- **Sobre estilo visual**: `06-visual-identity.md` y el logo en `public/brand/`.
-- **Sobre la estructura de la Fase 0**: `12-phase-0-summary.md`.
+- **Sobre estilo visual**: `06-visual-identity.md` y `10-design-direction.md`.
+- **Sobre la estructura de una fase**: `12-phase-0-summary.md` o `15-phase-1-summary.md`.
 - **Sobre errores a evitar**: `13-lessons-learned.md`.
