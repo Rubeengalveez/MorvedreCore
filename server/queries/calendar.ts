@@ -206,6 +206,9 @@ export interface NextEvent {
   kind: "training" | "match";
   id: string;
   scheduled_at: string;
+  team_label: string;
+  team_color: string;
+  location: string | null;
 }
 
 export async function getNextEventForProfile(input: {
@@ -223,7 +226,7 @@ export async function getNextEventForProfile(input: {
   const [trainingRes, matchRes, callupsRes] = await Promise.all([
     supabase
       .from("training_sessions")
-      .select("id, scheduled_at")
+      .select("id, scheduled_at, location, teams!training_sessions_team_id_fkey(label, color)")
       .in("team_id", teamIds)
       .eq("cancelled", false)
       .gte("scheduled_at", nowIso)
@@ -231,7 +234,7 @@ export async function getNextEventForProfile(input: {
       .limit(1),
     supabase
       .from("matches")
-      .select("id, scheduled_at, status")
+      .select("id, scheduled_at, status, location, teams!matches_team_id_fkey(label, color)")
       .in("team_id", teamIds)
       .in("status", ["scheduled", "in_progress"])
       .gte("scheduled_at", nowIso)
@@ -252,10 +255,12 @@ export async function getNextEventForProfile(input: {
   const userMatch = ((matchRes.data ?? []) as Array<{
     id: string;
     scheduled_at: string;
+    location: string | null;
+    teams: unknown;
   }>).find((m) => calledMatchIds.has(m.id));
 
   const nextTraining = (trainingRes.data ?? [])[0] as
-    | { id: string; scheduled_at: string }
+    | { id: string; scheduled_at: string; location: string | null; teams: unknown }
     | undefined;
   const nextUserMatch = userMatch ?? null;
 
@@ -264,18 +269,29 @@ export async function getNextEventForProfile(input: {
 
   if (!trainingTime && !matchTime) return null;
   if (trainingTime && (!matchTime || trainingTime < matchTime)) {
+    const team = Array.isArray(nextTraining?.teams) ? nextTraining?.teams[0] : nextTraining?.teams;
+    const teamObj = team as { label?: string; color?: string } | null;
     return {
       kind: "training",
       id: nextTraining!.id,
       scheduled_at: trainingTime,
+      team_label: teamObj?.label ?? "",
+      team_color: teamObj?.color ?? "#1E5AA8",
+      location: nextTraining!.location,
     };
   }
   if (matchTime) {
+    const team = Array.isArray(nextUserMatch?.teams) ? nextUserMatch?.teams[0] : nextUserMatch?.teams;
+    const teamObj = team as { label?: string; color?: string } | null;
     return {
       kind: "match",
       id: nextUserMatch!.id,
       scheduled_at: matchTime,
+      team_label: teamObj?.label ?? "",
+      team_color: teamObj?.color ?? "#F4C430",
+      location: nextUserMatch!.location,
     };
   }
   return null;
 }
+
