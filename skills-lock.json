@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "customer-discovery": {
+      "source": "guia-matthieu/clawfu-skills",
+      "sourceType": "github",
+      "skillPath": "skills/validation/customer-discovery/SKILL.md",
+      "computedHash": "48f36750137eff2466466217ee1bcd50e7c6d1aba4dbb8f6f4b772a557562320"
+    },
+    "discovery-interview-guide": {
+      "source": "mohitagw15856/pm-claude-skills",
+      "sourceType": "github",
+      "skillPath": "skills/discovery-interview-guide/SKILL.md",
+      "computedHash": "34a04551b4878104143a1197df72243e4f695b907d3be4fdf9dcff24d24fd50f"
+    },
+    "find-skills": {
+      "source": "vercel-labs/skills",
+      "sourceType": "github",
+      "skillPath": "skills/find-skills/SKILL.md",
+      "computedHash": "781bd6d3f9b19f8c9af6b53d8d0e4876d0183841b565db34ca7092ffa412d111"
+    },
+    "mobile-first-design": {
+      "source": "secondsky/claude-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/mobile-first-design/skills/mobile-first-design/SKILL.md",
+      "computedHash": "5f7a038065c988351dd0928f1026ffc60bd79c74d81fcf70931ca1b711667ace"
+    }
+  }
+}
