@@ -196,6 +196,26 @@ Auditoría profunda de Fase 1. Encontrados **4 críticos, 18 altos, 47 medios, 2
     - Por eso los integration tests usan el cloud de Supabase y skip si no hay env vars.
     - **Regla**: marcar con `it.skip()` los tests que dependen de env, no fallarlos.
 
+## 2026-06-26 — Bug crítico de login descubierto por el usuario
+
+**El bug**: el form de login no tenía `method="post"`, así que cuando el usuario enviaba el form sin que React hubiera interceptado (o con JS deshabilitado), el browser hacía GET a `/login` con `?email=...&password=...` en la URL. Las contraseñas quedaban expuestas en el historial del navegador.
+
+**Por qué pasó**: el form se construyó con RHF + useActionState + onSubmit, confiando en que RHF siempre llama `event.preventDefault()`. En condiciones normales (React hidratado), funciona. Pero sin la red de seguridad de `method="post"`, un fallo de hidratación o un browser lento podía exponer la contraseña.
+
+**El fix**: añadir `method="post"` al form. Es una red de seguridad de 1 línea que previene el peor escenario incluso si React no intercepta.
+
+**Regla**: SIEMPRE poner `method="post"` en formularios con contraseñas u otra información sensible. Aunque confíes en que JS va a interceptar, la defensa en profundidad importa.
+
+**Regla 2**: SIEMPRE probar el flujo end-to-end con Playwright ANTES de declarar una fase como completa. El error fue que validé que el form renderiza (200 OK en /login) pero no validé que el submit funciona y redirige. Eso requiere tests e2e con el flujo real.
+
+**Test e2e añadido** (`tests/e2e/login.spec.ts`):
+- El form renderiza con título, inputs, botón
+- El form tiene `method="post"`
+- Submit NO pone la password en la URL
+- Errores de validación se muestran
+
+**Lección para futuras fases**: nunca declarar "completado y probado" sin haber ejecutado el flujo crítico de extremo a extremo con Playwright. Los unit tests y la build pass no garantizan que el flujo funciona en el browser.
+
 ## 2026-06-26 — Auditoría de Fase 2
 
 Auditoría profunda de Fase 2 (entrenamientos y partidos). 4 críticos, 5 altos, 4 medios. **Todos los del audit ya estaban aplicados** por las subagentes de implementación (el audit se ejecutó contra código más antiguo).

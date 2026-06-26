@@ -66,7 +66,7 @@ export function LoginForm({ next }: LoginFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} className="flex w-full flex-col gap-5" noValidate>
+      <form onSubmit={onSubmit} method="post" className="flex w-full flex-col gap-5" noValidate>
         {state?.error ? (
           <Alert variant="danger" title="No pudimos entrar">
             {state.error}
