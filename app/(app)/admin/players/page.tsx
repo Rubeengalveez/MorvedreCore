@@ -1,4 +1,6 @@
-import { Plus } from "lucide-react";
+import { Plus, FileUp } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
 
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, inferCategory } from "@/lib/domain/categories";
@@ -85,14 +87,22 @@ export default async function PlayersPage() {
             Altas, ediciones y asignación a equipos.
           </p>
         </div>
-        <PlayerFormSheet
-          trigger={
-            <Button size="md" className="shrink-0">
-              <Plus className="h-5 w-5" aria-hidden="true" />
-              <span className="hidden sm:inline">Nuevo</span>
-            </Button>
-          }
-        />
+        <div className="flex shrink-0 gap-2">
+          <Button asChild size="md" variant="secondary" className="shrink-0">
+            <Link href={"/admin/players/import" as Route}>
+              <FileUp className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">Importar Excel</span>
+            </Link>
+          </Button>
+          <PlayerFormSheet
+            trigger={
+              <Button size="md" className="shrink-0">
+                <Plus className="h-5 w-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Nuevo</span>
+              </Button>
+            }
+          />
+        </div>
       </header>
 
       <PlayersTable players={players} />

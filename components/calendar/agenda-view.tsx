@@ -95,7 +95,7 @@ export function AgendaView({
   eventsByDay,
   rangeStartIso,
   rangeEndIso,
-  emptyMessage = "No hay eventos en este rango. Cambia el filtro de equipo o navega a otra semana.",
+  emptyMessage = "Tu semana en el club. Si convocan a tu hijo, aparecerá aquí. Si no, descansas.",
   activeProfileId,
   showAttendance,
   userAttendanceBySession,

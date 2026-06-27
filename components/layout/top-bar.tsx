@@ -28,10 +28,17 @@ export async function TopBar({
     ),
   ]);
 
+  const teamColor = activeProfile.team_color ?? "var(--brand-blue)";
+
   return (
     <header className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-2 border-b border-ink-300 bg-paper px-4 pt-[env(safe-area-inset-top)]">
       <Logo size="sm" withWordmark />
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
+        <span
+          aria-hidden="true"
+          className="hidden h-6 w-1 shrink-0 rounded-full sm:block"
+          style={{ backgroundColor: teamColor }}
+        />
         <NotificationsBell
           initialUnread={unread}
           initialNotifications={items}

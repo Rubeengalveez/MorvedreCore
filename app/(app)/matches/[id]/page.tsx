@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
+import { Trophy, Minus, TrendingDown, ChevronLeft } from "lucide-react";
 
 import { Balon, ChevronDerecha, Gorro, Porteria } from "@/components/brand/pictograms";
 import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
@@ -11,7 +12,6 @@ import { formatLongDate, formatTimeOfDay } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getMatchById,
-  getMatchCallups,
   getMatchMvp,
   getMatchTopScorers,
   isProfileCoachOfMatch,
@@ -19,6 +19,7 @@ import {
   type MatchDetail,
   type MatchScorer,
 } from "@/server/queries/matches";
+import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 
 export const dynamic = "force-dynamic";
@@ -63,6 +64,43 @@ export async function generateMetadata({
   };
 }
 
+interface CallupDetailWithPhoto extends CallupDetail {
+  photo_url: string | null;
+}
+
+async function getCallupsWithPhotos(matchId: string): Promise<CallupDetailWithPhoto[]> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("match_callups")
+    .select("match_id, player_id, cap_number, status, confirmed_at, source_team_id, profiles!match_callups_player_id_fkey(full_name, photo_url)")
+    .eq("match_id", matchId)
+    .order("cap_number", { ascending: true });
+  const out: CallupDetailWithPhoto[] = [];
+  for (const row of (data ?? []) as Array<{
+    match_id: string;
+    player_id: string;
+    cap_number: number | null;
+    status: string;
+    confirmed_at: string | null;
+    source_team_id: string | null;
+    profiles: unknown;
+  }>) {
+    const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
+    const profileObj = profile as { full_name?: string; photo_url?: string | null } | null;
+    out.push({
+      match_id: row.match_id,
+      player_id: row.player_id,
+      full_name: profileObj?.full_name ?? "Sin nombre",
+      photo_url: profileObj?.photo_url ?? null,
+      cap_number: row.cap_number,
+      status: row.status,
+      confirmed_at: row.confirmed_at,
+      source_team_id: row.source_team_id,
+    });
+  }
+  return out;
+}
+
 export default async function MatchDetailPage({
   params,
 }: {
@@ -76,7 +114,7 @@ export default async function MatchDetailPage({
   if (!match) notFound();
 
   const [callups, mvp, topScorers, isCoach] = await Promise.all([
-    getMatchCallups(id).catch(() => [] as CallupDetail[]),
+    getCallupsWithPhotos(id).catch(() => [] as CallupDetailWithPhoto[]),
     getMatchMvp(id).catch(() => null as MatchScorer | null),
     getMatchTopScorers(id, 3).catch(() => [] as MatchScorer[]),
     isProfileCoachOfMatch(id, ctx.activeProfile.id),
@@ -89,6 +127,16 @@ export default async function MatchDetailPage({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-4">
+      <div className="sticky top-[60px] z-10 -mx-4 flex items-center gap-1 border-b border-ink-300 bg-paper/95 px-4 py-2 backdrop-blur">
+        <Link
+          href={"/calendar" as Route}
+          className="inline-flex items-center gap-1 text-sm font-semibold text-brand-blue hover:underline"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Calendario
+        </Link>
+      </div>
+
       <MatchHero match={match} />
 
       {myStatus ? (
@@ -175,61 +223,92 @@ function MatchHero({ match }: { match: MatchDetail }) {
   const isHome = match.is_home;
   const dateLabel = formatLongDate(match.scheduled_at);
   const timeLabel = formatTimeOfDay(match.scheduled_at);
-  const score =
-    match.final_score_us != null && match.final_score_them != null
-      ? `${match.final_score_us} - ${match.final_score_them}`
-      : null;
+  const hasScore =
+    match.final_score_us != null && match.final_score_them != null;
   const isCancelled = match.status === "cancelled";
   const isPlayed = match.status === "played";
 
   return (
-    <header className="overflow-hidden rounded-md border border-ink-300 bg-paper">
-      <div
-        aria-hidden="true"
-        className="block h-2 w-full"
-        style={{ backgroundColor: match.team_color }}
-      />
+    <header
+      className="relative overflow-hidden rounded-md border border-ink-300 bg-paper"
+      style={{
+        borderTopWidth: "4px",
+        borderTopColor: match.team_color,
+        borderLeftWidth: "4px",
+        borderLeftColor: match.team_color,
+      }}
+    >
       <div className="flex flex-col gap-4 p-5">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-ink-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-600">
-            {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+        <div className="flex items-center gap-2 text-xs text-ink-600">
+          <span className="font-mono font-bold uppercase tracking-wider text-brand-deep">
+            {dateLabel}
           </span>
-          {isCancelled ? (
-            <span className="inline-flex h-6 items-center rounded-full bg-danger/15 px-2 text-[11px] font-semibold text-danger">
-              Cancelado
-            </span>
-          ) : null}
-          {isPlayed ? (
-            <span className="inline-flex h-6 items-center rounded-full bg-success/15 px-2 text-[11px] font-semibold text-success">
-              Jugado
-            </span>
-          ) : null}
+          <span
+            className={cn(
+              "ml-auto inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
+              isCancelled
+                ? "bg-danger/15 text-danger"
+                : isPlayed
+                  ? "bg-success/15 text-success"
+                  : "bg-brand-aqua/15 text-brand-deep",
+            )}
+          >
+            {STATUS_LABELS[match.status] ?? match.status}
+          </span>
         </div>
-        <div className="flex flex-col items-center gap-3 text-center">
-          <span className="text-xs font-semibold uppercase tracking-wider text-ink-600">
-            {dateLabel} · {timeLabel}
-          </span>
-          <div className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:justify-center sm:gap-6">
-            <div className="flex flex-col items-center gap-1 sm:items-end">
-              <span className="font-display text-lg font-bold text-brand-deep">
-                {match.team_label}
-              </span>
-              <span className="text-xs text-ink-600">{isHome ? "Local" : "Visitante"}</span>
-            </div>
-            {score ? (
-              <span className="font-mono text-[40px] font-extrabold leading-none text-brand-deep">
-                {score}
+        <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
+          <div className="flex flex-col items-center gap-1 text-center sm:items-end sm:text-right">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+              {isHome ? "Local" : "Visitante"}
+            </span>
+            <span className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
+              {match.team_label}
+            </span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <span className="font-mono text-sm font-bold text-ink-600">
+              {timeLabel}
+            </span>
+            {hasScore ? (
+              <span
+                className="font-mono font-extrabold leading-none text-brand-deep"
+                style={{ fontSize: "72px" }}
+              >
+                {match.final_score_us} - {match.final_score_them}
               </span>
             ) : (
-              <span className="font-display text-2xl font-extrabold text-ink-600">vs</span>
-            )}
-            <div className="flex flex-col items-center gap-1 sm:items-start">
-              <span className="font-display text-lg font-bold text-brand-deep">
-                {match.opponent}
+              <span className="font-display text-3xl font-extrabold text-ink-600">
+                vs
               </span>
-              <span className="text-xs text-ink-600">{isHome ? "Visitante" : "Local"}</span>
-            </div>
+            )}
           </div>
+          <div className="flex flex-col items-center gap-1 text-center sm:items-start sm:text-left">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+              {isHome ? "Visitante" : "Local"}
+            </span>
+            <span className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
+              {match.opponent}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-ink-600">
+          <span className="inline-flex h-6 items-center rounded-full border border-ink-300 px-2 text-[11px] font-semibold text-ink-600">
+            {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+          </span>
+          {isHome ? (
+            <span className="inline-flex h-6 items-center rounded-full bg-brand-foam px-2 text-[11px] font-semibold text-brand-deep">
+              Local
+            </span>
+          ) : (
+            <span className="inline-flex h-6 items-center rounded-full bg-ink-300/40 px-2 text-[11px] font-semibold text-ink-600">
+              Visitante
+            </span>
+          )}
+          {(match.pool_name || match.location) ? (
+            <span className="text-xs text-ink-600">
+              {match.pool_name ?? match.location}
+            </span>
+          ) : null}
         </div>
       </div>
     </header>
@@ -303,7 +382,7 @@ function CallupSection({
   isCoach,
   matchId,
 }: {
-  callups: CallupDetail[];
+  callups: CallupDetailWithPhoto[];
   isCoach: boolean;
   matchId: string;
 }) {
@@ -339,16 +418,20 @@ function CallupSection({
   );
 }
 
-function CallupRow({ callup }: { callup: CallupDetail }) {
+function CallupRow({ callup }: { callup: CallupDetailWithPhoto }) {
   const tone = callupTone(callup.status);
+  const isWin = callup.status === "confirmed";
+  const isDraw = callup.status === "called";
+  const Icon = isWin ? Trophy : isDraw ? Minus : TrendingDown;
   return (
     <li className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper px-4 py-3">
-      <Avatar name={callup.full_name} size={40} />
+      <Avatar src={callup.photo_url} name={callup.full_name} size={40} />
       <div className="flex flex-1 flex-col">
         <span className="font-display text-base font-bold text-brand-deep">
           {callup.full_name}
         </span>
-        <span className={cn("text-xs font-semibold", tone.textClass)}>
+        <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", tone.textClass)}>
+          <Icon className="h-3 w-3" />
           {CALLOUP_LABELS[callup.status] ?? callup.status}
         </span>
       </div>

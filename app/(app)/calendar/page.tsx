@@ -81,6 +81,7 @@ export default async function CalendarPage() {
   const isAdmin = await loadAdminFlag(activeProfile.id);
 
   const ym = currentYearMonth();
+  const now = new Date();
   const startIso = new Date(ym.year, ym.month, 1, 0, 0, 0).toISOString();
   const endIso = new Date(
     ym.year,
@@ -120,7 +121,7 @@ export default async function CalendarPage() {
     .from("training_attendance")
     .select("session_id, present")
     .eq("player_id", activeProfile.id)
-    .gte("marked_at", new Date(Date.now() - 1000 * 60 * 60 * 24 * 60).toISOString());
+    .gte("marked_at", new Date(now.getTime() - 1000 * 60 * 60 * 24 * 60).toISOString());
   const userAttendanceBySession = new Map<string, boolean>();
   for (const a of attendanceData ?? []) {
     const ar = a as { session_id: string; present: boolean };
@@ -131,7 +132,7 @@ export default async function CalendarPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-1">
         <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
-          Calendario
+          Tu mes en el club
         </h1>
         <p className="text-sm leading-relaxed text-ink-600">
           Aquí verás tus entrenos, partidos y eventos.

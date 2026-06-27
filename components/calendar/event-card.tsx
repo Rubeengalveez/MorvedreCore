@@ -4,6 +4,7 @@ import { Clock, MapPin, Calendar, Users, Volleyball, X, ChevronRight, AlertCircl
 import Link from "next/link";
 import type { Route } from "next";
 
+import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils/cn";
 import { matchColor, trainingColor } from "@/lib/domain/event-colors";
 
@@ -31,6 +32,10 @@ export interface CalendarEventCardData {
   duration_minutes?: number;
   competition_type?: string;
   opponent?: string;
+  callup_photo_url?: string | null;
+  callup_name?: string | null;
+  callup_status?: string | null;
+  callup_cap_number?: number | null;
 }
 
 function formatTime(iso: string): string {
@@ -161,6 +166,29 @@ function EventBody({
           </div>
         </div>
       </div>
+      {event.callup_name ? (
+        <div
+          className="flex items-center gap-2 rounded-md border border-ink-300 bg-brand-foam/40 p-2"
+          style={{ borderLeftWidth: "3px", borderLeftColor: color }}
+        >
+          <Avatar
+            src={event.callup_photo_url ?? null}
+            name={event.callup_name}
+            size={28}
+          />
+          <div className="min-w-0 flex-1">
+            <p className="line-clamp-1 text-xs font-semibold text-brand-deep">
+              {event.callup_name}
+              {event.callup_cap_number != null ? ` #${event.callup_cap_number}` : ""}
+            </p>
+            {event.callup_status ? (
+              <p className="text-[10px] uppercase tracking-wider text-ink-600">
+                {event.callup_status === "confirmed" ? "Confirmado" : "Convocado"}
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-ink-300 pt-2 text-[11px] text-ink-600">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />

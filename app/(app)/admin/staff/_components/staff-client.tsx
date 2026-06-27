@@ -1,9 +1,10 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import {
   StaffFormSheet,
@@ -21,11 +22,18 @@ export interface StaffClientProps {
 
 export function StaffClient({ rows, teams, people }: StaffClientProps) {
   const [teamFilter, setTeamFilter] = useState<string>("");
+  const [search, setSearch] = useState("");
 
   const filteredRows = useMemo(() => {
-    if (!teamFilter) return rows;
-    return rows.filter((r) => r.team_id === teamFilter);
-  }, [rows, teamFilter]);
+    const q = search.toLowerCase().trim();
+    const base = teamFilter ? rows.filter((r) => r.team_id === teamFilter) : rows;
+    if (!q) return base;
+    return base.filter(
+      (r) =>
+        r.profile_name.toLowerCase().includes(q) ||
+        r.team_label.toLowerCase().includes(q),
+    );
+  }, [rows, teamFilter, search]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -47,6 +55,20 @@ export function StaffClient({ rows, teams, people }: StaffClientProps) {
               <span className="hidden sm:inline">Nueva asignación</span>
             </Button>
           }
+        />
+      </div>
+
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-600"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          placeholder="Buscar por nombre o equipo"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
         />
       </div>
 

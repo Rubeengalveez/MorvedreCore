@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils/cn";
 import {
   formatLongDate,
   formatTime,
-  formatWeekdayLetter,
 } from "@/lib/utils/format";
 import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
 
@@ -231,7 +230,6 @@ export default async function MatchDetailPage({
     });
 
   const scheduledDate = new Date(match.scheduled_at);
-  const weekdayLetter = formatWeekdayLetter(((scheduledDate.getDay() + 6) % 7) + 1);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-4">
@@ -245,19 +243,19 @@ export default async function MatchDetailPage({
         </Link>
       </div>
 
-      <header className="overflow-hidden rounded-md border border-ink-300 bg-paper">
-        <div
-          aria-hidden="true"
-          className="h-2 w-full"
-          style={{ backgroundColor: match.team?.color ?? "var(--brand-blue)" }}
-        />
-        <div className="flex flex-col gap-3 p-4">
-          <div className="flex items-center gap-2 text-sm text-ink-600">
-            <span className="font-mono font-bold text-brand-deep">
-              {weekdayLetter}
-            </span>
-            <span className="font-mono font-semibold">
-              {formatTime(scheduledDate)}
+      <header
+        className="relative overflow-hidden rounded-md border border-ink-300 bg-paper"
+        style={{
+          borderTopWidth: "4px",
+          borderTopColor: match.team?.color ?? "var(--brand-blue)",
+          borderLeftWidth: "4px",
+          borderLeftColor: match.team?.color ?? "var(--brand-blue)",
+        }}
+      >
+        <div className="flex flex-col gap-4 p-5">
+          <div className="flex items-center gap-2 text-xs text-ink-600">
+            <span className="font-mono font-bold uppercase tracking-wider text-brand-deep">
+              {formatLongDate(scheduledDate)}
             </span>
             <span
               className={cn(
@@ -268,16 +266,44 @@ export default async function MatchDetailPage({
               {STATUS_LABELS[match.status] ?? match.status}
             </span>
           </div>
-          <h1 className="font-display text-2xl font-extrabold leading-tight text-brand-deep">
-            {match.is_home
-              ? `${match.team?.label ?? "Equipo"} vs ${match.opponent}`
-              : `${match.opponent} vs ${match.team?.label ?? "Equipo"}`}
-          </h1>
-          <div className="flex flex-wrap items-center gap-1.5 text-sm text-ink-600">
-            <span className="font-mono text-xs text-ink-600">
-              {formatLongDate(scheduledDate)}
-            </span>
-            <span>·</span>
+          <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
+            <div className="flex flex-col items-center gap-1 text-center sm:items-end sm:text-right">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+                {match.is_home ? "Local" : "Visitante"}
+              </span>
+              <span className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
+                {match.team?.label ?? "Equipo"}
+              </span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <span className="font-mono text-sm font-bold text-ink-600">
+                {formatTime(scheduledDate)}
+              </span>
+              {match.status === "played" &&
+              match.final_score_us != null &&
+              match.final_score_them != null ? (
+                <span
+                  className="font-mono font-extrabold leading-none text-brand-deep"
+                  style={{ fontSize: "72px" }}
+                >
+                  {match.final_score_us} - {match.final_score_them}
+                </span>
+              ) : (
+                <span className="font-display text-3xl font-extrabold text-ink-600">
+                  vs
+                </span>
+              )}
+            </div>
+            <div className="flex flex-col items-center gap-1 text-center sm:items-start sm:text-left">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+                {match.is_home ? "Visitante" : "Local"}
+              </span>
+              <span className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
+                {match.opponent}
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-ink-600">
             <span className="inline-flex h-6 items-center rounded-full border border-ink-300 px-2 text-[11px] font-semibold text-ink-600">
               {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
             </span>
@@ -290,21 +316,12 @@ export default async function MatchDetailPage({
                 Visitante
               </span>
             )}
+            {(match.pool_name || match.location) ? (
+              <span className="text-xs text-ink-600">
+                {match.pool_name ?? match.location}
+              </span>
+            ) : null}
           </div>
-          {(match.pool_name || match.location) && (
-            <p className="text-sm text-ink-600">
-              {match.pool_name ? `${match.pool_name}` : ""}
-              {match.pool_name && match.location ? " · " : ""}
-              {match.location ?? ""}
-            </p>
-          )}
-          {match.status === "played" &&
-          match.final_score_us != null &&
-          match.final_score_them != null ? (
-            <p className="font-mono text-3xl font-extrabold text-brand-deep">
-              {match.final_score_us} - {match.final_score_them}
-            </p>
-          ) : null}
         </div>
       </header>
 

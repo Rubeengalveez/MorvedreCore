@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { Search } from "lucide-react";
 
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import type { Season, Team } from "@/server/actions/admin";
 
@@ -20,10 +22,18 @@ export interface TeamsGridProps {
 
 export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGridProps) {
   const [filter, setFilter] = useState<string>(defaultSeasonId);
+  const [search, setSearch] = useState("");
 
   const teams = useMemo(() => {
-    return teamsBySeason.get(filter) ?? [];
-  }, [teamsBySeason, filter]);
+    const base = teamsBySeason.get(filter) ?? [];
+    const q = search.toLowerCase().trim();
+    if (!q) return base;
+    return base.filter(
+      (t) =>
+        t.label.toLowerCase().includes(q) ||
+        (t.coachName ?? "").toLowerCase().includes(q),
+    );
+  }, [teamsBySeason, filter, search]);
 
   return (
     <div className="flex flex-col gap-5">
@@ -49,13 +59,27 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
         </Select>
       </div>
 
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-600"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          placeholder="Buscar equipo por nombre o entrenador"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
       {teams.length === 0 ? (
         <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
           <p className="text-base font-semibold text-brand-deep">
-            No hay equipos en esta temporada.
+            Aún no formas parte de un equipo.
           </p>
           <p className="mt-1 text-sm text-ink-600">
-            Crea el primer equipo con el botón de arriba.
+            Cuando el admin te asigne, aparecerán tus compañeros.
           </p>
         </div>
       ) : (
@@ -65,18 +89,20 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
               <a
                 href={`/admin/teams/${t.id}`}
                 className="group flex flex-col overflow-hidden rounded-md border border-ink-300 bg-paper transition-colors hover:border-brand-blue hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                style={{
+                  borderLeftWidth: "4px",
+                  borderLeftColor: t.color,
+                }}
               >
-                <div
-                  aria-hidden="true"
-                  className="h-2 w-full"
-                  style={{ backgroundColor: t.color }}
-                />
                 <div className="flex flex-col gap-3 p-4">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-display text-xl font-extrabold leading-tight text-brand-deep">
                       {t.label}
                     </h3>
-                    <span className="rounded-full border border-ink-300 px-2 py-0.5 text-xs font-semibold text-ink-600">
+                    <span
+                      className="rounded-full px-2 py-0.5 text-xs font-semibold text-paper"
+                      style={{ backgroundColor: t.color }}
+                    >
                       {t.categoryLabel}
                     </span>
                   </div>

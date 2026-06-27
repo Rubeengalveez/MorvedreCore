@@ -87,6 +87,7 @@ export function ProfileSwitcher({
   const hasLinked = linkedProfiles.length > 0;
   const ownIsActive = ownProfile.id === activeProfile.id;
   const triggerSize = 40;
+  const teamColor = activeProfile.team_color ?? "var(--brand-blue)";
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -96,7 +97,10 @@ export function ProfileSwitcher({
           aria-label="Cambiar de perfil"
           variant="ghost"
           size="sm"
-          className="h-12 w-12 rounded-full border border-ink-300 bg-brand-foam p-0 text-brand-deep hover:bg-brand-foam"
+          className="h-12 w-12 rounded-full p-0 text-brand-deep hover:bg-brand-foam"
+          style={{
+            border: `2px solid ${teamColor}`,
+          }}
           disabled={isPending}
         >
           <Avatar
@@ -165,6 +169,7 @@ function SwitchRow({
   disabled: boolean;
   onSelect: (id: string) => void;
 }) {
+  const teamColor = profile.team_color ?? "var(--brand-blue)";
   return (
     <button
       type="button"
@@ -175,8 +180,14 @@ function SwitchRow({
         "flex items-center gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-brand-foam disabled:opacity-50",
         isActive ? "bg-brand-foam" : "",
       )}
+      style={isActive ? undefined : undefined}
     >
-      <Avatar src={profile.photo_url} name={profile.full_name} size={48} />
+      <span
+        className="relative shrink-0 rounded-full p-[2px]"
+        style={{ backgroundColor: teamColor }}
+      >
+        <Avatar src={profile.photo_url} name={profile.full_name} size={44} />
+      </span>
       <span className="flex flex-1 flex-col">
         <span className="font-display text-base font-bold text-brand-deep">
           {title}

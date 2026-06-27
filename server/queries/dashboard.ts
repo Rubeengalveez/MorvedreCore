@@ -43,15 +43,22 @@ export interface DashboardActivity {
   kind: "training" | "match" | "team" | "season";
   title: string;
   subtitle: string;
-  emoji: string;
+  result: "win" | "draw" | "loss" | "scheduled" | "training";
   color: string;
   timestamp: string;
+}
+
+export interface DashboardSeasonStats {
+  goals: number;
+  month_attendance_pct: number;
+  attendance_streak: number;
 }
 
 export interface DashboardData {
   weekEvents: DashboardWeekEvent[];
   teamInfo: DashboardTeamInfo | null;
   recentActivity: DashboardActivity[];
+  seasonStats: DashboardSeasonStats | null;
 }
 
 function relativeTime(iso: string, now: Date): string {
@@ -91,7 +98,7 @@ export async function getDashboardData(input: {
   const admin = await createClient();
 
   if (teamIds.length === 0) {
-    return { weekEvents: [], teamInfo: null, recentActivity: [] };
+    return { weekEvents: [], teamInfo: null, recentActivity: [], seasonStats: null };
   }
 
   const [{ data: trainings }, { data: matches }] = await Promise.all([
@@ -264,17 +271,18 @@ export async function getDashboardData(input: {
     const teamObj = team as { label?: string; color?: string } | null;
     if (mr.status === "played" && mr.final_score_us !== null && mr.final_score_them !== null) {
       const won = mr.final_score_us > mr.final_score_them;
+      const draw = mr.final_score_us === mr.final_score_them;
       recentActivity.push({
         id: mr.id,
         kind: "match",
         title: won
           ? `Victoria ${mr.final_score_us}-${mr.final_score_them} contra ${mr.opponent}`
-          : mr.final_score_us === mr.final_score_them
+          : draw
             ? `Empate ${mr.final_score_us}-${mr.final_score_them} contra ${mr.opponent}`
             : `Derrota ${mr.final_score_us}-${mr.final_score_them} contra ${mr.opponent}`,
         subtitle: `${teamObj?.label ?? ""} · ${relativeTime(mr.scheduled_at, now)}`,
-        emoji: won ? "🏆" : mr.final_score_us === mr.final_score_them ? "🤝" : "💪",
-        color: won ? "var(--success)" : "var(--ink-600)",
+        result: won ? "win" : draw ? "draw" : "loss",
+        color: won ? "var(--success)" : draw ? "var(--ink-600)" : "var(--danger)",
         timestamp: mr.scheduled_at,
       });
     } else {
@@ -283,7 +291,7 @@ export async function getDashboardData(input: {
         kind: "match",
         title: `Partido vs ${mr.opponent}`,
         subtitle: `${teamObj?.label ?? ""} · ${relativeTime(mr.scheduled_at, now)}`,
-        emoji: "📅",
+        result: "scheduled",
         color: "var(--brand-action)",
         timestamp: mr.scheduled_at,
       });
@@ -325,7 +333,7 @@ export async function getDashboardData(input: {
         kind: "training",
         title: `Asististe a un entreno`,
         subtitle: `${session.team_label} · ${relativeTime(session.scheduled_at, now)}`,
-        emoji: "✅",
+        result: "training",
         color: "var(--success)",
         timestamp: session.scheduled_at,
       });
@@ -333,9 +341,83 @@ export async function getDashboardData(input: {
   }
 
   recentActivity.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+
+  const [matchStatsRes, monthSessionsRes, monthAttendanceRes, allAttendanceRes] = await Promise.all([
+    admin
+      .from("match_stats")
+      .select("goals")
+      .eq("player_id", profileId),
+    admin
+      .from("training_sessions")
+      .select("id, scheduled_at, cancelled")
+      .in("team_id", teamIds)
+      .gte("scheduled_at", monthStart.toISOString())
+      .lt("scheduled_at", monthEnd.toISOString()),
+    admin
+      .from("training_attendance")
+      .select("session_id, present")
+      .eq("player_id", profileId),
+    admin
+      .from("training_attendance")
+      .select("session_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled)")
+      .eq("player_id", profileId)
+      .order("marked_at", { ascending: false })
+      .limit(50),
+  ]);
+
+  const goals = (matchStatsRes.data ?? []).reduce(
+    (acc, row) => acc + ((row as { goals: number }).goals ?? 0),
+    0,
+  );
+
+  const monthSessionIds = new Set(
+    ((monthSessionsRes.data ?? []) as Array<{ id: string; cancelled: boolean }>)
+      .filter((s) => !s.cancelled)
+      .map((s) => s.id),
+  );
+  const monthAttendanceRows = (monthAttendanceRes.data ?? []) as Array<{
+    session_id: string;
+    present: boolean;
+  }>;
+  const monthAttended = monthAttendanceRows.filter(
+    (r) => r.present && monthSessionIds.has(r.session_id),
+  ).length;
+  const monthAttendancePct =
+    monthSessionIds.size > 0
+      ? Math.round((monthAttended / monthSessionIds.size) * 100)
+      : 0;
+
+  let attendanceStreak = 0;
+  const attendanceBySession = new Map<string, boolean>();
+  for (const r of (allAttendanceRes.data ?? []) as Array<{
+    session_id: string;
+    present: boolean;
+  }>) {
+    attendanceBySession.set(r.session_id, r.present);
+  }
+  for (const s of (allAttendanceRes.data ?? []) as Array<{
+    session_id: string;
+    present: boolean;
+    training_sessions: unknown;
+  }>) {
+    const ts = Array.isArray(s.training_sessions) ? s.training_sessions[0] : s.training_sessions;
+    const session = ts as { scheduled_at?: string; cancelled?: boolean } | null;
+    if (!session || session.cancelled) continue;
+    if (!s.present) break;
+    attendanceStreak += 1;
+  }
+
   return {
     weekEvents: weekEvents.slice(0, 10),
     teamInfo,
     recentActivity: recentActivity.slice(0, 8),
+    seasonStats: {
+      goals,
+      month_attendance_pct: monthAttendancePct,
+      attendance_streak: attendanceStreak,
+    },
   };
 }

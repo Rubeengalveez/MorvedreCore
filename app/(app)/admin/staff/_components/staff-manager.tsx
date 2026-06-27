@@ -324,10 +324,10 @@ export function StaffTable({
       {rows.length === 0 ? (
         <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
           <p className="text-base font-semibold text-brand-deep">
-            No hay asignaciones que coincidan.
+            Sin cuerpo técnico.
           </p>
           <p className="mt-1 text-sm text-ink-600">
-            Crea la primera con el botón de arriba.
+            Asigna al menos un entrenador para activar el equipo.
           </p>
         </div>
       ) : (

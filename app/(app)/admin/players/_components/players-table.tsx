@@ -68,10 +68,10 @@ export function PlayersTable({ players }: PlayersTableProps) {
     return (
       <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
         <p className="text-base font-semibold text-brand-deep">
-          Aún no has dado de alta a ningún jugador.
+          Plantilla vacía.
         </p>
         <p className="mt-1 text-sm text-ink-600">
-          Crea el primero con el botón de arriba, o importa una lista desde Excel.
+          Crea el primer jugador o importa el Excel que tenías en el Drive.
         </p>
       </div>
     );

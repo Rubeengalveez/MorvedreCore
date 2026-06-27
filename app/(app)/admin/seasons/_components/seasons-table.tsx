@@ -137,10 +137,10 @@ export function SeasonsTable({ seasons }: SeasonsTableProps) {
     return (
       <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
         <p className="text-base font-semibold text-brand-deep">
-          Aún no has creado ninguna temporada.
+          Empieza la máquina.
         </p>
         <p className="mt-1 text-sm text-ink-600">
-          Empieza creando la temporada actual para poder dar de alta los equipos.
+          Crea la temporada 26/27 para dar de alta los equipos y partidos.
         </p>
       </div>
     );

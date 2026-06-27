@@ -9,10 +9,20 @@ import {
   CalendarRange,
   Trophy,
   Volleyball,
+  Clock,
+  Bell,
+  ChevronRight,
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import { Silbato } from "@/components/brand/pictograms";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { getActiveProfileContext } from "@/server/queries/active-profile";
+import {
+  getNotificationsForProfile,
+  getUnreadNotificationsCount,
+  type NotificationItem,
+} from "@/server/queries/notifications";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -77,71 +87,187 @@ async function loadCounts(): Promise<Counts> {
   };
 }
 
-const SHORTCUTS = [
-  {
-    href: "/admin/seasons",
-    title: "Temporadas",
-    description: "Crea y archiva las temporadas del club.",
-    Icon: CalendarRange,
-  },
-  {
-    href: "/admin/teams",
-    title: "Equipos",
-    description: "Configura los equipos y asigna plantilla.",
-    Icon: Shield,
-  },
-  {
-    href: "/admin/players",
-    title: "Jugadores",
-    description: "Alta, edición y búsqueda de jugadores.",
-    Icon: Users,
-  },
-  {
-    href: "/admin/families",
-    title: "Familias",
-    description: "Vincula padres y tutores con jugadores.",
-    Icon: UserPlus,
-  },
-  {
-    href: "/admin/staff",
-    title: "Personal",
-    description: "Asignaciones de entrenadores y delegados.",
-    Icon: Users,
-  },
-  {
-    href: "/admin/trainings",
-    title: "Entrenamientos",
-    description: "Bloques, sesiones y lista de asistencia.",
-    Icon: Volleyball,
-  },
-  {
-    href: "/admin/matches",
-    title: "Partidos",
-    description: "Convocatorias, actas y resultados.",
-    Icon: Trophy,
-  },
-  {
-    href: "/admin/players/import",
-    title: "Importar",
-    description: "Carga jugadores desde un Excel.",
-    Icon: FileUp,
-  },
+interface TodayEvent {
+  id: string;
+  kind: "training" | "match";
+  scheduled_at: string;
+  title: string;
+  team_label: string;
+  team_color: string;
+}
+
+async function loadTodayEvents(): Promise<{
+  events: TodayEvent[];
+  unread: number;
+  notifications: NotificationItem[];
+}> {
+  const supabase = await createClient();
+  const ctx = await getActiveProfileContext();
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+  if (!ctx) {
+    return { events: [], unread: 0, notifications: [] };
+  }
+
+  const [trainingsRes, matchesRes, unread, notifications] = await Promise.all([
+    supabase
+      .from("training_sessions")
+      .select("id, scheduled_at, teams!training_sessions_team_id_fkey(label, color)")
+      .gte("scheduled_at", todayStart.toISOString())
+      .lt("scheduled_at", tomorrowStart.toISOString())
+      .eq("cancelled", false)
+      .order("scheduled_at", { ascending: true })
+      .limit(5),
+    supabase
+      .from("matches")
+      .select("id, scheduled_at, opponent, teams!matches_team_id_fkey(label, color)")
+      .gte("scheduled_at", todayStart.toISOString())
+      .lt("scheduled_at", tomorrowStart.toISOString())
+      .order("scheduled_at", { ascending: true })
+      .limit(5),
+    getUnreadNotificationsCount(ctx.activeProfile.id).catch(() => 0),
+    getNotificationsForProfile(ctx.activeProfile.id, 3).catch(
+      () => [] as NotificationItem[],
+    ),
+  ]);
+
+  const events: TodayEvent[] = [];
+  for (const t of trainingsRes.data ?? []) {
+    const tr = t as { id: string; scheduled_at: string; teams: unknown };
+    const team = Array.isArray(tr.teams) ? tr.teams[0] : tr.teams;
+    const teamObj = team as { label?: string; color?: string } | null;
+    events.push({
+      id: tr.id,
+      kind: "training",
+      scheduled_at: tr.scheduled_at,
+      title: `Entreno ${teamObj?.label ?? ""}`,
+      team_label: teamObj?.label ?? "",
+      team_color: teamObj?.color ?? "var(--brand-blue)",
+    });
+  }
+  for (const m of matchesRes.data ?? []) {
+    const mr = m as { id: string; scheduled_at: string; opponent: string; teams: unknown };
+    const team = Array.isArray(mr.teams) ? mr.teams[0] : mr.teams;
+    const teamObj = team as { label?: string; color?: string } | null;
+    events.push({
+      id: mr.id,
+      kind: "match",
+      scheduled_at: mr.scheduled_at,
+      title: `${teamObj?.label ?? ""} vs ${mr.opponent}`,
+      team_label: teamObj?.label ?? "",
+      team_color: teamObj?.color ?? "var(--brand-action)",
+    });
+  }
+  events.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
+  return { events, unread, notifications };
+}
+
+const QUICK_SHORTCUTS = [
+  { href: "/admin/teams", title: "Equipos", Icon: Shield },
+  { href: "/admin/players", title: "Jugadores", Icon: UserPlus },
+  { href: "/admin/families", title: "Familias", Icon: Users },
+  { href: "/admin/staff", title: "Personal", Icon: Users },
+] as const;
+
+const SPORTS_SHORTCUTS = [
+  { href: "/admin/trainings", title: "Entrenamientos", Icon: Volleyball, description: "Bloques, sesiones y lista de asistencia." },
+  { href: "/admin/matches", title: "Partidos", Icon: Trophy, description: "Convocatorias, actas y resultados." },
+  { href: "/admin/seasons", title: "Temporadas", Icon: CalendarRange, description: "Crea y archiva las temporadas del club." },
+  { href: "/admin/players/import", title: "Importar Excel", Icon: FileUp, description: "Carga jugadores desde un Excel." },
 ] as const;
 
 export default async function AdminHomePage() {
-  const counts = await loadCounts();
+  const [counts, today] = await Promise.all([loadCounts(), loadTodayEvents()]);
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
-          Panel de administración
-        </h1>
-        <p className="text-sm leading-relaxed text-ink-600">
-          Gestiona la estructura deportiva del club. Empieza creando la temporada
-          actual si aún no la tienes.
-        </p>
+      <header
+        className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-4"
+        style={{
+          borderLeftWidth: "4px",
+          borderLeftColor: "var(--brand-action)",
+        }}
+      >
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          style={{ backgroundColor: "var(--brand-action)" }}
+        >
+          <Silbato className="h-6 w-6" style={{ color: "var(--paper)" }} />
+        </span>
+        <div className="flex flex-1 flex-col">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+            Panel de administración
+          </p>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+            Tu día en el club
+          </h1>
+          <p className="text-xs text-ink-600">
+            Gestiona la estructura deportiva del club.
+          </p>
+        </div>
+        <Link
+          href={"/notifications" as Route}
+          className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-ink-300 bg-paper"
+          aria-label={`Notificaciones${today.unread > 0 ? ` (${today.unread} sin leer)` : ""}`}
+        >
+          <Bell className="h-5 w-5 text-ink-900" />
+          {today.unread > 0 ? (
+            <span className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-action px-1 text-[10px] font-bold leading-none text-brand-deep">
+              {today.unread > 9 ? "9+" : today.unread}
+            </span>
+          ) : null}
+        </Link>
       </header>
+
+      {today.events.length > 0 ? (
+        <section
+          aria-labelledby="admin-today-heading"
+          className="rounded-md border border-ink-300 bg-paper p-4"
+        >
+          <div className="mb-3 flex items-center gap-2">
+            <Clock className="h-4 w-4 text-brand-deep" />
+            <h2
+              id="admin-today-heading"
+              className="font-display text-base font-bold text-brand-deep"
+            >
+              Tu día
+            </h2>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {today.events.map((e) => (
+              <li key={`${e.kind}-${e.id}`}>
+                <Link
+                  href={(e.kind === "match" ? `/admin/matches/${e.id}` : "/admin/trainings") as Route}
+                  className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-3 transition-colors hover:border-brand-blue hover:bg-brand-foam"
+                  style={{
+                    borderLeftWidth: "4px",
+                    borderLeftColor: e.team_color,
+                  }}
+                >
+                  <span
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-paper"
+                    style={{ backgroundColor: e.team_color }}
+                  >
+                    {e.kind === "match" ? <Trophy className="h-4 w-4" /> : <Volleyball className="h-4 w-4" />}
+                  </span>
+                  <div className="flex flex-1 flex-col">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+                      {e.kind === "match" ? "Partido" : "Entreno"} · {formatClock(e.scheduled_at)}
+                    </span>
+                    <span className="font-display text-sm font-bold text-brand-deep">
+                      {e.title}
+                    </span>
+                  </div>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-ink-600" />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section
         aria-labelledby="admin-stats-heading"
@@ -183,18 +309,40 @@ export default async function AdminHomePage() {
         ) : null}
       </section>
 
-      <section
-        aria-labelledby="admin-shortcuts-heading"
-        className="flex flex-col gap-2"
-      >
+      <section aria-labelledby="admin-quick-heading" className="flex flex-col gap-2">
         <h2
-          id="admin-shortcuts-heading"
+          id="admin-quick-heading"
           className="font-display text-base font-bold text-brand-deep"
         >
-          Accesos rápidos
+          Personas
+        </h2>
+        <div className="grid grid-cols-2 gap-2">
+          {QUICK_SHORTCUTS.map(({ href, title, Icon }) => (
+            <Link
+              key={href}
+              href={href as Route}
+              className="flex items-center gap-2 rounded-md border border-ink-300 bg-paper p-3 transition-colors hover:border-brand-blue hover:bg-brand-foam"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded bg-brand-foam text-brand-deep">
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="font-display text-sm font-bold text-brand-deep">
+                {title}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section aria-labelledby="admin-sports-heading" className="flex flex-col gap-2">
+        <h2
+          id="admin-sports-heading"
+          className="font-display text-base font-bold text-brand-deep"
+        >
+          Competición
         </h2>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {SHORTCUTS.map(({ href, title, description, Icon }) => (
+          {SPORTS_SHORTCUTS.map(({ href, title, description, Icon }) => (
             <Link
               key={href}
               href={href as Route}
@@ -243,4 +391,9 @@ function Stat({
       {hint ? <dd className="text-xs text-ink-600">{hint}</dd> : null}
     </div>
   );
+}
+
+function formatClock(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }

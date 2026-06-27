@@ -44,7 +44,8 @@ export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
           variant="primary"
           disabled={pending || currentStatus === "confirmed"}
           onClick={() => send("confirmed")}
-          className="w-full sm:flex-1"
+          className="w-full text-paper sm:flex-1"
+          style={{ backgroundColor: "var(--success)" }}
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
           Confirmo

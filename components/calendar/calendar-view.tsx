@@ -278,7 +278,7 @@ export function CalendarView({
           activeProfileId={activeProfileId}
           showAttendance={showAttendance}
           userAttendanceBySession={userAttendanceBySession}
-          emptyMessage="No hay eventos en este mes. Cambia el filtro de equipo o navega a otro mes."
+          emptyMessage="Tu mes en el club. Si convocan a tu hijo, aparecerá aquí. Si no, descansas."
         />
       )}
 

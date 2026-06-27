@@ -10,12 +10,15 @@ export interface TeamHeroProps {
 
 export function TeamHero({ team, seasonLabel, homePool }: TeamHeroProps) {
   return (
-    <header className="overflow-hidden rounded-md border border-ink-300 bg-paper">
-      <div
-        aria-hidden="true"
-        className="block h-2 w-full"
-        style={{ backgroundColor: team.color }}
-      />
+    <header
+      className="relative overflow-hidden rounded-md border border-ink-300 bg-paper"
+      style={{
+        borderTopWidth: "4px",
+        borderTopColor: team.color,
+        borderLeftWidth: "4px",
+        borderLeftColor: team.color,
+      }}
+    >
       <div className="flex flex-col gap-4 p-5">
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-2">

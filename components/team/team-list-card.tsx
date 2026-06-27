@@ -15,13 +15,12 @@ export function TeamListCard({ team }: TeamListCardProps) {
     <Link
       href={href}
       className="flex items-center gap-3 overflow-hidden rounded-md border border-ink-300 bg-paper transition-colors hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+      style={{
+        borderLeftWidth: "4px",
+        borderLeftColor: team.color,
+      }}
     >
-      <div
-        aria-hidden="true"
-        className="block h-full w-1.5 shrink-0 self-stretch"
-        style={{ backgroundColor: team.color }}
-      />
-      <div className="flex flex-1 flex-col gap-1 py-3 pr-1">
+      <div className="flex flex-1 flex-col gap-1 py-3 pl-3 pr-1">
         <div className="flex flex-wrap items-center gap-2">
           <CategoryBadge code={team.category_code} />
           {team.team_type === "school" ? (

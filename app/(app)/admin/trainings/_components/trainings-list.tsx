@@ -100,12 +100,12 @@ export function TrainingsList({
             <p className="text-base font-semibold text-brand-deep">
               {filter
                 ? "No hay bloques para este equipo."
-                : "La piscina está tranquila esta semana."}
+                : "La piscina está tranquila."}
             </p>
             <p className="text-sm text-ink-600">
               {filter
                 ? "Crea un bloque de entrenamientos con el botón de arriba."
-                : "Crea el primer bloque para empezar a planificar la temporada."}
+                : "Crea el primer bloque de entrenamientos para tu equipo."}
             </p>
           </div>
           <TrainingBlockFormSheet

@@ -46,11 +46,10 @@ export default async function TeamPage() {
     <div className="flex w-full flex-col">
       <div className="mx-auto w-full max-w-2xl px-4 pb-3 pt-4">
         <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
-          Tu equipo
+          Tu gente
         </h1>
         <p className="mt-1 text-sm leading-relaxed text-ink-600">
-          Hola, {firstName}. Aquí verás la plantilla y el cuerpo técnico de tu
-          equipo esta temporada.
+          Hola, {firstName}. Estos son tus compañeros de esta temporada.
         </p>
       </div>
 

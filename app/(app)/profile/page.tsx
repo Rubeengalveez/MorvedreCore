@@ -104,6 +104,14 @@ export default async function ProfilePage() {
   const isAdmin = roles.includes("admin");
   const isPlayer = roles.includes("player");
 
+  const { data: activeProfileRow } = await supabase
+    .from("profiles")
+    .select("notes")
+    .eq("id", activeProfile.id)
+    .maybeSingle();
+  const activeProfileNotes =
+    (activeProfileRow as { notes: string | null } | null)?.notes ?? null;
+
   const teams = seasonId
     ? await getTeamsForProfileInSeason(activeProfile.id, seasonId)
     : [];
@@ -117,7 +125,7 @@ export default async function ProfilePage() {
   const now = new Date();
   const today = todayIso();
   const monthAhead = addDaysIso(today, 30);
-  const oneYearAgo = new Date(Date.now() - 1000 * 60 * 60 * 24 * 365).toISOString();
+  const oneYearAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 365).toISOString();
   const [availabilityData, attendanceData, allMatches, allSessions, callupsData] = await Promise.all([
     supabase
       .from("match_availability")
@@ -330,7 +338,7 @@ export default async function ProfilePage() {
       {nextEvent ? (
         <section className="rounded-lg border-2 border-brand-blue/30 bg-brand-foam/50 p-4">
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600">
-            Tu próximo compromiso
+            {nextEvent.kind === "match" ? "Tu próximo partido" : "Tu próximo entreno"}
           </p>
           <CalendarEventCard
             event={{
@@ -478,6 +486,23 @@ export default async function ProfilePage() {
           </Link>
         ) : null}
       </div>
+
+      {activeProfileNotes ? (
+        <section
+          aria-labelledby="my-notes-heading"
+          className="rounded-lg border border-ink-300 bg-paper p-4"
+        >
+          <h2
+            id="my-notes-heading"
+            className="mb-1.5 font-display text-base font-bold text-brand-deep"
+          >
+            Notas
+          </h2>
+          <p className="line-clamp-4 whitespace-pre-line text-sm leading-relaxed text-ink-900">
+            {activeProfileNotes}
+          </p>
+        </section>
+      ) : null}
 
       <form action={signOut} className="pt-1">
         <Button

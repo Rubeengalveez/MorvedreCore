@@ -1,12 +1,24 @@
 "use client";
 
-import { Clock, MapPin, Users, Calendar, ChevronRight, Trophy, Check, X, Sparkles, Activity } from "lucide-react";
+import {
+  Clock,
+  MapPin,
+  Users,
+  Calendar,
+  ChevronRight,
+  Trophy,
+  Check,
+  Minus,
+  TrendingDown,
+  Sparkles,
+  Activity,
+  Bell,
+} from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
 import { Avatar } from "@/components/ui/avatar";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
-import { cn } from "@/lib/utils/cn";
 
 export interface DashboardWeekEvent {
   id: string;
@@ -38,7 +50,7 @@ export interface DashboardActivity {
   kind: "training" | "match" | "team" | "season";
   title: string;
   subtitle: string;
-  emoji: string;
+  result: "win" | "draw" | "loss" | "scheduled" | "training";
   color: string;
   timestamp: string;
 }
@@ -266,10 +278,10 @@ export function ActivityItem({ activity }: { activity: DashboardActivity }) {
   return (
     <div className="flex items-start gap-3">
       <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
         style={{ backgroundColor: `color-mix(in oklab, ${activity.color} 15%, var(--paper))` }}
       >
-        <span style={{ color: activity.color }}>{activity.emoji}</span>
+        <ActivityIcon result={activity.result} color={activity.color} />
       </div>
       <div className="flex-1 pt-0.5">
         <p className="text-sm font-semibold leading-tight text-ink-900">
@@ -281,23 +293,44 @@ export function ActivityItem({ activity }: { activity: DashboardActivity }) {
   );
 }
 
+function ActivityIcon({
+  result,
+  color,
+}: {
+  result: DashboardActivity["result"];
+  color: string;
+}) {
+  if (result === "win") return <Trophy className="h-3.5 w-3.5" style={{ color }} />;
+  if (result === "draw") return <Minus className="h-3.5 w-3.5" style={{ color }} />;
+  if (result === "loss") return <TrendingDown className="h-3.5 w-3.5" style={{ color }} />;
+  if (result === "training") return <Check className="h-3.5 w-3.5" style={{ color }} />;
+  return <Calendar className="h-3.5 w-3.5" style={{ color }} />;
+}
+
 export function DashboardHero({
   profile,
   now,
   unreadNotifications,
   isAdmin,
   hasTeam,
+  nextEvent,
 }: {
   profile: { full_name: string; team_color: string | null };
   now: Date;
   unreadNotifications: number;
   isAdmin: boolean;
   hasTeam: boolean;
+  nextEvent: DashboardWeekEvent | null;
 }) {
   const hour = now.getHours();
-  const greeting =
+  const baseGreeting =
     hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
   const firstName = profile.full_name.split(" ")[0] ?? profile.full_name;
+  const todayIso = now.toISOString().slice(0, 10);
+  const isToday = nextEvent?.date === todayIso;
+  const greeting = isToday && nextEvent
+    ? `${baseGreeting}, ${firstName}. Hoy tienes ${nextEvent.kind === "match" ? "partido" : "entreno"}.`
+    : `${baseGreeting}, ${firstName}.`;
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-ink-300 bg-paper p-4 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-3">
@@ -309,11 +342,12 @@ export function DashboardHero({
         />
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-            {greeting}
+            {baseGreeting}
           </p>
           <h1 className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
             {firstName}
           </h1>
+          <p className="text-xs text-ink-600">{greeting}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -331,7 +365,7 @@ export function DashboardHero({
           className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-ink-300 bg-paper transition-colors hover:bg-brand-foam"
           aria-label={`Notificaciones${unreadNotifications > 0 ? ` (${unreadNotifications} sin leer)` : ""}`}
         >
-          <Activity className="h-5 w-5 text-ink-900" />
+          <Bell className="h-5 w-5 text-ink-900" />
           {unreadNotifications > 0 ? (
             <span
               aria-hidden="true"

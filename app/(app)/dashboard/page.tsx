@@ -1,14 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { UserPlus, Calendar, Users, FileUp, Volleyball, Trophy, Activity, Settings } from "lucide-react";
+import { UserPlus, Calendar, Users, FileUp, Volleyball, Trophy, Settings, Goal, TrendingUp, Sparkles } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { getCalendarData } from "@/server/queries/calendar";
 import { getDashboardData, type DashboardWeekEvent } from "@/server/queries/dashboard";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
-import { inferCategory, type CategoryCode } from "@/lib/domain/categories";
 
 type AppRole = "admin" | "coach" | "delegate" | "directiva" | "parent" | "player";
 
@@ -41,6 +39,11 @@ export const metadata = {
   description: "Tu resumen del día en el Waterpolo Morvedre.",
 };
 
+function formatTime(iso: string): string {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -71,41 +74,61 @@ export default async function DashboardPage() {
   const hasTeam = teamIds.length > 0;
 
   const now = new Date();
-  const todayIso = now.toISOString().slice(0, 10);
-  const monthAhead = new Date(now);
-  monthAhead.setDate(monthAhead.getDate() + 30);
-  const startIso = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0).toISOString();
-  const endIso = monthAhead.toISOString();
 
-  const [eventsByDay, dashboardData, { data: unread }] = await Promise.all([
-    teamIds.length > 0
-      ? getCalendarData({ teamIds, startIso, endIso, profileId: activeProfile.id })
-      : Promise.resolve(new Map()),
+  const [dashboardData, { data: unread }, myCallupRes] = await Promise.all([
     teamIds.length > 0
       ? getDashboardData({ teamIds, profileId: activeProfile.id, now })
-      : Promise.resolve({ weekEvents: [], teamInfo: null, recentActivity: [] }),
+      : Promise.resolve({ weekEvents: [], teamInfo: null, recentActivity: [], seasonStats: null }),
     supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("recipient_id", activeProfile.id)
       .is("read_at", null),
+    teamIds.length > 0
+      ? supabase
+          .from("match_callups")
+          .select("id, match_id, status, matches!match_callups_match_id_fkey(id, scheduled_at, opponent, teams!matches_team_id_fkey(label, color))")
+          .eq("player_id", activeProfile.id)
+          .in("status", ["called", "confirmed"])
+          .order("created_at", { ascending: false })
+          .limit(5)
+      : Promise.resolve({ data: [] as Array<unknown> }),
   ]);
 
-  const availabilityByDay = new Map<string, boolean>();
   const nextEvent: DashboardWeekEvent | null =
     dashboardData.weekEvents.find((e) => !e.cancelled) ?? null;
 
-  const birthYear: number | null = ownProfile?.birth_year ?? null;
-  let categoryLabel: string | null = null;
-  if (birthYear != null) {
-    try {
-      categoryLabel = inferCategory(birthYear, now.getFullYear());
-    } catch {
-      categoryLabel = null;
-    }
-  }
-
   const teamColor = dashboardData.teamInfo?.color ?? null;
+
+  const myCallups = ((myCallupRes.data ?? []) as Array<{
+    id: string;
+    match_id: string;
+    status: string;
+    matches: unknown;
+  }>).map((row) => {
+    const matchRaw = Array.isArray(row.matches) ? row.matches[0] : row.matches;
+    const m = matchRaw as {
+      id: string;
+      scheduled_at: string;
+      opponent: string;
+      teams: unknown;
+    } | null;
+    const teamRaw = m ? (Array.isArray(m.teams) ? m.teams[0] : m.teams) : null;
+    const team = teamRaw as { label?: string; color?: string } | null;
+    return {
+      id: row.id,
+      match_id: row.match_id,
+      status: row.status,
+      scheduled_at: m?.scheduled_at ?? null,
+      opponent: m?.opponent ?? "",
+      team_label: team?.label ?? "",
+      team_color: team?.color ?? "var(--brand-blue)",
+    };
+  });
+
+  const upcomingCallup = myCallups
+    .filter((c) => c.scheduled_at != null && new Date(c.scheduled_at).getTime() > now.getTime() - 1000 * 60 * 60 * 24)
+    .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""))[0] ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
@@ -118,7 +141,143 @@ export default async function DashboardPage() {
         unreadNotifications={unread?.length ?? 0}
         isAdmin={isAdmin}
         hasTeam={hasTeam}
+        nextEvent={nextEvent}
       />
+
+      {hasTeam ? (
+        <section
+          aria-labelledby="your-week-heading"
+          className="rounded-lg border border-ink-300 bg-paper p-4"
+        >
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-foam text-brand-deep">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <h2
+              id="your-week-heading"
+              className="font-display text-base font-bold text-brand-deep"
+            >
+              Tu semana
+            </h2>
+          </div>
+          <ul className="flex flex-col gap-2">
+            {upcomingCallup ? (
+              <li>
+                <Link
+                  href={`/matches/${upcomingCallup.match_id}` as Route}
+                  className="flex items-center gap-3 rounded-md border-2 p-2.5 transition-colors hover:bg-brand-foam"
+                  style={{
+                    borderColor: upcomingCallup.team_color,
+                    backgroundColor: `color-mix(in oklab, ${upcomingCallup.team_color} 6%, var(--paper))`,
+                  }}
+                >
+                  <Trophy
+                    className="h-4 w-4 shrink-0"
+                    style={{ color: upcomingCallup.team_color }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+                      Convocatoria
+                    </p>
+                    <p className="line-clamp-1 font-display text-sm font-bold text-brand-deep">
+                      vs {upcomingCallup.opponent}
+                    </p>
+                    <p className="text-[11px] text-ink-600">
+                      {upcomingCallup.scheduled_at
+                        ? new Date(upcomingCallup.scheduled_at).toLocaleDateString("es-ES", {
+                            weekday: "long",
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : ""}
+                      {upcomingCallup.scheduled_at
+                        ? ` · ${formatTime(upcomingCallup.scheduled_at)}`
+                        : ""}
+                    </p>
+                  </div>
+                  <span
+                    className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-paper"
+                    style={{ backgroundColor: upcomingCallup.team_color }}
+                  >
+                    {upcomingCallup.status === "confirmed" ? "Confirmado" : "Convocado"}
+                  </span>
+                </Link>
+              </li>
+            ) : null}
+            {dashboardData.weekEvents
+              .filter((e) => e.kind === "training" && !e.cancelled)
+              .slice(0, 1)
+              .map((e) => (
+                <li key={e.id}>
+                  <Link
+                    href={"/calendar" as Route}
+                    className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-2.5 transition-colors hover:bg-brand-foam"
+                  >
+                    <Volleyball
+                      className="h-4 w-4 shrink-0"
+                      style={{ color: e.team_color }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+                        Próximo entreno
+                      </p>
+                      <p className="line-clamp-1 font-display text-sm font-bold text-brand-deep">
+                        {e.team_label}
+                      </p>
+                      <p className="text-[11px] text-ink-600">
+                        {new Date(e.scheduled_at).toLocaleDateString("es-ES", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "short",
+                        })}{" "}
+                        · {formatTime(e.scheduled_at)}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            {dashboardData.weekEvents
+              .filter((e) => e.kind === "match" && !e.cancelled)
+              .slice(0, 1)
+              .map((e) => (
+                <li key={e.id}>
+                  <Link
+                    href={`/matches/${e.id}` as Route}
+                    className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-2.5 transition-colors hover:bg-brand-foam"
+                  >
+                    <Trophy
+                      className="h-4 w-4 shrink-0"
+                      style={{ color: e.team_color }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+                        Próximo partido
+                      </p>
+                      <p className="line-clamp-1 font-display text-sm font-bold text-brand-deep">
+                        {e.title}
+                      </p>
+                      <p className="text-[11px] text-ink-600">
+                        {new Date(e.scheduled_at).toLocaleDateString("es-ES", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "short",
+                        })}{" "}
+                        · {formatTime(e.scheduled_at)}
+                      </p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            {myCallups.length === 0 &&
+            dashboardData.weekEvents.filter((e) => e.kind === "training" && !e.cancelled).length === 0 &&
+            dashboardData.weekEvents.filter((e) => e.kind === "match" && !e.cancelled).length === 0 ? (
+              <li className="rounded-md border border-dashed border-ink-300 bg-paper p-3 text-center text-xs text-ink-600">
+                Esta semana no tienes entrenos ni partidos. Descansa.
+              </li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="next-event-heading">
         <h2
@@ -179,6 +338,53 @@ export default async function DashboardPage() {
             {dashboardData.weekEvents.slice(0, 10).map((e) => (
               <WeekEventCard key={e.id} event={e} now={now} />
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {dashboardData.seasonStats ? (
+        <section
+          aria-labelledby="your-season-heading"
+          className="rounded-lg border border-ink-300 bg-paper p-4"
+        >
+          <div className="mb-3 flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-foam text-brand-deep">
+              <TrendingUp className="h-4 w-4" />
+            </span>
+            <h2
+              id="your-season-heading"
+              className="font-display text-base font-bold text-brand-deep"
+            >
+              Tu temporada
+            </h2>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <SeasonStatCard
+              label="Goles"
+              value={String(dashboardData.seasonStats.goals)}
+              color="var(--success)"
+              icon={<Goal className="h-3.5 w-3.5" />}
+            />
+            <SeasonStatCard
+              label="Asistencia del mes"
+              value={
+                dashboardData.seasonStats.month_attendance_pct > 0
+                  ? `${dashboardData.seasonStats.month_attendance_pct}%`
+                  : "—"
+              }
+              color="var(--brand-blue)"
+              icon={<Calendar className="h-3.5 w-3.5" />}
+            />
+            <SeasonStatCard
+              label="Racha"
+              value={
+                dashboardData.seasonStats.attendance_streak > 0
+                  ? `${dashboardData.seasonStats.attendance_streak} seguidos`
+                  : "—"
+              }
+              color="var(--brand-action)"
+              icon={<Sparkles className="h-3.5 w-3.5" />}
+            />
           </div>
         </section>
       ) : null}
@@ -271,6 +477,33 @@ export default async function DashboardPage() {
           </Link>
         )}
       </section>
+    </div>
+  );
+}
+
+function SeasonStatCard({
+  label,
+  value,
+  color,
+  icon,
+}: {
+  label: string;
+  value: string;
+  color: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col items-start gap-1 rounded-md border border-ink-300 bg-brand-foam/30 p-3">
+      <span
+        className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
+        style={{ color }}
+      >
+        {icon}
+        {label}
+      </span>
+      <span className="font-display text-xl font-extrabold leading-none text-brand-deep">
+        {value}
+      </span>
     </div>
   );
 }

@@ -166,13 +166,15 @@ export default async function TeamDetailPage({
           </Link>
         </div>
         <div
-          className="overflow-hidden rounded-md border border-ink-300 bg-paper"
+          className="relative overflow-hidden rounded-md border border-ink-300 bg-paper"
+          style={{
+            borderTopWidth: "4px",
+            borderTopColor: team.color,
+            borderLeftWidth: "4px",
+            borderLeftColor: team.color,
+            backgroundImage: `linear-gradient(180deg, color-mix(in oklab, ${team.color} 10%, var(--paper)) 0%, var(--paper) 80%)`,
+          }}
         >
-          <div
-            aria-hidden="true"
-            className="h-2 w-full"
-            style={{ backgroundColor: team.color }}
-          />
           <div className="flex flex-col gap-2 p-5">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-brand-deep">

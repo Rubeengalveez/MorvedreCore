@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Trash2 } from "lucide-react";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { Loader2, Search, Trash2 } from "lucide-react";
+import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -299,6 +299,17 @@ export interface FamiliesTableProps {
 export function FamiliesTable({ rows }: FamiliesTableProps) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return rows;
+    return rows.filter(
+      (r) =>
+        r.parent_name.toLowerCase().includes(q) ||
+        r.child_name.toLowerCase().includes(q),
+    );
+  }, [rows, search]);
 
   function handleRemove(row: FamilyRow) {
     if (
@@ -326,64 +337,85 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
     return (
       <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
         <p className="text-base font-semibold text-brand-deep">
-          Aún no hay vínculos familiares.
+          Sin vínculos familiares.
         </p>
         <p className="mt-1 text-sm text-ink-600">
-          Crea el primero con el botón de arriba.
+          Cuando los padres y jugadores se unan, aparecerán aquí.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-      <table className="w-full min-w-[520px] border-separate border-spacing-0 text-left">
-        <thead>
-          <tr className="text-xs uppercase tracking-wider text-ink-600">
-            <th className="border-b border-ink-300 px-3 py-2 font-semibold">Tutor</th>
-            <th className="border-b border-ink-300 px-3 py-2 font-semibold">Jugador</th>
-            <th className="border-b border-ink-300 px-3 py-2 font-semibold">Relación</th>
-            <th className="border-b border-ink-300 px-3 py-2 text-right font-semibold">
-              <span className="sr-only">Acciones</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const key = `${r.parent_id}-${r.child_id}`;
-            const isPending = pendingKey === key;
-            return (
-              <tr key={key} className="text-base">
-                <td className="border-b border-ink-300 px-3 py-3 font-display font-bold text-brand-deep">
-                  {r.parent_name}
-                </td>
-                <td className="border-b border-ink-300 px-3 py-3 text-ink-900">
-                  {r.child_name}
-                </td>
-                <td className="border-b border-ink-300 px-3 py-3 text-sm text-ink-600">
-                  {RELATION_LABEL[r.relation]}
-                </td>
-                <td className="border-b border-ink-300 px-3 py-3 text-right">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-12 w-12 p-0 text-danger hover:bg-danger/10"
-                    aria-label={`Eliminar vínculo entre ${r.parent_name} y ${r.child_name}`}
-                    disabled={isPending}
-                    onClick={() => handleRemove(r)}
-                  >
-                    {isPending ? (
-                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                    ) : (
-                      <Trash2 className="h-5 w-5" aria-hidden="true" />
-                    )}
-                  </Button>
-                </td>
+    <div className="flex flex-col gap-3">
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-600"
+          aria-hidden="true"
+        />
+        <Input
+          type="search"
+          placeholder="Buscar por nombre de tutor o jugador"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+      {filtered.length === 0 ? (
+        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
+          <p className="text-sm text-ink-600">No hay coincidencias.</p>
+        </div>
+      ) : (
+        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
+          <table className="w-full min-w-[520px] border-separate border-spacing-0 text-left">
+            <thead>
+              <tr className="text-xs uppercase tracking-wider text-ink-600">
+                <th className="border-b border-ink-300 px-3 py-2 font-semibold">Tutor</th>
+                <th className="border-b border-ink-300 px-3 py-2 font-semibold">Jugador</th>
+                <th className="border-b border-ink-300 px-3 py-2 font-semibold">Relación</th>
+                <th className="border-b border-ink-300 px-3 py-2 text-right font-semibold">
+                  <span className="sr-only">Acciones</span>
+                </th>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
+            </thead>
+            <tbody>
+              {filtered.map((r) => {
+                const key = `${r.parent_id}-${r.child_id}`;
+                const isPending = pendingKey === key;
+                return (
+                  <tr key={key} className="text-base">
+                    <td className="border-b border-ink-300 px-3 py-3 font-display font-bold text-brand-deep">
+                      {r.parent_name}
+                    </td>
+                    <td className="border-b border-ink-300 px-3 py-3 text-ink-900">
+                      {r.child_name}
+                    </td>
+                    <td className="border-b border-ink-300 px-3 py-3 text-sm text-ink-600">
+                      {RELATION_LABEL[r.relation]}
+                    </td>
+                    <td className="border-b border-ink-300 px-3 py-3 text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-12 w-12 p-0 text-danger hover:bg-danger/10"
+                        aria-label={`Eliminar vínculo entre ${r.parent_name} y ${r.child_name}`}
+                        disabled={isPending}
+                        onClick={() => handleRemove(r)}
+                      >
+                        {isPending ? (
+                          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                        ) : (
+                          <Trash2 className="h-5 w-5" aria-hidden="true" />
+                        )}
+                      </Button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

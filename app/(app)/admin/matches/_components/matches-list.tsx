@@ -196,10 +196,10 @@ export function MatchesList({
       {sorted.length === 0 ? (
         <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
           <p className="text-base font-semibold text-brand-deep">
-            No hay partidos que coincidan.
+            Calendario vacío.
           </p>
           <p className="mt-1 text-sm text-ink-600">
-            Ajusta los filtros o crea un partido con el botón de arriba.
+            Crea el primer partido desde la pestaña de equipos.
           </p>
         </div>
       ) : (
@@ -209,12 +209,11 @@ export function MatchesList({
               <a
                 href={`/admin/matches/${m.id}`}
                 className="group flex flex-col overflow-hidden rounded-md border border-ink-300 bg-paper transition-colors hover:border-brand-blue hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                style={{
+                  borderLeftWidth: "4px",
+                  borderLeftColor: m.team_color,
+                }}
               >
-                <div
-                  aria-hidden="true"
-                  className="block h-2 w-full"
-                  style={{ backgroundColor: m.team_color }}
-                />
                 <div className="flex flex-col gap-2 p-4">
                   <div className="flex flex-wrap items-center gap-2 text-xs text-ink-600">
                     <span className="font-mono font-semibold text-brand-deep">

@@ -76,6 +76,11 @@ const profileFormSchema = z.object({
     .trim()
     .optional()
     .refine((v) => !v || emailPattern.test(v), "Email inválido."),
+  notes: z
+    .string()
+    .trim()
+    .max(1000, "Máximo 1000 caracteres.")
+    .optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -112,6 +117,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
       cap_number: profile.cap_number?.toString() ?? "",
       phone_e164: profile.phone_e164 ?? "",
       email_contact: profile.email_contact ?? "",
+      notes: profile.notes ?? "",
     },
   });
 
@@ -123,6 +129,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     fd.append("cap_number", values.cap_number ?? "");
     fd.append("phone_e164", values.phone_e164 ?? "");
     fd.append("email_contact", values.email_contact ?? "");
+    fd.append("notes", values.notes ?? "");
     startTransition(() => {
       formAction(fd);
     });
@@ -294,6 +301,33 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                   ref={field.ref}
                 />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="notes"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel htmlFor="notes">Notas (privadas)</FormLabel>
+              <FormControl>
+                <textarea
+                  id="notes"
+                  rows={4}
+                  placeholder="Cosas que quieres recordar: dorsal preferido, alergias, observaciones…"
+                  value={field.value ?? ""}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  ref={field.ref}
+                  className="flex w-full rounded border border-ink-300 bg-paper px-4 py-3 text-base text-ink-900 placeholder:text-ink-600/70 transition-colors focus-visible:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                />
+              </FormControl>
+              <FormDescription>
+                Solo tú verás este texto. Máx. 1000 caracteres.
+              </FormDescription>
               <FormMessage />
             </FormItem>
           )}

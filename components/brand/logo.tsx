@@ -12,10 +12,10 @@ export interface LogoProps {
 }
 
 const sizeMap: Record<"sm" | "md" | "lg" | "xl", number> = {
-  sm: 32,
-  md: 40,
-  lg: 56,
-  xl: 80,
+  sm: 40,
+  md: 48,
+  lg: 64,
+  xl: 88,
 };
 
 const SMALL_THRESHOLD = 48;

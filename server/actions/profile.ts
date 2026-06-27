@@ -18,6 +18,7 @@ export async function updateProfile(
     cap_number: formData.get("cap_number"),
     phone_e164: formData.get("phone_e164"),
     email_contact: formData.get("email_contact"),
+    notes: formData.get("notes"),
   });
 
   if (!parsed.success) {
@@ -42,6 +43,7 @@ export async function updateProfile(
       cap_number: parsed.data.cap_number,
       phone_e164: parsed.data.phone_e164,
       email_contact: parsed.data.email_contact,
+      notes: parsed.data.notes,
     })
     .eq("auth_user_id", user.id);
 

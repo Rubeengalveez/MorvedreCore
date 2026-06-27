@@ -242,6 +242,10 @@ export const updateProfileSchema = z.object({
     nullIfEmpty,
     z.string().email("Email inválido.").nullable(),
   ),
+  notes: z.preprocess(
+    nullIfEmpty,
+    z.string().max(1000, "Máximo 1000 caracteres.").nullable(),
+  ),
 });
 
 export const linkSchema = z.object({
