@@ -4,6 +4,9 @@ import { Loader2, MoreHorizontal } from "lucide-react";
 import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { PictogramBadge } from "@/components/ui/pictogram-badge";
+import { Calendario } from "@/components/brand/pictograms";
 import {
   Sheet,
   SheetBody,
@@ -41,8 +44,8 @@ function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold",
-        variant === "current" && "bg-brand-blue text-paper",
+        "inline-flex h-6 items-center rounded-sm px-2 text-eyebrow",
+        variant === "current" && "bg-pool-deep text-paper",
         variant === "archived" && "bg-ink-300 text-ink-900",
         variant === "inactive" && "border border-ink-300 text-ink-600",
       )}
@@ -63,7 +66,7 @@ function RowActions({ season }: { season: Season }) {
       <SheetTrigger asChild>
         <Button
           variant="ghost"
-          size="sm"
+          size="md"
           className="h-12 w-12 min-w-12 p-0"
           aria-label="Acciones"
         >
@@ -135,11 +138,16 @@ export interface SeasonsTableProps {
 export function SeasonsTable({ seasons }: SeasonsTableProps) {
   if (seasons.length === 0) {
     return (
-      <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
-        <p className="text-base font-semibold text-brand-deep">
+      <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-ink-300 bg-paper-card p-6 text-center">
+        <PictogramBadge
+          pictogram={Calendario}
+          color="var(--pool-teal)"
+          size="lg"
+        />
+        <p className="font-display text-base font-extrabold text-pool-deep">
           Empieza la máquina.
         </p>
-        <p className="mt-1 text-sm text-ink-600">
+        <p className="max-w-sm text-sm text-ink-600">
           Crea la temporada 26/27 para dar de alta los equipos y partidos.
         </p>
       </div>
@@ -150,12 +158,20 @@ export function SeasonsTable({ seasons }: SeasonsTableProps) {
     <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
       <table className="w-full min-w-[480px] border-separate border-spacing-0 text-left">
         <thead>
-          <tr className="text-xs uppercase tracking-wider text-ink-600">
-            <th className="border-b border-ink-300 px-3 py-2 font-semibold">Temporada</th>
-            <th className="border-b border-ink-300 px-3 py-2 font-semibold">Inicio</th>
-            <th className="border-b border-ink-300 px-3 py-2 font-semibold">Fin</th>
-            <th className="border-b border-ink-300 px-3 py-2 font-semibold">Estado</th>
-            <th className="border-b border-ink-300 px-3 py-2 text-right font-semibold">
+          <tr>
+            <th className="border-b border-ink-300 px-3 py-2">
+              <Eyebrow as="span" className="text-ink-600">Temporada</Eyebrow>
+            </th>
+            <th className="border-b border-ink-300 px-3 py-2">
+              <Eyebrow as="span" className="text-ink-600">Inicio</Eyebrow>
+            </th>
+            <th className="border-b border-ink-300 px-3 py-2">
+              <Eyebrow as="span" className="text-ink-600">Fin</Eyebrow>
+            </th>
+            <th className="border-b border-ink-300 px-3 py-2">
+              <Eyebrow as="span" className="text-ink-600">Estado</Eyebrow>
+            </th>
+            <th className="border-b border-ink-300 px-3 py-2 text-right">
               <span className="sr-only">Acciones</span>
             </th>
           </tr>
@@ -165,13 +181,13 @@ export function SeasonsTable({ seasons }: SeasonsTableProps) {
             const isArchived = s.archived_at != null;
             return (
               <tr key={s.id} className="text-base">
-                <td className="border-b border-ink-300 px-3 py-3 font-display font-bold text-brand-deep">
+                <td className="border-b border-ink-300 px-3 py-3 font-display text-base font-extrabold text-pool-deep">
                   {s.label}
                 </td>
-                <td className="border-b border-ink-300 px-3 py-3 text-sm text-ink-600">
+                <td className="border-b border-ink-300 px-3 py-3 text-mono-num text-sm text-ink-700">
                   {formatDate(s.start_date)}
                 </td>
-                <td className="border-b border-ink-300 px-3 py-3 text-sm text-ink-600">
+                <td className="border-b border-ink-300 px-3 py-3 text-mono-num text-sm text-ink-700">
                   {formatDate(s.end_date)}
                 </td>
                 <td className="border-b border-ink-300 px-3 py-3">

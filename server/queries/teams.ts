@@ -31,6 +31,22 @@ export interface StaffMember {
   role: string;
 }
 
+export interface TeamListItem {
+  id: string;
+  label: string;
+  category_code: string;
+  gender: string;
+  team_type: string;
+  color: string;
+  season_id: string;
+  home_pool: string | null;
+  player_count: number;
+  coach_name: string | null;
+  featured_player_name: string | null;
+  featured_player_cap: number | null;
+  featured_player_id: string | null;
+}
+
 function extractJoined<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
   if (Array.isArray(value)) {
@@ -52,11 +68,7 @@ const TEAM_PUBLIC_SELECT = `
 
 export async function getTeamById(teamId: string): Promise<Team | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("teams")
-    .select("*")
-    .eq("id", teamId)
-    .maybeSingle();
+  const { data, error } = await supabase.from("teams").select("*").eq("id", teamId).maybeSingle();
 
   if (error) {
     throw new Error("No pudimos cargar el equipo.");
@@ -267,9 +279,7 @@ export async function getTeamsForProfileInSeason(
     }
   }
 
-  return Array.from(teamMap.values()).sort((a, b) =>
-    a.label.localeCompare(b.label, "es"),
-  );
+  return Array.from(teamMap.values()).sort((a, b) => a.label.localeCompare(b.label, "es"));
 }
 
 export async function isProfileStaffInSeason(
@@ -291,6 +301,198 @@ export async function isProfileStaffInSeason(
     if (team && team.season_id === seasonId) return true;
   }
   return false;
+}
+
+export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListItem[]> {
+  const supabase = await createClient();
+
+  const { data: teamRows, error: teamError } = await supabase
+    .from("teams")
+    .select(TEAM_PUBLIC_SELECT)
+    .eq("season_id", seasonId)
+    .order("category_code", { ascending: true })
+    .order("label", { ascending: true });
+
+  if (teamError || !teamRows) {
+    return [];
+  }
+
+  const teamIds = (teamRows as Array<{ id: string }>).map((t) => t.id);
+  const result: TeamListItem[] = (
+    teamRows as Array<{
+      id: string;
+      label: string;
+      category_code: string;
+      gender: string;
+      team_type: string;
+      color: string;
+      season_id: string;
+      home_pool: string | null;
+    }>
+  ).map((t) => ({
+    id: t.id,
+    label: t.label,
+    category_code: t.category_code,
+    gender: t.gender,
+    team_type: t.team_type,
+    color: t.color,
+    season_id: t.season_id,
+    home_pool: t.home_pool,
+    player_count: 0,
+    coach_name: null,
+    featured_player_name: null,
+    featured_player_cap: null,
+    featured_player_id: null,
+  }));
+
+  if (teamIds.length === 0) return result;
+
+  const [rosterRes, staffRes, topScorersRes] = await Promise.all([
+    supabase
+      .from("team_rosters")
+      .select(
+        "team_id, squad_number, profiles!team_rosters_player_id_fkey(id, full_name, cap_number)",
+      )
+      .in("team_id", teamIds)
+      .is("left_at", null),
+    supabase
+      .from("team_staff")
+      .select("team_id, role, profiles!team_staff_profile_id_fkey(full_name)")
+      .in("team_id", teamIds)
+      .eq("role", "head_coach"),
+    supabase
+      .from("ranking_snapshots")
+      .select("player_id, scope_key, goals")
+      .eq("season_id", seasonId)
+      .eq("scope", "team")
+      .in("scope_key", teamIds)
+      .gt("goals", 0)
+      .order("goals", { ascending: false })
+      .limit(teamIds.length * 5),
+  ]);
+
+  const counts = new Map<string, number>();
+  const featuredByTeam = new Map<
+    string,
+    { player_id: string; full_name: string; cap: number | null }
+  >();
+  for (const row of (rosterRes.data ?? []) as Array<{
+    team_id: string;
+    squad_number: number | null;
+    profiles: unknown;
+  }>) {
+    counts.set(row.team_id, (counts.get(row.team_id) ?? 0) + 1);
+    const profile = extractJoined(row.profiles) as {
+      id?: string;
+      full_name?: string;
+      cap_number?: number | null;
+    } | null;
+    if (!profile?.id) continue;
+    const cap = row.squad_number ?? profile.cap_number ?? null;
+    if (cap == null) continue;
+    const current = featuredByTeam.get(row.team_id);
+    if (!current || cap < (current.cap ?? 99)) {
+      featuredByTeam.set(row.team_id, {
+        player_id: profile.id,
+        full_name: profile.full_name ?? "Sin nombre",
+        cap,
+      });
+    }
+  }
+  for (const row of (staffRes.data ?? []) as Array<{
+    team_id: string;
+    profiles: unknown;
+  }>) {
+    const team = result.find((t) => t.id === row.team_id);
+    if (!team) continue;
+    const profile = extractJoined(row.profiles) as { full_name?: string } | null;
+    team.coach_name = profile?.full_name ?? null;
+  }
+
+  const topScorerPlayerIds = Array.from(
+    new Set((topScorersRes.data ?? []).map((r) => (r as { player_id: string }).player_id)),
+  );
+  if (topScorerPlayerIds.length > 0) {
+    const { data: topProfiles } = await supabase
+      .from("profiles")
+      .select("id, full_name, cap_number")
+      .in("id", topScorerPlayerIds);
+    const profileMap = new Map<string, { full_name: string; cap_number: number | null }>();
+    for (const p of (topProfiles ?? []) as Array<{
+      id: string;
+      full_name: string;
+      cap_number: number | null;
+    }>) {
+      profileMap.set(p.id, p);
+    }
+    for (const row of (topScorersRes.data ?? []) as Array<{
+      player_id: string;
+      scope_key: string;
+    }>) {
+      const teamId = row.scope_key;
+      if (featuredByTeam.has(teamId)) continue;
+      const profile = profileMap.get(row.player_id);
+      if (!profile) continue;
+      featuredByTeam.set(teamId, {
+        player_id: row.player_id,
+        full_name: profile.full_name,
+        cap: profile.cap_number ?? null,
+      });
+    }
+  }
+
+  for (const team of result) {
+    team.player_count = counts.get(team.id) ?? 0;
+    const featured = featuredByTeam.get(team.id);
+    if (featured) {
+      team.featured_player_id = featured.player_id;
+      team.featured_player_name = featured.full_name;
+      team.featured_player_cap = featured.cap;
+    }
+  }
+
+  return result;
+}
+
+export async function getTeamMatches(
+  teamId: string,
+  limit = 20,
+): Promise<
+  Array<{
+    id: string;
+    opponent: string;
+    scheduled_at: string;
+    status: string;
+    is_home: boolean;
+    competition_type: string;
+    location: string | null;
+    pool_name: string | null;
+    final_score_us: number | null;
+    final_score_them: number | null;
+  }>
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("matches")
+    .select(
+      "id, opponent, scheduled_at, status, is_home, competition_type, location, pool_name, final_score_us, final_score_them",
+    )
+    .eq("team_id", teamId)
+    .order("scheduled_at", { ascending: false })
+    .limit(limit);
+  if (error) return [];
+  return (data ?? []) as Array<{
+    id: string;
+    opponent: string;
+    scheduled_at: string;
+    status: string;
+    is_home: boolean;
+    competition_type: string;
+    location: string | null;
+    pool_name: string | null;
+    final_score_us: number | null;
+    final_score_them: number | null;
+  }>;
 }
 
 export async function isProfilePlayerInSeason(

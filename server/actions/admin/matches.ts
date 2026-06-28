@@ -29,6 +29,34 @@ import { safeInferCategory, type CategoryCode } from "@/lib/domain/categories";
 
 import { requireCoachOf } from "./_helpers";
 
+async function recomputeRankingForMatchAll(matchId: string): Promise<void> {
+  const { recomputeSnapshotForPlayer } = await import("./rankings");
+  const { recomputeStreaksForMatch } = await import("./streaks");
+  const supabase = await createClient();
+  const { data: match } = await supabase
+    .from("matches")
+    .select("season_id")
+    .eq("id", matchId)
+    .maybeSingle();
+  const seasonId = (match as { season_id?: string } | null)?.season_id;
+  if (!seasonId) return;
+  const { data: callupRows } = await supabase
+    .from("match_callups")
+    .select("player_id")
+    .eq("match_id", matchId);
+  const playerIds = Array.from(
+    new Set((callupRows ?? []).map((r) => (r as { player_id: string }).player_id)),
+  );
+  for (const playerId of playerIds) {
+    await recomputeSnapshotForPlayer(playerId, seasonId).catch(() => {
+      // ignore individual failures
+    });
+  }
+  await recomputeStreaksForMatch(matchId).catch((e) => {
+    console.error("recomputeStreaksForMatch error", e);
+  });
+}
+
 export type MatchRow = Tables<"matches", "Row">;
 export type CallupRow = Tables<"match_callups", "Row">;
 export type MatchStatRow = Tables<"match_stats", "Row">;
@@ -499,6 +527,22 @@ export async function setMyCallupStatus(input: {
   }
 
   const supabase = await createClient();
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("id, status, scheduled_at")
+    .eq("id", parsed.data.match_id)
+    .maybeSingle();
+
+  throwIfError(matchError, "No pudimos cargar el partido.");
+  if (!match) {
+    throw new Error("El partido no existe.");
+  }
+  if (match.status !== "scheduled" && match.status !== "in_progress") {
+    throw new Error(
+      "Este partido ya no admite cambios de convocatoria. Habla con tu entrenador.",
+    );
+  }
+
   const update: {
     status: string;
     confirmed_at: string | null;
@@ -623,6 +667,20 @@ export async function recordMatchStat(input: {
     throw new Error("El partido no existe.");
   }
 
+  const { data: callup, error: callupError } = await supabase
+    .from("match_callups")
+    .select("player_id")
+    .eq("match_id", parsed.data.match_id)
+    .eq("player_id", parsed.data.player_id)
+    .maybeSingle();
+
+  throwIfError(callupError, "No pudimos comprobar la convocatoria.");
+  if (!callup) {
+    throw new Error(
+      "Solo puedes registrar estadísticas de jugadores que estaban convocados.",
+    );
+  }
+
   const { data: existing, error: existingError } = await supabase
     .from("match_stats")
     .select("validated_by")
@@ -660,6 +718,9 @@ export async function recordMatchStat(input: {
 
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${parsed.data.match_id}`);
+
+  const { recomputeStreaksForMatch } = await import("./streaks");
+  await recomputeStreaksForMatch(parsed.data.match_id).catch(() => undefined);
 
   return data;
 }
@@ -706,8 +767,14 @@ export async function validateMatchStats(matchId: string): Promise<void> {
 
   throwIfError(error, "No pudimos validar las estadísticas. Inténtalo de nuevo.");
 
+  await recomputeRankingForMatchAll(parsed.data.match_id).catch(() => {
+    // No bloqueamos la validación si el recompute falla.
+  });
+
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${parsed.data.match_id}`);
+  revalidatePath("/rankings");
+  revalidatePath("/profile");
 }
 
 export async function suggestCallupForMatch(matchId: string): Promise<CallupSuggestion[]> {

@@ -2,6 +2,7 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 
 import {
+  bulkUnvalidateMatchStatsSchema,
   categoryEnum,
   createPlayerSchema,
   createSeasonSchema,
@@ -12,6 +13,7 @@ import {
   isoDate,
   linkSchema,
   parentRelationEnum,
+  recomputeRankingSchema,
   roleAssignmentSchema,
   staffRoleEnum,
   staffSchema,
@@ -19,6 +21,7 @@ import {
   teamTypeEnum,
   unlinkSchema,
   unrosterSchema,
+  unvalidateMatchStatsSchema,
   updatePlayerSchema,
   updateProfileSchema,
   updateSeasonSchema,
@@ -678,6 +681,102 @@ describe("xlsxRowSchema", () => {
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
 }));
+
+describe("recomputeRankingSchema", () => {
+  const valid = {
+    season_id: "550e8400-e29b-41d4-a716-446655440000",
+    player_id: "550e8400-e29b-41d4-a716-446655440001",
+  };
+
+  it("accepts valid season and player ids", () => {
+    expect(recomputeRankingSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects non-UUID season_id", () => {
+    expect(
+      recomputeRankingSchema.safeParse({ ...valid, season_id: "x" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects non-UUID player_id", () => {
+    expect(
+      recomputeRankingSchema.safeParse({ ...valid, player_id: "x" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("unvalidateMatchStatsSchema", () => {
+  const valid = {
+    match_id: "550e8400-e29b-41d4-a716-446655440000",
+    reason: "Resultado mal apuntado",
+  };
+
+  it("accepts a valid match_id and a 5+ character reason", () => {
+    expect(unvalidateMatchStatsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects a too-short reason", () => {
+    expect(
+      unvalidateMatchStatsSchema.safeParse({ ...valid, reason: "x" }).success,
+    ).toBe(false);
+  });
+
+  it("rejects a too-long reason", () => {
+    expect(
+      unvalidateMatchStatsSchema.safeParse({ ...valid, reason: "x".repeat(501) }).success,
+    ).toBe(false);
+  });
+
+  it("trims whitespace from the reason", () => {
+    const result = unvalidateMatchStatsSchema.safeParse({
+      ...valid,
+      reason: "   Resultado mal apuntado   ",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.reason).toBe("Resultado mal apuntado");
+    }
+  });
+
+  it("rejects a non-UUID match_id", () => {
+    expect(
+      unvalidateMatchStatsSchema.safeParse({ ...valid, match_id: "nope" }).success,
+    ).toBe(false);
+  });
+});
+
+describe("bulkUnvalidateMatchStatsSchema", () => {
+  const valid = {
+    match_ids: ["550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"],
+    reason: "Validar de nuevo toda la jornada",
+  };
+
+  it("accepts a valid list of match ids and a reason", () => {
+    expect(bulkUnvalidateMatchStatsSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it("rejects an empty match_ids array", () => {
+    expect(
+      bulkUnvalidateMatchStatsSchema.safeParse({ ...valid, match_ids: [] }).success,
+    ).toBe(false);
+  });
+
+  it("rejects more than 50 match_ids", () => {
+    const ids = Array.from({ length: 51 }, (_, i) => `550e8400-e29b-41d4-a716-4466554400${String(i).padStart(2, "0")}`);
+    expect(
+      bulkUnvalidateMatchStatsSchema.safeParse({ ...valid, match_ids: ids }).success,
+    ).toBe(false);
+  });
+
+  it("rejects when any match_id is not a UUID", () => {
+    expect(
+      bulkUnvalidateMatchStatsSchema.safeParse({
+        ...valid,
+        match_ids: ["550e8400-e29b-41d4-a716-446655440000", "not-a-uuid"],
+      }).success,
+    ).toBe(false);
+  });
+});
 
 describe("requireAdmin (mocked supabase)", () => {
   beforeEach(() => {

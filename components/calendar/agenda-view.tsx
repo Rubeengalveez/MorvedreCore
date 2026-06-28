@@ -1,12 +1,11 @@
 "use client";
 
-import { Calendar, Clock, Filter } from "lucide-react";
-import Link from "next/link";
+import { Calendar } from "lucide-react";
 import type { Route } from "next";
 
 import { CalendarEventCard, CalendarEmptyState } from "./event-card";
 import type { CalendarData } from "@/server/queries/calendar";
-import { cn } from "@/lib/utils/cn";
+import { isoDateFromDate } from "@/lib/domain/calendar";
 
 export interface AgendaViewProps {
   eventsByDay: CalendarData;
@@ -102,6 +101,7 @@ export function AgendaView({
 }: AgendaViewProps) {
   const events = flattenEvents(eventsByDay, rangeStartIso, rangeEndIso);
   const now = new Date();
+  const todayIsoValue = isoDateFromDate(now);
 
   const groups = new Map<string, FlatEvent[]>();
   for (const ev of events) {
@@ -127,7 +127,7 @@ export function AgendaView({
       ) : null}
       {dayKeys.map((dayIso) => {
         const dayEvents = groups.get(dayIso) ?? [];
-        const isPast = new Date(dayIso) < new Date(now.toDateString());
+        const isPast = dayIso < todayIsoValue;
         return (
           <section
             key={dayIso}

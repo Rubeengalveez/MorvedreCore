@@ -44,6 +44,7 @@ function session(overrides: Partial<TrainingSessionLite>): TrainingSessionLite {
     id: "s-1",
     team_id: "team-1",
     cancelled: false,
+    scheduled_at: "2026-01-15T18:00:00Z",
     ...overrides,
   };
 }
@@ -69,6 +70,7 @@ describe("computePlayerStats", () => {
       exclusions: 0,
       mvp_count: 0,
       attendance_pct: 0,
+      attendance_streak: 0,
       trainings_attended: 0,
       trainings_total: 0,
     });
@@ -223,6 +225,7 @@ describe("aggregateSeasonStats", () => {
         exclusions: 1,
         mvp_count: 1,
         attendance_pct: 80,
+        attendance_streak: 0,
         trainings_attended: 8,
         trainings_total: 10,
       },
@@ -235,6 +238,7 @@ describe("aggregateSeasonStats", () => {
         exclusions: 2,
         mvp_count: 0,
         attendance_pct: 60,
+        attendance_streak: 0,
         trainings_attended: 6,
         trainings_total: 10,
       },

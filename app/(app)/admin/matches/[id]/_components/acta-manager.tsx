@@ -220,31 +220,30 @@ function StatRow({
   const [exclusions, setExclusions] = useState<string>(
     entry.stat ? String(entry.stat.exclusions) : "0",
   );
-  const [mvp, setMvp] = useState<boolean>(entry.stat?.mvp ?? false);
   const [pending, startTransition] = useTransition();
+
+  const isMvp = entry.stat?.mvp ?? false;
 
   const dirty = useMemo(() => {
     if (!entry.stat) {
-      return goals !== "0" || exclusions !== "0" || mvp;
+      return goals !== "0" || exclusions !== "0";
     }
     return (
       goals !== String(entry.stat.goals) ||
-      exclusions !== String(entry.stat.exclusions) ||
-      mvp !== entry.stat.mvp
+      exclusions !== String(entry.stat.exclusions)
     );
-  }, [entry.stat, goals, exclusions, mvp]);
+  }, [entry.stat, goals, exclusions]);
 
   function commit() {
     if (!dirty) return;
-    const goalsN = Math.max(0, Math.min(20, Number(goals) || 0));
-    const exclusionsN = Math.max(0, Math.min(20, Number(exclusions) || 0));
+    const goalsN = Math.max(0, Math.min(99, Number(goals) || 0));
+    const exclusionsN = Math.max(0, Math.min(3, Number(exclusions) || 0));
     startTransition(async () => {
       await recordMatchStat({
         match_id: entry.callup.match_id,
         player_id: entry.callup.player_id,
         goals: goalsN,
         exclusions: exclusionsN,
-        mvp,
       });
     });
   }
@@ -253,7 +252,7 @@ function StatRow({
     <li
       className={cn(
         "flex items-center gap-3 rounded-md border bg-paper p-3",
-        mvp ? "border-brand-ball" : "border-ink-300",
+        isMvp ? "border-brand-ball bg-brand-ball/5" : "border-ink-300",
       )}
     >
       <Avatar
@@ -310,31 +309,23 @@ function StatRow({
             className="h-10 w-16 text-center font-mono"
           />
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            if (disabled) return;
-            setMvp(!mvp);
-            startTransition(async () => {
-              await recordMatchStat({
-                match_id: entry.callup.match_id,
-                player_id: entry.callup.player_id,
-                mvp: !mvp,
-              });
-            });
-          }}
-          disabled={disabled}
-          aria-pressed={mvp}
-          aria-label="MVP"
-          className={cn(
-            "inline-flex h-12 w-12 min-h-12 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
-            mvp
-              ? "border-brand-ball bg-brand-ball/20 text-brand-deep"
-              : "border-ink-300 bg-paper text-ink-600 hover:border-brand-ball",
-          )}
-        >
-          <Star className="h-5 w-5" aria-hidden="true" />
-        </button>
+        
+        {isMvp ? (
+          <div
+            title="MVP del partido (calculado automáticamente)"
+            className="inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded border border-brand-ball bg-brand-ball/20 text-brand-deep"
+          >
+            <Star className="h-5 w-5 fill-brand-ball text-brand-deep" aria-hidden="true" />
+          </div>
+        ) : (
+          <div
+            title="No es MVP"
+            className="inline-flex h-10 w-10 min-h-10 min-w-10 items-center justify-center rounded border border-transparent text-ink-300"
+          >
+            <Star className="h-5 w-5 text-ink-300" aria-hidden="true" />
+          </div>
+        )}
+        
         {pending ? (
           <Loader2 className="h-4 w-4 animate-spin text-ink-600" aria-hidden="true" />
         ) : null}

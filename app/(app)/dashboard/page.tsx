@@ -1,16 +1,45 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { UserPlus, Calendar, Users, FileUp, Volleyball, Trophy, Settings, Goal, TrendingUp, Sparkles } from "lucide-react";
+import { Flame } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getDashboardData, type DashboardWeekEvent } from "@/server/queries/dashboard";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
+import { getStreaksForPlayer, type ActiveStreakRow } from "@/server/queries/streaks";
+import { LanePattern } from "@/components/ui/lane-pattern";
+import { PictogramBadge } from "@/components/ui/pictogram-badge";
+import {
+  Balon,
+  Calendario,
+  Equipo,
+  FileUp,
+  Gorro,
+  Porteria,
+  Silbato,
+  SilbatoActivo,
+  Trofeo,
+  Usuario,
+} from "@/components/brand/pictograms";
+
+import { DashboardHero, NextEventCard, TeamCard } from "@/components/dashboard/dashboard-blocks";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
+export const metadata = {
+  title: "Inicio — Morvedre Core",
+  description: "Tu resumen del día en el Waterpolo Morvedre.",
+};
 
 type AppRole = "admin" | "coach" | "delegate" | "directiva" | "parent" | "player";
 
-async function userHasRole(supabase: Awaited<ReturnType<typeof createClient>>, profileId: string, role: AppRole): Promise<boolean> {
+async function userHasRole(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  profileId: string,
+  role: AppRole,
+): Promise<boolean> {
   const { data } = await supabase
     .from("user_roles")
     .select("role")
@@ -21,27 +50,15 @@ async function userHasRole(supabase: Awaited<ReturnType<typeof createClient>>, p
   return data != null;
 }
 
-const isUserAdmin = (supabase: Awaited<ReturnType<typeof createClient>>, profileId: string) => userHasRole(supabase, profileId, "admin");
+const isUserAdmin = (supabase: Awaited<ReturnType<typeof createClient>>, profileId: string) =>
+  userHasRole(supabase, profileId, "admin");
 
-import {
-  ActivityItem,
-  DashboardHero,
-  NextEventCard,
-  TeamCard,
-  WeekEventCard,
-} from "@/components/dashboard/dashboard-blocks";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-export const metadata = {
-  title: "Inicio — Morvedre Core",
-  description: "Tu resumen del día en el Waterpolo Morvedre.",
-};
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+function toActiveStreak(row: ActiveStreakRow): ActiveStreak {
+  return {
+    type: row.type,
+    current_value: row.current_value,
+    best_value: row.best_value,
+  };
 }
 
 export default async function DashboardPage() {
@@ -56,7 +73,6 @@ export default async function DashboardPage() {
   const { activeProfile, ownProfile } = ctx;
 
   const isAdmin = ownProfile ? await isUserAdmin(supabase, ownProfile.id) : false;
-  // isCoach/isPlayer reserved for future use (only isAdmin drives the shortcuts today)
 
   const { data: seasonRow } = await supabase
     .from("seasons")
@@ -75,455 +91,272 @@ export default async function DashboardPage() {
 
   const now = new Date();
 
-  const [dashboardData, { data: unread }, myCallupRes] = await Promise.all([
+  const [dashboardData, streaks, { data: unread }] = await Promise.all([
     teamIds.length > 0
       ? getDashboardData({ teamIds, profileId: activeProfile.id, now })
-      : Promise.resolve({ weekEvents: [], teamInfo: null, recentActivity: [], seasonStats: null }),
+      : Promise.resolve({
+          weekEvents: [],
+          teamInfo: null,
+          recentActivity: [],
+          seasonStats: null,
+        }),
+    seasonId
+      ? getStreaksForPlayer(seasonId, activeProfile.id)
+      : Promise.resolve([] as ActiveStreakRow[]),
     supabase
       .from("notifications")
       .select("id", { count: "exact", head: true })
       .eq("recipient_id", activeProfile.id)
       .is("read_at", null),
-    teamIds.length > 0
-      ? supabase
-          .from("match_callups")
-          .select("id, match_id, status, matches!match_callups_match_id_fkey(id, scheduled_at, opponent, teams!matches_team_id_fkey(label, color))")
-          .eq("player_id", activeProfile.id)
-          .in("status", ["called", "confirmed"])
-          .order("created_at", { ascending: false })
-          .limit(5)
-      : Promise.resolve({ data: [] as Array<unknown> }),
   ]);
 
-  const nextEvent: DashboardWeekEvent | null =
-    dashboardData.weekEvents.find((e) => !e.cancelled) ?? null;
-
-  const teamColor = dashboardData.teamInfo?.color ?? null;
-
-  const myCallups = ((myCallupRes.data ?? []) as Array<{
-    id: string;
-    match_id: string;
-    status: string;
-    matches: unknown;
-  }>).map((row) => {
-    const matchRaw = Array.isArray(row.matches) ? row.matches[0] : row.matches;
-    const m = matchRaw as {
-      id: string;
-      scheduled_at: string;
-      opponent: string;
-      teams: unknown;
-    } | null;
-    const teamRaw = m ? (Array.isArray(m.teams) ? m.teams[0] : m.teams) : null;
-    const team = teamRaw as { label?: string; color?: string } | null;
-    return {
-      id: row.id,
-      match_id: row.match_id,
-      status: row.status,
-      scheduled_at: m?.scheduled_at ?? null,
-      opponent: m?.opponent ?? "",
-      team_label: team?.label ?? "",
-      team_color: team?.color ?? "var(--brand-blue)",
-    };
-  });
-
-  const upcomingCallup = myCallups
-    .filter((c) => c.scheduled_at != null && new Date(c.scheduled_at).getTime() > now.getTime() - 1000 * 60 * 60 * 24)
-    .sort((a, b) => (a.scheduled_at ?? "").localeCompare(b.scheduled_at ?? ""))[0] ?? null;
+  const upcomingWeekEvents = dashboardData.weekEvents.filter(
+    (e) => !e.cancelled && new Date(e.scheduled_at).getTime() >= now.getTime() - 1000 * 60 * 60 * 6,
+  );
+  const nextEvent: DashboardWeekEvent | null = upcomingWeekEvents[0] ?? null;
+  const teamColor = dashboardData.teamInfo?.color ?? activeProfile.team_color ?? "var(--pool-blue)";
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
-      <DashboardHero
-        profile={{
-          full_name: activeProfile.full_name,
-          team_color: teamColor,
-        }}
-        now={now}
-        unreadNotifications={unread?.length ?? 0}
-        isAdmin={isAdmin}
-        hasTeam={hasTeam}
-        nextEvent={nextEvent}
-      />
+    <div className="relative">
+      <LanePattern as="div" className="absolute inset-0" strong />
+      <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
+        <DashboardHero
+          profile={{
+            full_name: activeProfile.full_name,
+            team_color: teamColor,
+          }}
+          now={now}
+          unreadNotifications={unread?.length ?? 0}
+          isAdmin={isAdmin}
+          hasTeam={hasTeam}
+          nextEvent={nextEvent}
+          capNumber={activeProfile.cap_number}
+        />
 
-      {hasTeam ? (
-        <section
-          aria-labelledby="your-week-heading"
-          className="rounded-lg border border-ink-300 bg-paper p-4"
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-foam text-brand-deep">
-              <Sparkles className="h-4 w-4" />
+        {/* Tira compacta de Rachas Activas */}
+        {streaks.filter((s) => s.current_value > 0).length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2 rounded-md border border-[#FF6B35]/20 bg-[#FF6B35]/5 px-3 py-2.5 shadow-sm">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-[#FF6B35] flex items-center gap-1">
+              <Flame className="h-4 w-4 fill-[#FF6B35] text-[#FF6B35] animate-pulse" />
+              Tus rachas:
             </span>
-            <h2
-              id="your-week-heading"
-              className="font-display text-base font-bold text-brand-deep"
-            >
-              Tu semana
-            </h2>
+            <div className="flex flex-wrap gap-1.5">
+              {streaks
+                .filter((s) => s.current_value > 0)
+                .map((streak) => {
+                  const meta = STREAK_METADATA[streak.type];
+                  return (
+                    <div
+                      key={streak.type}
+                      title={`Récord histórico: ${streak.best_value}`}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-ink-300 bg-paper px-2.5 py-1 text-xs font-bold text-pool-deep shadow-sm"
+                    >
+                      <span className="text-[#FF6B35] font-extrabold">🔥 {streak.current_value}</span>
+                      <span className="text-ink-600 text-[10px] font-semibold">
+                        {meta.label.split(" ")[0]}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
           </div>
-          <ul className="flex flex-col gap-2">
-            {upcomingCallup ? (
-              <li>
-                <Link
-                  href={`/matches/${upcomingCallup.match_id}` as Route}
-                  className="flex items-center gap-3 rounded-md border-2 p-2.5 transition-colors hover:bg-brand-foam"
-                  style={{
-                    borderColor: upcomingCallup.team_color,
-                    backgroundColor: `color-mix(in oklab, ${upcomingCallup.team_color} 6%, var(--paper))`,
-                  }}
-                >
-                  <Trophy
-                    className="h-4 w-4 shrink-0"
-                    style={{ color: upcomingCallup.team_color }}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-                      Convocatoria
-                    </p>
-                    <p className="line-clamp-1 font-display text-sm font-bold text-brand-deep">
-                      vs {upcomingCallup.opponent}
-                    </p>
-                    <p className="text-[11px] text-ink-600">
-                      {upcomingCallup.scheduled_at
-                        ? new Date(upcomingCallup.scheduled_at).toLocaleDateString("es-ES", {
-                            weekday: "long",
-                            day: "numeric",
-                            month: "short",
-                          })
-                        : ""}
-                      {upcomingCallup.scheduled_at
-                        ? ` · ${formatTime(upcomingCallup.scheduled_at)}`
-                        : ""}
-                    </p>
-                  </div>
-                  <span
-                    className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-paper"
-                    style={{ backgroundColor: upcomingCallup.team_color }}
-                  >
-                    {upcomingCallup.status === "confirmed" ? "Confirmado" : "Convocado"}
-                  </span>
-                </Link>
-              </li>
-            ) : null}
-            {dashboardData.weekEvents
-              .filter((e) => e.kind === "training" && !e.cancelled)
-              .slice(0, 1)
-              .map((e) => (
-                <li key={e.id}>
-                  <Link
-                    href={"/calendar" as Route}
-                    className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-2.5 transition-colors hover:bg-brand-foam"
-                  >
-                    <Volleyball
-                      className="h-4 w-4 shrink-0"
-                      style={{ color: e.team_color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-                        Próximo entreno
-                      </p>
-                      <p className="line-clamp-1 font-display text-sm font-bold text-brand-deep">
-                        {e.team_label}
-                      </p>
-                      <p className="text-[11px] text-ink-600">
-                        {new Date(e.scheduled_at).toLocaleDateString("es-ES", {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "short",
-                        })}{" "}
-                        · {formatTime(e.scheduled_at)}
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            {dashboardData.weekEvents
-              .filter((e) => e.kind === "match" && !e.cancelled)
-              .slice(0, 1)
-              .map((e) => (
-                <li key={e.id}>
-                  <Link
-                    href={`/matches/${e.id}` as Route}
-                    className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-2.5 transition-colors hover:bg-brand-foam"
-                  >
-                    <Trophy
-                      className="h-4 w-4 shrink-0"
-                      style={{ color: e.team_color }}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-                        Próximo partido
-                      </p>
-                      <p className="line-clamp-1 font-display text-sm font-bold text-brand-deep">
-                        {e.title}
-                      </p>
-                      <p className="text-[11px] text-ink-600">
-                        {new Date(e.scheduled_at).toLocaleDateString("es-ES", {
-                          weekday: "long",
-                          day: "numeric",
-                          month: "short",
-                        })}{" "}
-                        · {formatTime(e.scheduled_at)}
-                      </p>
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            {myCallups.length === 0 &&
-            dashboardData.weekEvents.filter((e) => e.kind === "training" && !e.cancelled).length === 0 &&
-            dashboardData.weekEvents.filter((e) => e.kind === "match" && !e.cancelled).length === 0 ? (
-              <li className="rounded-md border border-dashed border-ink-300 bg-paper p-3 text-center text-xs text-ink-600">
-                Esta semana no tienes entrenos ni partidos. Descansa.
-              </li>
-            ) : null}
-          </ul>
-        </section>
-      ) : null}
+        ) : null}
 
-      <section aria-labelledby="next-event-heading">
-        <h2
-          id="next-event-heading"
-          className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
-        >
-          Tu próximo evento
-        </h2>
-        <NextEventCard event={nextEvent} now={now} />
-      </section>
-
-      {hasTeam && dashboardData.teamInfo ? (
-        <section aria-labelledby="your-team-heading">
+        <section aria-labelledby="next-event-heading">
           <div className="mb-2 flex items-center justify-between">
-            <h2
-              id="your-team-heading"
-              className="text-[10px] font-bold uppercase tracking-wider text-ink-600"
-            >
-              Tu equipo
+            <h2 id="next-event-heading" className="text-eyebrow text-ink-600">
+              Tu próximo evento
             </h2>
             <Link
               href={"/calendar" as Route}
-              className="text-xs font-bold text-brand-blue hover:underline"
+              className="text-pool-blue text-xs font-bold hover:underline"
             >
-              Ver calendario completo
+              Calendario
             </Link>
           </div>
-          <TeamCard team={dashboardData.teamInfo} />
+          <NextEventCard event={nextEvent} now={now} />
         </section>
-      ) : !hasTeam ? (
-        <section
-          aria-labelledby="no-team-heading"
-          className="rounded-lg border-2 border-dashed border-ink-300 bg-paper p-6 text-center"
-        >
-          <Users className="mx-auto h-10 w-10 text-ink-300" />
-          <h2
-            id="no-team-heading"
-            className="mt-3 font-display text-lg font-extrabold text-brand-deep"
-          >
-            Aún no formas parte de un equipo
-          </h2>
-          <p className="mt-1 text-sm text-ink-600">
-            Cuando el admin te asigne a un equipo esta temporada, tus entrenos y
-            partidos aparecerán aquí.
-          </p>
-        </section>
-      ) : null}
 
-      {dashboardData.weekEvents.length > 1 ? (
-        <section aria-labelledby="this-week-heading">
-          <h2
-            id="this-week-heading"
-            className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
+        {hasTeam && dashboardData.teamInfo ? (
+          <section aria-labelledby="your-team-heading">
+            <div className="mb-2 flex items-center justify-between">
+              <h2 id="your-team-heading" className="text-eyebrow text-ink-600">
+                Tu equipo
+              </h2>
+              <Link
+                href={"/team" as Route}
+                className="text-pool-blue text-xs font-bold hover:underline"
+              >
+                Ver todos
+              </Link>
+            </div>
+            <TeamCard team={dashboardData.teamInfo} />
+          </section>
+        ) : !hasTeam ? (
+          <section
+            aria-labelledby="no-team-heading"
+            className="border-ink-300 bg-paper rounded-md border-2 border-dashed p-6 text-center"
           >
-            Esta semana
-          </h2>
-          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-            {dashboardData.weekEvents.slice(0, 10).map((e) => (
-              <WeekEventCard key={e.id} event={e} now={now} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {dashboardData.seasonStats ? (
-        <section
-          aria-labelledby="your-season-heading"
-          className="rounded-lg border border-ink-300 bg-paper p-4"
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-md bg-brand-foam text-brand-deep">
-              <TrendingUp className="h-4 w-4" />
-            </span>
+            <PictogramBadge pictogram={Silbato} color="var(--ink-400)" size="lg" />
             <h2
-              id="your-season-heading"
-              className="font-display text-base font-bold text-brand-deep"
+              id="no-team-heading"
+              className="font-display text-pool-deep mt-3 text-lg font-extrabold"
             >
-              Tu temporada
+              Aún no formas parte de un equipo
             </h2>
-          </div>
-          <div className="grid grid-cols-3 gap-2">
-            <SeasonStatCard
-              label="Goles"
-              value={String(dashboardData.seasonStats.goals)}
-              color="var(--success)"
-              icon={<Goal className="h-3.5 w-3.5" />}
-            />
-            <SeasonStatCard
-              label="Asistencia del mes"
-              value={
-                dashboardData.seasonStats.month_attendance_pct > 0
-                  ? `${dashboardData.seasonStats.month_attendance_pct}%`
-                  : "—"
-              }
-              color="var(--brand-blue)"
-              icon={<Calendar className="h-3.5 w-3.5" />}
-            />
-            <SeasonStatCard
-              label="Racha"
-              value={
-                dashboardData.seasonStats.attendance_streak > 0
-                  ? `${dashboardData.seasonStats.attendance_streak} seguidos`
-                  : "—"
-              }
-              color="var(--brand-action)"
-              icon={<Sparkles className="h-3.5 w-3.5" />}
-            />
-          </div>
-        </section>
-      ) : null}
+            <p className="text-ink-600 mt-1 text-sm">
+              Cuando el admin te asigne a un equipo esta temporada, tus entrenos y partidos
+              aparecerán aquí.
+            </p>
+          </section>
+        ) : null}
 
-      {dashboardData.recentActivity.length > 0 ? (
-        <section aria-labelledby="activity-heading">
-          <h2
-            id="activity-heading"
-            className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
-          >
-            Actividad reciente
-          </h2>
-          <div className="flex flex-col gap-3 rounded-lg border border-ink-300 bg-paper p-4">
-            {dashboardData.recentActivity.slice(0, 6).map((a) => (
-              <ActivityItem key={a.id} activity={a} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {isAdmin ? (
-        <section aria-labelledby="admin-shortcuts-heading">
-          <h2
-            id="admin-shortcuts-heading"
-            className="mb-2 text-[10px] font-bold uppercase tracking-wider text-ink-600"
-          >
-            Atajos de admin
-          </h2>
-          <div className="grid grid-cols-2 gap-2">
-            <AdminLink
-              href="/admin/seasons"
-              icon={<Calendar className="h-4 w-4" />}
-              label="Temporadas"
-            />
-            <AdminLink
-              href="/admin/teams"
-              icon={<Users className="h-4 w-4" />}
-              label="Equipos"
-            />
-            <AdminLink
-              href="/admin/players"
-              icon={<UserPlus className="h-4 w-4" />}
-              label="Jugadores"
-            />
-            <AdminLink
-              href="/admin/matches"
-              icon={<Trophy className="h-4 w-4" />}
-              label="Partidos"
-            />
-            <AdminLink
-              href="/admin/trainings"
-              icon={<Volleyball className="h-4 w-4" />}
-              label="Entrenamientos"
-            />
-            <AdminLink
-              href="/admin/players/import"
-              icon={<FileUp className="h-4 w-4" />}
-              label="Importar"
-            />
-          </div>
-        </section>
-      ) : null}
-
-      <section
-        aria-label="Enlaces rápidos"
-        className="grid grid-cols-2 gap-2 border-t border-ink-300 pt-3"
-      >
-        <Link
-          href={"/profile" as Route}
-          className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper text-xs font-bold text-ink-900 transition-colors hover:bg-brand-foam"
-        >
-          <Settings className="h-3.5 w-3.5" />
-          Mi perfil
-        </Link>
-        {hasTeam ? (
-          <Link
-            href={"/calendar" as Route}
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper text-xs font-bold text-ink-900 transition-colors hover:bg-brand-foam"
-          >
-            <Calendar className="h-3.5 w-3.5" />
-            Calendario
-          </Link>
-        ) : (
-          <Link
-            href={"/team" as Route}
-            className="inline-flex h-10 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper text-xs font-bold text-ink-900 transition-colors hover:bg-brand-foam"
-          >
-            <Users className="h-3.5 w-3.5" />
-            Mi equipo
-          </Link>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function SeasonStatCard({
-  label,
-  value,
-  color,
-  icon,
-}: {
-  label: string;
-  value: string;
-  color: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-start gap-1 rounded-md border border-ink-300 bg-brand-foam/30 p-3">
-      <span
-        className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider"
-        style={{ color }}
-      >
-        {icon}
-        {label}
-      </span>
-      <span className="font-display text-xl font-extrabold leading-none text-brand-deep">
-        {value}
-      </span>
+        {isAdmin ? (
+          <section aria-labelledby="admin-shortcuts-heading">
+            <h2 id="admin-shortcuts-heading" className="text-eyebrow text-ink-600 mb-2">
+              Atajos de admin
+            </h2>
+            <div className="grid grid-cols-2 gap-2">
+              <AdminLink
+                href="/admin/seasons"
+                pictogram={Calendario}
+                label="Temporadas"
+                color="var(--pool-teal)"
+              />
+              <AdminLink
+                href="/admin/teams"
+                pictogram={Equipo}
+                label="Equipos"
+                color="var(--pool-blue)"
+              />
+              <AdminLink
+                href="/admin/players"
+                pictogram={Usuario}
+                label="Jugadores"
+                color="var(--action)"
+              />
+              <AdminLink
+                href="/admin/matches"
+                pictogram={Gorro}
+                label="Partidos"
+                color="var(--goggle-red)"
+              />
+              <AdminLink
+                href="/admin/trainings"
+                pictogram={SilbatoActivo}
+                label="Entrenamientos"
+                color="var(--success)"
+              />
+              <AdminLink
+                href="/admin/players/import"
+                pictogram={FileUp}
+                label="Importar"
+                color="var(--ball-gold)"
+              />
+            </div>
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }
 
 function AdminLink({
   href,
-  icon,
+  pictogram: Pictogram,
   label,
+  color,
 }: {
   href: string;
-  icon: React.ReactNode;
+  pictogram: React.ComponentType<{ className?: string; accent?: string }>;
   label: string;
+  color: string;
 }) {
   return (
     <Link
       href={href as Route}
-      className="inline-flex h-10 items-center gap-2 rounded-md border border-ink-300 bg-paper px-3 text-xs font-bold text-ink-900 transition-colors hover:border-brand-blue hover:bg-brand-foam"
+      data-admin-shortcut
+      className="border-ink-300 bg-paper-card text-ink-900 hover:border-pool-blue hover:bg-pool-foam inline-flex h-11 items-center gap-2.5 rounded-md border px-3 text-xs font-bold transition-colors"
     >
-      {icon}
+      <PictogramBadge pictogram={Pictogram} color={color} size="sm" />
       {label}
     </Link>
+  );
+}
+
+interface ActiveStreak {
+  type: "goals_consec" | "excl_consec" | "train_consec" | "mvp_consec" | "wins_consec";
+  current_value: number;
+  best_value: number;
+}
+
+const STREAK_METADATA: Record<
+  ActiveStreak["type"],
+  { label: string; color: string; pictogram: React.ComponentType<{ className?: string; accent?: string }> }
+> = {
+  goals_consec: {
+    label: "Goles seguidos",
+    color: "var(--success)",
+    pictogram: Porteria,
+  },
+  excl_consec: {
+    label: "Exclusiones seguidas",
+    color: "var(--goggle-red)",
+    pictogram: Silbato,
+  },
+  train_consec: {
+    label: "Entrenos seguidos",
+    color: "var(--pool-teal)",
+    pictogram: Balon,
+  },
+  mvp_consec: {
+    label: "MVP seguidos",
+    color: "var(--ball-gold)",
+    pictogram: Trofeo,
+  },
+  wins_consec: {
+    label: "Victorias seguidas",
+    color: "var(--pool-blue)",
+    pictogram: Trofeo,
+  },
+};
+
+function StreakStrip({ streaks }: { streaks: ActiveStreak[] }) {
+  const active = streaks.filter((s) => s.current_value > 0);
+
+  if (active.length === 0) {
+    return (
+      <p className="text-ink-500 text-xs italic">Sin rachas activas en este momento.</p>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+      {active.map((streak) => {
+        const meta = STREAK_METADATA[streak.type];
+        if (!meta) return null;
+        return (
+          <div
+            key={streak.type}
+            className="border-ink-300 bg-paper-card/50 flex flex-col gap-1 rounded-md border p-3"
+          >
+            <div className="flex items-center gap-1.5">
+              <PictogramBadge pictogram={meta.pictogram} color={meta.color} size="xs" />
+              <span className="text-ink-600 text-[10px] font-bold uppercase tracking-wider">
+                {meta.label}
+              </span>
+            </div>
+            <div className="mt-1 flex items-baseline gap-1.5">
+              <span className="font-display text-pool-deep text-2xl font-extrabold leading-none">
+                {streak.current_value}
+              </span>
+              <span className="text-ink-500 text-[10px] font-medium">
+                (récord: {streak.best_value})
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }

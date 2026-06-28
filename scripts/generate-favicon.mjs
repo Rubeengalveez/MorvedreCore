@@ -1,7 +1,7 @@
 import path from "node:path";
 import sharp from "sharp";
 
-const SOURCE = path.resolve("public", "brand", "logo-original.png");
+const SOURCE = path.resolve("public", "brand", "logo.webp");
 const DEST = path.resolve("public", "favicon.ico");
 const SIZE = 32;
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
@@ -9,6 +9,9 @@ import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { PictogramBadge } from "@/components/ui/pictogram-badge";
+import { Calendario } from "@/components/brand/pictograms";
 import {
   Form,
   FormControl,
@@ -143,12 +146,24 @@ export function SeasonFormSheet({ mode, trigger }: SeasonFormSheetProps) {
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent size="md">
         <SheetHeader>
-          <SheetTitle>{isEdit ? "Editar temporada" : "Nueva temporada"}</SheetTitle>
-          <SheetDescription>
-            {isEdit
-              ? "Modifica las fechas o el nombre de la temporada."
-              : "Crea la temporada actual y márcala como activa para empezar."}
-          </SheetDescription>
+          <div className="flex items-center gap-3">
+            <PictogramBadge
+              pictogram={Calendario}
+              color="var(--pool-teal)"
+              size="md"
+            />
+            <div className="flex flex-col gap-0.5">
+              <Eyebrow>Temporada</Eyebrow>
+              <SheetTitle className="text-h2">
+                {isEdit ? "Editar temporada" : "Nueva temporada"}
+              </SheetTitle>
+              <SheetDescription>
+                {isEdit
+                  ? "Modifica las fechas o el nombre de la temporada."
+                  : "Crea la temporada actual y márcala como activa para empezar."}
+              </SheetDescription>
+            </div>
+          </div>
         </SheetHeader>
         <SheetBody>
           <Form {...form}>
@@ -226,6 +241,19 @@ export function SeasonFormSheet({ mode, trigger }: SeasonFormSheetProps) {
                   </FormItem>
                 )}
               />
+
+              {state?.ok ? (
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 p-3 text-sm text-ink-900"
+                >
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden="true" />
+                  <span className="font-semibold">
+                    Temporada guardada correctamente.
+                  </span>
+                </div>
+              ) : null}
             </form>
           </Form>
         </SheetBody>

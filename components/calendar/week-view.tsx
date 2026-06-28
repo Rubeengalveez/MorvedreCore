@@ -1,17 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
 import type { CalendarData } from "@/server/queries/calendar";
-import {
-  addDaysIso,
-  isSameLocalDay,
-  todayIso,
-  weekdayShort,
-} from "@/lib/domain/calendar";
+import { todayIso, weekdayShort } from "@/lib/domain/calendar";
 import { matchColor, trainingColor } from "@/lib/domain/event-colors";
 
 export interface WeekViewProps {
@@ -120,7 +111,6 @@ function getDayLabels(startIso: string): { iso: string; date: Date }[] {
   const out: { iso: string; date: Date }[] = [];
   const [y, m, d] = startIso.split("-").map(Number);
   if (y == null || m == null || d == null) return out;
-  const base = new Date(y, m - 1, d);
   for (let i = 0; i < 7; i++) {
     const dd = new Date(y, m - 1, d + i);
     out.push({
@@ -140,11 +130,14 @@ export function WeekView({
   availabilityByDay = new Map(),
 }: WeekViewProps) {
   const days = getDayLabels(startIso);
-  const today = new Date();
   const todayIsoValue = todayIso();
+
+  const HOUR_HEIGHT = 56;
+  const TOTAL_HEIGHT = HOURS.length * HOUR_HEIGHT;
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Cabecera de días */}
       <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-1">
         <div />
         {days.map((d) => {
@@ -174,63 +167,117 @@ export function WeekView({
             </button>
           );
         })}
-        {HOURS.map((h) => (
-          <div key={`row-${h}`} className="contents">
+      </div>
+
+      {/* Grid del calendario semanal */}
+      <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-1">
+        {/* Columna de etiquetas de horas */}
+        <div className="relative select-none" style={{ height: `${TOTAL_HEIGHT}px` }}>
+          {HOURS.map((h, i) => (
             <div
+              key={`hour-${h}`}
               aria-hidden="true"
-              className="self-start pt-1 text-right text-[10px] font-medium text-ink-600"
+              className="absolute right-1 text-right text-[10px] font-semibold uppercase tracking-wider text-ink-500"
+              style={{
+                top: `${i * HOUR_HEIGHT + 4}px`,
+                height: `${HOUR_HEIGHT}px`,
+              }}
             >
               {hourLabel(h)}
             </div>
-            {days.map((d) => {
-              const dayEvents = buildDayEvents(
-                d.iso,
-                eventsByDay,
-                availabilityByDay,
-              );
-              const block = dayEvents.find(
-                (b) => h >= b.startHour && h < b.endHour,
-              );
-              const isHourStart = block?.startHour === h;
-              return (
-                <button
-                  key={`cell-${d.iso}-${h}`}
-                  type="button"
-                  onClick={() => {
-                    if (block && isHourStart && onEventClick) {
-                      onEventClick(block.kind, block.id);
-                    } else {
-                      onDayClick?.(d.iso);
-                    }
+          ))}
+        </div>
+
+        {/* Columnas diarias con eventos absolutos */}
+        {days.map((d) => {
+          const dayEvents = buildDayEvents(
+            d.iso,
+            eventsByDay,
+            availabilityByDay,
+          );
+          const isSelected = selectedIso === d.iso;
+
+          return (
+            <div
+              key={`col-${d.iso}`}
+              onClick={() => onDayClick?.(d.iso)}
+              className={cn(
+                "relative border-l border-ink-300/40 bg-paper transition-colors cursor-pointer",
+                isSelected ? "bg-brand-foam/20" : "",
+              )}
+              style={{ height: `${TOTAL_HEIGHT}px` }}
+            >
+              {/* Líneas de cuadrícula de fondo */}
+              {HOURS.map((h, i) => (
+                <div
+                  key={`grid-${d.iso}-${h}`}
+                  className="absolute inset-x-0 border-t border-ink-300/30 pointer-events-none"
+                  style={{
+                    top: `${i * HOUR_HEIGHT}px`,
+                    height: `${HOUR_HEIGHT}px`,
                   }}
-                  aria-label={
-                    block
-                      ? `${block.title} ${d.iso}`
-                      : `${d.iso} ${hourLabel(h)}`
-                  }
-                  className={cn(
-                    "relative min-h-11 border-t border-l border-ink-300/50 bg-paper p-1 text-left transition-colors hover:bg-brand-foam/50",
-                    selectedIso === d.iso ? "bg-brand-foam" : "",
-                  )}
-                >
-                  {block && isHourStart ? (
-                    <span
-                      className="pointer-events-none block truncate rounded px-1.5 py-0.5 text-[10px] font-semibold text-paper"
-                      style={{ backgroundColor: block.color }}
-                      title={block.title}
-                    >
+                />
+              ))}
+
+              {/* Renderizado de eventos en esta columna */}
+              {dayEvents.map((block) => {
+                const topPx = (block.startHour - HOUR_START) * HOUR_HEIGHT;
+                const heightPx = (block.endHour - block.startHour) * HOUR_HEIGHT;
+
+                const startH = Math.floor(block.startHour);
+                const startM = Math.round((block.startHour - startH) * 60);
+                const endH = Math.floor(block.endHour);
+                const endM = Math.round((block.endHour - endH) * 60);
+
+                const timeStr = `${String(startH).padStart(2, "0")}:${String(startM).padStart(2, "0")}–${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
+
+                const isUnavailableCell = block.id.endsWith("-unavailable");
+
+                return (
+                  <button
+                    key={`event-${block.id}`}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation(); // Evita que se seleccione el día de fondo
+                      if (onEventClick && !isUnavailableCell) {
+                        onEventClick(block.kind, block.id);
+                      } else {
+                        onDayClick?.(d.iso);
+                      }
+                    }}
+                    style={{
+                      position: "absolute",
+                      top: `${topPx + 2}px`,
+                      height: `${heightPx - 4}px`,
+                      left: "2px",
+                      right: "2px",
+                      backgroundColor: block.color,
+                    }}
+                    className={cn(
+                      "flex flex-col justify-start rounded p-1 text-left text-paper transition-transform active:scale-[0.98] shadow-elev-1 overflow-hidden select-none border border-black/5",
+                      block.cancelled && "opacity-60",
+                      isUnavailableCell ? "cursor-default" : "cursor-pointer",
+                    )}
+                    title={`${block.title} (${timeStr})`}
+                  >
+                    <span className="line-clamp-2 text-[9px] font-bold leading-tight">
                       {block.cancelled ? (
                         <span className="line-through">{block.title}</span>
                       ) : (
                         block.title
                       )}
                     </span>
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
-        ))}
+                    {heightPx >= 28 ? (
+                      <span className="mt-0.5 block font-mono text-[8px] font-semibold opacity-90 leading-none">
+                        {timeStr}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

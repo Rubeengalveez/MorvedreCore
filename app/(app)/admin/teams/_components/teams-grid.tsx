@@ -3,8 +3,11 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
+import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { Select } from "@/components/ui/select";
+import { Equipo } from "@/components/brand/pictograms";
 import type { Season, Team } from "@/server/actions/admin";
 
 export interface TeamCardData extends Team {
@@ -36,99 +39,124 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
   }, [teamsBySeason, filter, search]);
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <label
-          htmlFor="season-filter"
-          className="text-sm font-semibold text-ink-600"
-        >
-          Filtrar por temporada
-        </label>
-        <Select
-          id="season-filter"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          {seasons.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.label}
-              {s.is_current ? " (actual)" : ""}
-              {s.archived_at ? " (archivada)" : ""}
-            </option>
-          ))}
-        </Select>
-      </div>
-
-      <div className="relative">
-        <Search
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-600"
-          aria-hidden="true"
-        />
-        <Input
-          type="search"
-          placeholder="Buscar equipo por nombre o entrenador"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-9"
-        />
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex flex-1 flex-col gap-1.5">
+          <label
+            htmlFor="season-filter"
+            className="text-eyebrow text-ink-600"
+          >
+            Temporada
+          </label>
+          <Select
+            id="season-filter"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+          >
+            {seasons.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.label}
+                {s.is_current ? " (actual)" : ""}
+                {s.archived_at ? " (archivada)" : ""}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5">
+          <label
+            htmlFor="team-search"
+            className="text-eyebrow text-ink-600"
+          >
+            Buscar
+          </label>
+          <div className="relative">
+            <Search
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-600"
+              aria-hidden="true"
+            />
+            <Input
+              id="team-search"
+              type="search"
+              placeholder="Por nombre o entrenador"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
       </div>
 
       {teams.length === 0 ? (
-        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
-          <p className="text-base font-semibold text-brand-deep">
-            Aún no formas parte de un equipo.
+        <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-ink-300 bg-paper-card p-6 text-center">
+          <PictogramBadge
+            pictogram={Equipo}
+            color="var(--pool-blue)"
+            size="lg"
+          />
+          <p className="font-display text-base font-extrabold text-pool-deep">
+            No hay equipos en esta temporada.
           </p>
-          <p className="mt-1 text-sm text-ink-600">
-            Cuando el admin te asigne, aparecerán tus compañeros.
+          <p className="max-w-sm text-sm text-ink-600">
+            Crea el primer equipo para empezar a asignar jugadores.
           </p>
         </div>
       ) : (
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {teams.map((t) => (
             <li key={t.id}>
               <a
                 href={`/admin/teams/${t.id}`}
-                className="group flex flex-col overflow-hidden rounded-md border border-ink-300 bg-paper transition-colors hover:border-brand-blue hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-                style={{
-                  borderLeftWidth: "4px",
-                  borderLeftColor: t.color,
-                }}
+                data-team-card={t.id}
+                className="group flex h-full flex-col overflow-hidden rounded-md border border-ink-300 bg-paper-card shadow-elev-1 transition-all hover:border-pool-blue hover:shadow-elev-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               >
-                <div className="flex flex-col gap-3 p-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-display text-xl font-extrabold leading-tight text-brand-deep">
-                      {t.label}
-                    </h3>
-                    <span
-                      className="rounded-full px-2 py-0.5 text-xs font-semibold text-paper"
-                      style={{ backgroundColor: t.color }}
-                    >
-                      {t.categoryLabel}
-                    </span>
+                <div
+                  aria-hidden="true"
+                  className="h-1.5 w-full"
+                  style={{ backgroundColor: t.color }}
+                />
+                <div className="flex flex-1 flex-col gap-3 p-4">
+                  <div className="flex items-start gap-3">
+                    <PictogramBadge
+                      pictogram={Equipo}
+                      color={t.color}
+                      size="md"
+                    />
+                    <div className="flex min-w-0 flex-1 flex-col">
+                      <h3 className="line-clamp-2 font-display text-lg font-extrabold leading-tight text-pool-deep">
+                        {t.label}
+                      </h3>
+                      <span className="text-eyebrow text-ink-600">
+                        {t.categoryLabel}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-ink-600">
-                    <span className="inline-flex h-6 items-center rounded-full bg-brand-foam px-2 font-semibold text-brand-deep">
+                  <div className="flex flex-wrap gap-1.5">
+                    <span className="inline-flex h-6 items-center rounded-sm border border-ink-300 bg-paper-card px-2 text-eyebrow text-ink-700">
                       {t.genderLabel}
                     </span>
                     {t.team_type === "school" ? (
-                      <span className="inline-flex h-6 items-center rounded-full bg-brand-foam px-2 font-semibold text-brand-deep">
+                      <span className="inline-flex h-6 items-center rounded-sm bg-pool-foam px-2 text-eyebrow text-pool-deep">
                         Escuela
                       </span>
                     ) : null}
-                    <span className="inline-flex h-6 items-center rounded-full bg-ink-300/40 px-2 font-mono text-ink-900">
-                      {t.playerCount} jugadores
+                    <span className="inline-flex h-6 items-center rounded-sm bg-ink-300/30 px-2 text-eyebrow text-ink-900">
+                      <span className="text-mono-num">{t.playerCount}</span>
+                      <span className="ml-1 normal-case tracking-flat text-ink-600">
+                        jugadores
+                      </span>
                     </span>
                   </div>
-                  <p
-                    className={
-                      "text-sm leading-relaxed text-ink-600" +
-                      (t.coachName ? "" : " italic")
-                    }
-                  >
-                    {t.coachName
-                      ? `Entrenador: ${t.coachName}`
-                      : "Sin entrenador asignado"}
-                  </p>
+                  <div className="border-t border-ink-300 pt-3 text-xs text-ink-600">
+                    <Eyebrow as="span" className="text-ink-400">Entrenador</Eyebrow>
+                    <p
+                      className={
+                        "mt-0.5 font-semibold" +
+                        (t.coachName ? " text-pool-deep" : " italic text-ink-600")
+                      }
+                    >
+                      {t.coachName ?? "Sin asignar"}
+                    </p>
+                  </div>
                 </div>
               </a>
             </li>

@@ -1,12 +1,16 @@
 "use client";
 
-import { Clock, MapPin, Calendar, Users, Volleyball, X, ChevronRight, AlertCircle, Check } from "lucide-react";
+import { Clock, MapPin, Calendar, Users, X, ChevronRight, AlertCircle, Check } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
 import { Avatar } from "@/components/ui/avatar";
+import { CapTile } from "@/components/ui/cap-tile";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { cn } from "@/lib/utils/cn";
 import { matchColor, trainingColor } from "@/lib/domain/event-colors";
+import { Gorro, SilbatoActivo } from "@/components/brand/pictograms";
 
 export interface CalendarEventBase {
   id: string;
@@ -36,6 +40,7 @@ export interface CalendarEventCardData {
   callup_name?: string | null;
   callup_status?: string | null;
   callup_cap_number?: number | null;
+  callup_team_color?: string | null;
 }
 
 function formatTime(iso: string): string {
@@ -60,7 +65,7 @@ export function CalendarEventChip({ event, size = "sm", className }: {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded px-1.5 text-paper font-semibold leading-none",
+        "inline-flex items-center gap-1 rounded-sm px-1.5 text-paper font-semibold leading-none",
         size === "sm" ? "h-4 text-[9px]" : "h-5 text-[10px]",
         event.cancelled && "opacity-50 line-through",
         className,
@@ -85,7 +90,7 @@ function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center rounded-full px-2 text-[10px] font-bold uppercase tracking-wider text-paper",
+        "inline-flex h-5 items-center rounded-sm px-2 text-eyebrow text-paper",
         className,
       )}
       style={{ backgroundColor: bg }}
@@ -117,26 +122,24 @@ function EventBody({
   return (
     <>
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <div
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-paper"
-            style={{ backgroundColor: color }}
-            aria-hidden="true"
-          >
-            {event.kind === "match" ? <Calendar className="h-4 w-4" /> : <Volleyball className="h-4 w-4" />}
-          </div>
+        <div className="flex items-center gap-2.5">
+          <PictogramBadge
+            pictogram={event.kind === "match" ? Gorro : SilbatoActivo}
+            color={color}
+            size="md"
+          />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
               {event.kind === "match" ? (
                 event.competition_type === "tournament" ? (
-                  <Badge bg="var(--brand-action)">Torneo</Badge>
+                  <Badge bg="var(--action)">Torneo</Badge>
                 ) : event.competition_type === "friendly" ? (
-                  <Badge bg="var(--brand-aqua)">Amistoso</Badge>
+                  <Badge bg="var(--pool-teal)">Amistoso</Badge>
                 ) : (
-                  <Badge bg="var(--brand-ball)">Liga/Copa</Badge>
+                  <Badge bg="var(--ball-gold)">Liga/Copa</Badge>
                 )
               ) : (
-                <Badge bg="var(--brand-blue)">Entreno</Badge>
+                <Badge bg="var(--pool-blue)">Entreno</Badge>
               )}
               {isCancelled ? <Badge bg="var(--danger)">Cancelado</Badge> : null}
               {isPostponed ? <Badge bg="var(--ink-600)">Aplazado</Badge> : null}
@@ -146,14 +149,14 @@ function EventBody({
                 </Badge>
               ) : null}
               {showAttendance && userAttendance === false ? (
-                <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-danger/10 px-2 text-[10px] font-bold uppercase tracking-wider text-danger">
+                <span className="inline-flex h-5 items-center gap-0.5 rounded-sm bg-danger/10 px-2 text-eyebrow text-danger">
                   <X className="h-2.5 w-2.5" /> No asististe
               </span>
               ) : null}
             </div>
             <p
               className={cn(
-                "mt-1 font-display text-sm font-bold leading-tight text-brand-deep",
+                "mt-1 font-display text-sm font-extrabold leading-tight text-pool-deep",
                 isPast && "opacity-80",
                 isCancelled && "line-through opacity-60",
               )}
@@ -168,23 +171,30 @@ function EventBody({
       </div>
       {event.callup_name ? (
         <div
-          className="flex items-center gap-2 rounded-md border border-ink-300 bg-brand-foam/40 p-2"
+          className="flex items-center gap-2 rounded-md border border-ink-300 bg-pool-foam/40 p-2"
           style={{ borderLeftWidth: "3px", borderLeftColor: color }}
         >
-          <Avatar
-            src={event.callup_photo_url ?? null}
-            name={event.callup_name}
-            size={28}
-          />
+          {event.callup_cap_number != null ? (
+            <CapTile
+              number={event.callup_cap_number}
+              teamColor={event.callup_team_color ?? color}
+              size="sm"
+            />
+          ) : (
+            <Avatar
+              src={event.callup_photo_url ?? null}
+              name={event.callup_name}
+              size={28}
+            />
+          )}
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-1 text-xs font-semibold text-brand-deep">
+            <p className="line-clamp-1 text-xs font-semibold text-pool-deep">
               {event.callup_name}
-              {event.callup_cap_number != null ? ` #${event.callup_cap_number}` : ""}
             </p>
             {event.callup_status ? (
-              <p className="text-[10px] uppercase tracking-wider text-ink-600">
+              <Eyebrow tone="muted">
                 {event.callup_status === "confirmed" ? "Confirmado" : "Convocado"}
-              </p>
+              </Eyebrow>
             ) : null}
           </div>
         </div>
@@ -230,16 +240,15 @@ export function CalendarEventCard({
   const timeStr = event.duration_minutes
     ? formatDuration(event.scheduled_at, event.duration_minutes)
     : formatTime(event.scheduled_at);
-  const isMatch = event.kind === "match";
   const isCancelled = !!event.cancelled || event.status === "cancelled";
   const isPostponed = event.status === "postponed";
   const baseClass = cn(
-    "group flex flex-col gap-2 rounded-md border bg-paper p-3 transition-colors",
+    "group flex flex-col gap-2 rounded-md border bg-paper-card p-3 transition-colors shadow-elev-1",
     isPast && !isCancelled && !isPostponed && "border-ink-300 opacity-80",
     isCancelled && "border-danger/30 bg-danger/5",
     isPostponed && "border-ink-300 bg-paper/50",
     !isPast && !isCancelled && !isPostponed && "border-ink-300",
-    href && "hover:border-brand-blue hover:shadow-sm",
+    href && "hover:border-pool-blue hover:shadow-elev-2",
     className,
   );
   const body = (
@@ -278,14 +287,14 @@ export function CalendarEmptyState({
 }) {
   return (
     <div className="flex flex-col items-center gap-2 rounded-md border-2 border-dashed border-ink-300 bg-paper/50 p-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-foam text-ink-600">
+      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pool-foam text-ink-600">
         {icon ?? <Calendar className="h-5 w-5" />}
       </div>
       <p className="text-sm font-semibold text-ink-900">{message}</p>
       {cta ? (
         <Link
           href={cta.href as Route}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-brand-deep px-3 text-xs font-bold text-paper transition-colors hover:bg-ink-900"
+          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-pool-deep px-3 text-xs font-bold text-paper transition-colors hover:bg-ink-900"
         >
           {cta.label}
         </Link>
@@ -302,7 +311,7 @@ export function CalendarAlert({
   message: string;
 }) {
   const styles = {
-    info: "border-brand-blue/20 bg-brand-blue/5 text-brand-deep",
+    info: "border-pool-teal/30 bg-pool-teal/10 text-pool-deep",
     warning: "border-warning/20 bg-warning/5 text-warning",
     error: "border-danger/20 bg-danger/5 text-danger",
   };

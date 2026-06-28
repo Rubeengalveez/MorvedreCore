@@ -1,23 +1,15 @@
 "use client";
 
-import {
-  Clock,
-  MapPin,
-  Users,
-  Calendar,
-  ChevronRight,
-  Trophy,
-  Check,
-  Minus,
-  TrendingDown,
-  Sparkles,
-  Activity,
-  Bell,
-} from "lucide-react";
+import { Clock, MapPin, Users, Calendar, ChevronRight, Bell } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
 import { Avatar } from "@/components/ui/avatar";
+import { CapTile } from "@/components/ui/cap-tile";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { LanePattern } from "@/components/ui/lane-pattern";
+import { PictogramBadge } from "@/components/ui/pictogram-badge";
+import { Equipo, Gorro, Porteria, SilbatoActivo } from "@/components/brand/pictograms";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 
 export interface DashboardWeekEvent {
@@ -43,16 +35,6 @@ export interface DashboardTeamInfo {
   coach_name: string | null;
   next_training: string | null;
   next_match: string | null;
-}
-
-export interface DashboardActivity {
-  id: string;
-  kind: "training" | "match" | "team" | "season";
-  title: string;
-  subtitle: string;
-  result: "win" | "draw" | "loss" | "scheduled" | "training";
-  color: string;
-  timestamp: string;
 }
 
 function formatTime(iso: string): string {
@@ -84,24 +66,23 @@ function formatRelative(iso: string, now: Date): string {
   return "hace " + Math.round(diffD / 7) + "sem";
 }
 
-export function NextEventCard({
-  event,
-  now,
-}: {
-  event: DashboardWeekEvent | null;
-  now: Date;
-}) {
+export function NextEventCard({ event, now }: { event: DashboardWeekEvent | null; now: Date }) {
   if (!event) {
     return (
-      <div className="flex items-center gap-4 rounded-lg border border-ink-300 bg-paper p-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-md bg-brand-foam">
-          <Calendar className="h-6 w-6 text-ink-600" />
+      <LanePattern className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-4">
+        <div className="flex items-center gap-4">
+          <PictogramBadge
+            pictogram={CalendarioEmpty}
+            color="var(--pool-teal)"
+            size="md"
+            ariaLabel="Sin eventos"
+          />
+          <div className="flex-1">
+            <p className="font-display text-pool-deep text-base font-bold">Sin eventos próximos</p>
+            <p className="text-ink-600 text-xs">Tu calendario está vacío esta semana</p>
+          </div>
         </div>
-        <div className="flex-1">
-          <p className="font-display text-sm font-bold text-ink-900">Sin eventos próximos</p>
-          <p className="text-xs text-ink-600">Tu calendario está vacío esta semana</p>
-        </div>
-      </div>
+      </LanePattern>
     );
   }
   const isMatch = event.kind === "match";
@@ -110,38 +91,45 @@ export function NextEventCard({
   return (
     <Link
       href={isMatch ? (`/matches/${event.id}` as Route) : ("/calendar" as Route)}
-      className="group block rounded-lg border-2 p-4 transition-all hover:shadow-md"
+      data-next-event
+      data-event-kind={event.kind}
+      className="group shadow-elev-2 hover:shadow-elev-3 block overflow-hidden rounded-md border-2 transition-shadow"
       style={{
         borderColor: event.team_color,
-        backgroundColor: `color-mix(in oklab, ${event.team_color} 6%, var(--paper))`,
+        backgroundColor: `color-mix(in oklab, ${event.team_color} 5%, var(--paper))`,
       }}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="mb-1 flex items-center gap-2">
+      <div
+        aria-hidden="true"
+        className="h-1 w-full"
+        style={{ backgroundColor: event.team_color }}
+      />
+      <div className="flex items-start justify-between gap-3 p-4">
+        <div className="flex flex-1 flex-col gap-1.5">
+          <div className="flex flex-wrap items-center gap-2">
             <span
-              className="inline-flex h-6 items-center rounded-full px-2.5 text-[11px] font-bold uppercase tracking-wider text-paper"
+              className="text-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-1.5"
               style={{ backgroundColor: event.team_color }}
             >
               {isMatch ? "Partido" : "Entreno"}
             </span>
             {event.is_today ? (
-              <span className="inline-flex h-6 items-center rounded-full bg-brand-action px-2.5 text-[11px] font-bold uppercase tracking-wider text-paper">
+              <span className="bg-action text-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-1.5">
                 Hoy
               </span>
             ) : event.is_tomorrow ? (
-              <span className="inline-flex h-6 items-center rounded-full bg-ink-900 px-2.5 text-[11px] font-bold uppercase tracking-wider text-paper">
+              <span className="bg-ink-900 text-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-1.5">
                 Mañana
               </span>
             ) : null}
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-600">
+            <span className="text-eyebrow text-ink-600">
               {formatDayShort(event.scheduled_at, now)}
             </span>
           </div>
-          <h2 className="font-display text-xl font-extrabold leading-tight text-brand-deep sm:text-2xl">
+          <h2 className="font-display text-pool-deep text-xl leading-tight font-extrabold sm:text-2xl">
             {event.title}
           </h2>
-          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink-600">
+          <div className="text-ink-600 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3.5 w-3.5" />
               {formatTime(event.scheduled_at)}
@@ -151,17 +139,25 @@ export function NextEventCard({
               {event.team_label}
             </span>
             {hours > 0 ? (
-              <span className="inline-flex items-center gap-1 font-semibold text-brand-deep">
-                <Sparkles className="h-3.5 w-3.5" />
+              <span className="text-pool-deep inline-flex items-center gap-1 font-semibold">
                 {formatRelative(event.scheduled_at, now)}
               </span>
             ) : null}
           </div>
         </div>
-        <ChevronRight className="h-6 w-6 shrink-0 text-ink-600 transition-transform group-hover:translate-x-1" />
+        <PictogramBadge
+          pictogram={isMatch ? Gorro : SilbatoActivo}
+          color={event.team_color}
+          size="lg"
+        />
+        <ChevronRight className="text-ink-600 h-6 w-6 shrink-0 self-center transition-transform group-hover:translate-x-1" />
       </div>
     </Link>
   );
+}
+
+function CalendarioEmpty({ className }: { className?: string }) {
+  return <Calendar className={className ?? "h-5 w-5"} aria-hidden="true" />;
 }
 
 export function TeamCard({ team }: { team: DashboardTeamInfo }) {
@@ -169,62 +165,59 @@ export function TeamCard({ team }: { team: DashboardTeamInfo }) {
   return (
     <Link
       href={`/team/${team.id}` as Route}
-      className="group block overflow-hidden rounded-lg border border-ink-300 bg-paper transition-all hover:shadow-md"
+      data-team-card
+      className="group border-ink-300 bg-paper-card shadow-elev-1 hover:shadow-elev-3 block overflow-hidden rounded-md border transition-shadow"
     >
-      <div className="h-2" style={{ backgroundColor: team.color }} />
-      <div className="p-4">
+      <div aria-hidden="true" className="h-1.5 w-full" style={{ backgroundColor: team.color }} />
+      <LanePattern className="px-4 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-              {categoryLabel}
-            </p>
-            <h3 className="mt-0.5 font-display text-2xl font-extrabold leading-tight text-brand-deep">
+            <Eyebrow>{categoryLabel}</Eyebrow>
+            <h3 className="font-display text-pool-deep mt-0.5 text-2xl leading-tight font-extrabold">
               {team.label}
             </h3>
           </div>
-          <div
-            className="flex h-12 w-12 items-center justify-center rounded-md text-paper"
-            style={{ backgroundColor: team.color }}
-          >
-            <Users className="h-6 w-6" />
-          </div>
+          <PictogramBadge pictogram={Equipo} color={team.color} size="lg" />
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-ink-300 pt-3 text-xs">
-          <span className="inline-flex items-center gap-1 text-ink-600">
+        <div className="border-ink-300 mt-3 flex flex-wrap items-center gap-3 border-t pt-3 text-xs">
+          <span className="text-ink-600 inline-flex items-center gap-1">
             <Users className="h-3.5 w-3.5" />
-            <span className="font-bold text-ink-900">{team.player_count}</span> jugadores
+            <span className="text-ink-900 font-bold">{team.player_count}</span> jugadores
           </span>
           {team.coach_name ? (
-            <span className="inline-flex items-center gap-1 text-ink-600">
-              <span className="font-bold text-ink-900">{team.coach_name}</span>
+            <span className="text-ink-600 inline-flex items-center gap-1">
+              <span className="text-ink-900 font-bold">{team.coach_name}</span>
             </span>
           ) : null}
         </div>
-        {(team.next_training || team.next_match) ? (
-          <div className="mt-3 space-y-1 border-t border-ink-300 pt-3 text-xs">
+        {team.next_training || team.next_match ? (
+          <div className="border-ink-300 mt-3 space-y-1 border-t pt-3 text-xs">
             {team.next_training ? (
-              <p className="flex items-center gap-1.5 text-ink-600">
+              <p className="text-ink-600 flex items-center gap-1.5">
                 <span
+                  aria-hidden="true"
                   className="inline-block h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: "var(--brand-blue)" }}
+                  style={{ backgroundColor: "var(--pool-blue)" }}
                 />
                 <span>
                   Próximo entreno{" "}
-                  <span className="font-bold text-ink-900">
-                    {formatDayShort(team.next_training, new Date())} {formatTime(team.next_training)}
+                  <span className="text-ink-900 font-bold">
+                    {formatDayShort(team.next_training, new Date())}{" "}
+                    {formatTime(team.next_training)}
                   </span>
                 </span>
               </p>
             ) : null}
             {team.next_match ? (
-              <p className="flex items-center gap-1.5 text-ink-600">
+              <p className="text-ink-600 flex items-center gap-1.5">
                 <span
+                  aria-hidden="true"
                   className="inline-block h-2 w-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: "var(--brand-action)" }}
+                  style={{ backgroundColor: "var(--action)" }}
                 />
                 <span>
                   Próximo partido{" "}
-                  <span className="font-bold text-ink-900">
+                  <span className="text-ink-900 font-bold">
                     {formatDayShort(team.next_match, new Date())} {formatTime(team.next_match)}
                   </span>
                 </span>
@@ -232,79 +225,9 @@ export function TeamCard({ team }: { team: DashboardTeamInfo }) {
             ) : null}
           </div>
         ) : null}
-      </div>
+      </LanePattern>
     </Link>
   );
-}
-
-export function WeekEventCard({
-  event,
-  now,
-}: {
-  event: DashboardWeekEvent;
-  now: Date;
-}) {
-  const isMatch = event.kind === "match";
-  const accent = isMatch ? "var(--brand-action)" : "var(--brand-blue)";
-  return (
-    <Link
-      href={isMatch ? (`/matches/${event.id}` as Route) : ("/calendar" as Route)}
-      className="flex shrink-0 flex-col gap-1 rounded-md border border-ink-300 bg-paper p-3 transition-all hover:border-brand-blue hover:shadow-sm"
-      style={{ minWidth: 180 }}
-    >
-      <div className="flex items-center gap-2">
-        <span
-          className="inline-block h-2 w-2 rounded-full"
-          style={{ backgroundColor: accent }}
-        />
-        <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-          {formatDayShort(event.scheduled_at, now)} {formatTime(event.scheduled_at)}
-        </span>
-        {event.cancelled ? (
-          <span className="inline-flex h-4 items-center rounded bg-danger/10 px-1.5 text-[9px] font-bold uppercase tracking-wider text-danger">
-            Cancelado
-          </span>
-        ) : null}
-      </div>
-      <p className="line-clamp-2 font-display text-sm font-bold leading-tight text-brand-deep">
-        {event.title}
-      </p>
-      <p className="line-clamp-1 text-[11px] text-ink-600">{event.team_label}</p>
-    </Link>
-  );
-}
-
-export function ActivityItem({ activity }: { activity: DashboardActivity }) {
-  return (
-    <div className="flex items-start gap-3">
-      <div
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-        style={{ backgroundColor: `color-mix(in oklab, ${activity.color} 15%, var(--paper))` }}
-      >
-        <ActivityIcon result={activity.result} color={activity.color} />
-      </div>
-      <div className="flex-1 pt-0.5">
-        <p className="text-sm font-semibold leading-tight text-ink-900">
-          {activity.title}
-        </p>
-        <p className="text-[11px] text-ink-600">{activity.subtitle}</p>
-      </div>
-    </div>
-  );
-}
-
-function ActivityIcon({
-  result,
-  color,
-}: {
-  result: DashboardActivity["result"];
-  color: string;
-}) {
-  if (result === "win") return <Trophy className="h-3.5 w-3.5" style={{ color }} />;
-  if (result === "draw") return <Minus className="h-3.5 w-3.5" style={{ color }} />;
-  if (result === "loss") return <TrendingDown className="h-3.5 w-3.5" style={{ color }} />;
-  if (result === "training") return <Check className="h-3.5 w-3.5" style={{ color }} />;
-  return <Calendar className="h-3.5 w-3.5" style={{ color }} />;
 }
 
 export function DashboardHero({
@@ -314,6 +237,7 @@ export function DashboardHero({
   isAdmin,
   hasTeam,
   nextEvent,
+  capNumber,
 }: {
   profile: { full_name: string; team_color: string | null };
   now: Date;
@@ -321,70 +245,67 @@ export function DashboardHero({
   isAdmin: boolean;
   hasTeam: boolean;
   nextEvent: DashboardWeekEvent | null;
+  capNumber?: number | null;
 }) {
   const hour = now.getHours();
-  const baseGreeting =
-    hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
+  const baseGreeting = hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
   const firstName = profile.full_name.split(" ")[0] ?? profile.full_name;
   const todayIso = now.toISOString().slice(0, 10);
   const isToday = nextEvent?.date === todayIso;
-  const greeting = isToday && nextEvent
-    ? `${baseGreeting}, ${firstName}. Hoy tienes ${nextEvent.kind === "match" ? "partido" : "entreno"}.`
-    : `${baseGreeting}, ${firstName}.`;
+  const greeting =
+    isToday && nextEvent
+      ? `${baseGreeting}, ${firstName}. Hoy tienes ${nextEvent.kind === "match" ? "partido" : "entreno"}.`
+      : `${baseGreeting}, ${firstName}.`;
+  const teamColor = profile.team_color ?? "var(--pool-blue)";
   return (
-    <div className="flex flex-col gap-3 rounded-lg border border-ink-300 bg-paper p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex items-center gap-3">
-        <Avatar
-          name={profile.full_name}
-          src={null}
-          size={56}
-          style={profile.team_color ? { backgroundColor: profile.team_color, color: "white" } : undefined}
-        />
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-            {baseGreeting}
-          </p>
-          <h1 className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
-            {firstName}
-          </h1>
-          <p className="text-xs text-ink-600">{greeting}</p>
+    <LanePattern
+      className="border-ink-300 bg-paper-card shadow-elev-2 overflow-hidden rounded-md border"
+      strong
+    >
+      <div aria-hidden="true" className="h-1.5 w-full" style={{ backgroundColor: teamColor }} />
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <Avatar name={profile.full_name} src={null} size={64} teamColor={teamColor} />
+          <div className="min-w-0">
+            <Eyebrow>{baseGreeting}</Eyebrow>
+            <h1 className="font-display text-pool-deep text-2xl leading-tight font-extrabold sm:text-3xl">
+              {firstName}
+            </h1>
+            <p className="text-ink-600 text-xs">{greeting}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {capNumber != null && hasTeam ? (
+            <CapTile number={capNumber} teamColor={teamColor} size="md" isMe />
+          ) : null}
+          {isAdmin ? (
+            <Link
+              href={"/admin" as Route}
+              data-admin-link
+              className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-11 items-center gap-2 rounded-md px-4 text-sm font-bold transition-colors"
+            >
+              <PictogramBadge pictogram={Porteria} color="var(--ball-gold)" size="sm" />
+              Panel admin
+            </Link>
+          ) : null}
+          <Link
+            href={"/notifications" as Route}
+            data-notifications-link
+            className="border-ink-300 bg-paper-card hover:bg-pool-foam relative inline-flex h-11 w-11 items-center justify-center rounded-md border transition-colors"
+            aria-label={`Notificaciones${unreadNotifications > 0 ? ` (${unreadNotifications} sin leer)` : ""}`}
+          >
+            <Bell className="text-ink-900 h-5 w-5" />
+            {unreadNotifications > 0 ? (
+              <span
+                aria-hidden="true"
+                className="bg-action text-paper absolute -top-1 -right-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] leading-none font-extrabold"
+              >
+                {unreadNotifications > 9 ? "9+" : unreadNotifications}
+              </span>
+            ) : null}
+          </Link>
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        {isAdmin ? (
-          <Link
-            href={"/admin" as Route}
-            className="inline-flex h-10 items-center gap-2 rounded-md bg-brand-deep px-4 text-sm font-bold text-paper transition-colors hover:bg-ink-900"
-          >
-            <Activity className="h-4 w-4" />
-            Panel admin
-          </Link>
-        ) : null}
-        <Link
-          href={"/notifications" as Route}
-          className="relative inline-flex h-10 w-10 items-center justify-center rounded-md border border-ink-300 bg-paper transition-colors hover:bg-brand-foam"
-          aria-label={`Notificaciones${unreadNotifications > 0 ? ` (${unreadNotifications} sin leer)` : ""}`}
-        >
-          <Bell className="h-5 w-5 text-ink-900" />
-          {unreadNotifications > 0 ? (
-            <span
-              aria-hidden="true"
-              className="absolute -right-1 -top-1 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-action px-1 text-[10px] font-bold leading-none text-brand-deep"
-            >
-              {unreadNotifications > 9 ? "9+" : unreadNotifications}
-            </span>
-          ) : null}
-        </Link>
-        {hasTeam ? (
-          <Link
-            href={"/calendar" as Route}
-            className="inline-flex h-10 items-center gap-2 rounded-md border border-ink-300 bg-paper px-4 text-sm font-bold text-ink-900 transition-colors hover:bg-brand-foam"
-          >
-            <Calendar className="h-4 w-4" />
-            Calendario
-          </Link>
-        ) : null}
-      </div>
-    </div>
+    </LanePattern>
   );
 }

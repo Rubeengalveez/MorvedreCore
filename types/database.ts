@@ -412,6 +412,7 @@ export type Database = {
           block_id: string | null;
           team_id: string;
           scheduled_at: string;
+          end_at: string | null;
           duration_minutes: number;
           location: string | null;
           cancelled: boolean;
@@ -427,6 +428,7 @@ export type Database = {
           block_id?: string | null;
           team_id: string;
           scheduled_at: string;
+          end_at?: string | null;
           duration_minutes?: number;
           location?: string | null;
           cancelled?: boolean;
@@ -442,6 +444,7 @@ export type Database = {
           block_id?: string | null;
           team_id?: string;
           scheduled_at?: string;
+          end_at?: string | null;
           duration_minutes?: number;
           location?: string | null;
           cancelled?: boolean;
@@ -544,6 +547,7 @@ export type Database = {
           notes: string | null;
           final_score_us: number | null;
           final_score_them: number | null;
+          mvp_player_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -580,6 +584,7 @@ export type Database = {
           notes?: string | null;
           final_score_us?: number | null;
           final_score_them?: number | null;
+          mvp_player_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -822,6 +827,132 @@ export type Database = {
           },
         ];
       };
+      ranking_snapshots: {
+        Row: {
+          season_id: string;
+          scope: string;
+          scope_key: string;
+          player_id: string;
+          matches_played: number;
+          matches_called: number;
+          goals: number;
+          exclusions: number;
+          mvp_count: number;
+          trainings_attended: number;
+          trainings_total: number;
+          attendance_pct: number;
+          attendance_streak: number;
+          updated_at: string;
+        };
+        Insert: {
+          season_id: string;
+          scope: string;
+          scope_key: string;
+          player_id: string;
+          matches_played?: number;
+          matches_called?: number;
+          goals?: number;
+          exclusions?: number;
+          mvp_count?: number;
+          trainings_attended?: number;
+          trainings_total?: number;
+          attendance_pct?: number;
+          attendance_streak?: number;
+          updated_at?: string;
+        };
+        Update: {
+          season_id?: string;
+          scope?: string;
+          scope_key?: string;
+          player_id?: string;
+          matches_played?: number;
+          matches_called?: number;
+          goals?: number;
+          exclusions?: number;
+          mvp_count?: number;
+          trainings_attended?: number;
+          trainings_total?: number;
+          attendance_pct?: number;
+          attendance_streak?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ranking_snapshots_season_id_fkey";
+            columns: ["season_id"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ranking_snapshots_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      opponent_stats: {
+        Row: {
+          season_id: string;
+          team_id: string;
+          opponent: string;
+          category_code: string;
+          matches_played: number;
+          wins: number;
+          draws: number;
+          losses: number;
+          goals_for: number;
+          goals_against: number;
+          last_match_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          season_id: string;
+          team_id: string;
+          opponent: string;
+          category_code: string;
+          matches_played?: number;
+          wins?: number;
+          draws?: number;
+          losses?: number;
+          goals_for?: number;
+          goals_against?: number;
+          last_match_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          season_id?: string;
+          team_id?: string;
+          opponent?: string;
+          category_code?: string;
+          matches_played?: number;
+          wins?: number;
+          draws?: number;
+          losses?: number;
+          goals_for?: number;
+          goals_against?: number;
+          last_match_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "opponent_stats_season_id_fkey";
+            columns: ["season_id"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "opponent_stats_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Views: {
       profiles_public: {
@@ -835,6 +966,53 @@ export type Database = {
           license_active: boolean;
         };
         Relationships: [];
+      };
+      streaks: {
+        Row: {
+          id: string;
+          season_id: string;
+          subject_type: string;
+          subject_id: string;
+          streak_type: string;
+          current_value: number;
+          best_value: number;
+          best_at: string | null;
+          last_event_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          season_id: string;
+          subject_type: string;
+          subject_id: string;
+          streak_type: string;
+          current_value?: number;
+          best_value?: number;
+          best_at?: string | null;
+          last_event_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          season_id?: string;
+          subject_type?: string;
+          subject_id?: string;
+          streak_type?: string;
+          current_value?: number;
+          best_value?: number;
+          best_at?: string | null;
+          last_event_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "streaks_season_id_fkey";
+            columns: ["season_id"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Functions: {

@@ -58,3 +58,11 @@ next-env.d.ts
 
 # Local seed state
 .seed-batch.json
+
+# PWA Service Worker (Serwist) build outputs
+public/sw.js
+public/swe-worker-*.js
+
+# Agent workdirs
+.agents/
+

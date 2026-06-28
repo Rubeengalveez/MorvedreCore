@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, List } from "lucide-react";
-import type { Route } from "next";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -15,11 +14,9 @@ import {
   daysInMonth,
   isoDateFromDate,
   monthLabel,
-  weekdayShort,
   type YearMonth,
 } from "@/lib/domain/calendar";
 import type { CalendarData } from "@/server/queries/calendar";
-import type { Tables } from "@/types/database";
 
 import { AgendaView } from "./agenda-view";
 import { EventSheet } from "./event-sheet";
@@ -66,6 +63,7 @@ export function CalendarView({
   userAttendanceBySession,
   showAttendance,
 }: CalendarViewProps) {
+  const router = useRouter();
   const [yearMonth, setYearMonth] = useState<YearMonth>(() => currentYearMonth());
   const [weekStartIso, setWeekStartIso] = useState<string>(() =>
     startOfWeekIso(new Date()),
@@ -89,18 +87,11 @@ export function CalendarView({
   }, [eventsByDay, teamFilter]);
 
   const selectedDay = selectedIso ? (filteredEvents.get(selectedIso) ?? null) : null;
-  const filteredAvailability = useMemo(() => {
-    if (!teamFilter) return availabilityByDay;
-    const out = new Map<string, boolean>();
-    for (const [iso, val] of availabilityByDay) {
-      out.set(iso, val);
-    }
-    return out;
-  }, [availabilityByDay, teamFilter]);
 
-  const now = new Date();
-  const agendaStartIso = isoDateFromDate(new Date(now.getFullYear(), now.getMonth(), 1));
-  const agendaEndIso = isoDateFromDate(new Date(now.getFullYear(), now.getMonth() + 1, daysInMonth(now.getFullYear(), now.getMonth())));
+  const agendaStartIso = isoDateFromDate(new Date(yearMonth.year, yearMonth.month, 1));
+  const agendaEndIso = isoDateFromDate(
+    new Date(yearMonth.year, yearMonth.month + 1, daysInMonth(yearMonth.year, yearMonth.month)),
+  );
 
   function goPrev() {
     if (viewMode === "month") {
@@ -246,7 +237,7 @@ export function CalendarView({
           year={yearMonth.year}
           month={yearMonth.month}
           eventsByDay={filteredEvents}
-          availabilityByDay={filteredAvailability}
+          availabilityByDay={availabilityByDay}
           onDayClick={(iso) => {
             setSelectedIso(iso);
             setOpen(true);
@@ -257,7 +248,7 @@ export function CalendarView({
         <WeekView
           startIso={weekStartIso}
           eventsByDay={filteredEvents}
-          availabilityByDay={filteredAvailability}
+          availabilityByDay={availabilityByDay}
           onDayClick={(iso) => {
             setSelectedIso(iso);
             setOpen(true);
@@ -265,7 +256,7 @@ export function CalendarView({
           onEventClick={(kind, id) => {
             setSelectedIso(null);
             if (kind === "match") {
-              window.location.href = `/matches/${id}`;
+              router.push(`/matches/${id}`);
             }
           }}
           selectedIso={selectedIso ?? undefined}

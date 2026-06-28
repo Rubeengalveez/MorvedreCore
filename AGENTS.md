@@ -35,16 +35,17 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 2 — Entrenamientos y partidos. COMPLETADA, commiteada y validada.** Ver `docs/planning/17-phase-2-summary.md` para el detalle.
+**Fase 3 — Estadísticas y rankings. COMPLETADA, compilando, validada.** Ver `docs/planning/18-phase-3-summary.md` para el detalle.
 
 Pendiente para probar en el cloud:
-- Aplicar las 8 migraciones de Fase 2 (consolidado en chat)
+- Aplicar las 2 migraciones de Fase 3 (consolidado en chat): `0022_ranking_snapshots.sql` + `0023_opponent_stats.sql`
 - Login con `galvillo9@gmail.com` y tu password
-- Ir a `/admin/trainings` para crear un bloque de entrenamientos
-- Ir a `/admin/matches` para crear un partido
-- Ver el calendario y las notificaciones in-app
+- Crear un partido en `/admin/matches`, convocar jugadores, meter acta (goles/excl/MVP) y validar
+- Ir a `/rankings` y ver el podio + tu posición
+- En `/profile` aparece el bloque "Tu posición en los rankings"
+- En `/team/[id]` aparece el bloque "Top del equipo"
 
-Próxima fase: **Fase 3 — Estadísticas y rankings** (rankings públicos, pichichi, exclusión, asistencia, MVP, histórico).
+Próxima fase: **Fase 4 — Noticias y tablón** (pinnear noticias, reacciones, caducidad automática).
 
 ### Lo que ya está implementado (Fase 0 + 1 + 2)
 
@@ -72,7 +73,7 @@ Próxima fase: **Fase 3 — Estadísticas y rankings** (rankings públicos, pich
 
 ### Decisiones cerradas (ver `docs/planning/00-decisions-log.md`)
 
-- Logo del club copiado a `public/brand/logo-original.png` (2.2MB, optimizar).
+- Logo del club copiado a `public/brand/logo.webp` (119KB, optimizado desde 2.2MB original).
 - Paleta: azul profundo `#0A2E5C` + naranja `#FF6B35` + amarillo balón `#F4C430`.
 - Nombre visible de la app: "Morvedre Core".
 - Idioma: solo castellano.
@@ -126,6 +127,8 @@ Próxima fase: **Fase 3 — Estadísticas y rankings** (rankings públicos, pich
 - `docs/planning/15-phase-1-summary.md` — resumen Fase 1
 - `docs/planning/16-phase-2-plan.md` — plan detallado Fase 2
 - `docs/planning/17-phase-2-summary.md` — resumen Fase 2
+- `docs/planning/18-phase-3-summary.md` — resumen Fase 3
+- `docs/planning/18-visual-identity-v2.md` — tesis de diseño "marcador de piscina en el bolsillo"
 
 ## Si dudas
 
@@ -133,6 +136,6 @@ Próxima fase: **Fase 3 — Estadísticas y rankings** (rankings públicos, pich
 - **Sobre el modelo de datos**: `03-architecture.md` § 2.
 - **Sobre las fases**: `04-roadmap.md`.
 - **Sobre decisiones tomadas**: `00-decisions-log.md`.
-- **Sobre estilo visual**: `06-visual-identity.md` y `10-design-direction.md`.
+- **Sobre estilo visual**: `06-visual-identity.md`, `10-design-direction.md` y `18-visual-identity-v2.md` (la versión evolucionada con los tokens y componentes identitarios aplicados en Fase 3).
 - **Sobre la estructura de una fase**: `12-phase-0-summary.md`, `15-phase-1-summary.md` o `17-phase-2-summary.md`.
 - **Sobre errores a evitar**: `13-lessons-learned.md`.

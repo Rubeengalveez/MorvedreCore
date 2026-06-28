@@ -35,7 +35,7 @@ describe("Button", () => {
   it("renders with the primary variant class", () => {
     render(<Button variant="primary">Primary</Button>);
     const btn = screen.getByRole("button", { name: "Primary" });
-    expect(btn.className).toContain("bg-brand-blue");
+    expect(btn.className).toContain("bg-pool-blue");
   });
 });
 

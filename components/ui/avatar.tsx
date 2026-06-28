@@ -8,6 +8,7 @@ export interface AvatarProps {
   size?: number;
   className?: string;
   style?: React.CSSProperties;
+  teamColor?: string;
 }
 
 function getInitials(name: string): string {
@@ -19,9 +20,11 @@ function getInitials(name: string): string {
     .join("");
 }
 
-export function Avatar({ src, name, size = 40, className, style }: AvatarProps) {
+export function Avatar({ src, name, size = 40, className, style, teamColor }: AvatarProps) {
   const initials = getInitials(name) || "?";
   const fontSize = Math.max(11, Math.round(size * 0.4));
+  const baseStyle = { width: `${size}px`, height: `${size}px` };
+  const bg = teamColor ?? "var(--pool-blue)";
 
   if (src) {
     return (
@@ -34,7 +37,7 @@ export function Avatar({ src, name, size = 40, className, style }: AvatarProps) 
           "inline-block shrink-0 rounded-full border border-ink-300 object-cover",
           className,
         )}
-        style={{ width: `${size}px`, height: `${size}px` }}
+        style={{ ...baseStyle, ...style }}
       />
     );
   }
@@ -43,10 +46,15 @@ export function Avatar({ src, name, size = 40, className, style }: AvatarProps) 
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full bg-brand-blue font-display font-extrabold leading-none text-paper",
+        "inline-flex shrink-0 items-center justify-center rounded-full font-display font-extrabold leading-none text-paper",
         className,
       )}
-      style={{ width: `${size}px`, height: `${size}px`, fontSize: `${fontSize}px` }}
+      style={{
+        ...baseStyle,
+        fontSize: `${fontSize}px`,
+        backgroundColor: bg,
+        ...style,
+      }}
     >
       {initials}
     </span>

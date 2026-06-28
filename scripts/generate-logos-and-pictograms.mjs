@@ -3,7 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 const BRAND_DIR = path.resolve("public", "brand");
-const SOURCE = path.join(BRAND_DIR, "logo-original.png");
+const SOURCE = path.join(BRAND_DIR, "logo.webp");
 
 const WHITE = { r: 255, g: 255, b: 255, alpha: 1 };
 

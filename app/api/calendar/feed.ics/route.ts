@@ -92,7 +92,6 @@ function matchToVEvent(
   m: CalendarMatch,
   teamLabel: string,
   teamColor: string,
-  teamIdToLabel: Map<string, string>,
 ): string {
   const start = formatIcsDate(m.scheduled_at, false);
   const end = formatIcsDate(
@@ -213,7 +212,6 @@ export async function GET(request: Request) {
       m,
       teamIdToLabel.get(m.team_id) ?? "Equipo",
       teamIdToColor.get(m.team_id) ?? "#0A2E5C",
-      teamIdToLabel,
     ),
   );
 

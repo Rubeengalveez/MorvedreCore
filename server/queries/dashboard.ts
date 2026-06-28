@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database";
 
 export interface DashboardNextEvent {
   kind: "training" | "match";
@@ -329,7 +328,7 @@ export async function getDashboardData(input: {
       const session = sessionMap.get(ar.session_id);
       if (!session) continue;
       recentActivity.push({
-        id: `${ar.session_id}-${a}`,
+        id: `att-${ar.session_id}`,
         kind: "training",
         title: `Asististe a un entreno`,
         subtitle: `${session.team_label} · ${relativeTime(session.scheduled_at, now)}`,
@@ -398,14 +397,24 @@ export async function getDashboardData(input: {
   }>) {
     attendanceBySession.set(r.session_id, r.present);
   }
-  for (const s of (allAttendanceRes.data ?? []) as Array<{
+  const sessionsOrdered = ((allAttendanceRes.data ?? []) as Array<{
     session_id: string;
     present: boolean;
     training_sessions: unknown;
-  }>) {
-    const ts = Array.isArray(s.training_sessions) ? s.training_sessions[0] : s.training_sessions;
-    const session = ts as { scheduled_at?: string; cancelled?: boolean } | null;
-    if (!session || session.cancelled) continue;
+  }>)
+    .map((s) => {
+      const ts = Array.isArray(s.training_sessions) ? s.training_sessions[0] : s.training_sessions;
+      const session = ts as { scheduled_at?: string; cancelled?: boolean } | null;
+      return {
+        session_id: s.session_id,
+        present: s.present,
+        scheduled_at: session?.scheduled_at ?? null,
+        cancelled: session?.cancelled ?? false,
+      };
+    })
+    .filter((s) => s.scheduled_at != null && !s.cancelled)
+    .sort((a, b) => (b.scheduled_at ?? "").localeCompare(a.scheduled_at ?? ""));
+  for (const s of sessionsOrdered) {
     if (!s.present) break;
     attendanceStreak += 1;
   }

@@ -6,9 +6,7 @@ import {
   getMonthCells,
   isSameLocalDay,
   monthLabel,
-  todayIso,
   weekdayShort,
-  type MonthCell,
   type YearMonth,
 } from "@/lib/domain/calendar";
 import { matchColor, trainingColor } from "@/lib/domain/event-colors";
@@ -26,7 +24,6 @@ export interface MonthViewProps {
 
 function buildDayItems(
   day: { trainings: CalendarTraining[]; matches: CalendarMatch[] } | undefined,
-  now: Date,
 ): Array<{ kind: "training" | "match"; id: string; title: string; scheduled_at: string; cancelled: boolean; status: string; competition_type: string }> {
   if (!day) return [];
   const items: Array<{ kind: "training" | "match"; id: string; title: string; scheduled_at: string; cancelled: boolean; status: string; competition_type: string }> = [];
@@ -87,7 +84,6 @@ export function MonthView({
 }: MonthViewProps) {
   const cells = getMonthCells(year, month);
   const today = new Date();
-  const todayIsoValue = todayIso();
 
   return (
     <div className="flex flex-col gap-2">
@@ -105,7 +101,7 @@ export function MonthView({
       >
         {cells.map((cell) => {
           const day = eventsByDay.get(cell.iso);
-          const items = buildDayItems(day, today);
+          const items = buildDayItems(day);
           const unavailable = availabilityByDay.get(cell.iso) === false;
           const isToday = isSameLocalDay(cell.date, today);
           const isSelected = selectedIso === cell.iso;

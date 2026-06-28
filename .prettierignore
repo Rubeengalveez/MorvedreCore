@@ -12,6 +12,6 @@ public/sw.js.map
 public/workbox-*.js
 public/workbox-*.js.map
 public/brand/icon-*.png
-public/brand/logo-original.png
+public/brand/logo.webp
 public/favicon.ico
 public/icons/*

@@ -538,12 +538,12 @@ export const updateCallupSchema = z
 export const recordMatchStatSchema = z.object({
   match_id: z.string().uuid("Partido inválido."),
   player_id: z.string().uuid("Jugador inválido."),
-  goals: z.number().int("Goles enteros.").min(0, "Mínimo 0.").max(20, "Máximo 20.").optional(),
+  goals: z.number().int("Goles enteros.").min(0, "Mínimo 0.").max(99, "Máximo 99.").optional(),
   exclusions: z
     .number()
     .int("Exclusiones enteras.")
     .min(0, "Mínimo 0.")
-    .max(20, "Máximo 20.")
+    .max(3, "Máximo 3 exclusiones por partido (normativa).")
     .optional(),
   mvp: z.boolean().optional(),
 });
@@ -595,4 +595,30 @@ export const setMatchStatusSchema = z.object({
     .max(99, "Máximo 99.")
     .nullable()
     .optional(),
+});
+
+export const recomputeRankingSchema = z.object({
+  season_id: z.string().uuid("Temporada inválida."),
+  player_id: z.string().uuid("Jugador inválido."),
+});
+
+export const unvalidateMatchStatsSchema = z.object({
+  match_id: z.string().uuid("Partido inválido."),
+  reason: z
+    .string()
+    .trim()
+    .min(5, "Indica un motivo de al menos 5 caracteres.")
+    .max(500, "Máximo 500 caracteres."),
+});
+
+export const bulkUnvalidateMatchStatsSchema = z.object({
+  match_ids: z
+    .array(z.string().uuid("Partido inválido."))
+    .min(1, "Selecciona al menos un partido.")
+    .max(50, "Máximo 50 partidos a la vez."),
+  reason: z
+    .string()
+    .trim()
+    .min(5, "Indica un motivo de al menos 5 caracteres.")
+    .max(500, "Máximo 500 caracteres."),
 });

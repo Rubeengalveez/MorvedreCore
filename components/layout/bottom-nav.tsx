@@ -8,7 +8,7 @@ import {
   Calendario,
   Equipo,
   Inicio,
-  Tienda,
+  Trofeo,
   Usuario,
 } from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils/cn";
 const items = [
   { href: "/dashboard", label: "Inicio", Pictogram: Inicio },
   { href: "/calendar", label: "Calendario", Pictogram: Calendario },
+  { href: "/rankings", label: "Rankings", Pictogram: Trofeo },
   { href: "/team", label: "Equipo", Pictogram: Equipo },
-  { href: "/shop", label: "Tienda", Pictogram: Tienda },
   { href: "/profile", label: "Yo", Pictogram: Usuario },
 ] as const;
 
@@ -27,7 +27,8 @@ export function BottomNav() {
   return (
     <nav
       aria-label="Navegación principal"
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-300 bg-paper pb-[env(safe-area-inset-bottom)]"
+      data-bottom-nav
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-300 bg-paper pb-[env(safe-area-inset-bottom)] shadow-elev-2"
     >
       <ul className="mx-auto flex h-16 max-w-md items-stretch">
         {items.map((item) => {
@@ -41,27 +42,31 @@ export function BottomNav() {
                 href={href as Route}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-full w-full flex-col items-center justify-center gap-1 px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
-                  isActive ? "text-brand-blue" : "text-ink-600",
+                  "flex h-full w-full flex-col items-center justify-center gap-1 px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                  isActive ? "text-pool-blue" : "text-ink-600",
                 )}
               >
                 <Pictogram
                   className="h-7 w-7"
-                  accent={isActive ? "#1E5AA8" : "currentColor"}
+                  accent={isActive ? "var(--pool-blue)" : "currentColor"}
                 />
                 <span
                   aria-hidden="true"
                   className="flex h-1.5 w-1.5 items-center justify-center"
                 >
                   {isActive ? (
-                    <span className="block h-1.5 w-1.5 rounded-full bg-brand-ball" />
+                    <span
+                      data-nav-dot
+                      className="block h-1.5 w-1.5 rounded-full"
+                      style={{ backgroundColor: "var(--ball-gold)" }}
+                    />
                   ) : null}
                 </span>
                 <span
                   className={cn(
                     "text-xs leading-none",
                     isActive
-                      ? "font-display font-bold"
+                      ? "font-display font-extrabold text-pool-deep"
                       : "font-medium",
                   )}
                 >

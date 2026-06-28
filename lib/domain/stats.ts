@@ -11,6 +11,7 @@ export interface PlayerStats {
   exclusions: number;
   mvp_count: number;
   attendance_pct: number;
+  attendance_streak: number;
   trainings_attended: number;
   trainings_total: number;
 }
@@ -40,6 +41,7 @@ export interface TrainingSessionLite {
   id: string;
   team_id: string;
   cancelled: boolean;
+  scheduled_at: string;
 }
 
 export interface TrainingAttendanceLite {
@@ -122,6 +124,19 @@ export function computePlayerStats(
   const attendance_pct =
     trainings_total > 0 ? (trainings_attended / trainings_total) * 100 : 0;
 
+  const sessionAttendanceById = new Map<string, boolean>();
+  for (const a of playerAttendance) {
+    sessionAttendanceById.set(a.session_id, a.present);
+  }
+  const orderedSessions = [...playerTeamSessions].sort((a, b) =>
+    b.scheduled_at.localeCompare(a.scheduled_at),
+  );
+  let attendance_streak = 0;
+  for (const s of orderedSessions) {
+    if (sessionAttendanceById.get(s.id) !== true) break;
+    attendance_streak += 1;
+  }
+
   return {
     player_id: playerId,
     season_id: seasonId,
@@ -131,6 +146,7 @@ export function computePlayerStats(
     exclusions,
     mvp_count,
     attendance_pct,
+    attendance_streak,
     trainings_attended,
     trainings_total,
   };

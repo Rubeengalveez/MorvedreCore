@@ -49,13 +49,16 @@ Estimaciones optimistas. La realidad dirá.
 ## Fase 3 — Estadísticas y rankings (1 semana)
 > Demo: "El delegado mete goles y exclusiones tras el partido y los rankings se recalculan"
 
-- [ ] Migración: `match_stats`
-- [ ] Formulario de acta (delegado, ultrarrápido)
-- [ ] Validación del acta (entrenador)
-- [ ] Cálculo de rankings (`lib/domain/rankings.ts`)
-- [ ] Pantalla pública de rankings con filtros
-- [ ] Filtro "ver mi posición aislada"
-- [ ] Dashboard reactivo (3 niveles: acción inmediata, tablón, rincón del ego)
+- [x] Migración: `match_stats`
+- [x] Formulario de acta (delegado, ultrarrápido)
+- [x] Validación del acta (entrenador)
+- [x] Cálculo de rankings (`lib/domain/rankings.ts`) — 34 tests
+- [x] Pantalla pública de rankings con filtros (`/rankings`)
+- [x] Filtro "ver mi posición aislada" (`MyPositionCard` en `/profile` y `/rankings`)
+- [x] Materialización con `ranking_snapshots` y `opponent_stats` (migraciones 0022 y 0023)
+- [x] Dashboard reactivo (3 niveles: acción inmediata, tablón, rincón del ego)
+- [x] Componentes identitarios: `CapTile`, `PoolScoreboard`, `PichichiPodium`, `Medal`, `LanePattern`
+- [x] Bottom nav con tab "Rankings" + pictograma `Trofeo`
 
 ## Fase 4 — Noticias y tablón (0.5 semanas)
 > Demo: "La directiva publica que la piscina está cerrada, todos reciben push, la gente reacciona"

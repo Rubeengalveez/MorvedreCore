@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import type { Route } from "next";
 
@@ -236,11 +237,11 @@ function MatchRow({
 
         <div className="flex flex-wrap gap-2">
           <Button asChild size="sm" variant="secondary">
-            <a href={href}>Ver partido</a>
+            <Link href={href}>Ver partido</Link>
           </Button>
           {isCoach ? (
             <Button asChild size="sm" variant="ghost">
-              <a href={`/admin/matches/${match.id}` as Route}>Editar convocatoria</a>
+              <Link href={`/admin/matches/${match.id}` as Route}>Editar convocatoria</Link>
             </Button>
           ) : null}
         </div>

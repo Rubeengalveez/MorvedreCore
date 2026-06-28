@@ -2,6 +2,10 @@ import { Plus } from "lucide-react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Eyebrow } from "@/components/ui/eyebrow";
+import { LanePattern } from "@/components/ui/lane-pattern";
+import { PictogramBadge } from "@/components/ui/pictogram-badge";
+import { Calendario } from "@/components/brand/pictograms";
 import { createClient } from "@/lib/supabase/server";
 import type { Season } from "@/server/actions/admin";
 
@@ -37,34 +41,46 @@ export default async function SeasonsPage() {
   const result = await loadSeasons();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
-            Temporadas
-          </h1>
-          <p className="text-sm text-ink-600">
-            Crea y archiva las temporadas del club.
-          </p>
-        </div>
-        <SeasonFormSheet
-          mode={{ kind: "create" }}
-          trigger={
-            <Button size="md" className="shrink-0">
-              <Plus className="h-5 w-5" aria-hidden="true" />
-              <span className="hidden sm:inline">Nueva</span>
-            </Button>
-          }
-        />
-      </header>
+    <div className="relative">
+      <LanePattern className="absolute inset-0" />
+      <div className="relative z-[1] mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4">
+        <header className="flex items-end justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <PictogramBadge
+              pictogram={Calendario}
+              color="var(--pool-teal)"
+              size="lg"
+            />
+            <div className="flex flex-col gap-0.5">
+              <Eyebrow>Estructura del club</Eyebrow>
+              <h1 className="font-display text-2xl font-extrabold tracking-tight text-pool-deep">
+                Temporadas
+              </h1>
+              <p className="text-sm text-ink-600">
+                Crea y archiva las temporadas del club.
+              </p>
+            </div>
+          </div>
+          <SeasonFormSheet
+            mode={{ kind: "create" }}
+            trigger={
+              <Button size="md" className="shrink-0">
+                <Plus className="h-5 w-5" aria-hidden="true" />
+                <span className="hidden sm:inline">Nueva</span>
+                <span className="sr-only sm:hidden">Nueva temporada</span>
+              </Button>
+            }
+          />
+        </header>
 
-      {result.ok ? null : (
-        <Alert variant="danger" title="No pudimos cargar las temporadas">
-          {result.error}
-        </Alert>
-      )}
+        {result.ok ? null : (
+          <Alert variant="danger" title="No pudimos cargar las temporadas">
+            {result.error}
+          </Alert>
+        )}
 
-      <SeasonsTable seasons={result.ok ? result.seasons : []} />
+        <SeasonsTable seasons={result.ok ? result.seasons : []} />
+      </div>
     </div>
   );
 }

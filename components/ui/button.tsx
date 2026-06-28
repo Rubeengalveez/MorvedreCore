@@ -12,16 +12,20 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "bg-brand-blue text-paper hover:bg-brand-deep active:bg-brand-deep",
+          "bg-pool-blue text-paper hover:bg-pool-deep active:bg-pool-deep",
+        deep: "bg-pool-deep text-paper hover:bg-ink-900",
         secondary:
-          "border border-ink-300 bg-paper text-brand-deep hover:bg-brand-foam",
-        ghost: "text-brand-deep hover:bg-brand-foam",
-        danger: "bg-danger text-paper hover:opacity-90",
+          "border border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",
+        ghost: "text-pool-deep hover:bg-pool-foam",
+        danger: "bg-goggle-red text-paper hover:opacity-90",
+        success: "bg-success text-paper hover:opacity-90",
+        gold: "bg-ball-gold text-pool-deep hover:opacity-90",
       },
       size: {
         sm: "h-11 min-h-11 px-4 text-sm",
         md: "h-12 min-h-12 px-5 text-base",
         lg: "h-14 min-h-14 px-6 text-base",
+        xl: "h-16 min-h-16 px-7 text-lg",
       },
     },
     defaultVariants: {
