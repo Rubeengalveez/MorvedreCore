@@ -35,16 +35,16 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 4 — Noticias y tablón. COMPLETADA, compilando, validada, push a `main`.** Ver `docs/planning/19-phase-4-summary.md` para el detalle.
+**Fase 5 — Tienda. COMPLETADA, compilando, validada, push a `main`.** Ver `docs/planning/20-phase-5-summary.md` para el detalle.
 
 Pendiente para probar en el cloud:
-- Aplicar la migración `0026_news.sql` y `0027_news_storage.sql` (policies de storage) en el SQL Editor de Supabase
+- Aplicar la migración `0028_shop.sql` en el SQL Editor de Supabase
 - Login con `galvillo9@gmail.com` / `Morvedre2026!`
-- Ir a `/admin/news`, crear noticia con título + cuerpo markdown, pinear
-- Ir a `/news` (bottom nav) y reaccionar con los 3 tipos
-- Verificar que las noticias con `audience="team"` solo las ven los del equipo destinatario
+- Ir a `/admin/shop` y crear un producto de prueba
+- Cambiar a otro perfil player y probar el flujo de compra
+- Probar aprobación desde `/shop/parents/pending`
 
-Próxima fase: **Fase 5 — Tienda** (catálogo, carrito, aprobación padres, panel Kanban).
+Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de cierre mensual, export Excel).
 
 ### Lo que ya está implementado (Fase 0 + 1 + 2)
 
@@ -128,6 +128,7 @@ Próxima fase: **Fase 5 — Tienda** (catálogo, carrito, aprobación padres, pa
 - `docs/planning/17-phase-2-summary.md` — resumen Fase 2
 - `docs/planning/18-phase-3-summary.md` — resumen Fase 3
 - `docs/planning/19-phase-4-summary.md` — resumen Fase 4
+- `docs/planning/20-phase-5-summary.md` — resumen Fase 5
 - `docs/planning/18-visual-identity-v2.md` — tesis de diseño "marcador de piscina en el bolsillo"
 
 ## Si dudas

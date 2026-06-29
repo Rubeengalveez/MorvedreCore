@@ -1,4 +1,4 @@
-import { z } from "zod";
+﻿import { z } from "zod";
 
 export const isoDate = z
   .string()
@@ -650,4 +650,50 @@ export const bulkUnvalidateMatchStatsSchema = z.object({
     .trim()
     .min(5, "Indica un motivo de al menos 5 caracteres.")
     .max(500, "Máximo 500 caracteres."),
+});
+
+export const upsertShopProductSchema = z.object({
+  title: z.string().trim().min(3, "El t�tulo es demasiado corto.").max(80, "M�ximo 80 caracteres."),
+  description: z.string().trim().min(1, "La descripci�n no puede estar vac�a.").max(2000, "M�ximo 2000 caracteres."),
+  category: z.string().trim().min(1, "La categor�a es obligatoria.").max(40, "M�ximo 40 caracteres."),
+  price_eur: z.number().min(0.01, "El precio debe ser mayor que 0.").max(1000, "M�ximo 1000�."),
+  image_url: z.string().url("URL inv�lida.").max(500).nullable().optional(),
+  sizes: z.array(z.string().trim().min(1).max(20)).max(20).optional(),
+  available: z.boolean().default(true),
+  stock: z.number().int().min(0).max(1000).nullable().optional(),
+  max_per_order: z.number().int().min(1).max(20).default(10),
+});
+
+export const updateShopProductSchema = upsertShopProductSchema.extend({
+  product_id: z.string().uuid("Producto inv�lido."),
+});
+
+export const deleteShopProductSchema = z.object({
+  product_id: z.string().uuid("Producto inv�lido."),
+});
+
+export const createShopOrderSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        product_id: z.string().uuid("Producto inv�lido."),
+        size: z.string().trim().max(20).nullable().optional(),
+        quantity: z.number().int().min(1).max(20),
+      }),
+    )
+    .min(1, "A�ade al menos un producto.")
+    .max(50, "M�ximo 50 productos por pedido."),
+  notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
+});
+
+export const decideShopOrderSchema = z.object({
+  order_id: z.string().uuid("Pedido inv�lido."),
+  decision: z.enum(["approve", "reject"]),
+  parent_notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
+});
+
+export const updateShopOrderStatusSchema = z.object({
+  order_id: z.string().uuid("Pedido inv�lido."),
+  status: z.enum(["pending_admin", "ordered", "received", "delivered", "cancelled"]),
+  admin_notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
 });

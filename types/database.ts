@@ -1014,6 +1014,187 @@ export type Database = {
           },
         ];
       };
+      shop_products: {
+        Row: {
+          id: string;
+          title: string;
+          description: string;
+          category: string;
+          price_cents: number;
+          currency: string;
+          image_url: string | null;
+          sizes: string[];
+          available: boolean;
+          stock: number | null;
+          max_per_order: number;
+          created_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          description: string;
+          category: string;
+          price_cents: number;
+          currency?: string;
+          image_url?: string | null;
+          sizes?: string[];
+          available?: boolean;
+          stock?: number | null;
+          max_per_order?: number;
+          created_by: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          description?: string;
+          category?: string;
+          price_cents?: number;
+          currency?: string;
+          image_url?: string | null;
+          sizes?: string[];
+          available?: boolean;
+          stock?: number | null;
+          max_per_order?: number;
+          created_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      shop_orders: {
+        Row: {
+          id: string;
+          requested_by: string;
+          approved_by: string | null;
+          managed_by: string | null;
+          status: Database["public"]["Enums"]["shop_order_status"];
+          total_cents: number;
+          currency: string;
+          notes: string | null;
+          parent_notes: string | null;
+          admin_notes: string | null;
+          requested_at: string;
+          approved_at: string | null;
+          ordered_at: string | null;
+          received_at: string | null;
+          delivered_at: string | null;
+          cancelled_at: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          requested_by: string;
+          approved_by?: string | null;
+          managed_by?: string | null;
+          status?: Database["public"]["Enums"]["shop_order_status"];
+          total_cents?: number;
+          currency?: string;
+          notes?: string | null;
+          parent_notes?: string | null;
+          admin_notes?: string | null;
+          requested_at?: string;
+          approved_at?: string | null;
+          ordered_at?: string | null;
+          received_at?: string | null;
+          delivered_at?: string | null;
+          cancelled_at?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          requested_by?: string;
+          approved_by?: string | null;
+          managed_by?: string | null;
+          status?: Database["public"]["Enums"]["shop_order_status"];
+          total_cents?: number;
+          currency?: string;
+          notes?: string | null;
+          parent_notes?: string | null;
+          admin_notes?: string | null;
+          requested_at?: string;
+          approved_at?: string | null;
+          ordered_at?: string | null;
+          received_at?: string | null;
+          delivered_at?: string | null;
+          cancelled_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shop_orders_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shop_orders_approved_by_fkey";
+            columns: ["approved_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shop_orders_managed_by_fkey";
+            columns: ["managed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      shop_order_items: {
+        Row: {
+          id: string;
+          order_id: string;
+          product_id: string;
+          size: string | null;
+          quantity: number;
+          unit_price_cents: number;
+          subtotal_cents: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          order_id: string;
+          product_id: string;
+          size?: string | null;
+          quantity: number;
+          unit_price_cents: number;
+          subtotal_cents: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          order_id?: string;
+          product_id?: string;
+          size?: string | null;
+          quantity?: number;
+          unit_price_cents?: number;
+          subtotal_cents?: number;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "shop_order_items_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "shop_orders";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "shop_order_items_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: false;
+            referencedRelation: "shop_products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       news_posts: {
         Row: {
           id: string;
@@ -1148,6 +1329,14 @@ export type Database = {
       staff_role: "head_coach" | "assistant_coach" | "delegate" | "physical_trainer";
       news_audience: "club" | "team";
       news_reaction: "like" | "fire" | "thanks";
+      shop_order_status:
+        | "pending_parent"
+        | "pending_admin"
+        | "rejected"
+        | "ordered"
+        | "received"
+        | "delivered"
+        | "cancelled";
     };
     CompositeTypes: {
       [_ in never]: never;

@@ -49,6 +49,34 @@ export async function requireAdmin(): Promise<AdminProfile> {
   return profile;
 }
 
+export async function requireSessionProfile(): Promise<AdminProfile> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    throw new Error("No has iniciado sesión.");
+  }
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    throw new Error("No pudimos verificar tu identidad. Inténtalo de nuevo.");
+  }
+
+  if (!profile) {
+    throw new Error("Tu perfil no está configurado. Contacta con un administrador.");
+  }
+
+  return profile;
+}
+
 export async function requireCoachOf(teamId: string): Promise<AdminProfile> {
   const supabase = await createClient();
 
