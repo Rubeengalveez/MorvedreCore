@@ -9,8 +9,8 @@ import {
   Equipo,
   Inicio,
   Tiburon,
+  Tienda,
   Trofeo,
-  Usuario,
 } from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
 
@@ -19,7 +19,7 @@ const items = [
   { href: "/calendar", label: "Calendario", Pictogram: Calendario },
   { href: "/rankings", label: "Rankings", Pictogram: Trofeo },
   { href: "/team", label: "Equipo", Pictogram: Equipo },
-  { href: "/profile", label: "Yo", Pictogram: Usuario },
+  { href: "/shop", label: "Tienda", Pictogram: Tienda },
 ] as const;
 
 export function BottomNav() {
