@@ -134,7 +134,7 @@ export function RankingsContent({
       <ScopeTabs
         meta={meta}
         active={activeScope}
-        onChange={(s) => navigate({ scope: s })}
+        baseParams={baseParams}
       />
 
       {activeMetric === "streak" ? (
