@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, Loader2, ShieldAlert } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
@@ -13,15 +14,12 @@ import { createCallup, suggestCallupForMatch, type CallupSuggestion } from "@/se
 
 export interface SuggestCallupSheetProps {
   matchId: string;
-  onClose: () => void;
-  onCommitted?: () => void;
 }
 
 export function SuggestCallupSheet({
   matchId,
-  onClose,
-  onCommitted,
 }: SuggestCallupSheetProps) {
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [suggestions, setSuggestions] = useState<CallupSuggestion[]>([]);
@@ -30,6 +28,14 @@ export function SuggestCallupSheet({
   const [committing, startCommit] = useTransition();
   const [commitError, setCommitError] = useState<string | null>(null);
   const [doneCount, setDoneCount] = useState<number | null>(null);
+
+  function closeAndRefresh() {
+    const close = document.querySelector<HTMLButtonElement>(
+      'button[aria-label="Cerrar"]',
+    );
+    close?.click();
+    router.refresh();
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -105,7 +111,7 @@ export function SuggestCallupSheet({
         }
       }
       setDoneCount(created);
-      onCommitted?.();
+      closeAndRefresh();
     });
   }
 
@@ -132,7 +138,7 @@ export function SuggestCallupSheet({
         <Alert variant="success" title="Convocatoria creada">
           Hemos añadido {doneCount} jugadores a la convocatoria.
         </Alert>
-        <Button onClick={onClose} size="lg" variant="secondary">
+        <Button onClick={closeAndRefresh} size="lg" variant="secondary">
           Cerrar
         </Button>
       </div>
@@ -145,7 +151,7 @@ export function SuggestCallupSheet({
         <Alert variant="info" title="Sin sugerencias">
           No hay jugadores disponibles para este partido.
         </Alert>
-        <Button onClick={onClose} size="md" variant="secondary">
+        <Button onClick={closeAndRefresh} size="md" variant="secondary">
           Cerrar
         </Button>
       </div>
@@ -244,7 +250,7 @@ export function SuggestCallupSheet({
           type="button"
           size="md"
           variant="secondary"
-          onClick={onClose}
+          onClick={closeAndRefresh}
           disabled={committing}
         >
           Cancelar

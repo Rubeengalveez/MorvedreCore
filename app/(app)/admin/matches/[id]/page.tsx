@@ -390,15 +390,7 @@ export default async function MatchDetailPage({
                     </SheetDescription>
                   </SheetHeader>
                   <SheetBody>
-                    <SuggestCallupSheet
-                      matchId={match.id}
-                      onClose={() => {
-                        const close = document.querySelector<HTMLButtonElement>(
-                          'button[aria-label="Cerrar"]',
-                        );
-                        close?.click();
-                      }}
-                    />
+                    <SuggestCallupSheet matchId={match.id} />
                   </SheetBody>
                 </SheetContent>
               </Sheet>
