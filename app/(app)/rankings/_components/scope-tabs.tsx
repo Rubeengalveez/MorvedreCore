@@ -1,7 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { ChevronDown, Users } from "lucide-react";
+
 import { cn } from "@/lib/utils/cn";
-import { type CategoryCode } from "@/lib/domain/categories";
+import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { type RankingScope } from "@/lib/domain/rankings";
 import type { RankingsPageMeta } from "@/server/queries/rankings";
 
@@ -12,72 +15,87 @@ export interface ScopeTabsProps {
 }
 
 export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
+  const router = useRouter();
+  const activeKey = scopeKey(active);
+  const currentLabel = labelFor(active, meta);
+
+  function handleChange(value: string) {
+    onChange(parseValue(value, meta));
+  }
+
   return (
-    <div className="relative">
-      <div
-        role="tablist"
-        aria-label="Filtrar por categoría o equipo"
-        data-scope-tabs
-        className="sticky top-[60px] z-10 -mx-4 flex gap-2 overflow-x-auto bg-paper/95 px-4 py-2 pr-8 backdrop-blur supports-[backdrop-filter]:bg-paper/80 border-b border-ink-200 [&::-webkit-scrollbar]:hidden"
-        style={{ scrollbarWidth: "none" }}
-      >
-      <ScopePill
-        label="Club"
-        isActive={active.kind === "all"}
-        onClick={() => onChange({ kind: "all" })}
-      />
-      {meta.categories.map((c) => (
-        <ScopePill
-          key={c.code}
-          label={c.label}
-          isActive={active.kind === "category" && active.category_code === c.code}
-          onClick={() => onChange({ kind: "category", category_code: c.code as CategoryCode })}
-        />
-      ))}
-      {meta.teams.length > 0 ? (
-        <div className="ml-1 mr-1 self-stretch border-l border-ink-300" aria-hidden="true" />
-      ) : null}
-      {meta.teams.map((t) => (
-        <ScopePill
-          key={t.id}
-          label={t.label}
-          isActive={active.kind === "team" && active.team_id === t.id}
-          onClick={() => onChange({ kind: "team", team_id: t.id })}
-        />
-      ))}
-      <div className="shrink-0 pr-2" aria-hidden="true" />
-    </div>
     <div
-      aria-hidden="true"
-      className="pointer-events-none absolute right-0 top-0 z-20 h-full w-8 bg-gradient-to-l from-paper to-transparent"
-    />
+      data-scope-tabs
+      className="sticky top-[60px] z-10 -mx-4 flex items-center gap-2 border-b border-ink-200 bg-paper/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-paper/80"
+    >
+      <span className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-ink-300 bg-paper-card px-3 text-xs font-bold uppercase tracking-wider text-ink-700">
+        <Users className="h-3.5 w-3.5" aria-hidden="true" />
+        Club
+      </span>
+      <div className="relative min-w-0 flex-1">
+        <select
+          aria-label="Filtrar por categoría o equipo"
+          data-scope-select
+          value={activeKey}
+          onChange={(e) => handleChange(e.target.value)}
+          className={cn(
+            "h-9 w-full appearance-none truncate rounded-full border border-ink-300 bg-paper pl-3 pr-8 text-xs font-bold text-pool-deep shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
+          )}
+        >
+          <option value="all">Todo el club</option>
+          <optgroup label="Por categoría">
+            {meta.categories.map((c) => (
+              <option key={c.code} value={`category:${c.code}`}>
+                {c.label}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Por equipo">
+            {meta.teams.map((t) => (
+              <option key={t.id} value={`team:${t.id}`}>
+                {t.label}
+              </option>
+            ))}
+          </optgroup>
+        </select>
+        <ChevronDown
+          className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-600"
+          aria-hidden="true"
+        />
+      </div>
+      <button
+        type="button"
+        onClick={() => router.refresh()}
+        className="hidden shrink-0 rounded-full border border-ink-300 bg-paper-card px-2.5 text-[10px] font-bold uppercase tracking-wider text-ink-600 hover:bg-pool-foam sm:inline-flex h-9 items-center"
+      >
+        Recargar
+      </button>
     </div>
   );
 }
 
-function ScopePill({
-  label,
-  isActive,
-  onClick,
-}: {
-  label: string;
-  isActive: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={isActive}
-      onClick={onClick}
-      className={cn(
-        "inline-flex h-9 min-h-9 shrink-0 items-center rounded-full px-3.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
-        isActive
-          ? "bg-pool-deep text-paper shadow-sm"
-          : "border border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",
-      )}
-    >
-      {label}
-    </button>
-  );
+function scopeKey(scope: RankingScope): string {
+  if (scope.kind === "all") return "all";
+  if (scope.kind === "category") return `category:${scope.category_code}`;
+  return `team:${scope.team_id}`;
+}
+
+function parseValue(value: string, meta: RankingsPageMeta): RankingScope {
+  if (value === "all") return { kind: "all" };
+  if (value.startsWith("category:")) {
+    return { kind: "category", category_code: value.slice("category:".length) as CategoryCode };
+  }
+  if (value.startsWith("team:")) {
+    return { kind: "team", team_id: value.slice("team:".length) };
+  }
+  return { kind: "all" };
+}
+
+function labelFor(scope: RankingScope, meta: RankingsPageMeta): string {
+  if (scope.kind === "all") return "Todo el club";
+  if (scope.kind === "category") {
+    return CATEGORY_LABELS[scope.category_code] ?? scope.category_code;
+  }
+  const team = meta.teams.find((t) => t.id === scope.team_id);
+  return team?.label ?? "Equipo";
 }
