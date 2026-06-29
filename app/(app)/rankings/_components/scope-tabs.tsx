@@ -26,13 +26,13 @@ export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
   return (
     <div
       data-scope-tabs
-      className="sticky top-[60px] z-10 -mx-4 flex items-center gap-2 border-b border-ink-200 bg-paper/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-paper/80"
+      className="sticky top-[60px] z-30 -mx-4 flex items-center gap-2 border-b border-ink-200 bg-paper/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-paper/80"
     >
       <span className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-ink-300 bg-paper-card px-3 text-xs font-bold uppercase tracking-wider text-ink-700">
         <Users className="h-3.5 w-3.5" aria-hidden="true" />
         Club
       </span>
-      <div className="relative min-w-0 flex-1">
+      <div className="relative z-30 min-w-0 flex-1">
         <select
           aria-label="Filtrar por categoría o equipo"
           data-scope-select
@@ -41,6 +41,7 @@ export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
           className={cn(
             "h-9 w-full appearance-none truncate rounded-full border border-ink-300 bg-paper pl-3 pr-8 text-xs font-bold text-pool-deep shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
           )}
+          style={{ fontSize: "16px" }}
         >
           <option value="all">Todo el club</option>
           <optgroup label="Por categoría">
