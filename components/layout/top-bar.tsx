@@ -7,6 +7,7 @@ import { Logo } from "@/components/brand/logo";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { type ProfileSummary } from "@/components/layout/profile-switcher";
 import { Avatar } from "@/components/ui/avatar";
+import { Tiburon } from "@/components/brand/pictograms";
 import {
   getNotificationsForProfile,
   getUnreadNotificationsCount,
@@ -52,20 +53,14 @@ export async function TopBar({
       className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-2 border-t-[3px] border-b border-ink-300 bg-paper px-4 pt-[env(safe-area-inset-top)] shadow-elev-1 transition-all duration-300"
       style={{ borderTopColor: teamColor }}
     >
-      <div className="flex items-center gap-1.5">
+      <Link
+        href={"/dashboard" as Route}
+        className="flex items-center gap-1.5 transition-opacity hover:opacity-80"
+      >
         <Logo size="sm" withWordmark />
-        <span
-          aria-hidden="true"
-          className="ml-1 block h-2 w-2 rounded-full"
-          style={{ backgroundColor: teamColor }}
-        />
-      </div>
+        <Tiburon className="h-6 w-6 hidden sm:block" accent={teamColor} />
+      </Link>
       <div className="flex items-center gap-2">
-        <span
-          aria-hidden="true"
-          className="hidden h-7 w-1 shrink-0 rounded-sm sm:block"
-          style={{ backgroundColor: teamColor }}
-        />
         {isPrivileged ? (
           <Link
             href="/admin"

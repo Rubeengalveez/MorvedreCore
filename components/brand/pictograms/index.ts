@@ -11,6 +11,7 @@ export { Personal } from "./personal";
 export { Porteria } from "./porteria";
 export { Silbato } from "./silbato";
 export { SilbatoActivo } from "./silbato-activo";
+export { Tiburon } from "./tiburon";
 export { Tienda } from "./tienda";
 export { Trofeo } from "./trofeo";
 export { Usuario } from "./usuario";

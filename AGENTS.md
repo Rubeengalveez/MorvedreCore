@@ -35,7 +35,7 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 3 — Estadísticas y rankings. COMPLETADA, compilando, validada.** Ver `docs/planning/18-phase-3-summary.md` para el detalle.
+**Fase 3 — Estadísticas y rankings. COMPLETADA, compilando, validada y con pulido visual mobile-first.** Ver `docs/planning/18-phase-3-summary.md` para el detalle y `docs/planning/00-decisions-log.md` (sección 2026-06-27) para los cambios de diseño de la última pasada.
 
 Pendiente para probar en el cloud:
 - Aplicar las 2 migraciones de Fase 3 (consolidado en chat): `0022_ranking_snapshots.sql` + `0023_opponent_stats.sql`

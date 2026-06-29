@@ -340,3 +340,30 @@ Tesis: **"marcador de piscina en el bolsillo"**. Tokens sin romper los actuales:
 - ? Desglose de exclusiones por tipo (simple/doble/penalti) ? diferido a Fase 8.
 - ? Página "Leyendas" del club ? Fase 8 (no hay datos históricos suficientes).
 - ? Push notifications reales ? Fase 9 polish.
+
+## 2026-06-27 — Pulido visual de Fase 3 (mobile-first + identidad)
+
+### Identidad Morvedre Core
+- Nuevo pictograma Tiburon (silueta del tiburón del logo del club) — se usa en el top bar (junto al logo) y como marca decorativa en el bottom nav.
+- Bottom nav reducido a 5 tabs: Inicio, Calendario, Rankings, Equipo, Yo (Tienda sale del bottom nav y queda accesible por URL).
+- Border-top del bottom nav de 2px en pool-deep con badge del tiburón como detalle decorativo.
+- Top bar con el logo Morvedre Core + el tiburón con el color del equipo activo del usuario.
+
+### Reducción de redundancia
+- **Dashboard**: quitados los bloques "Tu equipo" (redundante con /team + bottom nav), "Recent activity", "Esta semana", enlaces "Ver todos / Calendario" del hero. Solo se queda con: hero compacto (greeting + nombre + avatar + dorsal) + rachas con fueguito + próximo evento. Esto reduce el scroll significativamente en móvil.
+- **Profile**: quitados los bloques "Notas" (metadata interna), "Top 3 personal" (ya en /rankings), "Últimos partidos" (ya en /matches/[id]).
+- **Team [id]**: reordenado el flujo: Hero > Tabs > Resumen compacto (1 fila con divide-x) > Último resultado + Próximo partido (grid 2 cols con PoolScoreboard) > Top del equipo (3 cards) > Racha del equipo. Eliminado el bloque "Resumen del equipo" duplicado de 3 columnas grandes.
+
+### Token hygiene
+- Todos los g-[#hex] reemplazados por tokens ar(--pool-*), ar(--ball-gold), ar(--goggle-red).
+- Solo se usan gap-3 y gap-4 (12px y 16px), nada intermedio.
+- ounded-md para cards, ounded-sm para chips/badges, shadow-elev-1 para cards estándar, shadow-elev-2 para destacadas.
+- Pictogramas con pictogramAccent explícito por tile para garantizar contraste sobre cada fondo de color.
+
+### Limpieza de código
+- Eliminada la variable muerta ormatDayShort con su oid placeholder.
+- Quitados los oid (0 as unknown as ActiveStreak) que eran placeholders anti-warning.
+- Quitadas props no usadas: 
+extEvent en DashboardHero, linkedProfiles en TopBar, coachCapNumber y ariant en TeamListCard, isAdmin en dashboard.
+- Reemplazados los iconos Lucide no usados por pictogramas custom (ChevronDerecha en lugar de ChevronRight en TeamListCard).
+- Reemplazados los ny por tipos concretos en server/actions y team/[teamId]/page.
