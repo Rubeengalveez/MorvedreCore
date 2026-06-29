@@ -1,10 +1,8 @@
-import Image from "next/image";
-
-import { Trofeo } from "@/components/brand/pictograms";
+import { Avatar } from "@/components/ui/avatar";
 import { CapTile } from "@/components/ui/cap-tile";
-import { Eyebrow } from "@/components/ui/eyebrow";
 import { Medal } from "@/components/ui/medal";
 import { cn } from "@/lib/utils/cn";
+import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import type { RankingRow } from "@/lib/domain/rankings";
 
 export interface TopThreeCardsProps {
@@ -26,7 +24,7 @@ export function TopThreeCards({
   const third = items.find((i) => i.position === 3) ?? null;
 
   return (
-    <section aria-labelledby="top3-heading" className="flex flex-col gap-3">
+    <section aria-labelledby="top3-heading" className="flex flex-col gap-2.5">
       <h2 id="top3-heading" className="sr-only">
         Top 3
       </h2>
@@ -39,7 +37,7 @@ export function TopThreeCards({
         />
       ) : null}
       {(second || third) ? (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-2.5">
           {second ? (
             <RunnerCard
               row={second}
@@ -68,6 +66,12 @@ export function TopThreeCards({
   );
 }
 
+function categoryLabel(row: RankingRow): string {
+  if (row.team_label) return row.team_label;
+  const code = row.category_code as CategoryCode;
+  return CATEGORY_LABELS[code] ?? code;
+}
+
 function TopOneHighlight({
   row,
   metricLabel,
@@ -85,12 +89,11 @@ function TopOneHighlight({
     <article
       data-top-one
       className={cn(
-        "relative overflow-hidden rounded-md border-2 shadow-elev-2 transition-transform",
-        isMe ? "border-ball-gold cap-tile-ring" : "border-ink-200",
+        "relative overflow-hidden rounded-md border-2 shadow-elev-2",
+        isMe ? "border-ball-gold" : "border-pool-deep",
       )}
       style={{
-        background: `linear-gradient(135deg, color-mix(in oklab, ${teamColor} 22%, var(--paper-card)) 0%, color-mix(in oklab, ${teamColor} 8%, var(--paper-card)) 100%)`,
-        ["--cap-ring" as string]: "var(--ball-gold)",
+        background: `linear-gradient(135deg, color-mix(in oklab, ${teamColor} 18%, var(--paper-card)) 0%, var(--paper-card) 100%)`,
       }}
     >
       <div
@@ -98,73 +101,60 @@ function TopOneHighlight({
         className="absolute inset-x-0 top-0 h-1.5"
         style={{ backgroundColor: teamColor }}
       />
-      <div className="flex flex-col items-center gap-2 p-4 text-center">
-        <div className="flex items-center gap-2">
-          <Medal rank={1} size="sm" />
-          <Eyebrow className="text-ink-700">Líder de {metricLabel.toLowerCase()}</Eyebrow>
+      <div className="flex items-center gap-3 p-4">
+        <div className="flex shrink-0 flex-col items-center gap-1">
+          <Medal rank={1} size="md" />
           {isMe ? (
             <span
               data-top-one-self
-              className="inline-flex h-5 items-center rounded-sm bg-ball-gold px-1.5 text-[10px] font-extrabold uppercase tracking-eyebrow text-pool-deep"
+              className="inline-flex h-5 items-center rounded-sm bg-ball-gold px-1.5 text-[9px] font-extrabold uppercase tracking-wider text-pool-deep"
             >
-              Eres el #1
+              Tú
             </span>
           ) : null}
         </div>
-
-        <div className="flex flex-col items-center gap-1">
-          {row.photo_url ? (
-            <Image
-              src={row.photo_url}
-              alt={row.full_name}
-              width={80}
-              height={80}
-              className="h-20 w-20 rounded-full border-2 object-cover"
-              style={{ borderColor: teamColor }}
-            />
-          ) : (
-            <div
-              aria-hidden="true"
-              className="flex h-20 w-20 items-center justify-center rounded-full border-2 font-display text-2xl font-extrabold text-paper"
-              style={{ backgroundColor: teamColor, borderColor: "var(--ball-gold)" }}
-            >
-              {row.full_name
-                .split(/\s+/)
-                .filter(Boolean)
-                .slice(0, 2)
-                .map((p) => p[0]?.toUpperCase() ?? "")
-                .join("") || "?"}
-            </div>
-          )}
-          <CapTile
-            number={row.cap_number ?? 0}
-            teamColor={teamColor}
-            size="sm"
-            isMe={isMe}
-            aria-label={`Dorsal ${row.cap_number ?? 0} del líder`}
-          />
+        <Avatar
+          src={row.photo_url}
+          name={row.full_name}
+          size={64}
+          className="shrink-0"
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+            Líder de {metricLabel.toLowerCase()}
+          </p>
+          <h3
+            className="break-words font-display text-lg font-extrabold leading-tight text-pool-deep"
+            title={row.full_name}
+          >
+            {row.full_name}
+          </h3>
+          <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-ink-700">
+              {categoryLabel(row)}
+            </span>
+            {row.cap_number != null ? (
+              <>
+                <span className="text-ink-300">·</span>
+                <CapTile
+                  number={row.cap_number}
+                  teamColor={teamColor}
+                  size="sm"
+                  aria-label={`Dorsal ${row.cap_number}`}
+                />
+              </>
+            ) : null}
+          </div>
         </div>
-
-        <h3 className="font-display text-xl font-extrabold leading-tight text-pool-deep line-clamp-1">
-          {row.full_name}
-        </h3>
-        <p className="line-clamp-1 text-xs font-semibold text-ink-700">
-          {row.team_label ?? "Sin equipo"}
-        </p>
-
-        <div
-          className="flex flex-col items-center gap-0.5 pt-1"
-          aria-label={`${row.primary_value} ${metricLabel.toLowerCase()}`}
-        >
+        <div className="shrink-0 text-right">
           <p
-            className="font-mono text-6xl font-extrabold leading-[0.9] tabular-nums text-pool-deep"
-            style={{ fontSize: "clamp(56px, 18vw, 72px)" }}
+            className="font-mono text-5xl font-extrabold leading-none tabular-nums text-pool-deep"
+            aria-label={`${row.primary_value} ${metricLabel.toLowerCase()}`}
           >
             {displayValue}
           </p>
-          <p className="text-[10px] font-bold uppercase tracking-eyebrow text-ink-600">
+          <p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-ink-600">
             {metricLabel}
-            {metricSuffix ? ` (${metricSuffix})` : ""} · temporada
           </p>
         </div>
       </div>
@@ -185,39 +175,49 @@ function RunnerCard({
   metricSuffix: string;
   isMe: boolean;
 }) {
+  void row.team_color;
   return (
     <article
       data-runner-card={rank}
       className={cn(
-        "relative flex items-center gap-2.5 overflow-hidden rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1",
+        "flex items-center gap-2.5 overflow-hidden rounded-md border border-ink-300 bg-paper-card p-2.5 shadow-elev-1",
         isMe && "ring-2 ring-ball-gold/40",
       )}
     >
-      <Medal rank={rank} size="sm" />
+      <Avatar
+        src={row.photo_url}
+        name={row.full_name}
+        size={40}
+        className="shrink-0"
+      />
       <div className="min-w-0 flex-1">
-        <p className="line-clamp-1 text-sm font-bold text-pool-deep">
-          {row.full_name}
+        <div className="flex items-center gap-1.5">
+          <Medal rank={rank} size="sm" />
           {isMe ? (
-            <span className="ml-1 text-[10px] font-bold uppercase tracking-eyebrow text-pool-deep">
-              · Tú
+            <span className="inline-flex h-4 items-center rounded-sm bg-ball-gold px-1 text-[9px] font-extrabold uppercase tracking-wider text-pool-deep">
+              Tú
             </span>
           ) : null}
+        </div>
+        <p
+          className="break-words font-display text-sm font-extrabold leading-tight text-pool-deep"
+          title={row.full_name}
+        >
+          {row.full_name}
         </p>
-        <p className="line-clamp-1 text-[10px] text-ink-600">
-          {row.team_label ?? "Sin equipo"}
+        <p className="truncate text-[10px] text-ink-600">
+          {categoryLabel(row)}
         </p>
       </div>
-      <div className="text-right">
+      <div className="shrink-0 text-right">
         <p className="font-mono text-xl font-extrabold tabular-nums text-pool-deep">
           {row.primary_value}
           {metricSuffix}
         </p>
-        <p className="text-[9px] font-bold uppercase tracking-eyebrow text-ink-600">
+        <p className="text-[9px] font-bold uppercase tracking-wider text-ink-600">
           {metricLabel}
         </p>
       </div>
     </article>
   );
 }
-
-void Trofeo;

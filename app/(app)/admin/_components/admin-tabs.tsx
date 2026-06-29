@@ -125,53 +125,12 @@ export function AdminTabs() {
       data-admin-tabs
       className="sticky top-[60px] z-20 border-b border-ink-300 bg-paper"
     >
-      <div className="mx-auto max-w-3xl sm:hidden">
-        <ul
-          className="no-scrollbar flex gap-2 overflow-x-auto px-3 py-2"
-          role="tablist"
-        >
-          {TABS.map((tab) => {
-            const active = isActive(pathname, tab.href);
-            const { Pictogram } = tab;
-            return (
-              <li key={tab.id} className="shrink-0">
-                <Link
-                  href={tab.href as Route}
-                  role="tab"
-                  aria-selected={active}
-                  data-tab-id={tab.id}
-                  className={cn(
-                    "group inline-flex h-12 min-h-12 items-center gap-2 whitespace-nowrap rounded-md border px-3 font-display text-sm font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
-                    active
-                      ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
-                      : "border-ink-300 bg-paper-card text-ink-700 hover:border-pool-blue hover:bg-pool-foam/40",
-                  )}
-                >
-                  <span
-                    className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md"
-                    style={{ backgroundColor: tab.bg }}
-                  >
-                    <Pictogram
-                      aria-hidden="true"
-                      className="h-5 w-5"
-                      accent={tab.pictogramAccent}
-                      style={{ color: "#FFFFFF" } as React.CSSProperties}
-                    />
-                  </span>
-                  <span className="text-sm">{tab.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
       <div
         data-admin-tabs-grid
-        className="mx-auto hidden max-w-3xl px-4 py-3 sm:block"
+        className="mx-auto max-w-3xl px-3 py-3"
       >
         <ul
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+          className="grid grid-cols-4 gap-2 sm:grid-cols-4"
           role="tablist"
         >
           {TABS.map((tab) => {
@@ -185,33 +144,33 @@ export function AdminTabs() {
                   aria-selected={active}
                   data-tab-id={tab.id}
                   className={cn(
-                    "group flex h-full items-center gap-2.5 rounded-md border p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                    "group flex h-full flex-col items-center gap-1.5 rounded-md border p-2 text-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:flex-row sm:items-center sm:gap-2.5 sm:p-3 sm:text-left",
                     active
                       ? "border-pool-deep bg-pool-deep/5 shadow-elev-2"
                       : "border-ink-300 bg-paper-card hover:border-pool-blue hover:bg-pool-foam/40",
                   )}
                 >
                   <span
-                    className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md"
+                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md sm:h-10 sm:w-10"
                     style={{ backgroundColor: tab.bg }}
                   >
                     <Pictogram
                       aria-hidden="true"
-                      className="h-6 w-6"
+                      className="h-5 w-5 sm:h-6 sm:w-6"
                       accent={tab.pictogramAccent}
                       style={{ color: "#FFFFFF" } as React.CSSProperties}
                     />
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="flex min-w-0 flex-col">
                     <span
                       className={cn(
-                        "truncate font-display text-sm font-extrabold leading-tight",
+                        "truncate font-display text-[10px] font-extrabold leading-tight sm:text-sm",
                         active ? "text-pool-deep" : "text-ink-900",
                       )}
                     >
                       {tab.label}
                     </span>
-                    <span className="truncate text-[11px] leading-tight text-ink-600">
+                    <span className="hidden truncate text-[11px] leading-tight text-ink-600 sm:block">
                       {tab.description}
                     </span>
                   </span>

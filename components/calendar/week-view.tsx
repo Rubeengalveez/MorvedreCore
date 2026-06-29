@@ -12,6 +12,8 @@ export interface WeekViewProps {
   onEventClick?: (kind: "training" | "match", id: string) => void;
   selectedIso?: string;
   availabilityByDay?: Map<string, boolean>;
+  userAttendanceBySession?: Map<string, boolean>;
+  showAttendance?: boolean;
 }
 
 interface EventBlock {
@@ -32,6 +34,7 @@ const HOURS: number[] = Array.from(
   { length: HOUR_END - HOUR_START + 1 },
   (_, i) => HOUR_START + i,
 );
+const HOUR_HEIGHT = 36;
 
 function hourLabel(h: number): string {
   return `${String(h).padStart(2, "0")}:00`;
@@ -132,13 +135,11 @@ export function WeekView({
   const days = getDayLabels(startIso);
   const todayIsoValue = todayIso();
 
-  const HOUR_HEIGHT = 56;
   const TOTAL_HEIGHT = HOURS.length * HOUR_HEIGHT;
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* Cabecera de días */}
-      <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-1">
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-0.5">
         <div />
         {days.map((d) => {
           const isToday = d.iso === todayIsoValue;
@@ -148,18 +149,18 @@ export function WeekView({
               type="button"
               onClick={() => onDayClick?.(d.iso)}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded py-1 text-center transition-colors hover:bg-brand-foam",
-                isToday ? "bg-brand-foam" : "",
+                "flex flex-col items-center gap-0 rounded py-1 text-center transition-colors hover:bg-pool-foam",
+                isToday ? "bg-pool-foam" : "",
               )}
               aria-label={d.iso}
             >
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-600">
+              <span className="text-[9px] font-semibold uppercase tracking-wider text-ink-600">
                 {weekdayShort(d.date.getDay() === 0 ? 7 : d.date.getDay())}
               </span>
               <span
                 className={cn(
-                  "font-mono text-base font-bold",
-                  isToday ? "text-brand-deep" : "text-ink-900",
+                  "font-mono text-sm font-bold",
+                  isToday ? "text-pool-deep" : "text-ink-900",
                 )}
               >
                 {d.date.getDate()}
@@ -169,17 +170,17 @@ export function WeekView({
         })}
       </div>
 
-      {/* Grid del calendario semanal */}
-      <div className="grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-1">
-        {/* Columna de etiquetas de horas */}
+      <div
+        className="grid max-h-[60vh] grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-0.5 overflow-y-auto rounded border border-ink-300 bg-paper"
+      >
         <div className="relative select-none" style={{ height: `${TOTAL_HEIGHT}px` }}>
           {HOURS.map((h, i) => (
             <div
               key={`hour-${h}`}
               aria-hidden="true"
-              className="absolute right-1 text-right text-[10px] font-semibold uppercase tracking-wider text-ink-500"
+              className="absolute right-1 text-right text-[9px] font-medium text-ink-500"
               style={{
-                top: `${i * HOUR_HEIGHT + 4}px`,
+                top: `${i * HOUR_HEIGHT + 2}px`,
                 height: `${HOUR_HEIGHT}px`,
               }}
             >
@@ -203,9 +204,11 @@ export function WeekView({
               onClick={() => onDayClick?.(d.iso)}
               className={cn(
                 "relative border-l border-ink-300/40 bg-paper transition-colors cursor-pointer",
-                isSelected ? "bg-brand-foam/20" : "",
+                isSelected ? "bg-pool-foam/20" : "",
               )}
-              style={{ height: `${TOTAL_HEIGHT}px` }}
+                style={{ height: `${TOTAL_HEIGHT}px`, minHeight: `${TOTAL_HEIGHT}px` }}
+                role="button"
+                tabIndex={0}
             >
               {/* Líneas de cuadrícula de fondo */}
               {HOURS.map((h, i) => (
@@ -238,7 +241,7 @@ export function WeekView({
                     key={`event-${block.id}`}
                     type="button"
                     onClick={(e) => {
-                      e.stopPropagation(); // Evita que se seleccione el día de fondo
+                      e.stopPropagation();
                       if (onEventClick && !isUnavailableCell) {
                         onEventClick(block.kind, block.id);
                       } else {
@@ -247,14 +250,14 @@ export function WeekView({
                     }}
                     style={{
                       position: "absolute",
-                      top: `${topPx + 2}px`,
-                      height: `${heightPx - 4}px`,
-                      left: "2px",
-                      right: "2px",
+                      top: `${topPx + 1}px`,
+                      height: `${heightPx - 2}px`,
+                      left: "1px",
+                      right: "1px",
                       backgroundColor: block.color,
                     }}
                     className={cn(
-                      "flex flex-col justify-start rounded p-1 text-left text-paper transition-transform active:scale-[0.98] shadow-elev-1 overflow-hidden select-none border border-black/5",
+                      "flex flex-col justify-start rounded-sm px-1 py-0.5 text-left text-paper transition-transform active:scale-[0.98] overflow-hidden select-none border border-black/5",
                       block.cancelled && "opacity-60",
                       isUnavailableCell ? "cursor-default" : "cursor-pointer",
                     )}
@@ -267,7 +270,7 @@ export function WeekView({
                         block.title
                       )}
                     </span>
-                    {heightPx >= 28 ? (
+                    {heightPx >= 24 ? (
                       <span className="mt-0.5 block font-mono text-[8px] font-semibold opacity-90 leading-none">
                         {timeStr}
                       </span>

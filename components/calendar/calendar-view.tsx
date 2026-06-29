@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Grid3x3, List } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight, Grid3x3, Calendar as CalendarIcon, List } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -46,10 +45,7 @@ type ViewMode = "month" | "week" | "agenda";
 function startOfWeekIso(d: Date): string {
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
-  return addDaysIso(
-    isoDateFromDate(d),
-    diff,
-  );
+  return addDaysIso(isoDateFromDate(d), diff);
 }
 
 export function CalendarView({
@@ -63,11 +59,8 @@ export function CalendarView({
   userAttendanceBySession,
   showAttendance,
 }: CalendarViewProps) {
-  const router = useRouter();
   const [yearMonth, setYearMonth] = useState<YearMonth>(() => currentYearMonth());
-  const [weekStartIso, setWeekStartIso] = useState<string>(() =>
-    startOfWeekIso(new Date()),
-  );
+  const [weekStartIso, setWeekStartIso] = useState<string>(() => startOfWeekIso(new Date()));
   const [viewMode, setViewMode] = useState<ViewMode>("month");
   const [teamFilter, setTeamFilter] = useState<string>(defaultTeamId ?? "");
   const [selectedIso, setSelectedIso] = useState<string | null>(null);
@@ -120,29 +113,29 @@ export function CalendarView({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-end justify-between gap-2">
-        <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-center gap-1">
           <Button
             variant="secondary"
             size="sm"
             onClick={goPrev}
-            aria-label={viewMode === "week" ? "Semana anterior" : viewMode === "agenda" ? "Mes anterior" : "Mes anterior"}
+            aria-label="Anterior"
+            className="h-9 w-9 p-0"
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className="font-display text-lg font-bold text-brand-deep">
-            {viewMode === "month"
-              ? monthLabel(yearMonth)
-              : viewMode === "week"
-                ? `Semana del ${weekStartIso}`
-                : monthLabel(yearMonth)}
-          </span>
+          <h2 className="min-w-[140px] text-center font-display text-base font-extrabold text-pool-deep">
+            {viewMode === "week"
+              ? `Semana del ${weekStartIso}`
+              : monthLabel(yearMonth)}
+          </h2>
           <Button
             variant="secondary"
             size="sm"
             onClick={goNext}
-            aria-label={viewMode === "week" ? "Semana siguiente" : viewMode === "agenda" ? "Mes siguiente" : "Mes siguiente"}
+            aria-label="Siguiente"
+            className="h-9 w-9 p-0"
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -150,114 +143,91 @@ export function CalendarView({
             variant="ghost"
             size="sm"
             onClick={goToday}
-            className="ml-1"
+            className="ml-1 h-9 text-xs font-bold"
           >
             Hoy
           </Button>
         </div>
-        <div className="flex items-center gap-2">
-          <div
-            role="tablist"
-            aria-label="Modo de vista"
-            className="inline-flex h-11 min-h-11 items-center rounded-md border border-ink-300 bg-paper p-0.5"
-          >
+        <div
+          role="tablist"
+          aria-label="Modo de vista"
+          className="inline-flex h-10 w-full items-center rounded-md border border-ink-300 bg-paper p-0.5 sm:w-auto"
+        >
+          {[
+            { id: "month" as const, Icon: Grid3x3, label: "Mes" },
+            { id: "week" as const, Icon: CalendarIcon, label: "Semana" },
+            { id: "agenda" as const, Icon: List, label: "Agenda" },
+          ].map(({ id, Icon, label }) => (
             <button
+              key={id}
               type="button"
               role="tab"
-              aria-selected={viewMode === "month"}
-              onClick={() => setViewMode("month")}
+              aria-selected={viewMode === id}
+              onClick={() => setViewMode(id)}
               className={cn(
-                "inline-flex h-11 min-h-11 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
-                viewMode === "month"
-                  ? "bg-brand-blue text-paper"
-                  : "text-ink-600 hover:text-ink-900",
+                "inline-flex h-9 min-h-9 flex-1 items-center justify-center gap-1 rounded text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue sm:flex-initial sm:px-3",
+                viewMode === id
+                  ? "bg-pool-deep text-paper"
+                  : "text-ink-600 hover:text-pool-deep",
               )}
             >
-              <Grid3x3 className="h-3.5 w-3.5" />
-              Mes
+              <Icon className="h-3.5 w-3.5" />
+              {label}
             </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "week"}
-              onClick={() => setViewMode("week")}
-              className={cn(
-                "inline-flex h-11 min-h-11 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
-                viewMode === "week"
-                  ? "bg-brand-blue text-paper"
-                  : "text-ink-600 hover:text-ink-900",
-              )}
-            >
-              <CalendarIcon className="h-3.5 w-3.5" />
-              Semana
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={viewMode === "agenda"}
-              onClick={() => setViewMode("agenda")}
-              className={cn(
-                "inline-flex h-11 min-h-11 items-center gap-1 rounded px-2.5 text-xs font-semibold transition-colors",
-                viewMode === "agenda"
-                  ? "bg-brand-blue text-paper"
-                  : "text-ink-600 hover:text-ink-900",
-              )}
-            >
-              <List className="h-3.5 w-3.5" />
-              Agenda
-            </button>
-          </div>
-          {teams.length > 0 ? (
-            <div className="flex w-full flex-col gap-1 sm:w-56">
-              <label
-                htmlFor="calendar-team-filter"
-                className="text-[10px] font-bold uppercase tracking-wider text-ink-600"
-              >
-                Equipo
-              </label>
-              <Select
-                id="calendar-team-filter"
-                value={teamFilter}
-                onChange={(e) => setTeamFilter(e.target.value)}
-              >
-                <option value="">Todos mis equipos</option>
-                {teams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ) : null}
+          ))}
         </div>
       </div>
+
+      {teams.length > 0 ? (
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="calendar-team-filter"
+            className="text-[10px] font-bold uppercase tracking-wider text-ink-600"
+          >
+            Equipo
+          </label>
+          <Select
+            id="calendar-team-filter"
+            value={teamFilter}
+            onChange={(e) => setTeamFilter(e.target.value)}
+            className="h-9 text-sm"
+          >
+            <option value="">Todos mis equipos</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+      ) : null}
 
       {viewMode === "month" ? (
         <MonthView
           year={yearMonth.year}
           month={yearMonth.month}
           eventsByDay={filteredEvents}
-          availabilityByDay={availabilityByDay}
           onDayClick={(iso) => {
             setSelectedIso(iso);
             setOpen(true);
           }}
           selectedIso={selectedIso ?? undefined}
+          availabilityByDay={availabilityByDay}
         />
       ) : viewMode === "week" ? (
         <WeekView
           startIso={weekStartIso}
           eventsByDay={filteredEvents}
           availabilityByDay={availabilityByDay}
+          userAttendanceBySession={userAttendanceBySession}
+          showAttendance={showAttendance}
           onDayClick={(iso) => {
             setSelectedIso(iso);
             setOpen(true);
           }}
-          onEventClick={(kind, id) => {
+          onEventClick={() => {
             setSelectedIso(null);
-            if (kind === "match") {
-              router.push(`/matches/${id}`);
-            }
+            setOpen(true);
           }}
           selectedIso={selectedIso ?? undefined}
         />
@@ -278,7 +248,7 @@ export function CalendarView({
           <span
             aria-hidden="true"
             className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: "var(--brand-blue)" }}
+            style={{ backgroundColor: "var(--pool-blue)" }}
           />
           Entreno
         </span>
@@ -286,32 +256,17 @@ export function CalendarView({
           <span
             aria-hidden="true"
             className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: "var(--brand-ball)" }}
+            style={{ backgroundColor: "var(--ball-gold)" }}
           />
-          Partido (liga/copa)
+          Partido
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden="true"
             className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: "var(--brand-action)" }}
-          />
-          Torneo
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: "var(--danger)" }}
+            style={{ backgroundColor: "var(--goggle-red)" }}
           />
           Cancelado
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-2.5 w-2.5 rounded-full bg-ink-300 ring-1 ring-ink-600"
-          />
-          No disponible
         </span>
       </div>
 
@@ -323,10 +278,12 @@ export function CalendarView({
         }}
         iso={selectedIso}
         day={selectedDay}
-        isCoach={isCoach}
+        isCoach={isCoach || isAdmin}
         isAdmin={isAdmin}
         activeProfileId={activeProfileId}
       />
     </div>
   );
 }
+
+void (0 as unknown as Date);

@@ -119,7 +119,7 @@ export function MonthView({
               aria-label={`${cell.iso}${hasItems ? `, ${items.length} evento(s)` : ""}${unavailable ? ", no disponible" : ""}${isToday ? ", hoy" : ""}`}
               aria-pressed={isSelected}
               className={cn(
-                "group relative flex h-20 min-h-20 flex-col items-stretch gap-0.5 rounded-md border p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:h-24",
+                "group relative flex h-16 min-h-16 flex-col items-stretch gap-0.5 rounded border p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:h-20",
                 !cell.inMonth
                   ? "border-transparent bg-transparent text-ink-300"
                   : isPast
@@ -127,18 +127,18 @@ export function MonthView({
                     : isWeekend
                       ? "border-ink-300 bg-paper"
                       : "border-ink-300 bg-paper",
-                isSelected ? "ring-2 ring-brand-blue" : "",
-                isToday ? "ring-1 ring-brand-deep/30" : "",
-                isToday ? "bg-brand-foam/40" : "",
-                isToday ? "border-brand-deep/30" : "",
+                isSelected ? "ring-2 ring-pool-blue" : "",
+                isToday ? "ring-1 ring-pool-deep/30" : "",
+                isToday ? "bg-pool-foam/40" : "",
+                isToday ? "border-pool-deep/30" : "",
                 unavailable ? "bg-ink-300/30" : "",
               )}
             >
               <div className="flex items-center justify-between">
                 <span
                   className={cn(
-                    "font-mono text-xs font-bold leading-none",
-                    isToday ? "text-brand-deep" : "",
+                    "font-mono text-[11px] font-bold leading-none",
+                    isToday ? "text-pool-deep" : "",
                     !cell.inMonth && "text-ink-300",
                   )}
                 >
