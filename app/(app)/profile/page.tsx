@@ -1,14 +1,13 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { LogOut, ChevronRight } from "lucide-react";
+import { LogOut, ChevronRight, User } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { CapTile } from "@/components/ui/cap-tile";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { LanePattern } from "@/components/ui/lane-pattern";
-import { Medal } from "@/components/ui/medal";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import {
   Equipo,
@@ -20,7 +19,6 @@ import {
 } from "@/components/brand/pictograms";
 import { ProfileSwitcherInline } from "@/components/profile/profile-switcher-inline";
 import { AvailabilityCalendar, type AvailabilityDay } from "@/components/profile/availability-calendar";
-import { CalendarEventCard } from "@/components/calendar/event-card";
 import { todayIso, addDaysIso } from "@/lib/domain/calendar";
 import {
   CATEGORY_LABELS,
@@ -69,14 +67,6 @@ function extractYear(value: unknown): number | null {
   return null;
 }
 
-type ProfileStat = {
-  label: string;
-  value: string;
-  hint?: string;
-  tone: "default" | "positive" | "muted";
-  color: string;
-};
-
 export default async function ProfilePage() {
   const supabase = await createClient();
 
@@ -109,14 +99,6 @@ export default async function ProfilePage() {
   const isAdmin = roles.includes("admin");
   const isPlayer = roles.includes("player");
   const isCoach = roles.includes("coach");
-
-  const { data: activeProfileRow } = await supabase
-    .from("profiles")
-    .select("notes")
-    .eq("id", activeProfile.id)
-    .maybeSingle();
-  const activeProfileNotes =
-    (activeProfileRow as { notes: string | null } | null)?.notes ?? null;
 
   const teams = seasonId
     ? await getTeamsForProfileInSeason(activeProfile.id, seasonId)
@@ -202,6 +184,7 @@ export default async function ProfilePage() {
   const nextEvent: NextEvent | null = teamIds.length > 0
     ? await getNextEventForProfile({ teamIds, profileId: activeProfile.id, now })
     : null;
+  void nextEvent;
 
   const availability: AvailabilityDay[] = ((availabilityData.data ?? []) as Array<{ date: string; available: boolean; reason: string | null }>).map((row) => ({
     iso: row.date,
@@ -245,23 +228,6 @@ export default async function ProfilePage() {
     }
   }
 
-  const recentMatches = (allMatches.data ?? []).slice(0, 3).map((m) => {
-    const mr = m as { id: string; scheduled_at: string; opponent: string; status: string; final_score_us: number | null; final_score_them: number | null; teams: unknown };
-    const team = Array.isArray(mr.teams) ? mr.teams[0] : mr.teams;
-    const teamObj = team as { label?: string; color?: string } | null;
-    return {
-      id: mr.id,
-      scheduled_at: mr.scheduled_at,
-      opponent: mr.opponent,
-      status: mr.status,
-      score_us: mr.final_score_us,
-      score_them: mr.final_score_them,
-      team_label: teamObj?.label ?? "",
-      team_color: teamObj?.color ?? "#1E5AA8",
-    };
-  });
-  void recentMatches;
-
   const coachUpcoming = ((coachMatchesRes.data ?? []) as Array<{
     id: string;
     scheduled_at: string;
@@ -282,51 +248,31 @@ export default async function ProfilePage() {
     };
   });
 
-  const stats: ProfileStat[] = [
+  const stats = [
     {
       label: "Partidos",
       value: String(playerStats.matches_played),
-      hint: playerStats.matches_played > 0
-        ? `${Math.round((playerStats.goals / Math.max(playerStats.matches_played, 1)) * 100) / 100} por partido`
-        : undefined,
-      tone: playerStats.matches_played > 5 ? "positive" : "default",
       color: "var(--ball-gold)",
     },
     {
       label: "Goles",
       value: String(playerStats.goals),
-      hint: playerStats.matches_played > 0
-        ? `${(playerStats.goals / Math.max(playerStats.matches_played, 1)).toFixed(2)} por partido`
-        : undefined,
-      tone: "default",
       color: "var(--success)",
     },
     {
-      label: "Exclusiones",
+      label: "Excl.",
       value: String(playerStats.exclusions),
-      hint: undefined,
-      tone: "default",
       color: "var(--goggle-red)",
     },
     {
-      label: "Asistencia",
+      label: "Asist.",
       value: playerStats.attendance_pct > 0 ? `${playerStats.attendance_pct}%` : "—",
-      hint: playerStats.trainings_total > 0
-        ? `${playerStats.trainings_attended}/${playerStats.trainings_total} entrenos`
-        : undefined,
-      tone: playerStats.attendance_pct >= 80 ? "positive" : "default",
       color: "var(--pool-blue)",
     },
   ];
 
-  const top3 = [
-    { label: "Goles", value: playerStats.goals, color: "var(--success)" },
-    { label: "Asistencia", value: playerStats.attendance_pct, color: "var(--pool-blue)" },
-    { label: "Convocatorias", value: playerStats.matches_played, color: "var(--ball-gold)" },
-  ]
-    .filter((s) => s.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, 3);
+  const showStatsGrid =
+    playerStats.matches_played > 0 || playerStats.trainings_total > 0;
 
   return (
     <div className="relative">
@@ -339,309 +285,209 @@ export default async function ProfilePage() {
             linkedProfiles={linkedProfiles}
           />
         ) : null}
+
+        {/* Hero compacto: avatar + nombre + badges en una sola línea horizontal */}
         <header
           className="overflow-hidden rounded-md border border-ink-200 bg-paper-card"
           style={{ borderTopWidth: "3px", borderTopColor: teamColor }}
         >
-          <div className="flex items-center gap-3 p-4">
+          <div className="flex items-center gap-3 p-3">
             <Avatar
               name={activeProfile.full_name}
               src={activeProfile.photo_url}
-              size={72}
+              size={56}
               teamColor={teamColor}
             />
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-xl font-extrabold leading-tight tracking-tight text-pool-deep truncate">
+              <h1 className="font-display text-lg font-extrabold leading-tight tracking-tight text-pool-deep truncate">
                 {activeProfile.full_name}
               </h1>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 {primaryRole ? (
-                  <span className="inline-flex items-center rounded-sm bg-pool-deep px-2 py-0.5 text-eyebrow text-paper">
+                  <span className="inline-flex h-5 items-center rounded-sm bg-pool-deep px-1.5 text-[10px] font-bold uppercase tracking-eyebrow text-paper">
                     {ROLE_LABELS[primaryRole]}
                   </span>
                 ) : null}
                 {categoryLabel ? (
-                  <span className="inline-flex items-center rounded-sm border border-ink-200 px-2 py-0.5 text-eyebrow text-ink-700">
+                  <span className="inline-flex h-5 items-center rounded-sm border border-ink-200 px-1.5 text-[10px] font-bold uppercase tracking-eyebrow text-ink-700">
                     {CATEGORY_LABELS[categoryLabel as CategoryCode]}
                   </span>
                 ) : null}
                 {activeProfile.cap_number != null ? (
-                  <CapTile number={activeProfile.cap_number} teamColor={teamColor} size="sm" />
+                  <CapTile
+                    number={activeProfile.cap_number}
+                    teamColor={teamColor}
+                    size="sm"
+                  />
                 ) : null}
               </div>
             </div>
           </div>
-          {(primaryTeam || playerStats.matches_played > 0 || playerStats.trainings_total > 0) ? (
-            <div className="grid grid-cols-2 border-t border-ink-200">
-              {stats.map((s, i) => (
-                <div
-                  key={i}
-                  className={`flex items-center gap-2.5 px-4 py-3 ${
-                    i % 2 === 0 ? "border-r border-ink-200" : ""
-                  } ${
-                    i < 2 ? "border-b border-ink-200" : ""
-                  }`}
-                >
-                  <div
-                    className="h-7 w-1 shrink-0 rounded-full"
-                    style={{ backgroundColor: s.color }}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-eyebrow text-ink-500">{s.label}</p>
-                    <p
-                      className={`font-mono text-lg font-extrabold leading-none tabular-nums ${
-                        s.tone === "positive"
-                          ? "text-success"
-                          : s.tone === "muted"
-                            ? "text-ink-600"
-                            : "text-pool-deep"
-                      }`}
-                    >
-                      {s.value}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
         </header>
 
-      {nextEvent ? (
-        <section>
-          <CalendarEventCard
-            event={{
-              id: nextEvent.id,
-              kind: nextEvent.kind,
-              scheduled_at: nextEvent.scheduled_at,
-              title:
-                nextEvent.kind === "match"
-                  ? nextEvent.scheduled_at
-                    ? `Partido a las ${new Date(nextEvent.scheduled_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}`
-                    : "Partido"
-                  : "Entreno",
-              team_label: nextEvent.team_label,
-              team_color: nextEvent.team_color,
-              location: nextEvent.location,
-            }}
-            href={
-              nextEvent.kind === "match" ? `/matches/${nextEvent.id}` : "/calendar"
-            }
-          />
-        </section>
-      ) : null}
-
-      {isPlayer && seasonId ? <PlayerRankingSummary profileId={activeProfile.id} seasonId={seasonId} /> : null}
-
-      {primaryTeam ? (
-        <Link
-          href={`/team/${primaryTeam.id}` as Route}
-          className="flex items-center justify-between rounded-md border border-ink-300 bg-paper-card p-4 transition-colors hover:bg-pool-foam shadow-elev-1"
-        >
-          <div className="flex items-center gap-3">
-            <PictogramBadge
-              pictogram={Equipo}
-              color={primaryTeam.color}
-              size="lg"
-            />
-            <div>
-              <Eyebrow>Tu equipo</Eyebrow>
-              <p className="font-display text-lg font-extrabold text-pool-deep">
-                {primaryTeam.label}
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="h-5 w-5 text-ink-600" />
-        </Link>
-      ) : null}
-
-      {isPlayer && top3.length > 0 ? (
-        <section
-          aria-labelledby="top3-heading"
-          className="rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1"
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <PictogramBadge
-              pictogram={Trofeo}
-              color="var(--ball-gold)"
-              size="sm"
-            />
-            <h2
-              id="top3-heading"
-              className="font-display text-base font-extrabold text-pool-deep"
-            >
-              Top 3 personal
-            </h2>
-          </div>
-          <p className="mb-3 text-xs text-ink-600">
-            Tus categorías más fuertes esta temporada.
-          </p>
-          <ol className="flex flex-col gap-2">
-            {top3.map((s, idx) => {
-              const rank = (idx + 1) as 1 | 2 | 3;
-              return (
-                <li
-                  key={s.label}
-                  className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-2.5"
-                >
-                  <Medal rank={rank} size="sm" />
-                  <span className="text-sm font-semibold text-pool-deep">
-                    {s.label}
-                  </span>
-                  <span
-                    className="ml-auto font-mono text-base font-extrabold tabular-nums"
-                    style={{ color: s.color }}
-                  >
-                    {s.value}
-                    {s.label === "Asistencia" ? "%" : ""}
-                  </span>
-                </li>
-              );
-            })}
-          </ol>
-        </section>
-      ) : null}
-
-      {isCoach && coachUpcoming.length > 0 ? (
-        <section
-          aria-labelledby="coach-week-heading"
-          className="rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1"
-        >
-          <div className="mb-3 flex items-center gap-2">
-            <PictogramBadge
-              pictogram={SilbatoActivo}
-              color="var(--pool-teal)"
-              size="sm"
-            />
-            <h2
-              id="coach-week-heading"
-              className="font-display text-base font-extrabold text-pool-deep"
-            >
-              Mis equipos esta semana
-            </h2>
-          </div>
-          <p className="mb-3 text-xs text-ink-600">
-              Próximos partidos de los equipos que entrenas.
-          </p>
-          <ul className="flex flex-col gap-2">
-            {coachUpcoming.map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/matches/${m.id}` as Route}
-                  className="flex items-center gap-3 rounded-md border-2 p-2.5 transition-colors hover:bg-pool-foam"
-                  style={{
-                    borderColor: m.team_color,
-                    backgroundColor: `color-mix(in oklab, ${m.team_color} 5%, var(--paper))`,
-                  }}
-                >
-                  <PictogramBadge
-                    pictogram={Gorro}
-                    color={m.team_color}
-                    size="md"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <Eyebrow style={{ color: m.team_color }}>{m.team_label}</Eyebrow>
-                    <p className="line-clamp-1 font-display text-sm font-extrabold text-pool-deep">
-                      vs {m.opponent}
-                    </p>
-                    <p className="text-[11px] text-ink-600">
-                      {new Date(m.scheduled_at).toLocaleDateString("es-ES", {
-                        weekday: "long",
-                        day: "numeric",
-                        month: "short",
-                      })}{" "}
-                      ·{" "}
-                      {new Date(m.scheduled_at).toLocaleTimeString("es-ES", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      <section className="rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1">
-        <div className="mb-3 flex flex-col gap-1">
-          <h2 className="font-display text-base font-extrabold text-pool-deep">
-            Disponibilidad
-          </h2>
-          <p className="text-xs text-ink-600">
-            Marca los próximos 180 días que no podrás asistir. Tu entrenador lo verá
-            al preparar la convocatoria.
-          </p>
-        </div>
-        <AvailabilityCalendar
-          initialAvailability={availability}
-          todayIso={today}
-          upcomingMatches={upcomingMatches}
-          upcomingSessions={upcomingSessions}
-        />
-      </section>
-
-      <div className="grid grid-cols-2 gap-2">
-        <Link
-          href={"/profile/edit" as Route}
-          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-pool-deep text-sm font-bold text-paper transition-colors hover:bg-ink-900"
-        >
-          <PictogramBadge
-            pictogram={Usuario}
-            color="var(--ball-gold)"
-            size="sm"
-          />
-          Editar perfil
-        </Link>
-        <Link
-          href={"/change-password" as Route}
-          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper-card text-sm font-bold text-ink-900 transition-colors hover:bg-pool-foam"
-        >
-          Contraseña
-        </Link>
-        {isAdmin ? (
-          <Link
-            href={"/admin" as Route}
-            className="col-span-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper-card text-sm font-bold text-ink-900 transition-colors hover:bg-pool-foam"
+        {/* Stats grid 4 columnas */}
+        {showStatsGrid ? (
+          <section
+            aria-label="Estadísticas de la temporada"
+            className="grid grid-cols-4 gap-1 overflow-hidden rounded-md border border-ink-200 bg-paper-card shadow-elev-1"
           >
-            <PictogramBadge
-              pictogram={Porteria}
-              color="var(--pool-deep)"
-              size="sm"
-            />
-            Panel de administración
+            {stats.map((s, i) => (
+              <div
+                key={s.label}
+                className={`flex flex-col items-center gap-0.5 px-1 py-3 ${
+                  i < stats.length - 1 ? "border-r border-ink-200" : ""
+                }`}
+              >
+                <span
+                  aria-hidden="true"
+                  className="inline-block h-1 w-6 rounded-full"
+                  style={{ backgroundColor: s.color }}
+                />
+                <p
+                  className="font-mono text-xl font-extrabold leading-none tabular-nums text-pool-deep"
+                >
+                  {s.value}
+                </p>
+                <p className="text-[9px] font-bold uppercase tracking-eyebrow text-ink-600">
+                  {s.label}
+                </p>
+              </div>
+            ))}
+          </section>
+        ) : null}
+
+        {/* Mi posición en rankings (si es player) */}
+        {isPlayer && seasonId ? (
+          <PlayerRankingSummary profileId={activeProfile.id} seasonId={seasonId} />
+        ) : null}
+
+        {/* Tu equipo (link) */}
+        {primaryTeam ? (
+          <Link
+            href={`/team/${primaryTeam.id}` as Route}
+            className="flex items-center justify-between rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1 transition-colors hover:bg-pool-foam"
+          >
+            <div className="flex items-center gap-3">
+              <PictogramBadge pictogram={Equipo} color={primaryTeam.color} size="md" />
+              <div>
+                <Eyebrow>Tu equipo</Eyebrow>
+                <p className="font-display text-base font-extrabold text-pool-deep">
+                  {primaryTeam.label}
+                </p>
+              </div>
+            </div>
+            <ChevronRight className="h-5 w-5 text-ink-600" />
           </Link>
         ) : null}
-      </div>
 
-      {activeProfileNotes ? (
-        <section
-          aria-labelledby="my-notes-heading"
-          className="rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1"
-        >
-          <h2
-            id="my-notes-heading"
-            className="mb-1.5 font-display text-base font-extrabold text-pool-deep"
+        {/* Mis equipos esta semana (si es coach) */}
+        {isCoach && coachUpcoming.length > 0 ? (
+          <section
+            aria-labelledby="coach-week-heading"
+            className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
           >
-            Notas
-          </h2>
-          <p className="line-clamp-4 whitespace-pre-line text-sm leading-relaxed text-ink-900">
-            {activeProfileNotes}
-          </p>
-        </section>
-      ) : null}
+            <div className="flex items-center gap-2">
+              <PictogramBadge pictogram={SilbatoActivo} color="var(--pool-teal)" size="sm" />
+              <h2
+                id="coach-week-heading"
+                className="font-display text-sm font-extrabold text-pool-deep"
+              >
+                Mis equipos esta semana
+              </h2>
+            </div>
+            <ul className="flex flex-col gap-1.5">
+              {coachUpcoming.slice(0, 3).map((m) => (
+                <li key={m.id}>
+                  <Link
+                    href={`/matches/${m.id}` as Route}
+                    className="flex items-center gap-2.5 rounded-md border-2 p-2 transition-colors hover:bg-pool-foam"
+                    style={{
+                      borderColor: m.team_color,
+                      backgroundColor: `color-mix(in oklab, ${m.team_color} 5%, var(--paper))`,
+                    }}
+                  >
+                    <PictogramBadge pictogram={Gorro} color={m.team_color} size="sm" />
+                    <div className="min-w-0 flex-1">
+                      <Eyebrow style={{ color: m.team_color }}>{m.team_label}</Eyebrow>
+                      <p className="line-clamp-1 font-display text-sm font-extrabold text-pool-deep">
+                        vs {m.opponent}
+                      </p>
+                    </div>
+                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-eyebrow text-ink-600">
+                      {new Date(m.scheduled_at).toLocaleDateString("es-ES", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                      })}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
 
-      <form action={signOut} className="pt-1">
-        <Button
-          type="submit"
-          variant="secondary"
-          size="md"
-          className="w-full"
+        {/* Disponibilidad (1 sola sección) */}
+        <section
+          aria-labelledby="availability-heading"
+          className="rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
         >
-          <LogOut className="mr-2 h-4 w-4" />
-          Cerrar sesión
-        </Button>
-      </form>
+          <div className="mb-3 flex flex-col gap-1">
+            <h2
+              id="availability-heading"
+              className="font-display text-base font-extrabold text-pool-deep"
+            >
+              Disponibilidad
+            </h2>
+            <p className="text-xs text-ink-600">
+              Toca un día para marcar si no podrás asistir. Tu entrenador lo verá al preparar la convocatoria.
+            </p>
+          </div>
+          <AvailabilityCalendar
+            initialAvailability={availability}
+            todayIso={today}
+            upcomingMatches={upcomingMatches}
+            upcomingSessions={upcomingSessions}
+          />
+        </section>
+
+        {/* Botones de cuenta al final */}
+        <div className="grid grid-cols-2 gap-2 pt-1">
+          <Link
+            href={"/profile/edit" as Route}
+            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-pool-deep text-sm font-bold text-paper transition-colors hover:bg-ink-900"
+          >
+            <User className="h-4 w-4" aria-hidden="true" />
+            Editar perfil
+          </Link>
+          <Link
+            href={"/change-password" as Route}
+            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper-card text-sm font-bold text-ink-900 transition-colors hover:bg-pool-foam"
+          >
+            Contraseña
+          </Link>
+          {isAdmin ? (
+            <Link
+              href={"/admin" as Route}
+              className="col-span-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper-card text-sm font-bold text-ink-900 transition-colors hover:bg-pool-foam"
+            >
+              <PictogramBadge pictogram={Porteria} color="var(--pool-deep)" size="sm" />
+              Panel de administración
+            </Link>
+          ) : null}
+        </div>
+
+        <form action={signOut} className="pt-1">
+          <Button
+            type="submit"
+            variant="secondary"
+            size="md"
+            className="w-full"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Cerrar sesión
+          </Button>
+        </form>
       </div>
     </div>
   );
@@ -692,14 +538,14 @@ async function PlayerRankingSummary({
   return (
     <section
       aria-labelledby="my-rankings-heading"
-      className="flex flex-col gap-3 rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1"
+      className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <PictogramBadge pictogram={Trofeo} color="var(--ball-gold)" size="sm" />
           <h2
             id="my-rankings-heading"
-            className="font-display text-base font-extrabold text-pool-deep"
+            className="font-display text-sm font-extrabold text-pool-deep"
           >
             Tu posición en los rankings
           </h2>
@@ -711,7 +557,7 @@ async function PlayerRankingSummary({
           Ver todo
         </Link>
       </div>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-3 gap-2">
         {goalsRank.my_position ? (
           <RankingMiniCard
             label="Goles"
@@ -724,7 +570,7 @@ async function PlayerRankingSummary({
         ) : null}
         {attendanceRank.my_position ? (
           <RankingMiniCard
-            label="Asistencia"
+            label="Asist."
             suffix="%"
             position={attendanceRank.my_position.row.position}
             value={attendanceRank.my_position.row.primary_value}
@@ -732,6 +578,10 @@ async function PlayerRankingSummary({
             accent="var(--pool-blue)"
           />
         ) : null}
+        <RankingRelativeCard
+          goalsDelta={goalsRank.my_position?.delta_to_next ?? null}
+          attendanceDelta={attendanceRank.my_position?.delta_to_next ?? null}
+        />
       </div>
     </section>
   );
@@ -753,26 +603,59 @@ function RankingMiniCard({
   accent: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-md border border-ink-300 bg-pool-foam/40 p-3">
+    <div className="flex flex-col items-center gap-0.5 rounded-md border border-ink-300 bg-pool-foam/40 p-2">
+      <p className="text-[9px] font-bold uppercase tracking-eyebrow text-ink-600">
+        {label}
+      </p>
       <span
-        aria-hidden="true"
-        className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-md font-mono text-base font-extrabold text-paper"
+        className="inline-flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 font-mono text-base font-extrabold leading-none tabular-nums text-paper"
         style={{ backgroundColor: accent }}
       >
         {position}
       </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
-          {label}
-        </p>
-        <p className="font-display text-base font-extrabold text-pool-deep">
-          {value}
-          {suffix}
-        </p>
-      </div>
-      <span className="text-[10px] uppercase tracking-eyebrow text-ink-600">
+      <p className="font-mono text-sm font-extrabold leading-none tabular-nums text-pool-deep">
+        {value}
+        {suffix}
+      </p>
+      <p className="text-[9px] uppercase tracking-eyebrow text-ink-500">
         de {totalPlayers}
-      </span>
+      </p>
     </div>
   );
 }
+
+function RankingRelativeCard({
+  goalsDelta,
+  attendanceDelta,
+}: {
+  goalsDelta: number | null;
+  attendanceDelta: number | null;
+}) {
+  const goalTxt =
+    goalsDelta == null
+      ? "Eres el #1"
+      : goalsDelta === 0
+        ? "Líder en goles"
+        : `A ${goalsDelta} del 1º en goles`;
+  const attTxt =
+    attendanceDelta == null
+      ? null
+      : attendanceDelta === 0
+        ? "Líder en asist."
+        : `A ${attendanceDelta} del 1º en asist.`;
+  return (
+    <div className="flex flex-col items-center gap-0.5 rounded-md border border-ink-300 bg-pool-foam/40 p-2">
+      <p className="text-[9px] font-bold uppercase tracking-eyebrow text-ink-600">
+        Reta al líder
+      </p>
+      <p className="text-center font-display text-[10px] font-extrabold leading-tight text-pool-deep">
+        {goalTxt}
+      </p>
+      {attTxt ? (
+        <p className="text-center text-[9px] font-medium text-ink-600">{attTxt}</p>
+      ) : null}
+    </div>
+  );
+}
+
+void Usuario;

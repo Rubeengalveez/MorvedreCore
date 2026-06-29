@@ -155,12 +155,6 @@ export default async function TeamDetailPage({
     attendance_streak: row.attendance_streak,
   }));
 
-  interface TeamLeader {
-    full_name: string;
-    photo_url: string | null;
-    primary_value: number;
-  }
-
   const teamLeaders: {
     goals: TeamLeader | null;
     mvp: TeamLeader | null;
@@ -248,7 +242,7 @@ export default async function TeamDetailPage({
   return (
     <div className="flex w-full flex-col">
       <LanePattern as="div" className="bg-paper" strong>
-        <div className="mx-auto w-full max-w-2xl px-4 pt-5 pb-3">
+        <div className="mx-auto w-full max-w-2xl px-4 pt-4 pb-3">
           <TeamHero
             team={team}
             seasonLabel={inSeason ? (season?.label ?? null) : null}
@@ -263,7 +257,7 @@ export default async function TeamDetailPage({
         </div>
       </div>
 
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-5">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
         {activeTab === "principal" ? (
           <TeamPrincipal
             team={team}
@@ -314,42 +308,47 @@ function TeamPrincipal({
   const categoryLabel = CATEGORY_LABELS[team.category_code as CategoryCode] ?? team.category_code;
   const now = new Date();
 
+  const compactSummary = [
+    { label: "Categoría", value: categoryLabel, capitalize: true },
+    { label: "Plantilla", value: String(playerCount), capitalize: false },
+    { label: "Entrenador", value: coachName.split(" ")[0] ?? coachName, capitalize: true },
+  ];
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Resumen del equipo */}
-      <section className="rounded-md border border-ink-200 bg-paper-card overflow-hidden">
-        <div className="flex divide-x divide-ink-200">
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Categoría</span>
-            <p className="font-display text-sm font-extrabold text-pool-deep truncate capitalize">
-              {categoryLabel}
+      {/* Resumen compacto: 1 fila horizontal */}
+      <section
+        aria-label="Resumen del equipo"
+        className="grid grid-cols-3 divide-x divide-ink-200 overflow-hidden rounded-md border border-ink-200 bg-paper-card"
+      >
+        {compactSummary.map((item) => (
+          <div
+            key={item.label}
+            className="flex min-w-0 flex-col gap-0.5 px-2 py-2.5 text-center sm:px-3 sm:py-3"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">
+              {item.label}
+            </span>
+            <p
+              className={`font-display text-sm font-extrabold text-pool-deep truncate ${
+                item.capitalize ? "capitalize" : ""
+              }`}
+            >
+              {item.value}
             </p>
           </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Plantilla</span>
-            <p className="font-display text-sm font-extrabold text-pool-deep">
-              {playerCount}
-            </p>
-          </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-3">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Entrenador</span>
-            <p className="font-display text-sm font-extrabold text-pool-deep truncate">
-              {coachName.split(" ")[0]}
-            </p>
-          </div>
-        </div>
+        ))}
       </section>
 
-      {/* Último resultado / Próximo partido */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {/* Último resultado */}
+      {/* Último resultado / Próximo partido en grid 2 columnas */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <section className="flex flex-col gap-2">
           <Eyebrow as="h3">Último resultado</Eyebrow>
           {lastMatch ? (
             <div className="flex flex-col gap-1.5">
               <Link
                 href={`/matches/${lastMatch.id}` as Route}
-                className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
               >
                 <PoolScoreboard
                   mode="final"
@@ -364,7 +363,7 @@ function TeamPrincipal({
                 />
               </Link>
               {lastMatch.final_score_us != null && lastMatch.final_score_them != null ? (
-                <div className="bg-paper-card shadow-elev-1 tracking-eyebrow flex items-center gap-1.5 self-start rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase border border-ink-300">
+                <div className="flex items-center gap-1.5 self-start rounded-sm border border-ink-300 bg-paper-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-eyebrow shadow-elev-1">
                   {lastMatch.final_score_us > lastMatch.final_score_them ? (
                     <span className="text-success">Victoria</span>
                   ) : lastMatch.final_score_us === lastMatch.final_score_them ? (
@@ -379,19 +378,18 @@ function TeamPrincipal({
               ) : null}
             </div>
           ) : (
-            <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-xs">
+            <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-xs text-ink-600">
               No hay partidos jugados.
             </div>
           )}
         </section>
 
-        {/* Próximo partido */}
         <section className="flex flex-col gap-2">
           <Eyebrow as="h3">Próximo partido</Eyebrow>
           {nextMatch ? (
             <Link
               href={`/matches/${nextMatch.id}` as Route}
-              className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
             >
               <PoolScoreboard
                 mode="preview"
@@ -404,61 +402,69 @@ function TeamPrincipal({
               />
             </Link>
           ) : (
-            <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-xs">
+            <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-xs text-ink-600">
               No hay partidos programados.
             </div>
           )}
         </section>
       </div>
 
-      {/* Líderes del Equipo */}
-      <section className="flex flex-col gap-3">
+      {/* Top del equipo (3 cards: Pichichi / MVP / Asistencia) */}
+      <section className="flex flex-col gap-3" aria-labelledby="team-leaders-heading">
         <div className="flex items-center gap-2">
           <PictogramBadge pictogram={Trophy} color="var(--ball-gold)" size="sm" />
-          <h2 className="font-display text-pool-deep text-base font-extrabold">
-            Líderes del Equipo
+          <h2
+            id="team-leaders-heading"
+            className="font-display text-base font-extrabold text-pool-deep"
+          >
+            Top del equipo
           </h2>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           <LeaderStatCard
             title="Pichichi"
             player={categoryLeaders.goals}
-            metricLabel="Goles"
-            accent="bg-[#FF6B35]"
+            metricLabel="goles"
+            accent="var(--ball-gold)"
           />
           <LeaderStatCard
-            title="Más MVP"
+            title="MVP"
             player={categoryLeaders.mvp}
             metricLabel="MVPs"
-            accent="bg-brand-ball"
-          />
-          <LeaderStatCard
-            title="Exclusiones"
-            player={categoryLeaders.exclusions}
-            metricLabel="Excl."
-            accent="bg-goggle-red"
+            accent="var(--pool-blue)"
           />
           <LeaderStatCard
             title="Asistencia"
             player={categoryLeaders.attendance}
-            metricLabel="Asistencia"
-            suffix="%"
-            accent="bg-pool-teal"
+            metricLabel="%"
+            accent="var(--pool-teal)"
+            suffix=""
+            showSuffix
           />
         </div>
       </section>
 
       {/* Racha del equipo */}
       {teamWinStreak && teamWinStreak.current_value > 0 ? (
-        <div className="border border-[#FF6B35]/20 bg-[#FF6B35]/5 flex flex-wrap items-center gap-2 rounded-md p-3 shadow-sm">
-          <Flame className="h-4 w-4 fill-[#FF6B35] text-[#FF6B35] animate-pulse" />
-          <span className="text-ink-700 text-xs font-bold uppercase tracking-wider text-[#FF6B35]">Racha del equipo:</span>
-          <span className="text-pool-deep font-mono text-base font-extrabold tabular-nums">
+        <div
+          data-team-streak
+          className="flex flex-wrap items-center gap-2 rounded-md border border-action/30 bg-action/5 p-3 shadow-elev-1"
+        >
+          <Flame
+            className="h-4 w-4 shrink-0 fill-action text-action animate-pulse"
+            aria-hidden="true"
+          />
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-action">
+            Racha
+          </span>
+          <span className="font-mono text-base font-extrabold tabular-nums text-pool-deep">
             {teamWinStreak.current_value} victorias seguidas
           </span>
-          <span className="text-ink-500 text-[10px]">
-            (récord histórico: {teamWinStreak.best_value})
-          </span>
+          {teamWinStreak.best_value > teamWinStreak.current_value ? (
+            <span className="text-[10px] text-ink-500">
+              (récord: {teamWinStreak.best_value})
+            </span>
+          ) : null}
         </div>
       ) : null}
     </div>
@@ -471,40 +477,55 @@ function LeaderStatCard({
   metricLabel,
   suffix = "",
   accent,
+  showSuffix = false,
 }: {
   title: string;
   player: TeamLeader | null;
   metricLabel: string;
   suffix?: string;
   accent: string;
+  showSuffix?: boolean;
 }) {
   return (
-    <div className="border border-ink-300 bg-paper flex flex-col rounded-md p-3 shadow-sm justify-between gap-3 transition-colors hover:border-pool-blue">
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-600 leading-none">{title}</span>
-        {player ? (
-          <div className="flex items-center gap-2 mt-1">
-            <Avatar name={player.full_name} src={player.photo_url} size={32} />
-            <div className="flex flex-col min-w-0">
-              <p className="font-display text-xs font-extrabold text-pool-deep leading-tight truncate">
-                {player.full_name.split(" ")[0]}
-              </p>
-              <p className="text-[9px] text-ink-500 truncate leading-none mt-0.5">{accent}</p>
-            </div>
-          </div>
-        ) : (
-          <p className="text-[11px] italic text-ink-500 mt-1">Sin datos</p>
-        )}
+    <div
+      data-leader-card={title}
+      className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-2.5 shadow-elev-1 sm:p-3"
+    >
+      <div className="flex items-center gap-1.5">
+        <span
+          aria-hidden="true"
+          className="inline-block h-2 w-2 shrink-0 rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-600">
+          {title}
+        </span>
       </div>
       {player ? (
-        <div className="flex items-baseline justify-between border-t border-ink-300/40 pt-1.5 mt-auto">
-          <span className="text-[9px] font-bold uppercase text-ink-500">{metricLabel}</span>
-          <span className="font-mono text-sm font-extrabold text-pool-deep tabular-nums">
-            {player.primary_value}
-            {suffix}
-          </span>
-        </div>
-      ) : null}
+        <>
+          <div className="flex min-w-0 items-center gap-2">
+            <Avatar
+              name={player.full_name}
+              src={player.photo_url}
+              size={32}
+            />
+            <p className="font-display text-xs font-extrabold leading-tight text-pool-deep truncate">
+              {player.full_name.split(" ")[0]}
+            </p>
+          </div>
+          <p className="flex items-baseline gap-1 font-mono text-2xl font-extrabold leading-none tabular-nums text-pool-deep">
+            <span>{player.primary_value}</span>
+            {showSuffix ? <span className="text-base">{suffix}</span> : null}
+            {!showSuffix ? (
+              <span className="text-[10px] font-bold uppercase tracking-eyebrow text-ink-500">
+                {metricLabel}
+              </span>
+            ) : null}
+          </p>
+        </>
+      ) : (
+        <p className="text-[11px] italic text-ink-500">Sin datos</p>
+      )}
     </div>
   );
 }
@@ -536,7 +557,7 @@ function TeamMatchesTab({
           Próximos partidos
         </Eyebrow>
         {upcoming.length === 0 ? (
-          <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-sm">
+          <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-sm text-ink-600">
             No hay partidos próximos.
           </div>
         ) : (
@@ -545,7 +566,7 @@ function TeamMatchesTab({
               <li key={m.id}>
                 <Link
                   href={`/matches/${m.id}` as Route}
-                  className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                 >
                   <PoolScoreboard
                     mode="preview"
@@ -568,7 +589,7 @@ function TeamMatchesTab({
           Últimos resultados
         </Eyebrow>
         {played.length === 0 ? (
-          <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-sm">
+          <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-sm text-ink-600">
             Aún no se ha jugado ningún partido.
           </div>
         ) : (
@@ -579,7 +600,7 @@ function TeamMatchesTab({
                 <li key={m.id} className="flex flex-col gap-1.5">
                   <Link
                     href={`/matches/${m.id}` as Route}
-                    className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                    className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
                   >
                     <PoolScoreboard
                       mode="final"
@@ -593,7 +614,7 @@ function TeamMatchesTab({
                       location={m.location ?? m.pool_name ?? null}
                     />
                   </Link>
-                  <div className="bg-paper-card shadow-elev-1 tracking-eyebrow flex items-center gap-1.5 self-start rounded-sm px-2 py-0.5 text-[10px] font-bold uppercase">
+                  <div className="flex items-center gap-1.5 self-start rounded-sm border border-ink-300 bg-paper-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-eyebrow shadow-elev-1">
                     {result ? <span style={{ color: result.color }}>{result.label}</span> : null}
                     <span className="text-ink-600">
                       · {relativeDay(m.scheduled_at, now)} {timeOf(m.scheduled_at)}

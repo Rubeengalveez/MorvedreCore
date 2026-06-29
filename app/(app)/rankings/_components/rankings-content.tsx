@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
+import { Flame } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { type CategoryCode } from "@/lib/domain/categories";
 import {
@@ -15,6 +16,7 @@ import type {
   RankingsPageMeta,
   RankingResult,
 } from "@/server/queries/rankings";
+import { StreakBadge } from "@/components/ui/streak-badge";
 
 import { ScopeTabs } from "./scope-tabs";
 import { MetricTabs } from "./metric-tabs";
@@ -71,13 +73,18 @@ export function RankingsContent({
   const top3 = ranking.rows.slice(0, 3);
   const hasData = ranking.rows.length > 0;
 
-  // Paginamos el resto de los jugadores del 4º puesto en adelante (slice 3+) de 10 en 10
   const restOfPlayers = ranking.rows.slice(3);
   const paged = paginateRanking({ ranking: restOfPlayers, page, page_size: 10 });
 
   const myOutsideTop10 =
     hasData && isMyPositionOutsideTopN(ranking.rows, myPlayerId, 10);
   const showMyPositionCard = ranking.my_position && !myOutsideTop10;
+
+  const streakSummary = buildStreakSummary(
+    ranking.rows,
+    myPlayerId,
+    metricMeta,
+  );
 
   function navigate(next: {
     scope?: RankingScope;
@@ -131,9 +138,8 @@ export function RankingsContent({
         onChange={(s) => navigate({ scope: s })}
       />
 
-      {/* Controles del Ranking de Rachas */}
       {activeMetric === "streak" ? (
-        <div className="flex flex-col gap-3 rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1">
+        <div className="rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1">
           <div className="flex flex-col gap-1.5">
             <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
               Tipo de Racha
@@ -148,9 +154,17 @@ export function RankingsContent({
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => navigate({ streak_type: t.id as "train_consec" | "goals_consec" | "excl_consec" | "mvp_consec" })}
+                  onClick={() =>
+                    navigate({
+                      streak_type: t.id as
+                        | "train_consec"
+                        | "goals_consec"
+                        | "excl_consec"
+                        | "mvp_consec",
+                    })
+                  }
                   className={cn(
-                    "inline-flex h-9 items-center rounded-full px-4 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
+                    "inline-flex h-8 items-center rounded-full px-3 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
                     activeStreakType === t.id
                       ? "bg-pool-deep text-paper shadow-sm"
                       : "border border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",
@@ -162,7 +176,7 @@ export function RankingsContent({
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-ink-300/40 pt-3">
+          <div className="mt-3 flex items-center justify-between border-t border-ink-300/40 pt-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
               Ordenar por
             </span>
@@ -177,7 +191,7 @@ export function RankingsContent({
                     : "text-pool-deep hover:text-action",
                 )}
               >
-                Racha Actual
+                Actual
               </button>
               <button
                 type="button"
@@ -189,10 +203,34 @@ export function RankingsContent({
                     : "text-pool-deep hover:text-action",
                 )}
               >
-                Mejor Racha
+                Mejor
               </button>
             </div>
           </div>
+        </div>
+      ) : null}
+
+      {streakSummary.length > 0 ? (
+        <div
+          data-streak-strip
+          className="flex flex-wrap items-center gap-1.5 rounded-md border border-action/30 bg-action/5 px-3 py-2.5"
+        >
+          <Flame
+            className="h-3.5 w-3.5 shrink-0 fill-action text-action"
+            aria-hidden="true"
+          />
+          <span className="mr-1 text-[10px] font-extrabold uppercase tracking-wider text-ink-600">
+            Rachas
+          </span>
+          {streakSummary.map((chip) => (
+            <StreakBadge
+              key={chip.key}
+              value={chip.value}
+              label={chip.label}
+              best={chip.best}
+              size="sm"
+            />
+          ))}
         </div>
       ) : null}
 
@@ -214,20 +252,19 @@ export function RankingsContent({
       ) : (
         <>
           {showMyPositionCard && ranking.my_position ? (
-            <div className="rounded-md border border-pool-deep/30 bg-pool-foam/60 p-3">
+            <div className="rounded-md border border-pool-deep/30 bg-pool-foam/60 p-3 shadow-elev-1">
               <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
                 Tu posición
               </p>
               <p className="mt-1 text-sm font-semibold text-pool-deep">
-                {ranking.my_position.row.position}º de {ranking.total_players} en {metricMeta.label.toLowerCase()}{" "}
-                {ranking.my_position.delta_to_next != null
-                  ? `· a ${ranking.my_position.delta_to_next} del 1º`
-                  : "· líder"}
+                {ranking.my_position.row.position}º de {ranking.total_players} en {metricMeta.label.toLowerCase()}
+                {ranking.my_position.delta_to_next != null && ranking.my_position.delta_to_next > 0
+                  ? ` — a ${ranking.my_position.delta_to_next} del ${ranking.my_position.row.position - 1}º`
+                  : " — líder"}
               </p>
             </div>
           ) : null}
 
-          {/* El podio (Top 3) se muestra únicamente en la página 1 */}
           {page === 1 ? (
             <TopThreeCards
               items={top3}
@@ -249,11 +286,13 @@ export function RankingsContent({
                 >
                   Ranking completo
                 </h2>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-ink-400">
-                  Pág. {paged.page} / {paged.total_pages}
-                </span>
+                {paged.total_pages > 1 ? (
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-ink-400">
+                    Pág. {paged.page} / {paged.total_pages}
+                  </span>
+                ) : null}
               </div>
-              <ul className="flex flex-col gap-1">
+              <ul className="flex flex-col gap-1.5">
                 {paged.rows.map((row) => (
                   <li key={row.player_id}>
                     <RankingRow
@@ -308,4 +347,30 @@ function scopeLabelOf(scope: RankingScope, meta: RankingsPageMeta): string {
     return label ?? scope.category_code;
   }
   return meta.teams.find((t) => t.id === scope.team_id)?.label ?? "Equipo";
+}
+
+interface StreakChip {
+  key: string;
+  value: number;
+  label: string;
+  best: number | null;
+}
+
+function buildStreakSummary(
+  rows: RankingResult["rows"],
+  myPlayerId: string,
+  metric: { id: RankingMetric; label: string },
+): StreakChip[] {
+  if (metric.id !== "streak") return [];
+  const me = rows.find((r) => r.player_id === myPlayerId);
+  if (!me) return [];
+  if (me.primary_value <= 0) return [];
+  return [
+    {
+      key: "me",
+      value: me.primary_value,
+      label: "tú",
+      best: null,
+    },
+  ];
 }

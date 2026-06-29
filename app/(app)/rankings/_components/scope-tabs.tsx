@@ -16,7 +16,8 @@ export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
     <div
       role="tablist"
       aria-label="Filtrar por categoría o equipo"
-      className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1"
+      data-scope-tabs
+      className="sticky top-[60px] z-10 -mx-4 flex gap-2 overflow-x-auto bg-paper/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-paper/80 border-b border-ink-200"
     >
       <ScopePill
         label="Club"
@@ -62,10 +63,10 @@ function ScopePill({
       aria-selected={isActive}
       onClick={onClick}
       className={cn(
-        "inline-flex h-11 min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+        "inline-flex h-9 min-h-9 shrink-0 items-center rounded-full px-3.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
         isActive
-          ? "border-pool-deep bg-pool-deep text-paper"
-          : "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",
+          ? "bg-pool-deep text-paper shadow-sm"
+          : "border border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",
       )}
     >
       {label}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { Balon, Trofeo } from "@/components/brand/pictograms";
+import { Eyebrow } from "@/components/ui/eyebrow";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
@@ -135,18 +136,18 @@ export default async function RankingsPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <Trofeo className="h-7 w-7" accent="var(--ball-gold)" />
-          <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
+      <header className="flex items-center justify-between gap-2 pt-1">
+        <div className="min-w-0">
+          <Eyebrow className="text-ink-600">Temporada {meta.season.label}</Eyebrow>
+          <h1 className="mt-0.5 font-display text-2xl font-extrabold leading-tight tracking-tight text-pool-deep truncate">
             Rankings
+            <span className="ml-2 align-baseline text-sm font-semibold text-ink-600">
+              {scopeLabel} · {metricMeta.label}
+            </span>
           </h1>
         </div>
-        <p className="text-sm text-ink-600">
-          Temporada {meta.season.label} · {scopeLabel} · {metricMeta.label}
-          {metric === "streak" ? ` (${streakType === "train_consec" ? "Entrenos" : streakType === "goals_consec" ? "Goles" : streakType === "excl_consec" ? "Exclusiones" : "MVP"} - ${streakOrder === "best" ? "Mejor" : "Actual"})` : ""}
-        </p>
+        <Trofeo className="h-7 w-7 shrink-0" accent="var(--ball-gold)" />
       </header>
 
       <RankingsContent
