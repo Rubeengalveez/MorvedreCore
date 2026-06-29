@@ -8,20 +8,17 @@ import {
   Calendario,
   Equipo,
   Inicio,
-  Megafone,
-  Tiburon,
+  Tienda,
   Trofeo,
-  Usuario,
 } from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
 
 const items = [
   { href: "/dashboard", label: "Inicio", Pictogram: Inicio },
-  { href: "/news", label: "Noticias", Pictogram: Megafone },
   { href: "/calendar", label: "Calendario", Pictogram: Calendario },
   { href: "/rankings", label: "Rankings", Pictogram: Trofeo },
   { href: "/team", label: "Equipo", Pictogram: Equipo },
-  { href: "/profile", label: "Yo", Pictogram: Usuario },
+  { href: "/shop", label: "Tienda", Pictogram: Tienda },
 ] as const;
 
 export function BottomNav() {
@@ -73,19 +70,6 @@ export function BottomNav() {
           );
         })}
       </ul>
-      <TiburonHiddenBadge />
     </nav>
-  );
-}
-
-function TiburonHiddenBadge() {
-  return (
-    <span
-      aria-hidden="true"
-      data-morvedre-shark
-      className="pointer-events-none absolute right-3 -top-1 h-3 w-4 opacity-50"
-    >
-      <Tiburon className="h-full w-full" accent="var(--pool-deep)" />
-    </span>
   );
 }

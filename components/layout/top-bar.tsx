@@ -7,7 +7,7 @@ import { Logo } from "@/components/brand/logo";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { type ProfileSummary } from "@/components/layout/profile-switcher";
 import { Avatar } from "@/components/ui/avatar";
-import { Tiburon } from "@/components/brand/pictograms";
+import { Megafone, Tiburon } from "@/components/brand/pictograms";
 import {
   getNotificationsForProfile,
   getUnreadNotificationsCount,
@@ -61,6 +61,14 @@ export async function TopBar({
         <Tiburon className="h-6 w-6 hidden sm:block" accent={teamColor} />
       </Link>
       <div className="flex items-center gap-2">
+        <Link
+          href={"/news" as Route}
+          title="Noticias"
+          aria-label="Ir a noticias"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded border border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+        >
+          <Megafone className="h-5 w-5" accent="var(--pool-deep)" aria-hidden="true" />
+        </Link>
         {isPrivileged ? (
           <Link
             href="/admin"

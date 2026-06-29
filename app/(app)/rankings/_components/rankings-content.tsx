@@ -24,7 +24,7 @@ import { TopThreeCards } from "./top-three-cards";
 import { RankingRow } from "./ranking-row";
 import { MyPositionSticky } from "./my-position-sticky";
 import { Pagination } from "./pagination";
-import { OpponentsMini } from "./opponents-mini";
+
 import { EmptyState } from "./empty-state";
 
 const METRICS: ReadonlyArray<{ id: RankingMetric; label: string; suffix: string }> = [
@@ -38,7 +38,7 @@ const METRICS: ReadonlyArray<{ id: RankingMetric; label: string; suffix: string 
 export interface RankingsContentProps {
   meta: RankingsPageMeta;
   ranking: RankingResult;
-  opponents: OpponentHistoryRow[];
+  opponents?: OpponentHistoryRow[];
   activeScope: RankingScope;
   activeMetric: RankingMetric;
   myPlayerId: string;
@@ -57,7 +57,6 @@ function scopeToParam(scope: RankingScope): string {
 export function RankingsContent({
   meta,
   ranking,
-  opponents,
   activeScope,
   activeMetric,
   myPlayerId,
@@ -318,8 +317,6 @@ export function RankingsContent({
           ) : null}
         </>
       )}
-
-      {opponents.length > 0 ? <OpponentsMini opponents={opponents} /> : null}
     </div>
   );
 }
