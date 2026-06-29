@@ -190,22 +190,41 @@ export interface RankingsPageMeta {
 export async function getRankingsMeta(activeSeasonId?: string): Promise<RankingsPageMeta> {
   const supabase = await createClient();
 
-  const [{ data: seasons }, { data: teams }, { data: rosters }] = await Promise.all([
-    supabase.from("seasons").select("id, label, is_current").order("label", { ascending: false }),
+  const [{ data: seasons }, { data: teamsData }, { data: rosters }] = await Promise.all([
+    supabase.from("seasons").select("id, label, is_current, start_date").order("start_date", { ascending: false }),
     supabase
       .from("teams")
       .select("id, label, category_code, color, season_id")
-      .eq("season_id", activeSeasonId ?? ""),
+      .order("start_date", { ascending: false }),
     supabase
       .from("team_rosters")
       .select("team_id, left_at"),
   ]);
 
   const seasonList = ((seasons ?? []) as Array<{ id: string; label: string; is_current: boolean }>);
-  const current = activeSeasonId
-    ? seasonList.find((s) => s.id === activeSeasonId)
-    : seasonList.find((s) => s.is_current);
-  const season = current ?? seasonList[0] ?? null;
+  const teamsAll = (teamsData ?? []) as Array<{ id: string; label: string; category_code: string; color: string; season_id: string }>;
+
+  let season: { id: string; label: string; is_current: boolean } | null = null;
+  if (activeSeasonId) {
+    season = seasonList.find((s) => s.id === activeSeasonId) ?? null;
+  } else {
+    const current = seasonList.find((s) => s.is_current);
+    if (current) {
+      const hasTeams = teamsAll.some((t) => t.season_id === current.id);
+      if (hasTeams) {
+        season = current;
+      }
+    }
+    if (!season) {
+      const seasonWithTeams = teamsAll.find((t) => t.season_id)?.season_id;
+      if (seasonWithTeams) {
+        season = seasonList.find((s) => s.id === seasonWithTeams) ?? null;
+      }
+    }
+    if (!season) {
+      season = seasonList[0] ?? null;
+    }
+  }
   if (!season) {
     return {
       season: { id: "", label: "" },
@@ -215,7 +234,7 @@ export async function getRankingsMeta(activeSeasonId?: string): Promise<Rankings
     };
   }
 
-  const seasonTeams = ((teams ?? []) as Array<{ id: string; label: string; category_code: string; color: string; season_id: string }>).filter(
+  const seasonTeams = teamsAll.filter(
     (t) => t.season_id === season.id,
   );
 
