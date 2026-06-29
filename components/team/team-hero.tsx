@@ -11,40 +11,33 @@ export interface TeamHeroProps {
 export function TeamHero({ team, seasonLabel, homePool }: TeamHeroProps) {
   return (
     <header
-      className="relative overflow-hidden rounded-md border border-ink-300 bg-paper"
-      style={{
-        borderTopWidth: "4px",
-        borderTopColor: team.color,
-        borderLeftWidth: "4px",
-        borderLeftColor: team.color,
-      }}
+      className="overflow-hidden rounded-md border border-ink-200 bg-paper-card"
+      style={{ borderTopWidth: "3px", borderTopColor: team.color }}
     >
-      <div className="flex flex-col gap-4 p-5">
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <CategoryBadge code={team.category_code} tone="solid" />
-            <GenderBadge gender={team.gender} />
-            {team.team_type === "school" ? (
-              <span className="inline-flex items-center rounded-full border border-ink-300 bg-paper px-2.5 py-1 text-xs font-semibold leading-none text-ink-600">
-                Escuela
-              </span>
-            ) : null}
-          </div>
-          <h1 className="font-display text-[32px] font-extrabold leading-[1.1] tracking-tight text-brand-deep sm:text-[40px]">
-            {team.label}
-          </h1>
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <CategoryBadge code={team.category_code} tone="solid" />
+          <GenderBadge gender={team.gender} />
+          {team.team_type === "school" ? (
+            <span className="text-eyebrow inline-flex items-center rounded-sm border border-ink-200 px-1.5 py-0.5 text-ink-600">
+              Escuela
+            </span>
+          ) : null}
         </div>
+        <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight text-pool-deep sm:text-3xl">
+          {team.label}
+        </h1>
         {(seasonLabel || homePool) ? (
-          <dl className="flex flex-wrap gap-x-6 gap-y-1 text-sm text-ink-600">
+          <dl className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-ink-500">
             {seasonLabel ? (
-              <div className="flex items-center gap-1.5">
-                <dt className="font-medium">Temporada:</dt>
+              <div className="flex items-center gap-1">
+                <dt className="font-semibold text-ink-700">Temporada:</dt>
                 <dd className="font-mono">{seasonLabel}</dd>
               </div>
             ) : null}
             {homePool ? (
-              <div className="flex items-center gap-1.5">
-                <dt className="font-medium">Piscina:</dt>
+              <div className="flex items-center gap-1">
+                <dt className="font-semibold text-ink-700">Piscina:</dt>
                 <dd>{homePool}</dd>
               </div>
             ) : null}

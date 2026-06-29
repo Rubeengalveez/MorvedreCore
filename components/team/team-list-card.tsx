@@ -1,12 +1,10 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { cn } from "@/lib/utils/cn";
+import { ChevronRight } from "lucide-react";
 
 import { CapTile } from "@/components/ui/cap-tile";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { Equipo } from "@/components/brand/pictograms";
 import { CategoryBadge } from "@/components/team/category-badge";
-import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import type { TeamListItem } from "@/server/queries/teams";
 
 export interface TeamListCardProps {
@@ -20,81 +18,67 @@ export function TeamListCard({
   team,
   isMyTeam = false,
   coachCapNumber = null,
-  variant = "default",
 }: TeamListCardProps) {
   const href = `/team/${team.id}` as Route;
-  const isFeatured = isMyTeam || variant === "featured";
-  const categoryLabel = CATEGORY_LABELS[team.category_code as CategoryCode] ?? team.category_code;
   const featuredCap = team.featured_player_cap ?? 1;
   const featuredLabel = team.featured_player_name ?? null;
+  void featuredCap;
+  void featuredLabel;
+  void coachCapNumber;
+
   return (
     <Link
       href={href}
       data-team-card
       data-my-team={isMyTeam}
       className={cn(
-        "group relative flex items-center gap-3 overflow-hidden rounded-md p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+        "group relative flex items-center gap-3 overflow-hidden rounded-md border bg-paper-card px-4 py-3.5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2",
         isMyTeam
-          ? "border-2 shadow-elev-2 hover:shadow-elev-3 scale-[1.01]"
-          : "border border-ink-300 bg-paper-card shadow-elev-1 hover:border-pool-blue hover:shadow-elev-2 hover:-translate-y-0.5"
+          ? "hover:shadow-md"
+          : "border-ink-200 hover:border-pool-blue hover:shadow-sm",
       )}
-      style={
-        isMyTeam
-          ? {
-              borderColor: team.color,
-              background: `radial-gradient(circle at top right, rgba(255, 107, 53, 0.1), transparent 70%), color-mix(in oklab, ${team.color} 10%, var(--paper-card))`,
-            }
-          : undefined
-      }
+      style={{
+        borderColor: isMyTeam ? team.color : undefined,
+        borderLeftWidth: isMyTeam ? "3px" : undefined,
+      }}
     >
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-0 left-0 w-1.5"
-        style={{ backgroundColor: team.color }}
-      />
-      <PictogramBadge pictogram={Equipo} color={team.color} size="md" />
-      <div className="flex min-w-0 flex-1 flex-col gap-1 pl-1">
-        <div className="flex flex-wrap items-center gap-1.5">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
           <CategoryBadge code={team.category_code} />
+          {isMyTeam ? (
+            <span
+              className="text-eyebrow inline-flex items-center rounded-sm px-1.5 py-0.5 text-paper"
+              style={{ backgroundColor: team.color }}
+            >
+              Mi equipo
+            </span>
+          ) : null}
           {team.team_type === "school" ? (
-            <span className="border-ink-300 bg-paper text-ink-600 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] leading-none font-semibold">
+            <span className="text-eyebrow inline-flex items-center rounded-sm border border-ink-200 px-1.5 py-0.5 text-ink-600">
               Escuela
             </span>
           ) : null}
-          {isMyTeam ? (
-            <span
-              className="tracking-eyebrow text-paper inline-flex items-center gap-1 rounded-sm px-1.5 py-0.5 text-[10px] font-extrabold uppercase"
-              style={{ backgroundColor: team.color }}
-            >
-              Tu equipo
-            </span>
-          ) : null}
         </div>
-        <span className="font-display text-pool-deep line-clamp-1 text-lg leading-tight font-extrabold">
+        <p className="font-display text-base font-extrabold leading-tight text-pool-deep line-clamp-1">
           {team.label}
-        </span>
-        <div className="text-ink-600 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px]">
-          <span className="text-ink-900 font-semibold">
-            {team.player_count} {team.player_count === 1 ? "jugador" : "jugadores"}
-          </span>
-          {team.coach_name ? (
-            <span>
-              <span className="text-ink-400">·</span> {team.coach_name}
-            </span>
-          ) : null}
-          {categoryLabel ? <span className="text-ink-400">· {categoryLabel}</span> : null}
-        </div>
+        </p>
+        <p className="mt-0.5 text-xs text-ink-500">
+          {team.player_count} {team.player_count === 1 ? "jugador" : "jugadores"}
+          {team.coach_name ? <> · {team.coach_name}</> : null}
+        </p>
       </div>
       {featuredLabel ? (
         <div className="flex shrink-0 flex-col items-center gap-0.5">
           <CapTile number={featuredCap} teamColor={team.color} size="sm" />
-          <span className="text-ink-700 line-clamp-1 max-w-[72px] text-center text-[10px] font-semibold">
+          <span className="text-ink-600 line-clamp-1 max-w-[60px] text-center text-[10px] font-medium">
             {featuredLabel.split(" ")[0]}
           </span>
         </div>
       ) : coachCapNumber != null ? (
         <CapTile number={coachCapNumber} teamColor={team.color} size="sm" />
-      ) : null}
+      ) : (
+        <ChevronRight className="h-4 w-4 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5" />
+      )}
     </Link>
   );
 }

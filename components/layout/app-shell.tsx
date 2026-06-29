@@ -21,7 +21,7 @@ export function AppShell({
         activeProfile={activeProfile}
         linkedProfiles={linkedProfiles}
       />
-      <main id="main-content" className="flex-1 pb-16">
+      <main id="main-content" className="flex-1" style={{ paddingBottom: "calc(60px + env(safe-area-inset-bottom))" }}>
         {children}
       </main>
       <BottomNav />

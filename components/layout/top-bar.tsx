@@ -1,13 +1,12 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { Settings } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/brand/logo";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
-import {
-  ProfileSwitcher,
-  type ProfileSummary,
-} from "@/components/layout/profile-switcher";
+import { type ProfileSummary } from "@/components/layout/profile-switcher";
+import { Avatar } from "@/components/ui/avatar";
 import {
   getNotificationsForProfile,
   getUnreadNotificationsCount,
@@ -21,9 +20,7 @@ export interface TopBarProps {
 }
 
 export async function TopBar({
-  ownProfile,
   activeProfile,
-  linkedProfiles,
 }: TopBarProps) {
   const supabase = await createClient();
   const [unread, items, rolesData] = await Promise.all([
@@ -34,14 +31,14 @@ export async function TopBar({
     supabase
       .from("user_roles")
       .select("role")
-      .eq("profile_id", ownProfile.id)
+      .eq("profile_id", activeProfile.id)
       .then(
         (res) => res,
         () => ({ data: [] }),
       ),
   ]);
 
-  const userRoles = (rolesData?.data ?? []).map((r: any) => r.role);
+  const userRoles = ((rolesData?.data ?? []) as Array<{ role: string }>).map((r) => r.role);
   const isPrivileged =
     userRoles.includes("admin") ||
     userRoles.includes("coach") ||
@@ -52,7 +49,8 @@ export async function TopBar({
   return (
     <header
       data-top-bar
-      className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-2 border-b border-ink-300 bg-paper px-4 pt-[env(safe-area-inset-top)] shadow-elev-1"
+      className="sticky top-0 z-30 flex h-[60px] items-center justify-between gap-2 border-t-[3px] border-b border-ink-300 bg-paper px-4 pt-[env(safe-area-inset-top)] shadow-elev-1 transition-all duration-300"
+      style={{ borderTopColor: teamColor }}
     >
       <div className="flex items-center gap-1.5">
         <Logo size="sm" withWordmark />
@@ -82,11 +80,18 @@ export async function TopBar({
           initialNotifications={items}
           showFullListHref="/notifications"
         />
-        <ProfileSwitcher
-          ownProfile={ownProfile}
-          activeProfile={activeProfile}
-          linkedProfiles={linkedProfiles}
-        />
+        <Link
+          href={"/profile" as Route}
+          title="Mi Perfil"
+          className="h-10 w-10 shrink-0 overflow-hidden rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+          style={{ border: `2px solid ${teamColor}` }}
+        >
+          <Avatar
+            src={activeProfile.photo_url}
+            name={activeProfile.full_name}
+            size={36}
+          />
+        </Link>
       </div>
     </header>
   );

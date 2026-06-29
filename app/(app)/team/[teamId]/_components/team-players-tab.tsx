@@ -1,8 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import { Star, Shield, Award, Calendar, CircleDot } from "lucide-react";
+import { Star, Shield, Award, Calendar, CircleDot, Flame } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { CapTile } from "@/components/ui/cap-tile";
@@ -20,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils/cn";
-import type { getTeamRoster, getTeamStaff } from "@/server/queries/teams";
+import type { getTeamStaff } from "@/server/queries/teams";
 
 interface RosterPlayer {
   player_id: string;
@@ -194,11 +193,11 @@ export function TeamPlayersTab({
                           subValue={`${selectedStats.trainings_attended} de ${selectedStats.trainings_total} entrenos`}
                         />
                         <StatBox
-                          icon={Star}
-                          label="Racha Actual"
-                          value={`🔥 ${selectedStats.attendance_streak}`}
+                          icon={Flame}
+                          label="Racha actual"
+                          value={`${selectedStats.attendance_streak}`}
                           subValue="Entrenamientos seguidos"
-                          valueColor="text-[#FF6B35]"
+                          valueColor="text-action"
                         />
                       </div>
                     ) : (

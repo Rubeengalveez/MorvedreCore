@@ -76,7 +76,7 @@ function isInScope(player: PlayerStatsInput, scope: RankingScope): boolean {
   return player.team_id === scope.team_id;
 }
 
-function metricIsAscending(metric: RankingMetric): boolean {
+function metricIsAscending(_metric: RankingMetric): boolean {
   return false;
 }
 

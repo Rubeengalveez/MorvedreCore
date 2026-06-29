@@ -39,8 +39,8 @@ function throwIfError(error: { message: string } | null, fallback: string): void
   }
 }
 
-async function loadSeasonData(seasonId: string) {
-  const supabase = await createClient();
+async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<typeof createClient>>) {
+  const supabase = client || (await createClient());
   const [
     { data: players, error: playersError },
     { data: teams, error: teamsError },
@@ -292,7 +292,7 @@ export async function recomputeSnapshotForPlayer(
 ): Promise<void> {
   const admin = createAdminClient();
   const { players, teams, matches, callups, stats, sessions, attendance, rosters } =
-    await loadSeasonData(seasonId);
+    await loadSeasonData(seasonId, admin);
 
   const player = players.find((p) => p.id === playerId);
   if (!player) {

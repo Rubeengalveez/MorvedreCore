@@ -144,9 +144,9 @@ function TeamSide({
         {shortLabel(label)} {isHome ? "(L)" : "(V)"}
       </span>
       {showScore ? (
-        <span className="text-score-xl text-pool-deep">{score ?? 0}</span>
+        <span className="font-mono text-4xl font-extrabold leading-none tabular-nums text-pool-deep sm:text-[56px]">{score ?? 0}</span>
       ) : (
-        <span className="font-display text-lg font-extrabold leading-tight text-pool-deep sm:text-xl">
+        <span className="font-display text-base font-extrabold leading-tight text-pool-deep line-clamp-2">
           {shortLabel(label)}
         </span>
       )}
@@ -169,14 +169,16 @@ function Center({
 }) {
   return (
     <div
-      className="flex min-w-[110px] flex-col items-center justify-center gap-0.5 border-x border-ink-300 px-3 py-3"
+      className="flex min-w-[80px] flex-col items-center justify-center gap-0.5 border-x border-ink-200 px-2 py-3"
       aria-live="polite"
     >
       {mode === "preview" && showTime ? (
         <>
-          <span className="text-eyebrow text-ink-600">vs</span>
-          <span className="text-score-lg text-pool-deep">{formatTime(scheduledAt)}</span>
-          <span className="text-[10px] font-semibold uppercase tracking-eyebrow text-ink-600">
+          <span className="text-eyebrow text-ink-500">vs</span>
+          <span className="font-mono text-2xl font-extrabold leading-none tabular-nums text-pool-deep sm:text-[40px]">
+            {formatTime(scheduledAt)}
+          </span>
+          <span className="text-[9px] font-semibold uppercase tracking-wide text-ink-500">
             {formatDateShort(scheduledAt)}
           </span>
         </>
@@ -189,7 +191,9 @@ function Center({
           >
             En vivo
           </span>
-          <span className="text-score-lg text-pool-deep">{clock ?? "00:00"}</span>
+          <span className="font-mono text-2xl font-extrabold leading-none tabular-nums text-pool-deep sm:text-[40px]">
+            {clock ?? "00:00"}
+          </span>
           <span className="text-eyebrow text-ink-600">{period ?? 1}º P</span>
         </>
       ) : null}

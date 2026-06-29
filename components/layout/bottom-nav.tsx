@@ -8,17 +8,17 @@ import {
   Calendario,
   Equipo,
   Inicio,
+  Tienda,
   Trofeo,
-  Usuario,
 } from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
 
 const items = [
   { href: "/dashboard", label: "Inicio", Pictogram: Inicio },
   { href: "/calendar", label: "Calendario", Pictogram: Calendario },
-  { href: "/rankings", label: "Rankings", Pictogram: Trofeo },
   { href: "/team", label: "Equipo", Pictogram: Equipo },
-  { href: "/profile", label: "Yo", Pictogram: Usuario },
+  { href: "/rankings", label: "Rankings", Pictogram: Trofeo },
+  { href: "/shop", label: "Tienda", Pictogram: Tienda },
 ] as const;
 
 export function BottomNav() {
@@ -28,46 +28,39 @@ export function BottomNav() {
     <nav
       aria-label="Navegación principal"
       data-bottom-nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-300 bg-paper pb-[env(safe-area-inset-bottom)] shadow-elev-2"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-ink-200 bg-paper-card pb-[env(safe-area-inset-bottom)]"
+      style={{ boxShadow: "0 -2px 16px rgba(6,32,72,0.07)" }}
     >
-      <ul className="mx-auto flex h-16 max-w-md items-stretch">
+      <ul className="mx-auto flex h-[60px] max-w-lg items-stretch">
         {items.map((item) => {
           const Pictogram = item.Pictogram;
           const href = item.href;
           const isActive =
             pathname === href || pathname.startsWith(`${href}/`);
           return (
-            <li key={href} className="flex-1">
+            <li key={href} className="relative flex-1">
+              {isActive ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-[2px] rounded-b-sm bg-pool-blue"
+                />
+              ) : null}
               <Link
                 href={href as Route}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-full w-full flex-col items-center justify-center gap-1 px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
-                  isActive ? "text-pool-blue" : "text-ink-600",
+                  "flex h-full w-full flex-col items-center justify-center gap-[3px] px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-inset",
+                  isActive ? "text-pool-blue" : "text-ink-400 hover:text-ink-600",
                 )}
               >
                 <Pictogram
-                  className="h-7 w-7"
+                  className="h-6 w-6 shrink-0"
                   accent={isActive ? "var(--pool-blue)" : "currentColor"}
                 />
                 <span
-                  aria-hidden="true"
-                  className="flex h-1.5 w-1.5 items-center justify-center"
-                >
-                  {isActive ? (
-                    <span
-                      data-nav-dot
-                      className="block h-1.5 w-1.5 rounded-full"
-                      style={{ backgroundColor: "var(--ball-gold)" }}
-                    />
-                  ) : null}
-                </span>
-                <span
                   className={cn(
-                    "text-xs leading-none",
-                    isActive
-                      ? "font-display font-extrabold text-pool-deep"
-                      : "font-medium",
+                    "text-[10px] leading-none tracking-wide",
+                    isActive ? "font-extrabold text-pool-blue" : "font-medium",
                   )}
                 >
                   {item.label}

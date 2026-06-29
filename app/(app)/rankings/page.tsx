@@ -12,7 +12,7 @@ import {
   type RankingResult,
 } from "@/server/queries/rankings";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
-import { RANKINGS_PAGE_SIZE, type RankingMetric, type RankingScope } from "@/lib/domain/rankings";
+import { type RankingMetric, type RankingScope } from "@/lib/domain/rankings";
 
 import { RankingsContent } from "./_components/rankings-content";
 
@@ -157,7 +157,6 @@ export default async function RankingsPage({
         activeMetric={metric}
         myPlayerId={activeProfile.id}
         page={page}
-        pageSize={RANKINGS_PAGE_SIZE}
         baseParams={baseParams.toString()}
         activeStreakType={streakType}
         activeStreakOrder={streakOrder}

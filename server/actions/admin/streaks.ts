@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -65,8 +66,8 @@ interface SeasonData {
   rosters: TeamRosterLite[];
 }
 
-async function loadSeasonData(seasonId: string): Promise<SeasonData> {
-  const supabase = await createClient();
+async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promise<SeasonData> {
+  const supabase = client || (await createClient());
   const [matchesRes, statsRes, sessionsRes, attendanceRes, rostersRes] = await Promise.all([
     supabase
       .from("matches")
@@ -101,8 +102,9 @@ async function readCurrentRow(
   subjectType: SubjectType,
   subjectId: string,
   streakType: StreakType,
+  client?: SupabaseClient,
 ): Promise<StreakRecord> {
-  const supabase = await createClient();
+  const supabase = client || (await createClient());
   const { data } = await supabase
     .from("streaks")
     .select("current_value, best_value, best_at, last_event_at")
@@ -149,8 +151,8 @@ async function upsertStreak(
   }
 }
 
-export async function recomputeStreaksForMatch(matchId: string): Promise<void> {
-  const supabase = await createClient();
+export async function recomputeStreaksForMatch(matchId: string, client?: SupabaseClient): Promise<void> {
+  const supabase = client || (await createClient());
   const { data: match } = await supabase
     .from("matches")
     .select("id, season_id, team_id, status, scheduled_at, final_score_us, final_score_them, mvp_player_id")
@@ -165,7 +167,8 @@ export async function recomputeStreaksForMatch(matchId: string): Promise<void> {
 
 async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<void> {
   const seasonId = match.season_id;
-  const data = await loadSeasonData(seasonId);
+  const admin = createAdminClient();
+  const data = await loadSeasonData(seasonId, admin);
 
   // MVP automático: calcular y persistir en la base de datos
   const statsForMatch = data.matchStats.filter((s) => s.match_id === match.id);
@@ -176,8 +179,6 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
   }));
   const mvpResult = computeMvp(candidates);
   const mvpPlayerIds = mvpResult.player_ids;
-
-  const admin = createAdminClient();
 
   // 1. Poner mvp = false para todos los jugadores del partido primero
   const { error: resetErr } = await admin
@@ -229,9 +230,9 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
     );
     const mvpMatches = playerMatches.map((mm) => ({ id: mm.id, scheduled_at: mm.scheduled_at, mvp_player_id: mm.mvp_player_id }));
 
-    await upsertStreakFromEvents(seasonId, "player", pid, "goals_consec", goalsConsecEvents(playerStats), nowIso);
-    await upsertStreakFromEvents(seasonId, "player", pid, "excl_consec", exclConsecEvents(playerStats), nowIso);
-    await upsertStreakFromEvents(seasonId, "player", pid, "mvp_consec", mvpConsecEvents(mvpMatches, pid), nowIso);
+    await upsertStreakFromEvents(seasonId, "player", pid, "goals_consec", goalsConsecEvents(playerStats), nowIso, admin);
+    await upsertStreakFromEvents(seasonId, "player", pid, "excl_consec", exclConsecEvents(playerStats), nowIso, admin);
+    await upsertStreakFromEvents(seasonId, "player", pid, "mvp_consec", mvpConsecEvents(mvpMatches, pid), nowIso, admin);
   }
 
   // 2) train_consec para todos los jugadores del roster del equipo del partido
@@ -240,7 +241,7 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
   const teamSessions = data.sessions.filter((s) => s.team_id === teamId);
   for (const pid of teamPlayerIds) {
     const playerAtt = data.attendance.filter((a) => a.player_id === pid);
-    await upsertStreakFromEvents(seasonId, "player", pid, "train_consec", trainConsecEvents(teamSessions, playerAtt), nowIso);
+    await upsertStreakFromEvents(seasonId, "player", pid, "train_consec", trainConsecEvents(teamSessions, playerAtt), nowIso, admin);
   }
 
   // 3) wins_consec para el equipo del partido
@@ -251,12 +252,17 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
     "wins_consec",
     winsConsecEvents(data.matches.filter((m) => m.team_id === teamId)),
     nowIso,
+    admin,
   );
 
-  revalidatePath("/dashboard");
-  revalidatePath("/profile");
-  revalidatePath("/team");
-  revalidatePath("/rankings");
+  try {
+    revalidatePath("/dashboard");
+    revalidatePath("/profile");
+    revalidatePath("/team");
+    revalidatePath("/rankings");
+  } catch {
+    // Ignorar errores de revalidatePath en ejecuciones fuera de request (scripts CLI)
+  }
 }
 
 async function upsertStreakFromEvents(
@@ -266,8 +272,9 @@ async function upsertStreakFromEvents(
   streakType: StreakType,
   events: { occurred_at: string; pass: boolean }[],
   nowIso: string,
+  client?: SupabaseClient,
 ): Promise<void> {
-  const prev = await readCurrentRow(seasonId, subjectType, subjectId, streakType);
+  const prev = await readCurrentRow(seasonId, subjectType, subjectId, streakType, client);
   const next = applyStreak(prev, events, nowIso);
   await upsertStreak(seasonId, subjectType, subjectId, streakType, next);
 }

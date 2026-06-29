@@ -2,12 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Route } from "next";
-import { Star, Shield, Award, Calendar, Trophy, CircleDot, Flame } from "lucide-react";
+import { Flame, Trophy } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
-import { Balon, Porteria, Silbato } from "@/components/brand/pictograms";
 import { Avatar } from "@/components/ui/avatar";
-import { CapTile } from "@/components/ui/cap-tile";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
@@ -16,12 +14,8 @@ import { Tabs } from "@/components/ui/tabs";
 import { TeamHero } from "@/components/team/team-hero";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
-import { getRankings } from "@/server/queries/rankings";
-import {
-  getStreakForTeam,
-  getStreaksForPlayer,
-  type ActiveStreakRow,
-} from "@/server/queries/streaks";
+import { getStreakForTeam } from "@/server/queries/streaks";
+import type { ActiveStreakRow } from "@/server/queries/streaks";
 import { getTeamById, getTeamMatches, getTeamRoster, getTeamStaff } from "@/server/queries/teams";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 
@@ -66,12 +60,23 @@ function competitionLabel(type: string | null | undefined): string {
   return "Liga";
 }
 
-function toActiveStreak(row: ActiveStreakRow): ActiveStreak {
-  return {
-    type: row.type,
-    current_value: row.current_value,
-    best_value: row.best_value,
-  };
+interface TeamMatchLite {
+  id: string;
+  opponent: string;
+  scheduled_at: string;
+  status: string;
+  competition_type: string | null;
+  is_home: boolean;
+  location: string | null;
+  pool_name: string | null;
+  final_score_us: number | null;
+  final_score_them: number | null;
+}
+
+interface TeamLeader {
+  full_name: string;
+  photo_url: string | null;
+  primary_value: number;
 }
 
 function relativeDay(iso: string, now: Date): string {
@@ -102,7 +107,6 @@ export default async function TeamDetailPage({
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const { activeProfile, ownProfile } = ctx;
 
   const { teamId } = await params;
   const sp = await searchParams;
@@ -114,11 +118,6 @@ export default async function TeamDetailPage({
   const season = await getCurrentSeason();
   const inSeason = season ? team.season_id === season.id : false;
   const seasonId = inSeason ? (season?.id ?? null) : null;
-  const isMyTeam = seasonId
-    ? ownProfile.id === activeProfile.id
-      ? await isProfileOnTeam(ownProfile.id, team.id)
-      : await isProfileOnTeam(activeProfile.id, team.id)
-    : false;
 
   const supabase = await createClient();
 
@@ -126,20 +125,12 @@ export default async function TeamDetailPage({
     roster,
     staff,
     teamMatches,
-    playerStreaks,
     teamWinStreak,
     teamSnapshotsRes,
-    catGoalsRes,
-    catExclRes,
-    catMvpRes,
-    catAttendanceRes,
   ] = await Promise.all([
     getTeamRoster(team.id),
     getTeamStaff(team.id),
     getTeamMatches(team.id, 20),
-    seasonId
-      ? getStreaksForPlayer(seasonId, activeProfile.id)
-      : Promise.resolve([] as ActiveStreakRow[]),
     seasonId ? getStreakForTeam(seasonId, team.id, "wins_consec") : Promise.resolve(null),
     seasonId
       ? supabase
@@ -149,43 +140,7 @@ export default async function TeamDetailPage({
           .eq("scope", "team")
           .eq("scope_key", team.id)
       : Promise.resolve({ data: [] }),
-    seasonId
-      ? getRankings({
-          season_id: seasonId,
-          scope: { kind: "category", category_code: team.category_code },
-          metric: "goals",
-        }).catch(() => ({ rows: [] }))
-      : Promise.resolve({ rows: [] }),
-    seasonId
-      ? getRankings({
-          season_id: seasonId,
-          scope: { kind: "category", category_code: team.category_code },
-          metric: "exclusions",
-        }).catch(() => ({ rows: [] }))
-      : Promise.resolve({ rows: [] }),
-    seasonId
-      ? getRankings({
-          season_id: seasonId,
-          scope: { kind: "category", category_code: team.category_code },
-          metric: "mvp",
-        }).catch(() => ({ rows: [] }))
-      : Promise.resolve({ rows: [] }),
-    seasonId
-      ? getRankings({
-          season_id: seasonId,
-          scope: { kind: "category", category_code: team.category_code },
-          metric: "attendance",
-          min_trainings_total: 3,
-        }).catch(() => ({ rows: [] }))
-      : Promise.resolve({ rows: [] }),
   ]);
-
-  const categoryLeaders = {
-    goals: catGoalsRes.rows[0] ?? null,
-    exclusions: catExclRes.rows[0] ?? null,
-    mvp: catMvpRes.rows[0] ?? null,
-    attendance: catAttendanceRes.rows[0] ?? null,
-  };
 
   const snapshots = (teamSnapshotsRes.data ?? []).map((row) => ({
     player_id: row.player_id,
@@ -199,6 +154,80 @@ export default async function TeamDetailPage({
     attendance_pct: Number(row.attendance_pct ?? 0),
     attendance_streak: row.attendance_streak,
   }));
+
+  interface TeamLeader {
+    full_name: string;
+    photo_url: string | null;
+    primary_value: number;
+  }
+
+  const teamLeaders: {
+    goals: TeamLeader | null;
+    mvp: TeamLeader | null;
+    exclusions: TeamLeader | null;
+    attendance: TeamLeader | null;
+  } = {
+    goals: null,
+    mvp: null,
+    exclusions: null,
+    attendance: null,
+  };
+
+  if (snapshots.length > 0) {
+    const sortedGoals = [...snapshots].sort((a, b) => b.goals - a.goals);
+    const topGoal = sortedGoals[0];
+    if (topGoal && topGoal.goals > 0) {
+      const p = roster.find((r) => r.player_id === topGoal.player_id);
+      if (p) {
+        teamLeaders.goals = {
+          full_name: p.full_name,
+          photo_url: p.photo_url,
+          primary_value: topGoal.goals,
+        };
+      }
+    }
+
+    const sortedMvp = [...snapshots].sort((a, b) => b.mvp_count - a.mvp_count);
+    const topMvp = sortedMvp[0];
+    if (topMvp && topMvp.mvp_count > 0) {
+      const p = roster.find((r) => r.player_id === topMvp.player_id);
+      if (p) {
+        teamLeaders.mvp = {
+          full_name: p.full_name,
+          photo_url: p.photo_url,
+          primary_value: topMvp.mvp_count,
+        };
+      }
+    }
+
+    const sortedExcl = [...snapshots].sort((a, b) => b.exclusions - a.exclusions);
+    const topExcl = sortedExcl[0];
+    if (topExcl && topExcl.exclusions > 0) {
+      const p = roster.find((r) => r.player_id === topExcl.player_id);
+      if (p) {
+        teamLeaders.exclusions = {
+          full_name: p.full_name,
+          photo_url: p.photo_url,
+          primary_value: topExcl.exclusions,
+        };
+      }
+    }
+
+    const sortedAtt = [...snapshots]
+      .filter((s) => s.trainings_total >= 3)
+      .sort((a, b) => b.attendance_pct - a.attendance_pct);
+    const topAtt = sortedAtt[0];
+    if (topAtt && topAtt.attendance_pct > 0) {
+      const p = roster.find((r) => r.player_id === topAtt.player_id);
+      if (p) {
+        teamLeaders.attendance = {
+          full_name: p.full_name,
+          photo_url: p.photo_url,
+          primary_value: Math.round(topAtt.attendance_pct),
+        };
+      }
+    }
+  }
 
   const now = new Date();
   const upcomingMatches = teamMatches
@@ -242,10 +271,8 @@ export default async function TeamDetailPage({
             coachName={coachName}
             lastMatch={lastMatch}
             nextMatch={nextMatch}
-            categoryLeaders={categoryLeaders}
+            categoryLeaders={teamLeaders}
             teamWinStreak={teamWinStreak}
-            playerStreaks={playerStreaks}
-            isMyTeam={isMyTeam}
           />
         ) : null}
 
@@ -261,26 +288,6 @@ export default async function TeamDetailPage({
   );
 }
 
-async function isProfileOnTeam(profileId: string, teamId: string): Promise<boolean> {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("team_rosters")
-    .select("id")
-    .eq("team_id", teamId)
-    .eq("player_id", profileId)
-    .is("left_at", null)
-    .maybeSingle();
-  if (data) return true;
-  const { data: staff } = await supabase
-    .from("team_staff")
-    .select("id")
-    .eq("team_id", teamId)
-    .eq("profile_id", profileId)
-    .maybeSingle();
-  return staff != null;
-}
-
 function TeamPrincipal({
   team,
   playerCount,
@@ -289,23 +296,19 @@ function TeamPrincipal({
   nextMatch,
   categoryLeaders,
   teamWinStreak,
-  playerStreaks,
-  isMyTeam,
 }: {
   team: Awaited<ReturnType<typeof getTeamById>>;
   playerCount: number;
   coachName: string;
-  lastMatch: any;
-  nextMatch: any;
+  lastMatch: TeamMatchLite | null;
+  nextMatch: TeamMatchLite | null;
   categoryLeaders: {
-    goals: any;
-    exclusions: any;
-    mvp: any;
-    attendance: any;
+    goals: TeamLeader | null;
+    exclusions: TeamLeader | null;
+    mvp: TeamLeader | null;
+    attendance: TeamLeader | null;
   };
   teamWinStreak: ActiveStreakRow | null;
-  playerStreaks: ActiveStreakRow[];
-  isMyTeam: boolean;
 }) {
   if (!team) return null;
   const categoryLabel = CATEGORY_LABELS[team.category_code as CategoryCode] ?? team.category_code;
@@ -314,27 +317,24 @@ function TeamPrincipal({
   return (
     <div className="flex flex-col gap-4">
       {/* Resumen del equipo */}
-      <section className="rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1">
-        <h2 className="font-display text-sm font-extrabold uppercase tracking-wider text-ink-600 mb-3">
-          Resumen del Equipo
-        </h2>
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="rounded border border-ink-300 bg-paper p-2 flex flex-col justify-center">
+      <section className="rounded-md border border-ink-200 bg-paper-card overflow-hidden">
+        <div className="flex divide-x divide-ink-200">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Categoría</span>
-            <p className="mt-1 font-display text-sm font-extrabold text-pool-deep truncate capitalize">
+            <p className="font-display text-sm font-extrabold text-pool-deep truncate capitalize">
               {categoryLabel}
             </p>
           </div>
-          <div className="rounded border border-ink-300 bg-paper p-2 flex flex-col justify-center">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Plantilla</span>
-            <p className="mt-1 font-display text-sm font-extrabold text-pool-deep truncate">
-              {playerCount} {playerCount === 1 ? "jugador" : "jugadores"}
+            <p className="font-display text-sm font-extrabold text-pool-deep">
+              {playerCount}
             </p>
           </div>
-          <div className="rounded border border-ink-300 bg-paper p-2 flex flex-col justify-center">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5 px-3 py-3">
             <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">Entrenador</span>
-            <p className="mt-1 font-display text-sm font-extrabold text-pool-deep truncate">
-              {coachName}
+            <p className="font-display text-sm font-extrabold text-pool-deep truncate">
+              {coachName.split(" ")[0]}
             </p>
           </div>
         </div>
@@ -411,12 +411,12 @@ function TeamPrincipal({
         </section>
       </div>
 
-      {/* Líderes de la Categoría */}
+      {/* Líderes del Equipo */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-2">
           <PictogramBadge pictogram={Trophy} color="var(--ball-gold)" size="sm" />
           <h2 className="font-display text-pool-deep text-base font-extrabold">
-            Líderes de la Categoría ({categoryLabel})
+            Líderes del Equipo
           </h2>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -461,41 +461,6 @@ function TeamPrincipal({
           </span>
         </div>
       ) : null}
-
-      {/* Tus rachas (jugador) */}
-      {isMyTeam && playerStreaks.filter((s) => s.current_value > 0).length > 0 ? (
-        <section
-          aria-labelledby="my-streaks-heading"
-          className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-md border p-4"
-        >
-          <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 fill-[#FF6B35] text-[#FF6B35] animate-pulse" />
-            <h2
-              id="my-streaks-heading"
-              className="font-display text-pool-deep text-base font-extrabold"
-            >
-              Tus rachas activas
-            </h2>
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {playerStreaks
-              .filter((s) => s.current_value > 0)
-              .map((streak) => {
-                const meta = STREAK_METADATA[streak.type];
-                return (
-                  <div
-                    key={streak.type}
-                    title={`Récord histórico: ${streak.best_value}`}
-                    className="inline-flex items-center gap-1.5 rounded-full border border-ink-300 bg-paper px-2.5 py-1 text-xs font-bold text-pool-deep shadow-sm"
-                  >
-                    <span className="text-[#FF6B35] font-extrabold">🔥 {streak.current_value}</span>
-                    <span className="text-ink-600 text-[10px] font-semibold">{meta.label.split(" ")[0]}</span>
-                  </div>
-                );
-              })}
-          </div>
-        </section>
-      ) : null}
     </div>
   );
 }
@@ -508,7 +473,7 @@ function LeaderStatCard({
   accent,
 }: {
   title: string;
-  player: any;
+  player: TeamLeader | null;
   metricLabel: string;
   suffix?: string;
   accent: string;
@@ -524,7 +489,7 @@ function LeaderStatCard({
               <p className="font-display text-xs font-extrabold text-pool-deep leading-tight truncate">
                 {player.full_name.split(" ")[0]}
               </p>
-              <p className="text-[9px] text-ink-500 truncate leading-none mt-0.5">{player.team_label ?? "Sin equipo"}</p>
+              <p className="text-[9px] text-ink-500 truncate leading-none mt-0.5">{accent}</p>
             </div>
           </div>
         ) : (
@@ -659,34 +624,4 @@ interface ActiveStreak {
   current_value: number;
   best_value: number;
 }
-
-const STREAK_METADATA: Record<
-  ActiveStreak["type"],
-  { label: string; color: string; pictogram: React.ComponentType<{ className?: string; accent?: string }> }
-> = {
-  goals_consec: {
-    label: "Goles seguidos",
-    color: "var(--success)",
-    pictogram: Balon,
-  },
-  excl_consec: {
-    label: "Exclusiones seguidas",
-    color: "var(--goggle-red)",
-    pictogram: Silbato,
-  },
-  train_consec: {
-    label: "Entrenos seguidos",
-    color: "var(--pool-teal)",
-    pictogram: Balon,
-  },
-  mvp_consec: {
-    label: "MVP seguidos",
-    color: "var(--ball-gold)",
-    pictogram: Trophy,
-  },
-  wins_consec: {
-    label: "Victorias seguidas",
-    color: "var(--pool-blue)",
-    pictogram: Trophy,
-  },
-};
+void (0 as unknown as ActiveStreak);

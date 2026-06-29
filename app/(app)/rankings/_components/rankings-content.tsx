@@ -9,7 +9,6 @@ import {
   type RankingScope,
   isMyPositionOutsideTopN,
   paginateRanking,
-  RANKINGS_PAGE_SIZE,
 } from "@/lib/domain/rankings";
 import type {
   OpponentHistoryRow,
@@ -42,7 +41,6 @@ export interface RankingsContentProps {
   activeMetric: RankingMetric;
   myPlayerId: string;
   page: number;
-  pageSize: number;
   baseParams: string;
   activeStreakType?: "goals_consec" | "excl_consec" | "train_consec" | "mvp_consec";
   activeStreakOrder?: "current" | "best";
@@ -62,7 +60,6 @@ export function RankingsContent({
   activeMetric,
   myPlayerId,
   page,
-  pageSize,
   baseParams,
   activeStreakType = "train_consec",
   activeStreakOrder = "current",
@@ -151,7 +148,7 @@ export function RankingsContent({
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => navigate({ streak_type: t.id as any })}
+                  onClick={() => navigate({ streak_type: t.id as "train_consec" | "goals_consec" | "excl_consec" | "mvp_consec" })}
                   className={cn(
                     "inline-flex h-9 items-center rounded-full px-4 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
                     activeStreakType === t.id
@@ -176,8 +173,8 @@ export function RankingsContent({
                 className={cn(
                   "rounded-sm px-3 py-1 text-xs font-extrabold transition-all",
                   activeStreakOrder === "current"
-                    ? "bg-brand-orange text-paper"
-                    : "text-pool-deep hover:text-brand-orange",
+                    ? "bg-action text-paper"
+                    : "text-pool-deep hover:text-action",
                 )}
               >
                 Racha Actual
@@ -188,8 +185,8 @@ export function RankingsContent({
                 className={cn(
                   "rounded-sm px-3 py-1 text-xs font-extrabold transition-all",
                   activeStreakOrder === "best"
-                    ? "bg-brand-orange text-paper"
-                    : "text-pool-deep hover:text-brand-orange",
+                    ? "bg-action text-paper"
+                    : "text-pool-deep hover:text-action",
                 )}
               >
                 Mejor Racha

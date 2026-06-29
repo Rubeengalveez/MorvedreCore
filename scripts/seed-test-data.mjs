@@ -43,7 +43,7 @@ const LAST_NAMES = ["García", "Rodríguez", "Martínez", "López", "Sánchez", 
 const OPPONENTS = ["CN Elche", "CN Valencia", "CN Godella", "CN Petrer", "CE Mediterrani", "CW Castellon", "Askartza LE", "CN Sabadell Sur", "CN Terrassa", "CN Barcelona"];
 
 const CURRENT_YEAR = 2026;
-const seasonLabel = "2026/2027";
+const seasonLabel = "2025/2026"; // Cambiado a la temporada actual para que la mitad de los partidos queden en el pasado
 const BATCH_FILE = resolve(process.cwd(), ".seed-batch.json");
 
 function pick(arr, i) {
@@ -145,14 +145,14 @@ async function createProfile(id, profile, authUserId) {
 }
 
 const TEAMS = [
-  { code: "benjamin", label: "Benjamín", gender: "mixed", count: 8, weekday: 1, hour: 17, capMin: 1, capMax: 12, color: "#10B981" },
-  { code: "alevin", label: "Alevín", gender: "mixed", count: 10, weekday: 3, hour: 17, capMin: 1, capMax: 14, color: "#F4C430" },
-  { code: "infantil", label: "Infantil", gender: "mixed", count: 12, weekday: 1, hour: 18, capMin: 1, capMax: 14, color: "#FF6B35" },
-  { code: "cadete", label: "Cadete A", gender: "male", count: 14, weekday: 3, hour: 19, capMin: 1, capMax: 15, color: "#1E5AA8" },
-  { code: "cadete", label: "Cadete B", gender: "male", count: 12, weekday: 5, hour: 19, capMin: 1, capMax: 15, color: "#1E5AA8" },
-  { code: "juvenil", label: "Juvenil", gender: "male", count: 14, weekday: 1, hour: 20, capMin: 1, capMax: 15, color: "#DC2626" },
+  { code: "benjamin", label: "Benjamín", gender: "mixed", count: 10, weekday: 1, hour: 17, capMin: 1, capMax: 12, color: "#10B981" },
+  { code: "alevin", label: "Alevín", gender: "mixed", count: 12, weekday: 3, hour: 17, capMin: 1, capMax: 14, color: "#F4C430" },
+  { code: "infantil", label: "Infantil", gender: "mixed", count: 14, weekday: 1, hour: 18, capMin: 1, capMax: 14, color: "#FF6B35" },
+  { code: "cadete", label: "Cadete A", gender: "male", count: 15, weekday: 3, hour: 19, capMin: 1, capMax: 15, color: "#1E5AA8" },
+  { code: "cadete", label: "Cadete B", gender: "male", count: 13, weekday: 5, hour: 19, capMin: 1, capMax: 15, color: "#1E5AA8" },
+  { code: "juvenil", label: "Juvenil", gender: "male", count: 15, weekday: 1, hour: 20, capMin: 1, capMax: 15, color: "#DC2626" },
   { code: "absoluto", label: "Absoluto", gender: "male", count: 16, weekday: 3, hour: 20, capMin: 1, capMax: 15, color: "#0F172A" },
-  { code: "escuela", label: "Escuela", gender: "mixed", team_type: "school", count: 6, weekday: 2, hour: 17, capMin: 1, capMax: 12, color: "#A78BFA" },
+  { code: "escuela", label: "Escuela", gender: "mixed", team_type: "school", count: 8, weekday: 2, hour: 17, capMin: 1, capMax: 12, color: "#A78BFA" },
 ];
 
 const COACHES = [
@@ -194,7 +194,7 @@ async function main() {
       await admin.from("seasons").update({ is_current: true }).eq("id", seasonId);
     }
   } else {
-    const { data, error } = await admin.from("seasons").insert({ label: seasonLabel, start_date: "2026-09-01", end_date: "2027-07-31", is_current: true }).select("id").single();
+    const { data, error } = await admin.from("seasons").insert({ label: seasonLabel, start_date: "2025-09-01", end_date: "2026-07-31", is_current: true }).select("id").single();
     if (error) throw error;
     seasonId = data.id;
   }
@@ -203,6 +203,8 @@ async function main() {
   // Teams + rosters
   const teamIdByLabel = new Map();
   const playersByTeam = new Map();
+  const coachIdByTeamLabel = new Map();
+
   for (let i = 0; i < TEAMS.length; i++) {
     const t = TEAMS[i];
     const teamId = randomUUID();
@@ -227,7 +229,7 @@ async function main() {
           birth_year: CURRENT_YEAR - birthYear,
           gender: isFemale ? "female" : "male",
           cap_number: t.capMin + (p % (t.capMax - t.capMin + 1)),
-          license_active: Math.random() > 0.05,
+          license_active: true,
           team_color: t.color,
           role: "player",
         }, authUserId);
@@ -236,7 +238,7 @@ async function main() {
         continue;
       }
       await admin.from("team_rosters").upsert({
-        team_id: teamId, player_id: playerId, squad_number: t.capMin + (p % (t.capMax - t.capMin + 1)), joined_at: "2026-09-01",
+        team_id: teamId, player_id: playerId, squad_number: t.capMin + (p % (t.capMax - t.capMin + 1)), joined_at: "2025-09-01",
       }, { onConflict: "team_id,player_id" });
       batch.profileIds.push(playerId);
       playersByTeam.get(t.label).push({ id: playerId });
@@ -256,6 +258,7 @@ async function main() {
     for (const label of c.teamLabels) {
       const teamId = teamIdByLabel.get(label);
       if (teamId) {
+        coachIdByTeamLabel.set(label, id);
         await admin.from("team_staff").upsert({
           team_id: teamId, profile_id: id, role: "head_coach", granted_by: null,
         }, { onConflict: "team_id,profile_id,role" });
@@ -296,8 +299,8 @@ async function main() {
 
   // Training
   const now = new Date();
-  const startDate = new Date("2026-09-01T00:00:00Z");
-  const endDate = new Date("2026-12-31T00:00:00Z");
+  const startDate = new Date("2025-09-01T00:00:00Z");
+  const endDate = new Date("2026-07-31T00:00:00Z");
   for (let i = 0; i < TEAMS.length; i++) {
     const t = TEAMS[i];
     const blockId = randomUUID();
@@ -306,7 +309,7 @@ async function main() {
     await admin.from("training_blocks").upsert({
       id: blockId, team_id: teamId, label: `Temporada ${t.label}`,
       weekdays: [t.weekday, t.weekday === 5 ? 1 : t.weekday + 2],
-      start_date: "2026-09-01", end_date: "2027-06-30",
+      start_date: "2025-09-01", end_date: "2026-07-31",
       start_time: `${String(t.hour).padStart(2, "0")}:00`,
       end_time: `${String(t.hour + 1).padStart(2, "0")}:30`,
       kind: t.code === "escuela" ? "mixed" : "water", is_active: true, created_by: null,
@@ -327,7 +330,7 @@ async function main() {
         duration_minutes: 90, location: "Piscina Municipal",
       }, { onConflict: "id" });
       batch.trainingSessionIds.push(sessionId);
-      if (isPast && Math.random() < 0.7) {
+      if (isPast && Math.random() < 0.8) {
         for (const p of playersByTeam.get(t.label) ?? []) {
           attendance.push({
             session_id: sessionId, player_id: p.id, present: Math.random() > 0.15, marked_by: null, marked_at: d.toISOString(),
@@ -341,9 +344,9 @@ async function main() {
   }
   console.log(`[seed] Training: ${batch.trainingBlockIds.length} blocks, ${batch.trainingSessionIds.length} sessions`);
 
-  // Matches
-  const seasonStart = new Date("2026-09-15T00:00:00Z");
-  const seasonEnd = new Date("2027-06-15T00:00:00Z");
+  // Matches (incrementado a 15 partidos por equipo competitivo)
+  const seasonStart = new Date("2025-09-15T00:00:00Z");
+  const seasonEnd = new Date("2026-07-15T00:00:00Z");
   for (let i = 0; i < TEAMS.length; i++) {
     const t = TEAMS[i];
     if (t.code === "escuela") continue;
@@ -351,7 +354,9 @@ async function main() {
     if (!teamId) continue;
     const teamPlayers = playersByTeam.get(t.label) ?? [];
     if (teamPlayers.length < 5) continue;
-    for (let j = 0; j < 5; j++) {
+    const coachId = coachIdByTeamLabel.get(t.label) || null;
+
+    for (let j = 0; j < 15; j++) {
       const matchDate = randomDateBetween(seasonStart, seasonEnd);
       const isPast = matchDate < now;
       const isHome = (i + j) % 2 === 0;
@@ -368,8 +373,8 @@ async function main() {
         location: isHome ? "Piscina Municipal Puerto Sagunto" : "Piscina visitante",
         pool_name: "Piscina 25m", scheduled_at: isoDateTime(matchDateTime),
         status: isPast ? "played" : "scheduled",
-        final_score_us: isPast ? Math.floor(Math.random() * 15) + 5 : null,
-        final_score_them: isPast ? Math.floor(Math.random() * 13) + 3 : null,
+        final_score_us: isPast ? Math.floor(Math.random() * 12) + 4 : null,
+        final_score_them: isPast ? Math.floor(Math.random() * 10) + 3 : null,
       }, { onConflict: "id" });
       batch.matchIds.push(matchId);
 
@@ -384,13 +389,28 @@ async function main() {
       await admin.from("match_callups").upsert(callups, { onConflict: "match_id,player_id" });
 
       if (isPast) {
+        // Asignación de goles y exclusiones
         const stats = shuffled.map((p) => ({
           match_id: matchId, player_id: p.id,
-          goals: Math.random() < 0.3 ? Math.floor(Math.random() * 4) : 0,
-          exclusions: Math.random() < 0.4 ? Math.floor(Math.random() * 3) : 0,
-          mvp: Math.random() < 0.1, entered_by: null, entered_at: matchDateTime.toISOString(),
-          validated_by: null, validated_at: null,
+          goals: Math.random() < 0.4 ? Math.floor(Math.random() * 4) + 1 : 0,
+          exclusions: Math.random() < 0.3 ? Math.floor(Math.random() * 3) : 0,
+          mvp: false, // Se asignará el MVP del goleador máximo abajo
+          entered_by: coachId,
+          entered_at: matchDateTime.toISOString(),
+          validated_by: coachId,
+          validated_at: matchDateTime.toISOString(), // Muy importante: no nulo para que sume a rankings
         }));
+
+        // Seleccionar jugador con más goles como MVP
+        const maxGoals = Math.max(...stats.map((s) => s.goals));
+        if (maxGoals > 0) {
+          const topGoleadores = stats.filter((s) => s.goals === maxGoals);
+          const mvpStat = pick(topGoleadores, matchId.charCodeAt(0));
+          if (mvpStat) mvpStat.mvp = true;
+        } else if (stats.length > 0) {
+          stats[0].mvp = true;
+        }
+
         await admin.from("match_stats").upsert(stats, { onConflict: "match_id,player_id" });
       }
     }
@@ -401,11 +421,11 @@ async function main() {
   const availability = [];
   for (const [, players] of playersByTeam) {
     for (const p of players) {
-      if (Math.random() < 0.15) {
-        const daysAhead = Math.floor(Math.random() * 30) + 1;
+      if (Math.random() < 0.25) {
+        const daysAhead = Math.floor(Math.random() * 45) + 1;
         const date = new Date(now);
         date.setUTCDate(date.getUTCDate() + daysAhead);
-        const reasons = ["Médico", "Viaje familiar", "Examen", "Boda", "Trabajo"];
+        const reasons = ["Viaje", "Estudios", "Lesión", "Examen", "Familiar"];
         availability.push({
           player_id: p.id, date: isoDay(date), available: false, reason: pick(reasons, p.id.charCodeAt(0) % 5),
         });
