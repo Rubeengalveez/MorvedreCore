@@ -20,6 +20,9 @@ export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
   const currentLabel = labelFor(active, meta);
 
   function handleChange(value: string) {
+    if (typeof window !== "undefined") {
+      console.log("[ScopeTabs] onChange value:", value);
+    }
     onChange(parseValue(value, meta));
   }
 
@@ -37,9 +40,14 @@ export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
           aria-label="Filtrar por categoría o equipo"
           data-scope-select
           value={activeKey}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(e) => {
+            handleChange(e.target.value);
+          }}
+          onInput={(e) => {
+            handleChange((e.target as HTMLSelectElement).value);
+          }}
           className={cn(
-            "h-9 w-full appearance-none truncate rounded-full border border-ink-300 bg-paper pl-3 pr-8 text-xs font-bold text-pool-deep shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
+            "h-9 w-full cursor-pointer appearance-none truncate rounded-full border border-ink-300 bg-paper pl-3 pr-8 text-xs font-bold text-pool-deep shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
           )}
           style={{ fontSize: "16px" }}
         >
