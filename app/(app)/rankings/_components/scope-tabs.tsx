@@ -13,12 +13,14 @@ export interface ScopeTabsProps {
 
 export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
   return (
-    <div
-      role="tablist"
-      aria-label="Filtrar por categoría o equipo"
-      data-scope-tabs
-      className="sticky top-[60px] z-10 -mx-4 flex gap-2 overflow-x-auto bg-paper/95 px-4 py-2 backdrop-blur supports-[backdrop-filter]:bg-paper/80 border-b border-ink-200"
-    >
+    <div className="relative">
+      <div
+        role="tablist"
+        aria-label="Filtrar por categoría o equipo"
+        data-scope-tabs
+        className="sticky top-[60px] z-10 -mx-4 flex gap-2 overflow-x-auto bg-paper/95 px-4 py-2 pr-8 backdrop-blur supports-[backdrop-filter]:bg-paper/80 border-b border-ink-200 [&::-webkit-scrollbar]:hidden"
+        style={{ scrollbarWidth: "none" }}
+      >
       <ScopePill
         label="Club"
         isActive={active.kind === "all"}
@@ -43,6 +45,12 @@ export function ScopeTabs({ meta, active, onChange }: ScopeTabsProps) {
           onClick={() => onChange({ kind: "team", team_id: t.id })}
         />
       ))}
+      <div className="shrink-0 pr-2" aria-hidden="true" />
+    </div>
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute right-0 top-0 z-20 h-full w-8 bg-gradient-to-l from-paper to-transparent"
+    />
     </div>
   );
 }
