@@ -8,18 +8,20 @@ import {
   Calendario,
   Equipo,
   Inicio,
+  Megafone,
   Tiburon,
-  Tienda,
   Trofeo,
+  Usuario,
 } from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
 
 const items = [
   { href: "/dashboard", label: "Inicio", Pictogram: Inicio },
+  { href: "/news", label: "Noticias", Pictogram: Megafone },
   { href: "/calendar", label: "Calendario", Pictogram: Calendario },
   { href: "/rankings", label: "Rankings", Pictogram: Trofeo },
   { href: "/team", label: "Equipo", Pictogram: Equipo },
-  { href: "/shop", label: "Tienda", Pictogram: Tienda },
+  { href: "/profile", label: "Yo", Pictogram: Usuario },
 ] as const;
 
 export function BottomNav() {
@@ -32,7 +34,7 @@ export function BottomNav() {
       className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-pool-deep bg-paper-card pb-[env(safe-area-inset-bottom)]"
       style={{ boxShadow: "0 -2px 16px rgba(6,32,72,0.07)" }}
     >
-      <ul className="mx-auto flex h-[60px] max-w-lg items-stretch">
+      <ul className="mx-auto flex h-[60px] max-w-2xl items-stretch">
         {items.map((item) => {
           const Pictogram = item.Pictogram;
           const href = item.href;
@@ -87,4 +89,3 @@ function TiburonHiddenBadge() {
     </span>
   );
 }
-

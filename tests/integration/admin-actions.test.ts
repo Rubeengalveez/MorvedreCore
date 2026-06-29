@@ -27,8 +27,8 @@ import {
   updateSeasonSchema,
   updateTeamSchema,
   userRoleEnum,
-  xlsxRowSchema,
 } from "@/lib/domain/admin-schemas";
+import { xlsxRowSchema } from "@/lib/domain/import-schema";
 
 describe("isoDate", () => {
   it("accepts a valid YYYY-MM-DD date", () => {
@@ -607,9 +607,10 @@ describe("roleAssignmentSchema and userRoleEnum", () => {
 });
 
 describe("xlsxRowSchema", () => {
+  const currentYear = new Date().getFullYear();
   it("accepts a minimal valid row", () => {
     expect(
-      xlsxRowSchema.safeParse({
+      xlsxRowSchema(currentYear).safeParse({
         nombre_completo: "Jugador",
         ano_nacimiento: 2015,
       }).success,
@@ -618,24 +619,24 @@ describe("xlsxRowSchema", () => {
 
   it("rejects empty nombre_completo", () => {
     expect(
-      xlsxRowSchema.safeParse({ nombre_completo: "", ano_nacimiento: 2015 }).success,
+      xlsxRowSchema(currentYear).safeParse({ nombre_completo: "", ano_nacimiento: 2015 }).success,
     ).toBe(false);
   });
 
   it("rejects non-numeric ano_nacimiento", () => {
     expect(
-      xlsxRowSchema.safeParse({ nombre_completo: "X", ano_nacimiento: "abc" }).success,
+      xlsxRowSchema(currentYear).safeParse({ nombre_completo: "X", ano_nacimiento: "abc" }).success,
     ).toBe(false);
   });
 
   it("rejects birth_year outside the [1900, 2100] range", () => {
     expect(
-      xlsxRowSchema.safeParse({ nombre_completo: "X", ano_nacimiento: 1899 }).success,
+      xlsxRowSchema(currentYear).safeParse({ nombre_completo: "X", ano_nacimiento: 1899 }).success,
     ).toBe(false);
   });
 
   it("treats empty dorsal as missing (not 0)", () => {
-    const result = xlsxRowSchema.safeParse({
+    const result = xlsxRowSchema(currentYear).safeParse({
       nombre_completo: "X",
       ano_nacimiento: 2015,
       dorsal: "",
@@ -648,7 +649,7 @@ describe("xlsxRowSchema", () => {
 
   it("rejects dorsal out of range", () => {
     expect(
-      xlsxRowSchema.safeParse({
+      xlsxRowSchema(currentYear).safeParse({
         nombre_completo: "X",
         ano_nacimiento: 2015,
         dorsal: 100,
@@ -658,7 +659,7 @@ describe("xlsxRowSchema", () => {
 
   it("rejects invalid email_tutor", () => {
     expect(
-      xlsxRowSchema.safeParse({
+      xlsxRowSchema(currentYear).safeParse({
         nombre_completo: "X",
         ano_nacimiento: 2015,
         email_tutor: "not-an-email",
@@ -667,7 +668,7 @@ describe("xlsxRowSchema", () => {
   });
 
   it("defaults relacion to legal_guardian when missing", () => {
-    const result = xlsxRowSchema.safeParse({
+    const result = xlsxRowSchema(currentYear).safeParse({
       nombre_completo: "X",
       ano_nacimiento: 2015,
     });

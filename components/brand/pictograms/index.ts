@@ -7,6 +7,7 @@ export { Familia } from "./familia";
 export { FileUp } from "./file-up";
 export { Gorro } from "./gorro";
 export { Inicio } from "./inicio";
+export { Megafone } from "./megafone";
 export { Personal } from "./personal";
 export { Porteria } from "./porteria";
 export { Silbato } from "./silbato";

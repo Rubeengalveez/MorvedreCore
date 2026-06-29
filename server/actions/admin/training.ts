@@ -134,7 +134,17 @@ export async function updateTrainingBlock(
 
   const { data, error } = await supabase
     .from("training_blocks")
-    .update(parsed.data)
+    .update({
+      team_id: parsed.data.team_id,
+      label: parsed.data.label,
+      weekdays: parsed.data.weekdays,
+      start_time: parsed.data.start_time,
+      end_time: parsed.data.end_time,
+      start_date: parsed.data.start_date,
+      end_date: parsed.data.end_date,
+      location: parsed.data.location ?? null,
+      kind: parsed.data.kind,
+    })
     .eq("id", parsedId.data.id)
     .select("*")
     .single();
@@ -372,7 +382,7 @@ export async function markAttendance(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  if (parsed.data.rows.length === 0) {
+  if (parsed.data.entries.length === 0) {
     return { updated: 0 };
   }
 
@@ -390,7 +400,7 @@ export async function markAttendance(input: {
 
   const admin = await requireCoachOf(session.team_id);
 
-  const upsertRows = parsed.data.rows.map((r) => ({
+  const upsertRows = parsed.data.entries.map((r) => ({
     session_id: parsed.data.session_id,
     player_id: r.player_id,
     present: r.present,

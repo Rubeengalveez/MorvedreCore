@@ -1014,11 +1014,114 @@ export type Database = {
           },
         ];
       };
+      news_posts: {
+        Row: {
+          id: string;
+          author_id: string;
+          title: string;
+          body_md: string;
+          image_url: string | null;
+          audience: Database["public"]["Enums"]["news_audience"];
+          audience_team_id: string | null;
+          pinned: boolean;
+          published_at: string;
+          expires_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          author_id: string;
+          title: string;
+          body_md: string;
+          image_url?: string | null;
+          audience?: Database["public"]["Enums"]["news_audience"];
+          audience_team_id?: string | null;
+          pinned?: boolean;
+          published_at?: string;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          author_id?: string;
+          title?: string;
+          body_md?: string;
+          image_url?: string | null;
+          audience?: Database["public"]["Enums"]["news_audience"];
+          audience_team_id?: string | null;
+          pinned?: boolean;
+          published_at?: string;
+          expires_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "news_posts_author_id_fkey";
+            columns: ["author_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "news_posts_audience_team_id_fkey";
+            columns: ["audience_team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      news_reactions: {
+        Row: {
+          id: string;
+          post_id: string;
+          profile_id: string;
+          reaction: Database["public"]["Enums"]["news_reaction"];
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          post_id: string;
+          profile_id: string;
+          reaction: Database["public"]["Enums"]["news_reaction"];
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          post_id?: string;
+          profile_id?: string;
+          reaction?: Database["public"]["Enums"]["news_reaction"];
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "news_reactions_post_id_fkey";
+            columns: ["post_id"];
+            isOneToOne: false;
+            referencedRelation: "news_posts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "news_reactions_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       swap_current_season: {
         Args: { target_id: string };
         Returns: void;
+      };
+      archive_expired_news: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
       };
     };
     Enums: {
@@ -1043,6 +1146,8 @@ export type Database = {
       team_type: "competitive" | "school";
       team_gender: "male" | "female" | "mixed";
       staff_role: "head_coach" | "assistant_coach" | "delegate" | "physical_trainer";
+      news_audience: "club" | "team";
+      news_reaction: "like" | "fire" | "thanks";
     };
     CompositeTypes: {
       [_ in never]: never;

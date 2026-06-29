@@ -35,17 +35,16 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 3 — Estadísticas y rankings. COMPLETADA, compilando, validada y con pulido visual mobile-first.** Ver `docs/planning/18-phase-3-summary.md` para el detalle y `docs/planning/00-decisions-log.md` (sección 2026-06-27) para los cambios de diseño de la última pasada.
+**Fase 4 — Noticias y tablón. COMPLETADA, compilando, validada, push a `main`.** Ver `docs/planning/19-phase-4-summary.md` para el detalle.
 
 Pendiente para probar en el cloud:
-- Aplicar las 2 migraciones de Fase 3 (consolidado en chat): `0022_ranking_snapshots.sql` + `0023_opponent_stats.sql`
-- Login con `galvillo9@gmail.com` y tu password
-- Crear un partido en `/admin/matches`, convocar jugadores, meter acta (goles/excl/MVP) y validar
-- Ir a `/rankings` y ver el podio + tu posición
-- En `/profile` aparece el bloque "Tu posición en los rankings"
-- En `/team/[id]` aparece el bloque "Top del equipo"
+- Aplicar la migración `0026_news.sql` y `0027_news_storage.sql` (policies de storage) en el SQL Editor de Supabase
+- Login con `galvillo9@gmail.com` / `Morvedre2026!`
+- Ir a `/admin/news`, crear noticia con título + cuerpo markdown, pinear
+- Ir a `/news` (bottom nav) y reaccionar con los 3 tipos
+- Verificar que las noticias con `audience="team"` solo las ven los del equipo destinatario
 
-Próxima fase: **Fase 4 — Noticias y tablón** (pinnear noticias, reacciones, caducidad automática).
+Próxima fase: **Fase 5 — Tienda** (catálogo, carrito, aprobación padres, panel Kanban).
 
 ### Lo que ya está implementado (Fase 0 + 1 + 2)
 
@@ -128,6 +127,7 @@ Próxima fase: **Fase 4 — Noticias y tablón** (pinnear noticias, reacciones, 
 - `docs/planning/16-phase-2-plan.md` — plan detallado Fase 2
 - `docs/planning/17-phase-2-summary.md` — resumen Fase 2
 - `docs/planning/18-phase-3-summary.md` — resumen Fase 3
+- `docs/planning/19-phase-4-summary.md` — resumen Fase 4
 - `docs/planning/18-visual-identity-v2.md` — tesis de diseño "marcador de piscina en el bolsillo"
 
 ## Si dudas

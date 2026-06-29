@@ -3,12 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { read, utils } from "xlsx";
 
-import { xlsxRowSchema, RELATION_VALUES_XLSX } from "@/lib/domain/admin-schemas";
+import { xlsxRowSchema, RELATION_VALUES } from "@/lib/domain/import-schema";
 
 import { requireAdmin } from "./_helpers";
 import { createClient } from "@/lib/supabase/server";
 
-type Relation = (typeof RELATION_VALUES_XLSX)[number];
+type Relation = (typeof RELATION_VALUES)[number];
 
 export type PreviewRow = {
   rowNumber: number;
@@ -67,6 +67,7 @@ async function parseFile(formData: FormData): Promise<ParsedFileResult> {
     raw: true,
   });
 
+  const currentYear = new Date().getFullYear();
   const rows: PreviewRow[] = [];
   const errors: ImportError[] = [];
   for (let i = 0; i < raw.length; i++) {
@@ -76,7 +77,7 @@ async function parseFile(formData: FormData): Promise<ParsedFileResult> {
     const fullNameStr =
       typeof fullNameRaw === "string" ? fullNameRaw.trim() : null;
 
-    const parsed = xlsxRowSchema.safeParse(r);
+    const parsed = xlsxRowSchema(currentYear).safeParse(r);
     if (!parsed.success) {
       const issues = parsed.error.issues
         .map((iss) => `${iss.path.join(".") || "fila"}: ${iss.message}`)

@@ -111,7 +111,20 @@ export async function updatePlayer(
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .update(parsed.data)
+    .update({
+      full_name: parsed.data.full_name,
+      birth_year: parsed.data.birth_year,
+      gender: parsed.data.gender as
+        | "male" | "female" | "other" | "prefer_not_to_say" | undefined,
+      cap_number: parsed.data.cap_number,
+      photo_url: parsed.data.photo_url,
+      phone_e164: parsed.data.phone_e164,
+      email_contact: parsed.data.email_contact,
+      notes: parsed.data.notes,
+      team_color: parsed.data.team_color,
+      school_enrolled: parsed.data.school_enrolled ?? false,
+      school_payment_paid: parsed.data.school_payment_paid ?? false,
+    })
     .eq("id", parsedId.data.id)
     .select("*")
     .single();

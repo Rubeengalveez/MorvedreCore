@@ -9,7 +9,7 @@ import {
   makeRowSchema,
   normalizeRow,
   parseImportRow,
-} from "@/lib/domain/import-schema.mjs";
+} from "@/lib/domain/import-schema";
 
 const CURRENT_YEAR = 2026;
 

@@ -57,7 +57,6 @@ export async function createTeam(input: {
       team_type: parsed.data.team_type ?? "competitive",
       color: parsed.data.color ?? defaultTeamColor(parsed.data.category_code),
       home_pool: parsed.data.home_pool ?? null,
-      notes: parsed.data.notes ?? null,
     })
     .select("*")
     .single();
@@ -195,7 +194,7 @@ export async function rosterPlayer(input: {
 }): Promise<void> {
   await requireAdmin();
 
-  const rosterSchema = makeRosterSchema();
+  const rosterSchema = makeRosterSchema;
   const parsed = rosterSchema.safeParse(input);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");

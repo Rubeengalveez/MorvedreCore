@@ -260,9 +260,40 @@ export const unlinkSchema = z.object({
 });
 
 export const roleAssignmentSchema = z.object({
-  profile_id: z.string().uuid("Persona inválida."),
-  role: userRoleEnum,
+  profile_id: z.string().uuid("Perfil inválido."),
+  role: z.enum(["admin", "coach", "delegate", "directiva", "parent", "player"]),
   scope_team_id: z.string().uuid("Equipo inválido.").nullable().optional(),
+});
+
+export const createNewsPostSchema = z.object({
+  title: z.string().trim().min(3, "El título es demasiado corto.").max(120, "Máximo 120 caracteres."),
+  body_md: z.string().trim().min(1, "El cuerpo no puede estar vacío.").max(8000, "Máximo 8000 caracteres."),
+  image_url: z.string().url("URL de imagen inválida.").max(500).nullable().optional(),
+  audience: z.enum(["club", "team"]).default("club"),
+  audience_team_id: z.string().uuid().nullable().optional(),
+  pinned: z.boolean().default(false),
+  expires_at: z.string().datetime({ offset: true }).nullable().optional(),
+}).refine(
+  (v) => v.audience !== "team" || !!v.audience_team_id,
+  { message: "Si la audiencia es un equipo, indica audience_team_id.", path: ["audience_team_id"] },
+);
+
+export const updateNewsPostSchema = createNewsPostSchema.extend({
+  post_id: z.string().uuid("Post inválido."),
+});
+
+export const deleteNewsPostSchema = z.object({
+  post_id: z.string().uuid("Post inválido."),
+});
+
+export const togglePinNewsSchema = z.object({
+  post_id: z.string().uuid("Post inválido."),
+  pinned: z.boolean(),
+});
+
+export const reactNewsSchema = z.object({
+  post_id: z.string().uuid("Post inválido."),
+  reaction: z.enum(["like", "fire", "thanks"]),
 });
 
 export const RELATION_VALUES_XLSX = [
@@ -319,19 +350,17 @@ export const xlsxRowSchema = z.object({
   ),
 });
 
-export function makeRosterSchema() {
-  return z.object({
-    team_id: z.string().uuid("Equipo inválido."),
-    player_id: z.string().uuid("Jugador inválido."),
-    squad_number: z
-      .number()
-      .int("Dorsal entero.")
-      .min(0, "Mínimo 0.")
-      .max(99, "Máximo 99.")
-      .optional(),
-    joined_at: isoDate.optional(),
-  });
-}
+export const makeRosterSchema = z.object({
+  team_id: z.string().uuid("Equipo inválido."),
+  player_id: z.string().uuid("Jugador inválido."),
+  squad_number: z
+    .number()
+    .int("Dorsal entero.")
+    .min(0, "Mínimo 0.")
+    .max(99, "Máximo 99.")
+    .optional(),
+  joined_at: isoDate.optional(),
+});
 
 export const trainingKindSchema = z.enum(["water", "dry", "physical", "technical", "mixed"]);
 
@@ -563,7 +592,7 @@ export const setAvailabilitySchema = z.object({
 
 export const markAttendanceSchema = z.object({
   session_id: z.string().uuid("Sesión inválida."),
-  rows: z
+  entries: z
     .array(
       z.object({
         player_id: z.string().uuid("Jugador inválido."),
