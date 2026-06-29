@@ -101,9 +101,9 @@ function TopOneHighlight({
         className="absolute inset-x-0 top-0 h-1.5"
         style={{ backgroundColor: teamColor }}
       />
-      <div className="flex items-center gap-3 p-4">
-        <div className="flex shrink-0 flex-col items-center gap-1">
-          <Medal rank={1} size="md" />
+      <div className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:gap-3 sm:p-4">
+        <div className="flex items-center gap-2.5 sm:flex-col sm:items-center sm:gap-1">
+          <Medal rank={1} size={isMe ? "md" : "md"} />
           {isMe ? (
             <span
               data-top-one-self
@@ -112,13 +112,13 @@ function TopOneHighlight({
               Tú
             </span>
           ) : null}
+          <Avatar
+            src={row.photo_url}
+            name={row.full_name}
+            size={56}
+            className="shrink-0 sm:size-[64px]"
+          />
         </div>
-        <Avatar
-          src={row.photo_url}
-          name={row.full_name}
-          size={64}
-          className="shrink-0"
-        />
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
             Líder de {metricLabel.toLowerCase()}
@@ -130,7 +130,7 @@ function TopOneHighlight({
             {row.full_name}
           </h3>
           <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-semibold text-ink-700">
+            <span className="truncate text-[11px] font-semibold text-ink-700">
               {categoryLabel(row)}
             </span>
             {row.cap_number != null ? (
@@ -184,21 +184,21 @@ function RunnerCard({
         isMe && "ring-2 ring-ball-gold/40",
       )}
     >
+      <div className="flex shrink-0 flex-col items-center gap-1">
+        <Medal rank={rank} size="sm" />
+        {isMe ? (
+          <span className="inline-flex h-4 items-center rounded-sm bg-ball-gold px-1 text-[9px] font-extrabold uppercase tracking-wider text-pool-deep">
+            Tú
+          </span>
+        ) : null}
+      </div>
       <Avatar
         src={row.photo_url}
         name={row.full_name}
-        size={40}
+        size={36}
         className="shrink-0"
       />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <Medal rank={rank} size="sm" />
-          {isMe ? (
-            <span className="inline-flex h-4 items-center rounded-sm bg-ball-gold px-1 text-[9px] font-extrabold uppercase tracking-wider text-pool-deep">
-              Tú
-            </span>
-          ) : null}
-        </div>
         <p
           className="break-words font-display text-sm font-extrabold leading-tight text-pool-deep"
           title={row.full_name}
