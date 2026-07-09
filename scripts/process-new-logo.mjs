@@ -8,6 +8,25 @@ const BRAND_DIR = path.resolve("public", "brand");
 const CLUB_BLUE = { r: 10, g: 46, b: 92, alpha: 1 }; // #0A2E5C
 const TRANSPARENT = { r: 0, g: 0, b: 0, alpha: 0 };
 
+// Helper function to resize and apply a rounded rectangle mask
+async function generateRoundedPng(croppedBuffer, size, outPath) {
+  const radius = Math.round(size * 0.12); // 12% corner radius
+  const mask = Buffer.from(
+    `<svg width="${size}" height="${size}">
+       <rect x="0" y="0" width="${size}" height="${size}" rx="${radius}" ry="${radius}" fill="black" />
+     </svg>`
+  );
+
+  await sharp(croppedBuffer)
+    .resize(size, size, {
+      fit: "contain",
+      background: TRANSPARENT,
+    })
+    .composite([{ input: mask, blend: "dest-in" }])
+    .png()
+    .toFile(outPath);
+}
+
 async function main() {
   console.log(`Processing new logo from desktop: ${DESKTOP_SOURCE}`);
   
@@ -75,63 +94,53 @@ async function main() {
     })
     .toBuffer();
 
-  // 3. Save cropped high-quality webp source
+  // 3. Save cropped high-quality webp source (also masked with rounded corners)
   const logoWebpPath = path.join(BRAND_DIR, "logo.webp");
+  const webpRadius = Math.round(cropWidth * 0.12);
+  const webpMask = Buffer.from(
+    `<svg width="${cropWidth}" height="${cropHeight}">
+       <rect x="0" y="0" width="${cropWidth}" height="${cropHeight}" rx="${webpRadius}" ry="${webpRadius}" fill="black" />
+     </svg>`
+  );
   await sharp(croppedBuffer)
+    .composite([{ input: webpMask, blend: "dest-in" }])
     .webp({ quality: 90 })
     .toFile(logoWebpPath);
-  console.log(`- Created cropped source logo.webp`);
+  console.log(`- Created cropped and rounded source logo.webp`);
 
-  // 4. Generate shark-256.png and shark-512.png (transparent background, fully contained)
+  // 4. Generate shark-256.png and shark-512.png (transparent background, rounded corners)
   const shark256Path = path.join(BRAND_DIR, "shark-256.png");
-  await sharp(croppedBuffer)
-    .resize(256, 256, {
-      fit: "contain",
-      background: TRANSPARENT,
-    })
-    .png()
-    .toFile(shark256Path);
-  console.log(`- Created transparent shark-256.png`);
+  await generateRoundedPng(croppedBuffer, 256, shark256Path);
+  console.log(`- Created rounded transparent shark-256.png`);
 
   const shark512Path = path.join(BRAND_DIR, "shark-512.png");
-  await sharp(croppedBuffer)
-    .resize(512, 512, {
-      fit: "contain",
-      background: TRANSPARENT,
-    })
-    .png()
-    .toFile(shark512Path);
-  console.log(`- Created transparent shark-512.png`);
+  await generateRoundedPng(croppedBuffer, 512, shark512Path);
+  console.log(`- Created rounded transparent shark-512.png`);
 
   // 5. Generate PWA launcher icons (icon-192.png, icon-512.png)
   const icon192Path = path.join(BRAND_DIR, "icon-192.png");
-  await sharp(croppedBuffer)
-    .resize(192, 192, {
-      fit: "contain",
-      background: TRANSPARENT,
-    })
-    .png()
-    .toFile(icon192Path);
-  console.log(`- Created PWA launcher icon-192.png`);
+  await generateRoundedPng(croppedBuffer, 192, icon192Path);
+  console.log(`- Created rounded PWA launcher icon-192.png`);
 
   const icon512Path = path.join(BRAND_DIR, "icon-512.png");
-  await sharp(croppedBuffer)
-    .resize(512, 512, {
-      fit: "contain",
-      background: TRANSPARENT,
-    })
-    .png()
-    .toFile(icon512Path);
-  console.log(`- Created PWA launcher icon-512.png`);
+  await generateRoundedPng(croppedBuffer, 512, icon512Path);
+  console.log(`- Created rounded PWA launcher icon-512.png`);
 
-  // 6. Generate premium PWA maskable icon (blue background with safe zoned logo in center)
+  // 6. Generate premium PWA maskable icon (blue background with rounded safe zoned logo in center)
   const iconMaskablePath = path.join(BRAND_DIR, "icon-maskable-512.png");
   const innerSize = Math.round(512 * 0.5); // 50% safe zone
-  const innerBuffer = await sharp(croppedBuffer)
+  const innerRadius = Math.round(innerSize * 0.12);
+  const innerMask = Buffer.from(
+    `<svg width="${innerSize}" height="${innerSize}">
+       <rect x="0" y="0" width="${innerSize}" height="${innerSize}" rx="${innerRadius}" ry="${innerRadius}" fill="black" />
+     </svg>`
+  );
+  const innerBufferRounded = await sharp(croppedBuffer)
     .resize(innerSize, innerSize, {
       fit: "contain",
       background: TRANSPARENT,
     })
+    .composite([{ input: innerMask, blend: "dest-in" }])
     .png()
     .toBuffer();
 
@@ -143,21 +152,15 @@ async function main() {
       background: CLUB_BLUE,
     },
   })
-    .composite([{ input: innerBuffer, gravity: "center" }])
+    .composite([{ input: innerBufferRounded, gravity: "center" }])
     .png()
     .toFile(iconMaskablePath);
-  console.log(`- Created premium blue maskable icon-maskable-512.png`);
+  console.log(`- Created rounded premium blue maskable icon-maskable-512.png`);
 
-  // 7. Generate favicon.ico (32x32 transparent)
+  // 7. Generate favicon.ico (32x32 rounded transparent)
   const faviconPath = path.resolve("public", "favicon.ico");
-  await sharp(croppedBuffer)
-    .resize(32, 32, {
-      fit: "contain",
-      background: TRANSPARENT,
-    })
-    .png()
-    .toFile(faviconPath);
-  console.log(`- Created transparent favicon.ico`);
+  await generateRoundedPng(croppedBuffer, 32, faviconPath);
+  console.log(`- Created rounded transparent favicon.ico`);
 
   console.log("\nLogo processing completed successfully!");
 }
