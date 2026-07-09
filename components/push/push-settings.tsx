@@ -49,7 +49,7 @@ export function PushSettings({ publicKey }: { publicKey: string | undefined }) {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey!),
+          applicationServerKey: urlBase64ToUint8Array(publicKey!) as any,
         });
         const response = await fetch("/api/push/subscribe", {
           method: "POST",

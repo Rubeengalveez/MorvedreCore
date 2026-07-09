@@ -73,10 +73,10 @@ export function TrainingSessionsList({
                 ? "border-danger/30 bg-danger/5"
                 : past
                   ? "border-ink-300"
-                  : "border-brand-aqua/40 bg-brand-foam/30",
+                  : "border-pool-teal/40 bg-pool-foam/30",
             )}
           >
-            <div className="bg-paper text-brand-deep flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded">
+            <div className="bg-paper text-pool-deep flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded">
               <span className="text-ink-600 font-mono text-[10px] leading-none uppercase">
                 {formatWeekdayLetter(((new Date(s.scheduled_at).getDay() + 6) % 7) + 1)}
               </span>
@@ -85,7 +85,7 @@ export function TrainingSessionsList({
               </span>
             </div>
             <div className="flex flex-1 flex-col">
-              <span className="font-display text-brand-deep text-sm font-bold">{blockLabel}</span>
+              <span className="font-display text-pool-deep text-sm font-bold">{blockLabel}</span>
               <span className="text-ink-600 font-mono text-xs">
                 {formatTime(s.scheduled_at)}
                 {s.location ? ` · ${s.location}` : ""}

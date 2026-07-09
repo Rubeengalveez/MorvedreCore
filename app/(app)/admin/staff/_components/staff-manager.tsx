@@ -307,7 +307,7 @@ export function StaffTable({ rows, teamFilter, onTeamFilterChange, teams }: Staf
 
       {rows.length === 0 ? (
         <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-          <p className="text-brand-deep text-base font-semibold">Sin cuerpo técnico.</p>
+          <p className="text-pool-deep text-base font-semibold">Sin cuerpo técnico.</p>
           <p className="text-ink-600 mt-1 text-sm">
             Asigna al menos un entrenador para activar el equipo.
           </p>
@@ -324,7 +324,7 @@ export function StaffTable({ rows, teamFilter, onTeamFilterChange, teams }: Staf
                   className="border-ink-300 bg-paper-card shadow-elev-1 flex items-center gap-3 rounded-md border p-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-brand-deep truncate text-sm font-bold">
+                    <p className="font-display text-pool-deep truncate text-sm font-bold">
                       {r.profile_name}
                     </p>
                     <p className="text-ink-600 text-xs">{ROLE_LABEL[r.role]}</p>
@@ -369,7 +369,7 @@ export function StaffTable({ rows, teamFilter, onTeamFilterChange, teams }: Staf
                   const isPending = pendingKey === key;
                   return (
                     <tr key={key} className="text-base">
-                      <td className="border-ink-300 font-display text-brand-deep border-b px-3 py-3 font-bold">
+                      <td className="border-ink-300 font-display text-pool-deep border-b px-3 py-3 font-bold">
                         {r.profile_name}
                       </td>
                       <td className="border-ink-300 border-b px-3 py-3">

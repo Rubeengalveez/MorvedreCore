@@ -11,7 +11,7 @@ export function CategoryBadge({ code, className, tone = "soft" }: CategoryBadgeP
   const label = CATEGORY_LABELS[code as CategoryCode] ?? code;
   const colorHex = categoryAccent(code);
   const isSolid = tone === "solid";
-  const textColor = isSolid ? "text-brand-deep" : "text-brand-deep";
+  const textColor = isSolid ? "text-pool-deep" : "text-pool-deep";
 
   return (
     <span

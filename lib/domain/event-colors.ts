@@ -1,17 +1,17 @@
 export const EVENT_COLORS = {
   training: {
-    scheduled: "var(--brand-blue)",
+    scheduled: "var(--pool-blue)",
     cancelled: "var(--danger)",
     past: "var(--success)",
     past_cancelled: "var(--danger)",
     unavailable: "var(--ink-300)",
   },
   match: {
-    league: "var(--brand-ball)",
-    cup: "var(--brand-ball)",
+    league: "var(--ball-gold)",
+    cup: "var(--ball-gold)",
     tournament: "var(--brand-action)",
-    friendly: "var(--brand-aqua)",
-    scheduled: "var(--brand-ball)",
+    friendly: "var(--pool-teal)",
+    scheduled: "var(--ball-gold)",
     in_progress: "var(--brand-action)",
     played: "var(--success)",
     cancelled: "var(--danger)",

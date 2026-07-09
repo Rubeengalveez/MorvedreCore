@@ -36,17 +36,13 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 5 — Tienda. COMPLETADA, compilando, validada, push a `main`.** Ver `docs/planning/20-phase-5-summary.md` para el detalle.
+**Fase 7.5 — Cierre operativo. COMPLETADA, compilando, validada con tests locales y build de producción, push a `main`.** Ver `docs/planning/25-operational-closure-summary.md` para el detalle.
 
 Pendiente para probar en el cloud:
+- Comprobar que las notificaciones push nativas se reciben y desactivan correctamente si expiran.
+- Probar el envío de correos de cierre a través de Resend.
 
-- Aplicar la migración `0028_shop.sql` en el SQL Editor de Supabase
-- Login con `galvillo9@gmail.com` / `Morvedre2026!`
-- Ir a `/admin/shop` y crear un producto de prueba
-- Cambiar a otro perfil player y probar el flujo de compra
-- Probar aprobación desde `/shop/parents/pending`
-
-Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de cierre mensual, export Excel).
+Próxima fase: **Fase 8 — Históricos y leyendas** (historial de estadísticas, rivales, botón de archivar temporada).
 
 ### Lo que ya está implementado (Fase 0 + 1 + 2)
 
@@ -109,7 +105,7 @@ Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de c
 
 ## Próximo paso acordado
 
-**Fase 3 — Estadísticas y rankings**: pichichi, exclusión, asistencia, MVP, histórico de rivales, sección "Leyendas".
+**Fase 8 — Históricos y leyendas**: histórico de estadísticas de jugadores, histórico de enfrentamientos contra rivales, log de auditoría y botón admin "Iniciar nueva temporada" (archivar).
 
 ## Documentos disponibles
 
@@ -134,6 +130,11 @@ Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de c
 - `docs/planning/18-phase-3-summary.md` — resumen Fase 3
 - `docs/planning/19-phase-4-summary.md` — resumen Fase 4
 - `docs/planning/20-phase-5-summary.md` — resumen Fase 5
+- `docs/planning/21-phase-6-summary.md` — resumen Fase 6 (Tesorería)
+- `docs/planning/22-access-request-flow-design.md` — diseño de flujo de acceso
+- `docs/planning/23-phase-7-summary.md` — resumen Fase 7 (Coches/Logística)
+- `docs/planning/24-operational-closure-plan.md` — plan de cierre operativo
+- `docs/planning/25-operational-closure-summary.md` — resumen de cierre operativo (Fase 7.5)
 - `docs/planning/18-visual-identity-v2.md` — tesis de diseño "marcador de piscina en el bolsillo"
 
 ## Si dudas

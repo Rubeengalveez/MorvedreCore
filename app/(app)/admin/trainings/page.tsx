@@ -267,11 +267,11 @@ export default async function TrainingsPage() {
   if (seasons.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
+        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
           Entrenamientos
         </h1>
         <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
-          <p className="text-brand-deep text-base font-semibold">Primero crea una temporada.</p>
+          <p className="text-pool-deep text-base font-semibold">Primero crea una temporada.</p>
           <p className="text-ink-600 mt-1 text-sm">
             Los bloques de entrenamientos pertenecen a un equipo de una temporada.
           </p>
@@ -288,11 +288,11 @@ export default async function TrainingsPage() {
   if (teams.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
+        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
           Entrenamientos
         </h1>
         <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
-          <p className="text-brand-deep text-base font-semibold">Primero crea un equipo.</p>
+          <p className="text-pool-deep text-base font-semibold">Primero crea un equipo.</p>
           <p className="text-ink-600 mt-1 text-sm">
             Los bloques de entrenamientos se asignan a un equipo.
           </p>
@@ -310,7 +310,7 @@ export default async function TrainingsPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
+          <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
             Entrenamientos
           </h1>
           <p className="text-ink-600 text-sm">

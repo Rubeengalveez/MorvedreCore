@@ -126,12 +126,31 @@ function matchToVEvent(m: CalendarMatch, teamLabel: string, teamColor: string): 
 }
 
 export async function GET(request: Request) {
-  const ctx = await getActiveProfileContext();
-  if (!ctx) {
-    return new NextResponse("Not authenticated", { status: 401 });
+  const url = new URL(request.url);
+  const token = url.searchParams.get("token") ?? undefined;
+
+  let activeProfileId: string;
+
+  if (token) {
+    const admin = createAdminClient();
+    const { data: profile, error } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("calendar_token", token)
+      .maybeSingle();
+
+    if (error || !profile) {
+      return new NextResponse("Not authenticated", { status: 401 });
+    }
+    activeProfileId = profile.id;
+  } else {
+    const ctx = await getActiveProfileContext();
+    if (!ctx) {
+      return new NextResponse("Not authenticated", { status: 401 });
+    }
+    activeProfileId = ctx.activeProfile.id;
   }
 
-  const url = new URL(request.url);
   const parsed = querySchema.safeParse({
     team: url.searchParams.get("team") ?? undefined,
     from: url.searchParams.get("from") ?? undefined,
@@ -141,13 +160,12 @@ export async function GET(request: Request) {
     return new NextResponse("Invalid query params", { status: 400 });
   }
 
-  const { activeProfile } = ctx;
   const season = await getCurrentSeason();
   if (!season) {
     return new NextResponse("No current season", { status: 404 });
   }
 
-  const teams = await getTeamsForProfileInSeason(activeProfile.id, season.id);
+  const teams = await getTeamsForProfileInSeason(activeProfileId, season.id);
   const teamsFiltered = parsed.data.team ? teams.filter((t) => t.id === parsed.data.team) : teams;
   const teamIds = teamsFiltered.map((t) => t.id);
   const teamIdToLabel = new Map<string, string>();

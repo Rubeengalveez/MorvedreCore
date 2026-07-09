@@ -17,7 +17,8 @@ import { Balon, Porteria } from "@/components/brand/pictograms";
 import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { formatLongDate, formatTimeOfDay } from "@/lib/domain/calendar";
+import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
+import { formatLongDate } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getMatchById,
@@ -147,77 +148,36 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* ─── HERO SCOREBOARD ─── */}
-      <div className="bg-pool-deep flex flex-col items-center gap-5 px-5 pt-6 pb-7 select-none">
-        {/* Category pill */}
-        <span className="text-xs font-bold tracking-widest text-white/60 uppercase">
-          {match.team_label} ·{" "}
-          {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-        </span>
-
-        {/* Teams & Score row */}
-        <div className="flex w-full max-w-md items-center justify-center gap-5">
-          {/* Home */}
-          <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-black text-white"
-              style={{ backgroundColor: match.is_home ? match.team_color : "#64748B" }}
-            >
-              {match.is_home ? "MOR" : match.opponent.slice(0, 3).toUpperCase()}
-            </div>
-            <span className="w-full truncate text-center text-sm font-bold text-white">
-              {match.is_home ? "Morvedre" : match.opponent}
-            </span>
-          </div>
-
-          {/* Score / Time */}
-          <div className="shrink-0">
-            {hasScore ? (
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-4xl font-black text-white tabular-nums">
-                  {match.is_home ? match.final_score_us : match.final_score_them}
-                </span>
-                <span className="font-mono text-2xl font-bold text-white/40">-</span>
-                <span className="font-mono text-4xl font-black text-white tabular-nums">
-                  {match.is_home ? match.final_score_them : match.final_score_us}
-                </span>
-              </div>
-            ) : (
-              <span className="font-mono text-3xl font-black text-white">
-                {formatTimeOfDay(match.scheduled_at)}
-              </span>
-            )}
-          </div>
-
-          {/* Away */}
-          <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-            <div
-              className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-black text-white"
-              style={{ backgroundColor: match.is_home ? "#64748B" : match.team_color }}
-            >
-              {match.is_home ? match.opponent.slice(0, 3).toUpperCase() : "MOR"}
-            </div>
-            <span className="w-full truncate text-center text-sm font-bold text-white">
-              {match.is_home ? match.opponent : "Morvedre"}
-            </span>
-          </div>
-        </div>
-
-        {/* Date & Location */}
-        <div className="flex flex-col items-center gap-1 text-center">
-          <p className="text-sm font-semibold text-white/80">
-            {formatLongDate(match.scheduled_at)}
-          </p>
-          {match.pool_name && (
-            <p className="flex items-center gap-1.5 text-sm font-medium text-white/50">
-              <MapPin className="h-4 w-4" />
-              {match.pool_name}
-            </p>
-          )}
-        </div>
+      <div className="flex flex-col gap-4 px-4 pt-4 pb-5">
+        <PoolScoreboard
+          mode={hasScore ? "final" : "preview"}
+          homeTeam={{
+            label: match.is_home ? "Morvedre" : match.opponent,
+            color: match.is_home ? match.team_color : "#64748B",
+          }}
+          awayTeam={{
+            label: match.is_home ? match.opponent : "Morvedre",
+            color: match.is_home ? "#64748B" : match.team_color,
+          }}
+          homeScore={match.is_home ? match.final_score_us : match.final_score_them}
+          awayScore={match.is_home ? match.final_score_them : match.final_score_us}
+          scheduledAt={match.scheduled_at}
+          competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+          isHome={match.is_home}
+          location={match.pool_name}
+          mvp={
+            isPlayed && mvp
+              ? { name: mvp.full_name, cap: mvp.cap_number ?? null }
+              : null
+          }
+        />
+        <p className="text-ink-600 text-center text-sm font-medium">
+          {formatLongDate(match.scheduled_at)}
+        </p>
       </div>
 
       {/* ─── CONTENT ─── */}
-      <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+      <div className="flex flex-col gap-5 px-4 pt-2 pb-6">
         {!match.is_home && match.logistics_enabled && !isPlayed ? (
           <section className="bg-paper-card border-ink-200 flex items-center gap-4 rounded-lg border p-4">
             <div className="bg-ball-gold text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-md">
@@ -234,7 +194,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         ) : null}
         {/* RSVP (only upcoming matches) */}
         {myStatus && (match.status === "scheduled" || match.status === "in_progress") && (
-          <section className="bg-paper-card border-ink-200 flex flex-col gap-3 rounded-2xl border p-5 shadow-sm">
+          <section className="bg-paper-card border-ink-200 flex flex-col gap-3 rounded-lg border p-5 shadow-elev-1">
             <h2 className="text-ink-900 flex items-center gap-2 text-sm font-black">
               <UserCheck className="text-pool-blue h-5 w-5" />
               Confirmar asistencia
@@ -250,7 +210,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
         {/* MVP (only played matches) */}
         {isPlayed && mvp && (
-          <section className="flex items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm select-none">
+          <section className="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-elev-1 select-none">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-200">
               <Award className="h-6 w-6 text-amber-800" />
             </div>
@@ -282,7 +242,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                 asChild
                 size="sm"
                 variant="secondary"
-                className="h-9 cursor-pointer rounded-xl text-xs font-bold"
+                className="h-9 cursor-pointer rounded-md text-xs font-bold"
               >
                 <Link href={`/admin/matches/${match.id}` as Route}>Editar</Link>
               </Button>
@@ -290,7 +250,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </div>
 
           {callups.length === 0 ? (
-            <div className="border-ink-200 text-ink-500 rounded-2xl border-2 border-dashed p-10 text-center text-base font-medium select-none">
+            <div className="border-ink-200 text-ink-500 rounded-lg border-2 border-dashed p-10 text-center text-base font-medium select-none">
               Aún no se ha publicado la convocatoria.
             </div>
           ) : (
@@ -304,7 +264,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                 return (
                   <li
                     key={c.player_id}
-                    className="bg-paper-card border-ink-200 flex items-center gap-3 rounded-xl border px-4 py-3 select-none"
+                    className="bg-paper-card border-ink-200 flex items-center gap-3 rounded-md border px-4 py-3 select-none"
                   >
                     {/* Avatar with status dot */}
                     <div className="relative shrink-0">
@@ -366,7 +326,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
         {/* Notes */}
         {match.notes && (
-          <section className="bg-paper-card border-ink-200 flex flex-col gap-3 rounded-2xl border p-5 shadow-sm">
+          <section className="bg-paper-card border-ink-200 flex flex-col gap-3 rounded-lg border p-5 shadow-elev-1">
             <h2 className="text-ink-900 flex items-center gap-2 text-sm font-bold">
               <FileText className="text-ink-400 h-4 w-4" />
               Notas

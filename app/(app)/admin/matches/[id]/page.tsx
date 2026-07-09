@@ -13,6 +13,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 import { formatLongDate, formatTime } from "@/lib/utils/format";
@@ -51,7 +52,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  scheduled: "bg-brand-aqua/15 text-brand-deep",
+  scheduled: "bg-pool-teal/15 text-pool-deep",
   in_progress: "bg-warning/15 text-warning",
   played: "bg-success/15 text-success",
   cancelled: "bg-danger/15 text-danger",
@@ -245,90 +246,46 @@ export default async function MatchDetailPage({
       <div className="text-ink-600 flex items-center gap-2 text-sm">
         <Link
           href={"/admin/matches" as Route}
-          className="text-brand-blue inline-flex items-center gap-1 font-semibold hover:underline focus-visible:underline"
+          className="text-pool-blue inline-flex items-center gap-1 font-semibold hover:underline focus-visible:underline"
         >
           <MdArrowBack className="h-5 w-5" aria-hidden="true" />
           Partidos
         </Link>
       </div>
 
-      <header
-        className="border-ink-300 bg-paper relative overflow-hidden rounded-md border"
-        style={{
-          borderTopWidth: "4px",
-          borderTopColor: match.team?.color ?? "var(--brand-blue)",
-          borderLeftWidth: "4px",
-          borderLeftColor: match.team?.color ?? "var(--brand-blue)",
-        }}
-      >
-        <div className="flex flex-col gap-4 p-5">
-          <div className="text-ink-600 flex items-center gap-2 text-xs">
-            <span className="text-brand-deep font-mono font-bold tracking-wider uppercase">
-              {formatLongDate(scheduledDate)}
-            </span>
-            <span
-              className={cn(
-                "ml-auto inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
-                STATUS_BADGE[match.status] ?? "border-ink-300 text-ink-600 border",
-              )}
-            >
-              {STATUS_LABELS[match.status] ?? match.status}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
-            <div className="flex flex-col items-center gap-1 text-center sm:items-end sm:text-right">
-              <span className="text-eyebrow text-ink-600">
-                {match.is_home ? "Local" : "Visitante"}
-              </span>
-              <span className="font-display text-brand-deep text-2xl leading-tight font-extrabold sm:text-3xl">
-                {match.team?.label ?? "Equipo"}
-              </span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <span className="text-ink-600 font-mono text-sm font-bold">
-                {formatTime(scheduledDate)}
-              </span>
-              {match.status === "played" &&
-              match.final_score_us != null &&
-              match.final_score_them != null ? (
-                <span
-                  className="text-brand-deep font-mono leading-none font-extrabold"
-                  style={{ fontSize: "72px" }}
-                >
-                  {match.final_score_us} - {match.final_score_them}
-                </span>
-              ) : (
-                <span className="font-display text-ink-600 text-3xl font-extrabold">vs</span>
-              )}
-            </div>
-            <div className="flex flex-col items-center gap-1 text-center sm:items-start sm:text-left">
-              <span className="text-eyebrow text-ink-600">
-                {match.is_home ? "Visitante" : "Local"}
-              </span>
-              <span className="font-display text-brand-deep text-2xl leading-tight font-extrabold sm:text-3xl">
-                {match.opponent}
-              </span>
-            </div>
-          </div>
-          <div className="text-ink-600 flex flex-wrap items-center justify-center gap-1.5 text-sm">
-            <span className="border-ink-300 text-ink-600 inline-flex h-6 items-center rounded-full border px-2 text-[11px] font-semibold">
-              {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-            </span>
-            {match.is_home ? (
-              <span className="bg-brand-foam text-brand-deep inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
-                Local
-              </span>
-            ) : (
-              <span className="bg-ink-300/40 text-ink-600 inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
-                Visitante
-              </span>
-            )}
-            {match.pool_name || match.location ? (
-              <span className="text-ink-600 text-xs">{match.pool_name ?? match.location}</span>
-            ) : null}
-          </div>
-        </div>
-      </header>
+      <div className="relative">
+        <PoolScoreboard
+          mode={
+            match.status === "played" &&
+            match.final_score_us != null &&
+            match.final_score_them != null
+              ? "final"
+              : "preview"
+          }
+          homeTeam={{
+            label: match.is_home ? (match.team?.label ?? "Morvedre") : match.opponent,
+            color: match.is_home ? (match.team?.color ?? "var(--pool-blue)") : "#64748B",
+          }}
+          awayTeam={{
+            label: match.is_home ? match.opponent : (match.team?.label ?? "Morvedre"),
+            color: match.is_home ? "#64748B" : (match.team?.color ?? "var(--pool-blue)"),
+          }}
+          homeScore={match.final_score_us}
+          awayScore={match.final_score_them}
+          scheduledAt={match.scheduled_at}
+          competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+          isHome={match.is_home}
+          location={match.pool_name ?? match.location}
+        />
+        <span
+          className={cn(
+            "absolute top-3 right-3 inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
+            STATUS_BADGE[match.status] ?? "border-ink-300 text-ink-600 border",
+          )}
+        >
+          {STATUS_LABELS[match.status] ?? match.status}
+        </span>
+      </div>
 
       <nav
         aria-label="Secciones del partido"
@@ -344,15 +301,15 @@ export default async function MatchDetailPage({
                   role="tab"
                   aria-selected={isActive}
                   className={cn(
-                    "font-display focus-visible:ring-brand-blue focus-visible:ring-offset-paper relative inline-flex h-12 min-h-12 items-center justify-center px-4 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                    isActive ? "text-brand-blue" : "text-ink-600 hover:text-brand-deep",
+                    "font-display focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative inline-flex h-12 min-h-12 items-center justify-center px-4 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                    isActive ? "text-pool-blue" : "text-ink-600 hover:text-pool-deep",
                   )}
                 >
                   {t.label}
                   {isActive ? (
                     <span
                       aria-hidden="true"
-                      className="bg-brand-blue absolute inset-x-3 bottom-0 h-[3px] rounded-full"
+                      className="bg-pool-blue absolute inset-x-3 bottom-0 h-[3px] rounded-full"
                     />
                   ) : null}
                 </Link>
@@ -367,7 +324,7 @@ export default async function MatchDetailPage({
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-col">
-                <h2 className="font-display text-brand-deep text-lg font-bold">
+                <h2 className="font-display text-pool-deep text-lg font-bold">
                   Jugadores convocados
                 </h2>
                 <p className="text-ink-600 text-xs">{callupEntries.length} en la convocatoria</p>
@@ -399,7 +356,7 @@ export default async function MatchDetailPage({
 
         {tab === "acta" ? (
           <>
-            <h2 className="font-display text-brand-deep text-lg font-bold">Acta del partido</h2>
+            <h2 className="font-display text-pool-deep text-lg font-bold">Acta del partido</h2>
             <ActaManager
               match={{
                 id: match.id,
@@ -414,7 +371,7 @@ export default async function MatchDetailPage({
 
         {tab === "detalles" ? (
           <>
-            <h2 className="font-display text-brand-deep text-lg font-bold">Detalles del partido</h2>
+            <h2 className="font-display text-pool-deep text-lg font-bold">Detalles del partido</h2>
             {match.team ? (
               <MatchDetailsForm match={match} team={match.team} />
             ) : (
@@ -425,17 +382,17 @@ export default async function MatchDetailPage({
 
         {tab === "logistica" ? (
           <>
-            <h2 className="font-display text-brand-deep text-lg font-bold">Logística</h2>
+            <h2 className="font-display text-pool-deep text-lg font-bold">Logística</h2>
             {match.logistics_enabled ? (
               <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-                <p className="text-brand-deep text-base font-semibold">Próximamente.</p>
+                <p className="text-pool-deep text-base font-semibold">Próximamente.</p>
                 <p className="text-ink-600 mt-1 text-sm">
                   La gestión de coches y viajes se activa en una fase posterior (Fase 7).
                 </p>
               </div>
             ) : (
               <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-                <p className="text-brand-deep text-base font-semibold">Logística desactivada.</p>
+                <p className="text-pool-deep text-base font-semibold">Logística desactivada.</p>
                 <p className="text-ink-600 mt-1 text-sm">
                   Activa el interruptor de logística en la pestaña &ldquo;Detalles&rdquo; para
                   empezar a planificar el viaje.

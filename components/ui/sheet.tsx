@@ -28,7 +28,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const sheetContentVariants = cva(
-  "fixed inset-x-0 bottom-0 z-50 flex flex-col gap-4 border-t border-ink-300 bg-paper text-ink-900 shadow-lg transition-transform data-[state=closed]:translate-y-full data-[state=open]:translate-y-0",
+  "fixed inset-x-0 bottom-0 z-50 flex flex-col gap-4 border-t border-ink-300 bg-paper text-ink-900 shadow-elev-4 transition-transform data-[state=closed]:translate-y-full data-[state=open]:translate-y-0",
   {
     variants: {
       size: {
@@ -66,7 +66,7 @@ const SheetContent = React.forwardRef<
       {showClose ? (
         <DialogPrimitive.Close
           aria-label="Cerrar"
-          className="text-ink-600 hover:bg-brand-foam focus-visible:ring-brand-blue focus-visible:ring-offset-paper touch-target absolute top-[max(1rem,env(safe-area-inset-top))] right-4 inline-flex h-11 w-11 items-center justify-center rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="text-ink-600 hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-[max(1rem,env(safe-area-inset-top))] right-4 inline-flex h-11 w-11 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </DialogPrimitive.Close>
@@ -88,7 +88,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn("font-display text-brand-deep text-xl font-bold", className)}
+    className={cn("font-display text-pool-deep text-xl font-bold", className)}
     {...props}
   />
 ));

@@ -142,7 +142,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
         <div className="text-ink-600 flex items-center gap-2 text-sm">
           <Link
             href={"/admin/teams" as Route}
-            className="text-brand-blue font-semibold hover:underline focus-visible:underline"
+            className="text-pool-blue font-semibold hover:underline focus-visible:underline"
           >
             ← Equipos
           </Link>
@@ -159,7 +159,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
         >
           <div className="flex flex-col gap-2 p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-brand-deep text-3xl leading-tight font-extrabold tracking-tight">
+              <h1 className="font-display text-pool-deep text-3xl leading-tight font-extrabold tracking-tight">
                 {team.label}
               </h1>
               <span className="border-ink-300 text-ink-600 rounded-full border px-2 py-0.5 text-xs font-semibold">
@@ -180,7 +180,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
 
       <section aria-labelledby="staff-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 id="staff-heading" className="font-display text-brand-deep text-lg font-bold">
+          <h2 id="staff-heading" className="font-display text-pool-deep text-lg font-bold">
             Personal
           </h2>
           <StaffAssignSheet
@@ -194,7 +194,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
 
       <section aria-labelledby="roster-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 id="roster-heading" className="font-display text-brand-deep text-lg font-bold">
+          <h2 id="roster-heading" className="font-display text-pool-deep text-lg font-bold">
             Plantilla
           </h2>
           <RosterAddSheet
@@ -208,7 +208,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
 
       <section aria-labelledby="details-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 id="details-heading" className="font-display text-brand-deep text-lg font-bold">
+          <h2 id="details-heading" className="font-display text-pool-deep text-lg font-bold">
             Detalles
           </h2>
           <TeamEditSheet
@@ -238,7 +238,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
 
       <div className="flex justify-end">
         <Button asChild variant="secondary" size="md">
-          <Link href={"/admin/teams" as Route} className="text-brand-blue">
+          <Link href={"/admin/teams" as Route} className="text-pool-blue">
             Volver al listado
           </Link>
         </Button>

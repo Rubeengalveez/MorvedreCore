@@ -24,8 +24,8 @@ export default async function ParentRequestPage({
     >
       <div className="flex w-full max-w-sm flex-col items-center gap-6">
         <Logo size={64} withWordmark />
-        <div className="border-ink-300 bg-paper-card w-full rounded-md border p-6 shadow-md">
-          <h1 className="font-display text-brand-deep text-2xl font-extrabold">
+        <div className="border-ink-300 bg-paper-card w-full rounded-md border p-6 shadow-elev-2">
+          <h1 className="font-display text-pool-deep text-2xl font-extrabold">
             Solicitar acceso como padre/madre
           </h1>
           <p className="text-ink-600 mt-1 text-sm">

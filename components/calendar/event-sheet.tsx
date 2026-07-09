@@ -100,7 +100,7 @@ export function TrainingRow({
   isCoach: boolean;
 }) {
   return (
-    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md">
+    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-lg border p-5 shadow-sm transition-all hover:shadow-elev-2">
       {/* Decorative vertical color stripe */}
       <span
         aria-hidden="true"
@@ -173,7 +173,7 @@ export function MatchRow({
   const href = `/matches/${match.id}` as Route;
 
   return (
-    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md">
+    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-lg border p-5 shadow-sm transition-all hover:shadow-elev-2">
       {/* Decorative vertical team color stripe */}
       <span
         aria-hidden="true"

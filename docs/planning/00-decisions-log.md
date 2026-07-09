@@ -495,3 +495,19 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - La reserva usa `reserve_travel_seat` con bloqueo de fila y triggers defensivos para evitar sobreventa aunque alguien intente escribir por API directa.
 - La compensacion se modela como importe fijo por coche en centimos (`travel_compensation_cents`), no como calculo automatico por kilometros, porque el club decide la cifra por desplazamiento.
 - Documentado el cierre en `23-phase-7-summary.md`.
+
+## 2026-07-09 - Aplicación del design system (UI/UX Pro Max + identidad propia)
+
+- Se instala la skill **UI/UX Pro Max** (`ui-ux-pro-max-cli`) para obtener recomendaciones de estilo. Tras analizar el proyecto, se rechaza la propuesta genérica de la skill (`Vibrant & Block-based` en rojo, orientada a fan engagement) porque no encaja con una app de gestión interna de un club de waterpolo cuya marca es azul.
+- Se adopta como base técnica el estilo **Flat Design Mobile (Touch-First)** de la skill, adaptado a la identidad visual evolucionada del proyecto: **"marcador de piscina en el bolsillo"**.
+- Cambios aplicados en todo el código:
+  - Tokens CSS alineados con `18-visual-identity-v2.md` (`--pool-deep: #062048`, `--pool-blue: #1657A8`, `--pool-teal: #0E8C8E`, `--pool-foam: #E2EFF4`, radios `--r-md: 10px`, `--r-lg: 16px`, `--r-xl: 24px`, sombras sutiles con `var(--ink-300)`).
+  - `@theme inline` actualizado para registrar todos los tokens, sombras y radios en Tailwind v4.
+  - Componentes base normalizados: `Button` (font-semibold, rounded-[var(--r-sm)], focus ring `pool-blue`), `Card` (rounded-md = 10px), `Alert` (info con `pool-teal/10`), `Input`/`Select`/`Sheet`.
+  - Reemplazo masivo de `brand-*` por `pool-*` / `ball-gold` en toda la app; los alias `brand-*` se mantienen solo en `globals.css` para compatibilidad.
+  - `tailwind.config.ts` ya no expone colores `brand.*`.
+  - `PoolScoreboard` se integra en `/matches/[id]` y `/admin/matches/[id]` como hero del partido.
+  - `RsvpButtons` reescrito con el componente `Button` (`gold`/`success` para confirmar, `danger`/`secondary` para declinar).
+  - Sombras grandes de Tailwind (`shadow-lg`, `shadow-xl`, `shadow-2xl`) reemplazadas por `shadow-elev-*`; `rounded-2xl` en cards reducido a `rounded-lg`.
+- Build de producción y tests locales pasan tras los cambios.
+- Se hizo commit+push de seguridad (`f4ec428`) antes de aplicar el design system.

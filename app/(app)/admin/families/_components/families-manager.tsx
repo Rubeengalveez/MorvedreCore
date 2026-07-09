@@ -318,7 +318,7 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
   if (rows.length === 0) {
     return (
       <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-        <p className="text-brand-deep text-base font-semibold">Sin vínculos familiares.</p>
+        <p className="text-pool-deep text-base font-semibold">Sin vínculos familiares.</p>
         <p className="text-ink-600 mt-1 text-sm">
           Cuando los padres y jugadores se unan, aparecerán aquí.
         </p>
@@ -357,7 +357,7 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
                   className="border-ink-300 bg-paper-card shadow-elev-1 flex items-center gap-3 rounded-md border p-3"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-brand-deep truncate text-sm font-bold">
+                    <p className="font-display text-pool-deep truncate text-sm font-bold">
                       {r.parent_name}
                     </p>
                     <p className="text-ink-600 text-xs">
@@ -401,7 +401,7 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
                   const isPending = pendingKey === key;
                   return (
                     <tr key={key} className="text-base">
-                      <td className="border-ink-300 font-display text-brand-deep border-b px-3 py-3 font-bold">
+                      <td className="border-ink-300 font-display text-pool-deep border-b px-3 py-3 font-bold">
                         {r.parent_name}
                       </td>
                       <td className="border-ink-300 text-ink-900 border-b px-3 py-3">

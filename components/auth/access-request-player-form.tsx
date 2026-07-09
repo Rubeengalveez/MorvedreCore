@@ -45,8 +45,8 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
 
   if (state?.success) {
     return (
-      <div className="border-ink-300 bg-paper-card rounded-md border p-6 text-center shadow-md">
-        <h2 className="font-display text-brand-deep text-xl font-extrabold">Solicitud enviada</h2>
+      <div className="border-ink-300 bg-paper-card rounded-md border p-6 text-center shadow-elev-2">
+        <h2 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h2>
         <p className="text-ink-600 mt-2 text-sm">
           Tu cuenta está pendiente de activación. El administrador del club revisará tus datos y te
           pasará una contraseña provisional para que entres y la cambies.

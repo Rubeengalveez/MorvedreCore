@@ -82,30 +82,30 @@ export function ImportPlayersPanel() {
       <div className="border-ink-300 bg-paper rounded-md border p-5">
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3">
-            <span className="bg-brand-foam text-brand-deep flex h-10 w-10 items-center justify-center rounded">
+            <span className="bg-pool-foam text-pool-deep flex h-10 w-10 items-center justify-center rounded">
               <MdDescription className="h-6 w-6" aria-hidden="true" />
             </span>
             <div className="flex flex-1 flex-col">
-              <h2 className="font-display text-brand-deep text-lg font-bold">
+              <h2 className="font-display text-pool-deep text-lg font-bold">
                 Importar jugadores desde Excel
               </h2>
               <p className="text-ink-600 text-sm">
                 Sube un archivo .xlsx con las columnas:{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">nombre_completo</code>,{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">ano_nacimiento</code>,{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">dorsal</code>,{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">nombre_equipo</code>,{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">email_tutor</code>,{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">nombre_tutor</code>,{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">telefono_tutor</code>,{" "}
-                <code className="bg-brand-foam rounded px-1 py-0.5 text-xs">relacion</code>.
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">nombre_completo</code>,{" "}
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">ano_nacimiento</code>,{" "}
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">dorsal</code>,{" "}
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">nombre_equipo</code>,{" "}
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">email_tutor</code>,{" "}
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">nombre_tutor</code>,{" "}
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">telefono_tutor</code>,{" "}
+                <code className="bg-pool-foam rounded px-1 py-0.5 text-xs">relacion</code>.
               </p>
             </div>
           </div>
 
-          <label className="border-ink-300 bg-paper hover:border-brand-blue hover:bg-brand-foam flex cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors">
+          <label className="border-ink-300 bg-paper hover:border-pool-blue hover:bg-pool-foam flex cursor-pointer flex-col items-center gap-2 rounded-md border-2 border-dashed p-6 text-center transition-colors">
             <MdCloudUpload className="text-ink-600 h-7 w-7" aria-hidden="true" />
-            <span className="font-display text-brand-deep text-sm font-semibold">
+            <span className="font-display text-pool-deep text-sm font-semibold">
               {file ? file.name : "Selecciona un archivo .xlsx"}
             </span>
             <span className="text-ink-600 text-xs">
@@ -171,7 +171,7 @@ function PreviewSection({
   return (
     <section className="border-ink-300 bg-paper flex flex-col gap-4 rounded-md border p-5">
       <header className="flex flex-col gap-1">
-        <h3 className="font-display text-brand-deep text-lg font-bold">Previsualización</h3>
+        <h3 className="font-display text-pool-deep text-lg font-bold">Previsualización</h3>
         <p className="text-ink-600 text-sm">
           {preview.totalRows === 0
             ? "No hemos encontrado filas válidas en el archivo."
@@ -246,7 +246,7 @@ function PreviewRowTr({ row }: { row: PreviewRow }) {
       <td className="border-ink-300 text-ink-600 hidden border-b px-3 py-2 font-mono text-xs sm:table-cell">
         {row.rowNumber}
       </td>
-      <td className="border-ink-300 text-brand-deep truncate border-b px-3 py-2 font-semibold">
+      <td className="border-ink-300 text-pool-deep truncate border-b px-3 py-2 font-semibold">
         {row.full_name}
       </td>
       <td className="border-ink-300 text-ink-600 hidden border-b px-3 py-2 font-mono text-xs sm:table-cell">
@@ -269,7 +269,7 @@ function ResultSection({ result, onClose }: { result: ImportResult; onClose: () 
   return (
     <section className="border-ink-300 bg-paper flex flex-col gap-4 rounded-md border p-5">
       <header className="flex flex-col gap-2">
-        <h3 className="font-display text-brand-deep flex items-center gap-2 text-lg font-bold">
+        <h3 className="font-display text-pool-deep flex items-center gap-2 text-lg font-bold">
           <MdCheckCircle className="text-success h-5 w-5" aria-hidden="true" />
           Importación completada
         </h3>

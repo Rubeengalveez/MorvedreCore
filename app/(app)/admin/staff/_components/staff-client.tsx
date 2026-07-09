@@ -37,7 +37,7 @@ export function StaffClient({ rows, teams, people }: StaffClientProps) {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="font-display text-brand-deep text-3xl font-extrabold tracking-tight">
+          <h1 className="font-display text-pool-deep text-3xl font-extrabold tracking-tight">
             Personal
           </h1>
           <p className="text-ink-600 text-sm">

@@ -200,14 +200,14 @@ function TabButton({
       onClick={onClick}
       className={cn(
         "font-display relative inline-flex h-12 items-center gap-2 px-1 text-sm font-semibold transition-colors focus-visible:outline-none",
-        active ? "text-brand-blue" : "text-ink-600 hover:text-brand-deep",
+        active ? "text-pool-blue" : "text-ink-600 hover:text-pool-deep",
       )}
     >
       {label}
       <span
         className={cn(
           "inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold",
-          active ? "bg-brand-blue text-paper" : "bg-ink-300/40 text-ink-900",
+          active ? "bg-pool-blue text-paper" : "bg-ink-300/40 text-ink-900",
         )}
       >
         {count}
@@ -215,7 +215,7 @@ function TabButton({
       {active ? (
         <span
           aria-hidden="true"
-          className="bg-brand-blue absolute inset-x-0 bottom-0 h-[3px] rounded-full"
+          className="bg-pool-blue absolute inset-x-0 bottom-0 h-[3px] rounded-full"
         />
       ) : null}
     </button>
@@ -235,20 +235,20 @@ function NotificationRow({
       type="button"
       onClick={onClick}
       className={cn(
-        "hover:bg-brand-foam focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-        isUnread ? "border-brand-aqua/40 bg-brand-foam" : "border-ink-300 bg-paper",
+        "hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+        isUnread ? "border-pool-teal/40 bg-pool-foam" : "border-ink-300 bg-paper",
       )}
     >
       <span
         aria-hidden="true"
         className={cn(
           "mt-1 block h-2 w-2 shrink-0 rounded-full",
-          isUnread ? "bg-brand-blue" : "bg-ink-300",
+          isUnread ? "bg-pool-blue" : "bg-ink-300",
         )}
       />
       <div className="flex flex-1 flex-col gap-0.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-display text-brand-deep text-sm font-bold">
+          <span className="font-display text-pool-deep text-sm font-bold">
             {notification.title}
           </span>
           <span className="text-ink-600 shrink-0 text-[10px] font-semibold tracking-wider uppercase">

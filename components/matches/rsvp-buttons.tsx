@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/ui/button";
 import { setMyCallupStatus } from "@/server/actions/admin";
 
 export type RsvpStatus = "called" | "confirmed" | "declined" | "withdrawn" | "no_show";
@@ -15,19 +16,20 @@ export interface RsvpButtonsProps {
 
 export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  function send(status: "confirmed" | "declined" | "withdrawn") {
+  async function send(status: "confirmed" | "declined" | "withdrawn") {
     setError(null);
-    startTransition(async () => {
-      try {
-        await setMyCallupStatus({ match_id: matchId, status });
-        router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "No pudimos guardar tu respuesta.");
-      }
-    });
+    setPending(true);
+    try {
+      await setMyCallupStatus({ match_id: matchId, status });
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No pudimos guardar tu respuesta.");
+    } finally {
+      setPending(false);
+    }
   }
 
   const isConfirmed = currentStatus === "confirmed" || currentStatus === "called";
@@ -36,22 +38,16 @@ export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
 
   return (
     <div className="flex w-full flex-col gap-2.5 select-none">
-      <span className="text-ink-500 text-[10px] font-black tracking-widest uppercase">
-        ¿Confirmas tu asistencia al partido?
-      </span>
+      <span className="text-eyebrow text-ink-500">¿Confirmas tu asistencia al partido?</span>
 
       <div className="xs:flex-row flex flex-col gap-2.5">
-        {/* Green Button: Confirm */}
-        <button
+        <Button
           type="button"
+          size="xl"
+          variant={isConfirmed ? "success" : "gold"}
           disabled={pending}
           onClick={() => send("confirmed")}
-          className={cn(
-            "flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-xs font-extrabold transition-all active:scale-[0.97]",
-            isConfirmed
-              ? "text-paper border-emerald-600 bg-emerald-600 shadow-sm"
-              : "bg-paper border-emerald-500/25 text-emerald-700 hover:bg-emerald-50/50",
-          )}
+          className={cn("flex-1", isConfirmed && "border-success border")}
         >
           {pending ? (
             <Loader2 className="h-4 w-4 animate-spin text-current" />
@@ -59,19 +55,15 @@ export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
             <Check className="h-4 w-4 shrink-0" />
           )}
           <span>{isConfirmed ? "Asistiré" : "Confirmar asistencia"}</span>
-        </button>
+        </Button>
 
-        {/* Red Button: Decline */}
-        <button
+        <Button
           type="button"
+          size="xl"
+          variant={isDeclined ? "danger" : "secondary"}
           disabled={pending}
           onClick={() => send("declined")}
-          className={cn(
-            "flex h-12 flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border text-xs font-extrabold transition-all active:scale-[0.97]",
-            isDeclined
-              ? "text-paper border-red-600 bg-red-600 shadow-sm"
-              : "bg-paper border-red-500/25 text-red-600 hover:bg-red-50/50",
-          )}
+          className="flex-1"
         >
           {pending ? (
             <Loader2 className="h-4 w-4 animate-spin text-current" />
@@ -79,7 +71,7 @@ export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
             <X className="h-4 w-4 shrink-0" />
           )}
           <span>{isDeclined ? "No puedo ir" : "Denegar asistencia"}</span>
-        </button>
+        </Button>
       </div>
 
       {error ? <p className="text-danger mt-1 text-xs font-semibold">{error}</p> : null}

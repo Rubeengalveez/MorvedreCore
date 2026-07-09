@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils/cn";
 const alertVariants = cva("flex w-full items-start gap-3 rounded-md border p-4 text-sm", {
   variants: {
     variant: {
-      info: "border-brand-aqua bg-brand-foam text-ink-900",
+      info: "border-pool-teal/30 bg-pool-teal/10 text-pool-deep",
       success: "border-success/30 bg-success/10 text-ink-900",
       warning: "border-warning/30 bg-warning/10 text-ink-900",
       danger: "border-danger/30 bg-danger/10 text-ink-900",

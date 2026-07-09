@@ -20,9 +20,9 @@ export default function ResetPasswordPage() {
         <Logo size={64} withWordmark />
         <div
           className="border-ink-300 bg-paper flex w-full flex-col gap-1 rounded-md border p-4 text-center"
-          style={{ borderTopWidth: "4px", borderTopColor: "var(--brand-blue)" }}
+          style={{ borderTopWidth: "4px", borderTopColor: "var(--pool-blue)" }}
         >
-          <h1 className="font-display text-brand-deep text-2xl font-extrabold">
+          <h1 className="font-display text-pool-deep text-2xl font-extrabold">
             ¿Se te olvidó la contraseña?
           </h1>
           <p className="text-ink-600 text-sm">
@@ -34,7 +34,7 @@ export default function ResetPasswordPage() {
         </div>
         <Link
           href={"/login" as Route}
-          className="text-brand-blue text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
+          className="text-pool-blue text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
         >
           Volver a iniciar sesión
         </Link>

@@ -5,13 +5,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          deep: "var(--brand-deep)",
-          blue: "var(--brand-blue)",
-          aqua: "var(--brand-aqua)",
-          foam: "var(--brand-foam)",
-          ball: "var(--brand-ball)",
-        },
         pool: {
           deep: "var(--pool-deep)",
           blue: "var(--pool-blue)",

@@ -8,4 +8,5 @@ export interface ProfileSummary {
   cap_number: number | null;
   team_color: string | null;
   must_change_password: boolean;
+  calendar_token: string;
 }

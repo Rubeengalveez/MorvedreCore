@@ -7,18 +7,18 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils/cn";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md font-display font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[var(--r-sm)] font-display font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97]",
   {
     variants: {
       variant: {
         primary: "bg-pool-blue text-paper shadow-elev-2 hover:bg-pool-deep active:bg-pool-deep",
-        deep: "bg-pool-deep text-paper hover:bg-ink-900",
+        deep: "bg-pool-deep text-paper hover:bg-ink-900 active:bg-ink-900",
         secondary:
-          "border border-ink-300 bg-paper-card text-pool-deep shadow-elev-1 hover:bg-pool-foam",
-        ghost: "text-pool-deep hover:bg-pool-foam",
-        danger: "bg-goggle-red text-paper hover:opacity-90",
-        success: "bg-success text-paper hover:opacity-90",
-        gold: "bg-ball-gold text-pool-deep hover:opacity-90",
+          "border border-ink-300 bg-paper-card text-pool-deep shadow-elev-1 hover:bg-pool-foam active:bg-pool-foam",
+        ghost: "text-pool-deep hover:bg-pool-foam active:bg-pool-foam",
+        danger: "bg-goggle-red text-paper hover:opacity-90 active:opacity-90",
+        success: "bg-success text-paper hover:opacity-90 active:opacity-90",
+        gold: "bg-ball-gold text-pool-deep hover:opacity-90 active:opacity-90",
       },
       size: {
         sm: "h-11 min-h-11 px-4 text-sm",

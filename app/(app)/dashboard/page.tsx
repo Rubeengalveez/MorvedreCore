@@ -181,7 +181,7 @@ export default async function DashboardPage() {
         {activeStreaks.length > 0 ? (
           <section
             data-streak-strip
-            className="border-action/25 bg-action/7 no-scrollbar flex items-center gap-2 overflow-x-auto rounded-md border px-3 py-2"
+            className="border-action/25 bg-action/[7%] no-scrollbar flex items-center gap-2 overflow-x-auto rounded-md border px-3 py-2"
             aria-label="Rachas activas"
           >
             <span className="bg-action text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-md">

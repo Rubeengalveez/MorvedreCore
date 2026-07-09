@@ -46,7 +46,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  scheduled: "bg-brand-aqua/15 text-brand-deep",
+  scheduled: "bg-pool-teal/15 text-pool-deep",
   in_progress: "bg-warning/15 text-warning",
   played: "bg-success/15 text-success",
   cancelled: "bg-danger/15 text-danger",
@@ -154,15 +154,15 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
               aria-selected={isActive}
               onClick={() => setTab(t.value)}
               className={cn(
-                "font-display focus-visible:ring-brand-blue focus-visible:ring-offset-paper relative h-12 shrink-0 px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                isActive ? "text-brand-blue" : "text-ink-600 hover:text-brand-deep",
+                "font-display focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative h-12 shrink-0 px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                isActive ? "text-pool-blue" : "text-ink-600 hover:text-pool-deep",
               )}
             >
               {t.label}
               {isActive ? (
                 <span
                   aria-hidden="true"
-                  className="bg-brand-blue absolute inset-x-3 bottom-0 h-[3px] rounded-full"
+                  className="bg-pool-blue absolute inset-x-3 bottom-0 h-[3px] rounded-full"
                 />
               ) : null}
             </button>
@@ -172,7 +172,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
 
       {sorted.length === 0 ? (
         <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-          <p className="text-brand-deep text-base font-semibold">Calendario vacío.</p>
+          <p className="text-pool-deep text-base font-semibold">Calendario vacío.</p>
           <p className="text-ink-600 mt-1 text-sm">
             Crea el primer partido desde la pestaña de equipos.
           </p>
@@ -183,7 +183,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
             <li key={m.id}>
               <a
                 href={`/admin/matches/${m.id}`}
-                className="group border-ink-300 bg-paper hover:border-brand-blue hover:bg-brand-foam focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex flex-col overflow-hidden rounded-md border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="group border-ink-300 bg-paper hover:border-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex flex-col overflow-hidden rounded-md border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 style={{
                   borderLeftWidth: "4px",
                   borderLeftColor: m.team_color,
@@ -191,7 +191,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
               >
                 <div className="flex flex-col gap-2 p-4">
                   <div className="text-ink-600 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-brand-deep font-mono font-semibold">
+                    <span className="text-pool-deep font-mono font-semibold">
                       {formatLongDate(m.scheduled_at).split(",")[0]}
                     </span>
                     <span>·</span>
@@ -206,13 +206,13 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-display text-brand-deep text-xl leading-tight font-extrabold">
+                    <h3 className="font-display text-pool-deep text-xl leading-tight font-extrabold">
                       {m.is_home
                         ? `${m.team_label} vs ${m.opponent}`
                         : `${m.opponent} vs ${m.team_label}`}
                     </h3>
                     {m.status === "played" ? (
-                      <span className="text-brand-deep font-mono text-lg font-extrabold">
+                      <span className="text-pool-deep font-mono text-lg font-extrabold">
                         {scoreLabel(m)}
                       </span>
                     ) : null}
@@ -222,7 +222,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                       {COMPETITION_LABELS[m.competition_type] ?? m.competition_type}
                     </span>
                     {m.is_home ? (
-                      <span className="bg-brand-foam text-brand-deep inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
+                      <span className="bg-pool-foam text-pool-deep inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
                         Local
                       </span>
                     ) : (

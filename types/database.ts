@@ -130,6 +130,7 @@ export type Database = {
           school_enrolled: boolean;
           school_payment_paid: boolean;
           must_change_password: boolean;
+          calendar_token: string;
           created_at: string;
           updated_at: string;
         };
@@ -149,6 +150,7 @@ export type Database = {
           school_enrolled?: boolean;
           school_payment_paid?: boolean;
           must_change_password?: boolean;
+          calendar_token?: string;
           created_at?: string;
           updated_at?: string;
         };
@@ -168,6 +170,7 @@ export type Database = {
           school_enrolled?: boolean;
           school_payment_paid?: boolean;
           must_change_password?: boolean;
+          calendar_token?: string;
           created_at?: string;
           updated_at?: string;
         };

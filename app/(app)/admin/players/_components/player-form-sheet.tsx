@@ -153,8 +153,8 @@ function Toggle({
         aria-label={label}
         onClick={() => onChange(!value)}
         className={
-          "focus-visible:ring-brand-blue focus-visible:ring-offset-paper relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
-          (value ? "bg-brand-blue" : "bg-ink-300")
+          "focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
+          (value ? "bg-pool-blue" : "bg-ink-300")
         }
       >
         <span
@@ -458,7 +458,7 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
                         onBlur={field.onBlur}
                         name={field.name}
                         ref={field.ref}
-                        className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-brand-blue focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                       />
                     </FormControl>
                     <FormMessage />

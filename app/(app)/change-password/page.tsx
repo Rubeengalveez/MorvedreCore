@@ -46,7 +46,7 @@ export default async function ChangePasswordPage() {
           className="border-ink-300 bg-paper flex w-full flex-col gap-1 rounded-md border p-4 text-center"
           style={{ borderTopWidth: "4px", borderTopColor: "var(--brand-action)" }}
         >
-          <h1 className="font-display text-brand-deep text-2xl font-extrabold">Activa tu cuenta</h1>
+          <h1 className="font-display text-pool-deep text-2xl font-extrabold">Activa tu cuenta</h1>
           <p className="text-ink-600 text-sm">
             Tu cuenta está casi lista, solo falta una contraseña.
           </p>

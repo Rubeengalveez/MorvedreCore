@@ -74,7 +74,7 @@ export default async function FamiliesPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
+          <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
             Familias
           </h1>
           <p className="text-ink-600 text-sm">Vínculos entre tutores y jugadores.</p>

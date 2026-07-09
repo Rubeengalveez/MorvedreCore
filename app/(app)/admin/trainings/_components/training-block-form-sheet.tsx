@@ -127,10 +127,10 @@ function WeekdaysField({ value, onChange }: { value: number[]; onChange: (v: num
             onClick={() => toggle(d)}
             aria-pressed={active}
             className={cn(
-              "font-display focus-visible:ring-brand-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+              "font-display focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
               active
-                ? "border-brand-blue bg-brand-blue text-paper"
-                : "border-ink-300 bg-paper text-ink-600 hover:border-brand-blue hover:text-brand-deep",
+                ? "border-pool-blue bg-pool-blue text-paper"
+                : "border-ink-300 bg-paper text-ink-600 hover:border-pool-blue hover:text-pool-deep",
             )}
           >
             {formatWeekdayLetter(d)}

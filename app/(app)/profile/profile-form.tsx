@@ -300,7 +300,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                   onBlur={field.onBlur}
                   name={field.name}
                   ref={field.ref}
-                  className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-brand-blue focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                  className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 />
               </FormControl>
               <FormDescription>Solo tú verás este texto. Máx. 1000 caracteres.</FormDescription>
@@ -313,7 +313,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           <SubmitButton />
           <Link
             href={"/profile" as Route}
-            className="text-brand-blue text-center text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
+            className="text-pool-blue text-center text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
           >
             Volver a mi perfil
           </Link>

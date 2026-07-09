@@ -132,7 +132,7 @@ export function AccessRequestsManager({
   return (
     <div className="flex flex-col gap-6">
       <section className="border-ink-300 bg-paper-card rounded-md border p-4 shadow-sm">
-        <div className="text-brand-deep flex items-center gap-2">
+        <div className="text-pool-deep flex items-center gap-2">
           <MdLock className="h-5 w-5" />
           <h2 className="font-display text-lg font-extrabold">Contraseña temporal</h2>
         </div>
@@ -161,7 +161,7 @@ export function AccessRequestsManager({
 
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-brand-deep text-lg font-extrabold">
+          <h2 className="font-display text-pool-deep text-lg font-extrabold">
             Solicitudes pendientes ({pendingRequests.length})
           </h2>
           {selected.size > 0 ? (
@@ -252,7 +252,7 @@ export function AccessRequestsManager({
 
       {otherRequests.length > 0 ? (
         <section>
-          <h2 className="font-display text-brand-deep mb-3 text-lg font-extrabold">Historial</h2>
+          <h2 className="font-display text-pool-deep mb-3 text-lg font-extrabold">Historial</h2>
           <div className="flex flex-col gap-3">
             {otherRequests.map((request) => (
               <div

@@ -188,7 +188,7 @@ export function TeamPlayersTab({ roster, teamColor, staff, snapshots }: TeamPlay
                           label="MVPs"
                           value={selectedStats.mvp_count}
                           subValue="Veces MVP del partido"
-                          valueColor="text-brand-ball"
+                          valueColor="text-ball-gold"
                         />
                         <StatBox
                           icon={Star}

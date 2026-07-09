@@ -85,9 +85,9 @@ export function TrainingBlockCard({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-          <span className="text-brand-deep inline-flex h-9 w-9 shrink-0 items-center justify-center rounded">
+          <span className="text-pool-deep inline-flex h-9 w-9 shrink-0 items-center justify-center rounded">
             {open ? (
               <MdKeyboardArrowDown className="h-6 w-6" aria-hidden="true" />
             ) : (
@@ -95,7 +95,7 @@ export function TrainingBlockCard({
             )}
           </span>
           <div className="flex flex-1 flex-col">
-            <span className="font-display text-brand-deep text-lg font-extrabold">
+            <span className="font-display text-pool-deep text-lg font-extrabold">
               {block.label}
             </span>
             <span className="text-ink-600 text-sm">{team.label}</span>
@@ -112,7 +112,7 @@ export function TrainingBlockCard({
                   aria-hidden="true"
                   className={cn(
                     "inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
-                    active ? "bg-brand-blue text-paper" : "border-ink-300 text-ink-600/40 border",
+                    active ? "bg-pool-blue text-paper" : "border-ink-300 text-ink-600/40 border",
                   )}
                 >
                   {formatWeekdayLetter(d)}
@@ -122,7 +122,7 @@ export function TrainingBlockCard({
             <span className="sr-only">Días: {formatWeekdaysLong(block.weekdays)}</span>
           </div>
           <div className="text-ink-600 flex flex-col gap-0.5 text-sm">
-            <span className="text-brand-deep font-mono font-semibold">
+            <span className="text-pool-deep font-mono font-semibold">
               {formatTimeRange(block.start_time.slice(0, 5), block.end_time.slice(0, 5))}
             </span>
             <span>

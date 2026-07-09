@@ -1,3 +1,4 @@
+import { after } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPushToProfiles } from "@/lib/push/service";
 
@@ -21,14 +22,20 @@ export async function insertNotificationsWithPush(
   const { error } = await admin.from("notifications").insert(list);
   if (error) return { error };
 
-  await sendPushToProfiles(
-    list.map((row) => row.recipient_id),
-    {
-      title: list.length === 1 ? list[0].title : "Morvedre Core",
-      body: list.length === 1 ? (list[0].body ?? "") : `${list.length} avisos nuevos`,
-      href: list.length === 1 ? (list[0].href ?? "/notifications") : "/notifications",
-    },
-  );
+  after(async () => {
+    try {
+      await sendPushToProfiles(
+        list.map((row) => row.recipient_id),
+        {
+          title: list.length === 1 ? list[0].title : "Morvedre Core",
+          body: list.length === 1 ? (list[0].body ?? "") : `${list.length} avisos nuevos`,
+          href: list.length === 1 ? (list[0].href ?? "/notifications") : "/notifications",
+        },
+      );
+    } catch (pushErr) {
+      console.error("Async push notifications dispatch failed:", pushErr);
+    }
+  });
 
   return { error: null };
 }

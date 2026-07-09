@@ -120,7 +120,7 @@ export function AttendanceSheet({
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
-        <h2 className="font-display text-brand-deep text-xl font-bold">Pasar lista</h2>
+        <h2 className="font-display text-pool-deep text-xl font-bold">Pasar lista</h2>
         <p className="text-ink-600 text-sm">
           {sessionLabel} · {presentCount} de {players.length} presentes
         </p>
@@ -168,7 +168,7 @@ export function AttendanceSheet({
               <div className="flex items-center gap-3">
                 <Avatar name={p.full_name} src={p.photo_url} size={40} />
                 <div className="flex flex-1 flex-col">
-                  <span className="font-display text-brand-deep text-base font-bold">
+                  <span className="font-display text-pool-deep text-base font-bold">
                     {p.full_name}
                   </span>
                   {p.cap_number != null ? (
@@ -186,7 +186,7 @@ export function AttendanceSheet({
                     aria-pressed={isPresent}
                     aria-label="Presente"
                     className={cn(
-                      "focus-visible:ring-brand-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                      "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                       isPresent
                         ? "border-success bg-success text-paper"
                         : "border-ink-300 bg-paper text-ink-600 hover:border-success",
@@ -200,7 +200,7 @@ export function AttendanceSheet({
                     aria-pressed={!isPresent}
                     aria-label="Ausente"
                     className={cn(
-                      "focus-visible:ring-brand-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                      "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                       !isPresent
                         ? "border-danger bg-danger text-paper"
                         : "border-ink-300 bg-paper text-ink-600 hover:border-danger",

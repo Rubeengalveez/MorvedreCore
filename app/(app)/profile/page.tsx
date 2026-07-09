@@ -11,6 +11,7 @@ import { LanePattern } from "@/components/ui/lane-pattern";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { Equipo, Gorro, Porteria, SilbatoActivo, Trofeo } from "@/components/brand/pictograms";
 import { ProfileSwitcherInline } from "@/components/profile/profile-switcher-inline";
+import { CalendarSyncCard } from "@/components/profile/calendar-sync-card";
 import {
   AvailabilityCalendar,
   type AvailabilityDay,
@@ -462,6 +463,11 @@ export default async function ProfilePage() {
             upcomingSessions={upcomingSessions}
           />
         </section>
+
+        <CalendarSyncCard
+          token={activeProfile.calendar_token}
+          baseUrl={process.env.NEXT_PUBLIC_APP_URL || ""}
+        />
 
         {/* Botones de cuenta al final */}
         <div className="grid grid-cols-2 gap-2 pt-1">

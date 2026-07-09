@@ -119,7 +119,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="text-ink-600 hover:bg-pool-foam hover:text-brand-deep touch-target absolute top-1/2 right-1.5 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md focus-visible:outline-none"
+            className="text-ink-600 hover:bg-pool-foam hover:text-pool-deep touch-target absolute top-1/2 right-1.5 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md focus-visible:outline-none"
             tabIndex={-1}
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
           >

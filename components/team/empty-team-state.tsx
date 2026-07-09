@@ -18,11 +18,11 @@ export function EmptyTeamState({ title, description, pictogram, className }: Emp
         className,
       )}
     >
-      <div className="bg-brand-foam flex h-20 w-20 items-center justify-center rounded-full">
-        {pictogram ?? <Equipo className="h-12 w-12" accent="var(--brand-aqua)" />}
+      <div className="bg-pool-foam flex h-20 w-20 items-center justify-center rounded-full">
+        {pictogram ?? <Equipo className="h-12 w-12" accent="var(--pool-teal)" />}
       </div>
       <div className="flex flex-col gap-1">
-        <h2 className="font-display text-brand-deep text-xl font-extrabold">{title}</h2>
+        <h2 className="font-display text-pool-deep text-xl font-extrabold">{title}</h2>
         <p className="text-ink-600 max-w-xs text-sm leading-relaxed">{description}</p>
       </div>
     </div>

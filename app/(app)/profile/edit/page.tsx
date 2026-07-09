@@ -22,7 +22,7 @@ export default async function ProfileEditPage() {
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, team_color, school_enrolled, school_payment_paid, must_change_password, created_at, updated_at",
+      "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, team_color, school_enrolled, school_payment_paid, must_change_password, calendar_token, created_at, updated_at",
     )
     .eq("auth_user_id", user.id)
     .maybeSingle();
@@ -32,7 +32,7 @@ export default async function ProfileEditPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-1">
-        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
+        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
           Editar perfil
         </h1>
         <p className="text-ink-600 text-sm">

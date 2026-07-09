@@ -116,14 +116,14 @@ export default async function CalendarPage() {
       <PageHeader
         eyebrow="Calendario"
         title="Tu mes"
-        icon={<Silbato className="h-8 w-8 shrink-0" accent="var(--brand-aqua)" />}
+        icon={<Silbato className="h-8 w-8 shrink-0" accent="var(--pool-teal)" />}
         teamColor={calendarTeams[0]?.color}
         className="px-3 py-3"
       />
 
       {teamIds.length === 0 ? (
         <div className="border-ink-300 bg-paper flex flex-col items-center gap-3 rounded-md border border-dashed p-8 text-center">
-          <Silbato className="h-12 w-12" accent="var(--brand-aqua)" />
+          <Silbato className="h-12 w-12" accent="var(--pool-teal)" />
           <p className="text-ink-600 text-sm leading-relaxed">
             Aun no formas parte de un equipo esta temporada. Cuando tu entrenador te asigne, tus
             entrenos y partidos apareceran aqui.
@@ -145,7 +145,7 @@ export default async function CalendarPage() {
 
       {isCoach ? (
         <p className="text-ink-600 flex items-center gap-2 px-1 text-sm font-medium">
-          <Equipo className="h-4 w-4" accent="var(--brand-aqua)" />
+          <Equipo className="h-4 w-4" accent="var(--pool-teal)" />
           Como entrenador, puedes cancelar sesiones desde el detalle del dia.
         </p>
       ) : null}

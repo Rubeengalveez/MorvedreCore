@@ -19,7 +19,7 @@ export function TeamStaffList({ staff, teamColor }: TeamStaffListProps) {
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2 px-1">
         <Silbato className="h-5 w-5" accent={teamColor} />
-        <h2 className="font-display text-brand-deep text-lg font-bold">Cuerpo técnico</h2>
+        <h2 className="font-display text-pool-deep text-lg font-bold">Cuerpo técnico</h2>
       </div>
       {staff.length === 0 ? (
         <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-5 text-center text-sm leading-relaxed">
@@ -34,7 +34,7 @@ export function TeamStaffList({ staff, teamColor }: TeamStaffListProps) {
             >
               <Avatar src={member.photo_url} name={member.full_name} size={48} />
               <div className="flex flex-1 flex-col">
-                <span className="font-display text-brand-deep text-base leading-tight font-bold">
+                <span className="font-display text-pool-deep text-base leading-tight font-bold">
                   {member.full_name}
                 </span>
                 <span className="text-ink-600 text-sm">

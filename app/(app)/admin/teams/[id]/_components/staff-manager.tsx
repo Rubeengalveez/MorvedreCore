@@ -247,7 +247,7 @@ export function StaffList({ teamId, staff }: StaffListProps) {
             className="border-ink-300 bg-paper flex items-center justify-between gap-3 rounded-md border px-4 py-3"
           >
             <div className="flex flex-col">
-              <span className="font-display text-brand-deep text-base font-bold">
+              <span className="font-display text-pool-deep text-base font-bold">
                 {s.full_name}
               </span>
               <span className="text-ink-600 text-xs font-semibold tracking-wider uppercase">

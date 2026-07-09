@@ -262,11 +262,11 @@ export function RosterList({ teamId, rows }: RosterListProps) {
           key={r.player_id}
           className="border-ink-300 bg-paper flex items-center gap-3 rounded-md border px-4 py-3"
         >
-          <span className="bg-brand-foam text-brand-deep flex h-10 w-10 shrink-0 items-center justify-center rounded font-mono text-base font-bold">
+          <span className="bg-pool-foam text-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded font-mono text-base font-bold">
             {r.squad_number ?? "—"}
           </span>
           <div className="flex flex-1 flex-col">
-            <span className="font-display text-brand-deep text-base font-bold">{r.full_name}</span>
+            <span className="font-display text-pool-deep text-base font-bold">{r.full_name}</span>
             <span className="text-ink-600 text-xs">
               {r.birth_year ?? "?"} · {r.categoryLabel}
             </span>

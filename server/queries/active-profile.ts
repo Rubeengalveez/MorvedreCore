@@ -28,7 +28,7 @@ function isProfileRow(value: unknown): value is ProfileSummary {
 }
 
 const PROFILE_SELECT =
-  "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password";
+  "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password, calendar_token";
 
 export const getActiveProfileContext = cache(async (): Promise<ActiveProfileContext | null> => {
   const supabase = await createClient();

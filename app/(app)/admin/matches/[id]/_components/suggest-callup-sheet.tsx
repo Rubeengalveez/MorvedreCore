@@ -174,7 +174,7 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
                 isSelected
                   ? s.is_substitute
                     ? "border-ink-300"
-                    : "border-brand-blue"
+                    : "border-pool-blue"
                   : "border-ink-300 opacity-70",
               )}
             >
@@ -184,11 +184,11 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
                   checked={isSelected}
                   onChange={() => toggle(s.player_id)}
                   aria-label={`Convocar a ${s.full_name}`}
-                  className="accent-brand-blue h-6 w-6 shrink-0"
+                  className="accent-pool-blue h-6 w-6 shrink-0"
                 />
                 <Avatar name={s.full_name} size={40} />
                 <div className="flex flex-col">
-                  <span className="font-display text-brand-deep text-base font-bold">
+                  <span className="font-display text-pool-deep text-base font-bold">
                     {s.full_name}
                   </span>
                   <div className="text-ink-600 mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
@@ -196,7 +196,7 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
                       {CATEGORY_LABELS[s.category_code as CategoryCode] ?? s.category_code}
                     </span>
                     {s.is_ascending ? (
-                      <span className="bg-brand-foam text-brand-deep inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+                      <span className="bg-pool-foam text-pool-deep inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
                         <MdNorthEast className="h-3.5 w-3.5" aria-hidden="true" />
                         Asciende
                       </span>

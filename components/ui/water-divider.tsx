@@ -10,7 +10,7 @@ export interface WaterDividerProps {
 }
 
 export function WaterDivider({
-  fill = "var(--brand-foam)",
+  fill = "var(--pool-foam)",
   className,
   variant = "default",
   height = 48,

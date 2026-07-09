@@ -85,7 +85,7 @@ export default function RootLayout({
       <body className="bg-paper text-ink-900 min-h-dvh font-sans antialiased">
         <a
           href="#main-content"
-          className="focus:bg-brand-deep focus:text-paper sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-lg"
+          className="focus:bg-pool-deep focus:text-paper sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-elev-4"
         >
           Saltar al contenido principal
         </a>

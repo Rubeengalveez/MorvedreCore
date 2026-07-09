@@ -49,7 +49,7 @@ export function Logo({
       />
       {showText ? (
         <span
-          className="font-display text-brand-deep font-extrabold tracking-wider uppercase"
+          className="font-display text-pool-deep font-extrabold tracking-wider uppercase"
           style={{ fontSize: `${textSize}px` }}
         >
           Morvedre

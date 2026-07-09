@@ -43,7 +43,7 @@ function Avatar({ name, url, size = 40 }: { name: string; url: string | null; si
   return (
     <span
       aria-hidden="true"
-      className="bg-brand-blue font-display text-paper inline-flex shrink-0 items-center justify-center rounded-full leading-none font-extrabold"
+      className="bg-pool-blue font-display text-paper inline-flex shrink-0 items-center justify-center rounded-full leading-none font-extrabold"
       style={{ width: size, height: size, fontSize: `${fontSize}px` }}
     >
       {getInitials(name) || "?"}
@@ -65,7 +65,7 @@ export function PlayersTable({ players }: PlayersTableProps) {
   if (players.length === 0) {
     return (
       <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-        <p className="text-brand-deep text-base font-semibold">Plantilla vacía.</p>
+        <p className="text-pool-deep text-base font-semibold">Plantilla vacía.</p>
         <p className="text-ink-600 mt-1 text-sm">
           Crea el primer jugador o importa el Excel que tenías en el Drive.
         </p>
@@ -90,7 +90,7 @@ export function PlayersTable({ players }: PlayersTableProps) {
             >
               <Avatar name={p.full_name} url={p.photo_url} size={48} />
               <div className="min-w-0 flex-1">
-                <p className="font-display text-brand-deep truncate text-sm font-bold">
+                <p className="font-display text-pool-deep truncate text-sm font-bold">
                   {p.full_name}
                 </p>
                 <p className="text-ink-600 text-xs">
@@ -143,7 +143,7 @@ export function PlayersTable({ players }: PlayersTableProps) {
                   <div className="flex items-center gap-3">
                     <Avatar name={p.full_name} url={p.photo_url} />
                     <div className="flex flex-col">
-                      <span className="font-display text-brand-deep font-bold">{p.full_name}</span>
+                      <span className="font-display text-pool-deep font-bold">{p.full_name}</span>
                       {p.cap_number != null ? (
                         <span className="text-ink-600 font-mono text-xs">
                           Dorsal {p.cap_number}

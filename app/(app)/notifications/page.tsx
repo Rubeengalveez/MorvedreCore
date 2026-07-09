@@ -47,8 +47,8 @@ const KIND_META: Record<
   match_reminder: {
     label: "Recordatorio",
     Icon: Calendar,
-    color: "var(--brand-blue)",
-    tone: "border-brand-blue/30 bg-brand-blue/5",
+    color: "var(--pool-blue)",
+    tone: "border-pool-blue/30 bg-pool-blue/5",
   },
   training_cancelled: {
     label: "Entreno cancelado",
@@ -59,8 +59,8 @@ const KIND_META: Record<
   news_pinned: {
     label: "Noticia",
     Icon: Megaphone,
-    color: "var(--brand-aqua)",
-    tone: "border-brand-aqua/30 bg-brand-aqua/5",
+    color: "var(--pool-teal)",
+    tone: "border-pool-teal/30 bg-pool-teal/5",
   },
   result_published: {
     label: "Resultado",
@@ -114,7 +114,7 @@ async function loadContextForNotifications(
         opponent: m.opponent,
         scheduled_at: m.scheduled_at,
         team_label: teamObj?.label ?? "",
-        team_color: teamObj?.color ?? "var(--brand-blue)",
+        team_color: teamObj?.color ?? "var(--pool-blue)",
       });
     }
   }
@@ -147,7 +147,7 @@ export default async function NotificationsPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="font-display text-brand-deep text-[28px] leading-[1.1] font-extrabold tracking-tight">
+          <h1 className="font-display text-pool-deep text-[28px] leading-[1.1] font-extrabold tracking-tight">
             Notificaciones
           </h1>
           <p className="text-ink-600 text-sm">
@@ -156,7 +156,7 @@ export default async function NotificationsPage() {
               : "Estás al día con todo."}
           </p>
         </div>
-        <Bell className="text-brand-deep hidden h-7 w-7 sm:block" />
+        <Bell className="text-pool-deep hidden h-7 w-7 sm:block" />
       </header>
 
       <PushSettings publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
@@ -240,7 +240,7 @@ function NotificationRow({
       </span>
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-display text-brand-deep text-base font-bold">{item.title}</span>
+          <span className="font-display text-pool-deep text-base font-bold">{item.title}</span>
           <span
             className="text-paper rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase"
             style={{ backgroundColor: meta.color }}
@@ -255,7 +255,7 @@ function NotificationRow({
           >
             <Avatar src={photoUrl} name={item.title} size={28} />
             <div className="min-w-0 flex-1">
-              <p className="text-brand-deep line-clamp-1 text-sm font-semibold">
+              <p className="text-pool-deep line-clamp-1 text-sm font-semibold">
                 vs {match.opponent}
               </p>
               <p className="text-ink-600 text-[10px]">
@@ -283,7 +283,7 @@ function NotificationRow({
           {item.href ? (
             <Link
               href={item.href as Route}
-              className="text-brand-blue inline-flex items-center gap-0.5 text-xs font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
+              className="text-pool-blue inline-flex items-center gap-0.5 text-xs font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
             >
               Abrir
               <ChevronRight className="h-3.5 w-3.5" />

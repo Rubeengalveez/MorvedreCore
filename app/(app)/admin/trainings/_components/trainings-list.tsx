@@ -73,9 +73,9 @@ export function TrainingsList({
 
       {filteredBlocks.length === 0 ? (
         <div className="border-ink-300 bg-paper flex flex-col items-center gap-4 rounded-md border border-dashed p-8 text-center">
-          <MdSports aria-hidden="true" className="text-brand-blue h-12 w-12" />
+          <MdSports aria-hidden="true" className="text-pool-blue h-12 w-12" />
           <div className="flex flex-col gap-1">
-            <p className="text-brand-deep text-base font-semibold">
+            <p className="text-pool-deep text-base font-semibold">
               {filter ? "No hay bloques para este equipo." : "La piscina está tranquila."}
             </p>
             <p className="text-ink-600 text-sm">

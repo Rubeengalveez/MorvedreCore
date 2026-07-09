@@ -32,7 +32,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_BADGE: Record<string, string> = {
-  called: "bg-brand-aqua/15 text-brand-deep",
+  called: "bg-pool-teal/15 text-pool-deep",
   confirmed: "bg-success/15 text-success",
   declined: "bg-danger/15 text-danger",
   withdrawn: "bg-ink-300/40 text-ink-600",
@@ -47,7 +47,7 @@ export function CallupList({ entries }: CallupListProps) {
   if (entries.length === 0) {
     return (
       <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-        <p className="text-brand-deep text-base font-semibold">Aún no hay convocatoria.</p>
+        <p className="text-pool-deep text-base font-semibold">Aún no hay convocatoria.</p>
         <p className="text-ink-600 mt-1 text-sm">
           Pulsa &ldquo;Sugerir convocatoria&rdquo; para empezar.
         </p>
@@ -120,7 +120,7 @@ function CallupRowItem({ entry }: { entry: CallupEntry }) {
         />
         <div className="flex flex-1 flex-col">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-display text-brand-deep text-base font-bold">
+            <span className="font-display text-pool-deep text-base font-bold">
               {entry.player?.full_name ?? "Jugador sin nombre"}
             </span>
             {categoryLabel ? (
@@ -129,7 +129,7 @@ function CallupRowItem({ entry }: { entry: CallupEntry }) {
               </span>
             ) : null}
             {entry.sourceTeamLabel ? (
-              <span className="bg-brand-foam text-brand-deep inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+              <span className="bg-pool-foam text-pool-deep inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
                 <MdNorthEast className="h-3.5 w-3.5" aria-hidden="true" />
                 {entry.sourceTeamLabel}
               </span>

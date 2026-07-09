@@ -11,7 +11,7 @@ export default function ImportPlayersPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-1">
-        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
+        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
           Importar jugadores
         </h1>
         <p className="text-ink-600 text-sm">

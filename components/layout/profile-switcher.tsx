@@ -81,7 +81,7 @@ export function ProfileSwitcher({
   const hasLinked = linkedProfiles.length > 0;
   const ownIsActive = ownProfile.id === activeProfile.id;
   const triggerSize = 40;
-  const teamColor = activeProfile.team_color ?? "var(--brand-blue)";
+  const teamColor = activeProfile.team_color ?? "var(--pool-blue)";
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -91,7 +91,7 @@ export function ProfileSwitcher({
           aria-label="Cambiar de perfil"
           variant="ghost"
           size="sm"
-          className="text-brand-deep hover:bg-brand-foam h-12 w-12 rounded-full p-0"
+          className="text-pool-deep hover:bg-pool-foam h-12 w-12 rounded-full p-0"
           style={{
             border: `2px solid ${teamColor}`,
           }}
@@ -157,7 +157,7 @@ function SwitchRow({
   disabled: boolean;
   onSelect: (id: string) => void;
 }) {
-  const teamColor = profile.team_color ?? "var(--brand-blue)";
+  const teamColor = profile.team_color ?? "var(--pool-blue)";
   return (
     <button
       type="button"
@@ -165,8 +165,8 @@ function SwitchRow({
       disabled={disabled}
       aria-label={`${title}${subtitle ? `, ${subtitle}` : ""}${isActive ? ", activo" : ""}`}
       className={cn(
-        "hover:bg-brand-foam flex items-center gap-3 rounded-md px-2 py-3 text-left transition-colors disabled:opacity-50",
-        isActive ? "bg-brand-foam" : "",
+        "hover:bg-pool-foam flex items-center gap-3 rounded-md px-2 py-3 text-left transition-colors disabled:opacity-50",
+        isActive ? "bg-pool-foam" : "",
       )}
       style={isActive ? undefined : undefined}
     >
@@ -177,10 +177,10 @@ function SwitchRow({
         <Avatar src={profile.photo_url} name={profile.full_name} size={44} />
       </span>
       <span className="flex flex-1 flex-col">
-        <span className="font-display text-brand-deep text-base font-bold">{title}</span>
+        <span className="font-display text-pool-deep text-base font-bold">{title}</span>
         <span className="text-ink-600 text-sm">{subtitle}</span>
       </span>
-      {isActive ? <Check className="text-brand-blue h-5 w-5" aria-hidden="true" /> : null}
+      {isActive ? <Check className="text-pool-blue h-5 w-5" aria-hidden="true" /> : null}
     </button>
   );
 }

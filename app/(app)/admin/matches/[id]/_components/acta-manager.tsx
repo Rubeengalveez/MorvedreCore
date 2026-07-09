@@ -98,7 +98,7 @@ export function ActaManager({ match, entries }: ActaManagerProps) {
   if (entries.length === 0) {
     return (
       <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-        <p className="text-brand-deep text-base font-semibold">No hay jugadores convocados.</p>
+        <p className="text-pool-deep text-base font-semibold">No hay jugadores convocados.</p>
         <p className="text-ink-600 mt-1 text-sm">
           Crea primero la convocatoria en la pestaña anterior.
         </p>
@@ -126,7 +126,7 @@ export function ActaManager({ match, entries }: ActaManagerProps) {
       </ul>
 
       <div className="border-ink-300 bg-paper rounded-md border p-4">
-        <h3 className="font-display text-brand-deep text-lg font-bold">Resultado final</h3>
+        <h3 className="font-display text-pool-deep text-lg font-bold">Resultado final</h3>
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
             <label
@@ -222,13 +222,13 @@ function StatRow({ entry, disabled }: { entry: ActaEntry; disabled: boolean }) {
     <li
       className={cn(
         "bg-paper flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between",
-        isMvp ? "border-brand-ball bg-brand-ball/5" : "border-ink-300",
+        isMvp ? "border-ball-gold bg-ball-gold/5" : "border-ink-300",
       )}
     >
       <div className="flex items-center gap-3">
         <Avatar name={entry.player.full_name} src={entry.player.photo_url} size={40} />
         <div className="flex flex-col">
-          <span className="font-display text-brand-deep text-base font-bold">
+          <span className="font-display text-pool-deep text-base font-bold">
             {entry.player.full_name}
           </span>
           {entry.callup.cap_number != null ? (
@@ -282,9 +282,9 @@ function StatRow({ entry, disabled }: { entry: ActaEntry; disabled: boolean }) {
           {isMvp ? (
             <div
               title="MVP del partido (calculado automáticamente)"
-              className="border-brand-ball bg-brand-ball/20 text-brand-deep inline-flex h-10 min-h-10 w-10 min-w-10 items-center justify-center rounded border"
+              className="border-ball-gold bg-ball-gold/20 text-pool-deep inline-flex h-10 min-h-10 w-10 min-w-10 items-center justify-center rounded border"
             >
-              <MdStar className="text-brand-ball h-6 w-6" aria-hidden="true" />
+              <MdStar className="text-ball-gold h-6 w-6" aria-hidden="true" />
             </div>
           ) : (
             <div

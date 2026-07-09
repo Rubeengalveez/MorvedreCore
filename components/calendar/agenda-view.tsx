@@ -145,7 +145,7 @@ export function AgendaView({
           >
             <h3
               id={`day-${dayIso}`}
-              className="font-display text-brand-deep mb-2 flex items-center gap-2 text-base font-bold"
+              className="font-display text-pool-deep mb-2 flex items-center gap-2 text-base font-bold"
             >
               {formatLongDate(dayIso)}
               {isPast ? (

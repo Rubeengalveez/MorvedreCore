@@ -19,7 +19,7 @@ export function TeamRosterList({ players, teamColor, currentYear }: TeamRosterLi
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2 px-1">
         <Gorro className="h-5 w-5" accent={teamColor} />
-        <h2 className="font-display text-brand-deep text-lg font-bold">Plantilla</h2>
+        <h2 className="font-display text-pool-deep text-lg font-bold">Plantilla</h2>
         <span className="text-ink-600 font-mono text-sm font-semibold">{players.length}</span>
       </div>
       {players.length === 0 ? (
@@ -47,7 +47,7 @@ function RosterRow({ player, currentYear }: { player: RosterPlayer; currentYear:
     <li className="border-ink-300 bg-paper flex items-center gap-3 rounded-md border p-3">
       <Avatar src={player.photo_url} name={player.full_name} size={48} />
       <div className="flex flex-1 flex-col">
-        <span className="font-display text-brand-deep text-base leading-tight font-bold">
+        <span className="font-display text-pool-deep text-base leading-tight font-bold">
           {player.full_name}
         </span>
         <span className="text-ink-600 text-sm">
@@ -57,7 +57,7 @@ function RosterRow({ player, currentYear }: { player: RosterPlayer; currentYear:
       {player.squad_number != null ? (
         <span
           className="font-mono text-2xl leading-none font-bold"
-          style={{ color: "var(--brand-deep)" }}
+          style={{ color: "var(--pool-deep)" }}
         >
           #{player.squad_number}
         </span>
