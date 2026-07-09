@@ -40,64 +40,67 @@ export async function TopBar({ activeProfile }: TopBarProps) {
     userRoles.includes("admin") || userRoles.includes("coach") || userRoles.includes("delegate");
 
   const teamColor = activeProfile.team_color ?? "var(--pool-blue)";
-  const firstName = activeProfile.full_name.split(/\s+/)[0] ?? activeProfile.full_name;
 
   return (
     <header
       data-top-bar
-      className="bg-pool-deep/96 text-paper shadow-elev-4 sticky top-0 z-30 min-h-[var(--top-bar-height)] border-b border-white/10 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-md transition-all duration-300"
-      style={{ borderTop: `3px solid ${teamColor}` }}
+      className="bg-[linear-gradient(180deg,#062048_0%,#1657a8_100%)] text-paper sticky top-0 z-30 rounded-b-[1.5rem] shadow-elev-4"
     >
-      <div className="mx-auto flex h-[55px] w-full max-w-5xl items-center justify-between gap-2">
+      <div className="mx-auto flex h-[var(--top-bar-height)] w-full max-w-5xl items-center justify-between gap-2 px-3 pt-[env(safe-area-inset-top)] min-[380px]:gap-3 min-[380px]:px-4">
         <Link
           href={"/dashboard" as Route}
           prefetch={false}
-          className="focus-visible:ring-paper/80 flex min-w-0 items-center gap-2 rounded-md py-1 pr-2 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
+          className="focus-visible:ring-paper/80 flex min-w-0 shrink items-center gap-2 rounded-lg py-1 pr-1 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none min-[430px]:gap-3 min-[430px]:pr-2"
         >
-          <Logo size={36} className="shrink-0" />
-          <span className="hidden min-w-0 sm:block">
-            <span className="font-display text-paper block text-sm leading-none font-extrabold tracking-wide uppercase">
-              Morvedre
-            </span>
-            <span className="text-paper/70 mt-0.5 block truncate text-xs font-semibold">
-              {firstName}
-            </span>
+          <Logo size={44} className="shrink-0 min-[430px]:h-[52px] min-[430px]:w-[52px]" />
+          <span className="font-display hidden truncate text-xl leading-none font-extrabold tracking-tight min-[430px]:block">
+            Morvedre Core
           </span>
         </Link>
 
-        <div className="flex items-center gap-1.5">
+        <div className="flex shrink-0 items-center gap-1 rounded-full bg-white/10 p-1 min-[380px]:gap-2 min-[380px]:p-1.5">
           <Link
             href={"/news" as Route}
             prefetch={false}
             title="Noticias"
             aria-label="Ir a noticias"
-            className="text-paper focus-visible:ring-paper/80 touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/12 bg-white/8 transition-colors hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none"
+            className="text-paper focus-visible:ring-paper/80 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none min-[380px]:h-12 min-[380px]:w-12"
           >
-            <Megafone className="h-5 w-5" />
+            <Megafone className="h-5 w-5 min-[380px]:h-6 min-[380px]:w-6" />
           </Link>
+
           {isPrivileged ? (
             <Link
               href="/admin"
               prefetch={false}
               title="Panel de administracion"
-              className="text-paper focus-visible:ring-paper/80 touch-target flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-white/12 bg-white/8 transition-colors hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none"
+              aria-label="Panel de administracion"
+              className="text-paper focus-visible:ring-paper/80 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none min-[380px]:h-12 min-[380px]:w-12"
             >
-              <MdSettings className="h-6 w-6" aria-hidden="true" />
+              <MdSettings className="h-5 w-5 min-[380px]:h-6 min-[380px]:w-6" aria-hidden="true" />
             </Link>
           ) : null}
+
           <NotificationsBell
             initialUnread={unread}
             initialNotifications={items}
             showFullListHref="/notifications"
           />
+
           <Link
             href={"/profile" as Route}
             prefetch={false}
             title="Mi perfil"
-            className="bg-paper focus-visible:ring-paper/80 touch-target h-10 w-10 shrink-0 overflow-hidden rounded-full focus-visible:ring-2 focus-visible:outline-none"
-            style={{ boxShadow: `0 0 0 2px ${teamColor}` }}
+            aria-label="Mi perfil"
+            className="focus-visible:ring-paper/80 shrink-0 rounded-full focus-visible:ring-2 focus-visible:outline-none"
           >
-            <Avatar src={activeProfile.photo_url} name={activeProfile.full_name} size={40} />
+            <Avatar
+              src={activeProfile.photo_url}
+              name={activeProfile.full_name}
+              size={42}
+              teamColor={teamColor}
+              className="ring-2 ring-white/40"
+            />
           </Link>
         </div>
       </div>

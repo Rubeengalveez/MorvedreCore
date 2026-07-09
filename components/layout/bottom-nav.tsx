@@ -3,7 +3,14 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { MdHome, MdCalendarMonth, MdEmojiEvents, MdGroups, MdStorefront } from "react-icons/md";
+import { useEffect, useRef, useState } from "react";
+import {
+  MdHome,
+  MdCalendarMonth,
+  MdEmojiEvents,
+  MdGroups,
+  MdStorefront,
+} from "react-icons/md";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -17,44 +24,76 @@ const items = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [pill, setPill] = useState({ left: 0, width: 0 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const activeLink = container.querySelector<HTMLElement>("[data-tab-active='true']");
+    if (!activeLink) return;
+
+    const cRect = container.getBoundingClientRect();
+    const tRect = activeLink.getBoundingClientRect();
+
+    setPill({
+      left: tRect.left - cRect.left + container.scrollLeft,
+      width: tRect.width,
+    });
+  }, [pathname]);
 
   return (
     <nav
       aria-label="Navegacion principal Morvedre Core"
       data-bottom-nav
-      className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--bottom-nav-height)] px-3 pb-[max(env(safe-area-inset-bottom),8px)]"
+      className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--bottom-nav-height)] px-4 pb-[max(env(safe-area-inset-bottom),12px)]"
     >
-      <ul className="border-ink-300/90 bg-paper-card/96 shadow-elev-5 mx-auto grid h-14 max-w-2xl grid-cols-5 items-stretch rounded-lg border p-1 backdrop-blur-md">
+      <div
+        ref={containerRef}
+        className="bg-paper shadow-elev-5 relative mx-auto grid h-[60px] max-w-md grid-cols-5 items-stretch overflow-hidden rounded-full border border-ink-200/60 p-1"
+      >
+        <span
+          aria-hidden="true"
+          className="bg-pool-deep absolute top-1 bottom-1 rounded-full shadow-md transition-all duration-300 ease-out"
+          style={{
+            left: `${pill.left}px`,
+            width: `${pill.width}px`,
+          }}
+        />
+
         {items.map((item) => {
           const Icon = item.Icon;
           const href = item.href;
           const isActive = pathname === href || pathname.startsWith(`${href}/`);
           return (
-            <li key={href} className="min-w-0">
-              <Link
-                href={href as Route}
-                aria-current={isActive ? "page" : undefined}
+            <Link
+              key={href}
+              href={href as Route}
+              aria-current={isActive ? "page" : undefined}
+              data-tab-active={isActive}
+              className={cn(
+                "focus-visible:ring-pool-blue relative z-10 flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full px-1 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+                isActive ? "text-paper" : "text-ink-500 hover:text-pool-deep",
+              )}
+            >
+              <Icon
                 className={cn(
-                  "focus-visible:ring-pool-blue relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-md px-1 transition-all focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
-                  isActive
-                    ? "bg-pool-deep text-paper shadow-sm"
-                    : "text-ink-500 hover:bg-pool-foam/70 hover:text-pool-deep",
+                  "h-5 w-5 shrink-0 transition-transform duration-300",
+                  isActive && "scale-110",
+                )}
+              />
+              <span
+                className={cn(
+                  "max-w-full truncate text-[11px] leading-none transition-all duration-300",
+                  isActive ? "font-extrabold" : "font-semibold",
                 )}
               >
-                <Icon className="h-5 w-5 shrink-0" />
-                <span
-                  className={cn(
-                    "max-w-full truncate text-[11px] leading-none",
-                    isActive ? "text-paper font-extrabold" : "font-semibold",
-                  )}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            </li>
+                {item.label}
+              </span>
+            </Link>
           );
         })}
-      </ul>
+      </div>
     </nav>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, Upload, X } from "lucide-react";
 
@@ -40,7 +40,6 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
   const [error, setError] = useState<string | null>(null);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [coverImageIndex, setCoverImageIndex] = useState(0);
-  const [previews, setPreviews] = useState<string[]>([]);
   const [sizesText, setSizesText] = useState((initial?.sizes ?? []).join(", "));
 
   const [form, setForm] = useState<ShopEditorFormInitial>({
@@ -60,13 +59,13 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
     setForm((f) => ({ ...f, [key]: value }));
   }
 
+  const previews = useMemo(() => imageFiles.map((file) => URL.createObjectURL(file)), [imageFiles]);
+
   useEffect(() => {
-    const next = imageFiles.map((file) => URL.createObjectURL(file));
-    setPreviews(next);
     return () => {
-      for (const url of next) URL.revokeObjectURL(url);
+      for (const url of previews) URL.revokeObjectURL(url);
     };
-  }, [imageFiles]);
+  }, [previews]);
 
   function save() {
     setError(null);

@@ -1,5 +1,9 @@
 # Log de decisiones
 
+## 2026-07-09 - Cierre documental Fase 7.5
+
+- **Fase 7.5 cerrada antes de Fase 8**: `24-operational-closure-plan.md` queda marcado como plan inicial y `25-operational-closure-summary.md` como fuente de verdad del cierre operativo validado.
+
 Registro vivo. Cada decisión se fecha y queda con su justificación. Si revertimos, se anota aquí.
 
 ## 2026-06-26 — Sesión de planificación inicial

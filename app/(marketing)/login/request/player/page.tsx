@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 
-import { Logo } from "@/components/brand/logo";
+import { AuthRequestShell } from "@/components/auth/auth-request-shell";
 import { AccessRequestPlayerForm } from "@/components/auth/access-request-player-form";
 
 export const metadata: Metadata = {
@@ -18,24 +18,11 @@ export default async function PlayerRequestPage({
   const email = typeof emailRaw === "string" ? emailRaw : "";
 
   return (
-    <main
-      lang="es"
-      className="bg-paper flex min-h-dvh flex-col items-center justify-center px-6 py-12"
+    <AuthRequestShell
+      title="Solicitar acceso como jugador"
+      subtitle="Completa tus datos. Si ya est&aacute;s dado de alta en el club, vincularemos tu cuenta."
     >
-      <div className="flex w-full max-w-sm flex-col items-center gap-6">
-        <Logo size={64} withWordmark />
-        <div className="border-ink-300 bg-paper-card w-full rounded-md border p-6 shadow-elev-2">
-          <h1 className="font-display text-pool-deep text-2xl font-extrabold">
-            Solicitar acceso como jugador
-          </h1>
-          <p className="text-ink-600 mt-1 text-sm">
-            Completa tus datos. Si ya estás dado de alta en el club, vincularemos tu cuenta.
-          </p>
-          <div className="mt-6">
-            <AccessRequestPlayerForm email={email} />
-          </div>
-        </div>
-      </div>
-    </main>
+      <AccessRequestPlayerForm email={email} />
+    </AuthRequestShell>
   );
 }

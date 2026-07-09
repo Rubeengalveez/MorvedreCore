@@ -1,8 +1,8 @@
+import Image from "next/image";
 import type { Metadata } from "next";
-import { Logo } from "@/components/brand/logo";
+
 import { LoginForm } from "@/components/auth/login-form";
 import { AuthErrorBanner, type AuthErrorCode } from "@/components/auth/auth-error-banner";
-import { LanePattern } from "@/components/ui/lane-pattern";
 
 export const metadata: Metadata = {
   title: "Acceso — Morvedre Core",
@@ -30,7 +30,6 @@ function parseError(raw: string | string[] | undefined): AuthErrorCode {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value) return undefined;
   if (VALID_ERRORS.has(value)) return value as AuthErrorCode;
-  if (VALID_FORM_ERRORS.has(value)) return value as AuthErrorCode;
   return undefined;
 }
 
@@ -60,66 +59,54 @@ export default async function LoginPage({
   const errorCode = parseError(params.error);
   const formError = parseFormError(params.error);
 
-  const showFormError = formError && !errorCode;
-
   return (
-    <div className="bg-pool-deep relative isolate min-h-svh overflow-hidden text-white">
+    <div className="relative isolate flex min-h-svh flex-col items-center justify-start overflow-y-auto overflow-x-hidden bg-paper px-4 pb-4 pt-6 sm:px-6 sm:pb-6 sm:pt-12">
       <a
-        href="#login-main"
-        className="focus-visible:ring-paper sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-pool-deep focus:shadow-elev-3 focus:outline-none"
+        href="#login-form"
+        className="sr-only rounded-md bg-pool-deep px-3 py-2 text-sm font-semibold text-white shadow-elev-3 focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
       >
         Saltar al formulario
       </a>
 
-      <LanePattern as="div" className="absolute inset-0 opacity-30" />
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,32,72,0)_0%,rgba(6,32,72,0.6)_100%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[54svh] rounded-b-[2rem] bg-[linear-gradient(180deg,#062048_0%,#1657a8_100%)] shadow-elev-2 sm:h-[62svh] sm:rounded-b-[2.5rem]"
       />
 
-      <div
-        aria-hidden="true"
-        className="absolute top-0 left-0 h-full w-2 bg-pool-teal/40"
-      />
+      <div className="relative z-10 flex w-full max-w-[400px] flex-col items-center gap-4 sm:gap-8">
+        <div className="flex flex-col items-center gap-3 text-center sm:gap-4">
+          <Image
+            src="/brand/icon-192.png"
+            alt="Escudo del Waterpolo Morvedre"
+            width={160}
+            height={160}
+            priority
+            className="h-[118px] w-[118px] rounded-full object-cover min-[390px]:h-[140px] min-[390px]:w-[140px] sm:h-[200px] sm:w-[200px]"
+          />
 
-      <header className="relative flex items-center gap-3 px-5 pt-[max(env(safe-area-inset-top),14px)] pb-4 sm:px-6">
-        <Logo size={56} className="shadow-elev-3 rounded-[var(--r-sm)]" />
-        <div className="flex min-w-0 flex-1 flex-col leading-none">
-          <span className="text-eyebrow text-ball-gold">Waterpolo Morvedre</span>
-          <span className="font-display text-lg font-extrabold tracking-tight">
-            Morvedre Core
-          </span>
-        </div>
-        <span className="text-eyebrow text-white/55 hidden sm:inline">24/25</span>
-      </header>
-
-      <main
-        id="login-main"
-        lang="es"
-        className="relative mx-auto flex w-full max-w-md flex-col gap-5 px-5 pt-2 pb-[max(env(safe-area-inset-bottom),20px)] sm:max-w-lg sm:px-6"
-        aria-labelledby="login-title"
-      >
-        <div className="flex flex-col gap-1 pt-2">
-          <span className="text-eyebrow text-pool-teal">Acceso</span>
-          <h1
-            id="login-title"
-            className="font-display text-[34px] leading-[0.95] font-extrabold tracking-tight sm:text-[40px]"
-          >
-            Morvedre Core
-          </h1>
-        </div>
-
-        <div className="border-white/12 bg-white/5 rounded-[var(--r-md)] border p-1 backdrop-blur-sm">
-          <div className="bg-paper rounded-[var(--r-sm)] p-5 text-ink-900 sm:p-6">
-            {errorCode ? <AuthErrorBanner code={errorCode} provider="google" /> : null}
-            <LoginForm next={next} error={showFormError ? formError : undefined} />
+          <div className="flex flex-col gap-1 sm:gap-1.5">
+            <h1 className="font-display text-[32px] leading-none font-extrabold tracking-tight text-white drop-shadow-md min-[390px]:text-[36px] sm:text-[44px]">
+              Morvedre Core
+            </h1>
+            <span className="text-eyebrow text-[11px] tracking-wide text-white/75 min-[390px]:text-sm">Waterpolo Morvedre &middot; Temporada 24/25</span>
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 pt-1">
-          <span className="text-eyebrow text-white/40">Morvedre · Puerto de Sagunto</span>
+        <div className="w-full rounded-[var(--r-xl)] bg-paper-card p-5 shadow-elev-2 sm:p-8">
+          {errorCode ? <AuthErrorBanner code={errorCode} provider="google" /> : null}
+          <LoginForm next={next} error={formError} />
         </div>
-      </main>
+
+        <p className="text-center text-xs text-ink-500">
+          &iquest;Problemas para entrar?{" "}
+          <a
+            href="mailto:galvillo9@gmail.com"
+            className="font-semibold text-pool-blue hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            Escr&iacute;beme
+          </a>
+        </p>
+      </div>
     </div>
   );
 }

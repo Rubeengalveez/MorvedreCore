@@ -45,18 +45,36 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
 
   if (state?.success) {
     return (
-      <div className="border-ink-300 bg-paper-card rounded-md border p-6 text-center shadow-elev-2">
-        <h2 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h2>
-        <p className="text-ink-600 mt-2 text-sm">
-          Tu cuenta está pendiente de activación. El administrador del club revisará tus datos y te
-          pasará una contraseña provisional para que entres y la cambies.
-        </p>
+      <div className="flex flex-col items-center gap-3 py-4 text-center">
+        <div className="bg-pool-teal/15 text-pool-deep flex h-14 w-14 items-center justify-center rounded-full">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="28"
+            height="28"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        </div>
+        <div>
+          <h3 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h3>
+          <p className="text-ink-600 mt-1 text-sm">
+            Tu cuenta est&aacute; pendiente de activaci&oacute;n. El administrador del club revisar&aacute; tus datos y te
+            pasar&aacute; una contrase&ntilde;a provisional para que entres y la cambies.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4" noValidate>
+    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
       {state?.error ? (
         <Alert variant="danger" title="No pudimos enviar la solicitud">
           {state.error}
@@ -64,14 +82,20 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
       ) : null}
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-ink-700 text-xs font-bold">
+        <label htmlFor="email" className="text-eyebrow text-ink-700">
           Email
         </label>
-        <Input id="email" type="email" value={email} disabled className="bg-ink-100 text-ink-600" />
+        <Input
+          id="email"
+          type="email"
+          value={email}
+          disabled
+          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-ink-100 px-4 text-ink-600"
+        />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="fullName" className="text-ink-700 text-xs font-bold">
+        <label htmlFor="fullName" className="text-eyebrow text-ink-700">
           Nombre completo
         </label>
         <Input
@@ -83,13 +107,14 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
           minLength={2}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
+          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="birthYear" className="text-ink-700 text-xs font-bold">
-            Año de nacimiento
+          <label htmlFor="birthYear" className="text-eyebrow text-ink-700">
+            A&ntilde;o de nacimiento
           </label>
           <Input
             id="birthYear"
@@ -99,14 +124,21 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
             min={1900}
             max={2100}
             required
+            className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
           />
         </div>
 
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="gender" className="text-ink-700 text-xs font-bold">
-            Género
+          <label htmlFor="gender" className="text-eyebrow text-ink-700">
+            G&eacute;nero
           </label>
-          <Select id="gender" name="gender" required defaultValue="">
+          <Select
+            id="gender"
+            name="gender"
+            required
+            defaultValue=""
+            className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
+          >
             <option value="" disabled>
               Selecciona...
             </option>

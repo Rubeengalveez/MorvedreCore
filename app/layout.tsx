@@ -71,10 +71,25 @@ export default function RootLayout({
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
                   const swUrl = ${JSON.stringify(process.env.NODE_ENV === "production" ? "/sw.js" : "/sw-dev.js")};
-                  navigator.serviceWorker.register(swUrl).then(function(reg) {
-                    console.log('SW registered:', reg.scope);
-                  }).catch(function(err) {
-                    console.error('SW registration failed:', err);
+                  navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    var dirty = false;
+                    regs.forEach(function(r) {
+                      if (r.scope.includes(window.location.origin) && r.active && r.active.scriptURL !== (window.location.origin + swUrl)) {
+                        r.unregister();
+                        dirty = true;
+                      }
+                    });
+                    if (dirty) {
+                      console.log('[SW] Old service worker unregistered. Reloading...');
+                      window.location.reload();
+                      return;
+                    }
+                    navigator.serviceWorker.register(swUrl).then(function(reg) {
+                      console.log('[SW] Registered:', reg.scope);
+                      reg.update();
+                    }).catch(function(err) {
+                      console.error('[SW] Registration failed:', err);
+                    });
                   });
                 });
               }

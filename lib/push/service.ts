@@ -182,6 +182,9 @@ async function sendPushToSubscription(
 
     const vapidHeaders = generateVapidHeader(subscription.endpoint);
 
+    const body = new Uint8Array(new ArrayBuffer(encryptedBody.byteLength));
+    body.set(encryptedBody);
+
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
@@ -190,7 +193,7 @@ async function sendPushToSubscription(
         "Content-Type": "application/octet-stream",
         ...vapidHeaders,
       },
-      body: encryptedBody as any,
+      body,
     });
 
     const admin = createAdminClient();

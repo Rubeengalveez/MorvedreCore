@@ -3,11 +3,11 @@
 import { useEffect, useState, useTransition } from "react";
 import { BellRing, BellOff } from "lucide-react";
 
-function urlBase64ToUint8Array(value: string): Uint8Array {
+function urlBase64ToUint8Array(value: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (value.length % 4)) % 4);
   const base64 = (value + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = window.atob(base64);
-  const output = new Uint8Array(raw.length);
+  const output = new Uint8Array(new ArrayBuffer(raw.length));
   for (let i = 0; i < raw.length; i += 1) output[i] = raw.charCodeAt(i);
   return output;
 }
@@ -23,7 +23,7 @@ export function PushSettings({ publicKey }: { publicKey: string | undefined }) {
     const ok = Boolean(
       publicKey && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
     );
-    setSupported(ok);
+    queueMicrotask(() => setSupported(ok));
     if (!ok) return;
     navigator.serviceWorker.ready
       .then((registration) => registration.pushManager.getSubscription())
@@ -49,7 +49,7 @@ export function PushSettings({ publicKey }: { publicKey: string | undefined }) {
         const registration = await navigator.serviceWorker.ready;
         const subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey!) as any,
+          applicationServerKey: urlBase64ToUint8Array(publicKey!),
         });
         const response = await fetch("/api/push/subscribe", {
           method: "POST",

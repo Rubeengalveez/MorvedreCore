@@ -11,10 +11,10 @@ import { signIn } from "@/server/actions/auth";
 
 const GoogleIcon = () => (
   <svg
-    className="h-4 w-4 shrink-0"
+    className="h-5 w-5 shrink-0"
     viewBox="0 0 24 24"
-    width="16"
-    height="16"
+    width="20"
+    height="20"
     aria-hidden="true"
     focusable="false"
     xmlns="http://www.w3.org/2000/svg"
@@ -51,25 +51,24 @@ export function LoginForm({ next, error }: LoginFormProps) {
   const googleRedirectUrl = `/api/auth/google?next=${encodeURIComponent(safeNext)}`;
 
   return (
-    <form
-      action={(formData) => {
-        startTransition(async () => {
-          try {
-            await signIn(formData);
-          } catch {
-            // El redirect de Supabase o un error de credenciales caen aquí.
-            // Si hay error, useTransition termina y el server action puede
-            // haber redirigido a /login?error=invalid_credentials.
-          }
-        });
-      }}
-      noValidate
-      className="flex w-full flex-col gap-3.5"
-    >
+    <>
+      <form
+        id="login-form"
+        action={(formData) => {
+          startTransition(async () => {
+            try {
+              await signIn(formData);
+            } catch {
+              // El server action redirige o lanza; useTransition termina.
+            }
+          });
+        }}
+        className="flex w-full flex-col gap-4"
+      >
       {error === "invalid_credentials" ? (
         <div
           role="alert"
-          className="border-danger/30 bg-danger/10 text-danger rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold"
+          className="rounded-[var(--r-sm)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger"
         >
           Email o contraseña incorrectos.
         </div>
@@ -78,7 +77,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
       {error === "pending_request" ? (
         <div
           role="status"
-          className="border-pool-teal/30 bg-pool-teal/10 text-pool-deep rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold"
+          className="rounded-[var(--r-sm)] border border-pool-teal/30 bg-pool-teal/10 px-3 py-2 text-sm font-semibold text-pool-deep"
         >
           Tu solicitud está pendiente de aprobación.
         </div>
@@ -87,7 +86,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="email"
-          className="text-ink-700 text-xs font-bold uppercase tracking-eyebrow"
+          className="text-eyebrow text-ink-700"
         >
           Email
         </label>
@@ -101,14 +100,14 @@ export function LoginForm({ next, error }: LoginFormProps) {
           placeholder="tu@email.com"
           defaultValue=""
           required
-          className="h-11 min-h-11 rounded-[var(--r-sm)]"
+          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="password"
-          className="text-ink-700 text-xs font-bold uppercase tracking-eyebrow"
+          className="text-eyebrow text-ink-700"
         >
           Contraseña
         </label>
@@ -122,19 +121,19 @@ export function LoginForm({ next, error }: LoginFormProps) {
             placeholder="••••••••"
             defaultValue=""
             required
-            className="h-11 min-h-11 rounded-[var(--r-sm)] pr-12"
+            className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice pr-12 pl-4 focus:border-pool-blue focus:bg-paper"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             aria-pressed={showPassword}
-            className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-1 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {showPassword ? (
-              <EyeOff className="h-4 w-4" aria-hidden="true" />
+              <EyeOff className="h-5 w-5" aria-hidden="true" />
             ) : (
-              <Eye className="h-4 w-4" aria-hidden="true" />
+              <Eye className="h-5 w-5" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -142,40 +141,44 @@ export function LoginForm({ next, error }: LoginFormProps) {
 
       <input type="hidden" name="next" value={safeNext} />
 
-      <div className="flex items-center justify-between gap-3 pt-1">
-        <Link
-          href={"/reset-password" as Route}
-          className="text-ink-600 hover:text-pool-blue text-xs font-bold tracking-eyebrow uppercase focus-visible:underline focus-visible:outline-none"
-        >
-          ¿Olvidaste?
-        </Link>
-        <Button
-          type="submit"
-          size="md"
-          className="h-11 min-h-11 px-6"
-          disabled={isPending}
-        >
+      <Link
+        href={"/reset-password" as Route}
+        className="text-pool-blue self-end text-xs font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+      >
+        ¿Olvidaste la contraseña?
+      </Link>
+
+      <div className="flex flex-col gap-3 pt-1">
+        <Button type="submit" size="lg" className="w-full" disabled={isPending}>
           {isPending ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              <span>Entrando…</span>
+              <span>Entrando&hellip;</span>
             </>
           ) : (
             <span>Entrar</span>
           )}
         </Button>
       </div>
-
-      <div className="mt-2 flex items-center gap-3 border-t border-ink-200 pt-3">
-        <a
-          href={googleRedirectUrl}
-          rel="noopener"
-          className="text-ink-700 hover:text-pool-deep focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex items-center gap-2 rounded-[var(--r-sm)] text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-        >
-          <GoogleIcon />
-          <span>Entrar con Google</span>
-        </a>
-      </div>
     </form>
+
+    <div className="relative my-2">
+      <div className="absolute inset-0 flex items-center" aria-hidden="true">
+        <div className="w-full border-t border-ink-200" />
+      </div>
+      <div className="relative flex justify-center text-xs">
+        <span className="bg-paper-card px-2 text-ink-400">o</span>
+      </div>
+    </div>
+
+    <a
+      href={googleRedirectUrl}
+      rel="noopener"
+      className="focus-visible:ring-pool-blue inline-flex w-full items-center justify-center gap-2.5 rounded-[var(--r-sm)] border border-ink-200 bg-paper py-3 text-sm font-semibold text-ink-700 shadow-sm transition-colors hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper focus-visible:outline-none"
+    >
+      <GoogleIcon />
+      <span>Continuar con Google</span>
+    </a>
+    </>
   );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Gorro, SilbatoActivo } from "@/components/brand/pictograms";
 import { formatLongDate } from "@/lib/domain/calendar";
 import type { CalendarEventDay } from "@/server/queries/calendar";
@@ -23,23 +22,11 @@ export function PoolLaneTimeline({
   isAdmin,
   onChanged,
 }: PoolLaneTimelineProps) {
-  const [animate, setAnimate] = useState(false);
-
-  useEffect(() => {
-    setAnimate(false);
-    const timer = setTimeout(() => setAnimate(true), 20);
-    return () => clearTimeout(timer);
-  }, [selectedIso]);
-
   const hasEvents = day && (day.trainings.length > 0 || day.matches.length > 0);
   const dateLabel = formatLongDate(`${selectedIso}T12:00:00`);
 
   return (
-    <div
-      className={`flex h-full flex-col ${
-        animate ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0"
-      } transition-all duration-300 ease-out`}
-    >
+    <div className="flex h-full flex-col transition-all duration-300 ease-out">
       <div className="border-ink-200 mb-3 flex shrink-0 items-center justify-between border-b pb-2">
         <h3 className="font-display text-pool-deep text-sm font-extrabold tracking-wider uppercase">
           {dateLabel}

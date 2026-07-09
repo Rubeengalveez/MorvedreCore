@@ -2,6 +2,8 @@
 
 > Objetivo: no empezar Fase 8 hasta cerrar o clasificar explicitamente los pendientes operativos que quedaron repartidos entre fases anteriores.
 
+> Estado 2026-07-09: fase cerrada. Este documento queda como plan inicial; el estado final validado esta en `25-operational-closure-summary.md`.
+
 ## Estado por pendiente
 
 | Pendiente | Estado actual | Criterio de cerrado |

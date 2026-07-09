@@ -27,6 +27,10 @@ function isProfileRow(value: unknown): value is ProfileSummary {
   return typeof v.id === "string" && typeof v.full_name === "string";
 }
 
+type ParentChildProfileRow = {
+  profiles: ProfileSummary | ProfileSummary[] | null;
+};
+
 const PROFILE_SELECT =
   "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password, calendar_token";
 
@@ -111,7 +115,7 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
     .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`)
     .eq("parent_profile_id", own.id);
 
-  let finalRows: any = linkRows;
+  let finalRows = linkRows as ParentChildProfileRow[] | null;
   if (rowsError && (rowsError.message.includes("calendar_token") || rowsError.message.includes("does not exist"))) {
     const { data: fallbackRows } = await supabase
       .from("parent_child_links")
