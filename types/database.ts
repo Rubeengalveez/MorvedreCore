@@ -63,6 +63,56 @@ export type Database = {
           },
         ];
       };
+      push_subscriptions: {
+        Row: {
+          id: string;
+          profile_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent: string | null;
+          enabled: boolean;
+          last_success_at: string | null;
+          last_error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          profile_id: string;
+          endpoint: string;
+          p256dh: string;
+          auth: string;
+          user_agent?: string | null;
+          enabled?: boolean;
+          last_success_at?: string | null;
+          last_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          profile_id?: string;
+          endpoint?: string;
+          p256dh?: string;
+          auth?: string;
+          user_agent?: string | null;
+          enabled?: boolean;
+          last_success_at?: string | null;
+          last_error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       profiles: {
         Row: {
           id: string;
@@ -544,6 +594,8 @@ export type Database = {
           scheduled_at: string;
           status: string;
           logistics_enabled: boolean;
+          travel_meeting_point: string | null;
+          travel_compensation_cents: number;
           notes: string | null;
           final_score_us: number | null;
           final_score_them: number | null;
@@ -563,6 +615,8 @@ export type Database = {
           scheduled_at: string;
           status?: string;
           logistics_enabled?: boolean;
+          travel_meeting_point?: string | null;
+          travel_compensation_cents?: number;
           notes?: string | null;
           final_score_us?: number | null;
           final_score_them?: number | null;
@@ -581,6 +635,8 @@ export type Database = {
           scheduled_at?: string;
           status?: string;
           logistics_enabled?: boolean;
+          travel_meeting_point?: string | null;
+          travel_compensation_cents?: number;
           notes?: string | null;
           final_score_us?: number | null;
           final_score_them?: number | null;
@@ -601,6 +657,112 @@ export type Database = {
             columns: ["team_id"];
             isOneToOne: false;
             referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      travel_offers: {
+        Row: {
+          id: string;
+          match_id: string;
+          driver_id: string;
+          vehicle_label: string;
+          seats_total: number;
+          seats_taken: number;
+          departure_from: string;
+          departure_at: string;
+          notes: string | null;
+          cancelled: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          match_id: string;
+          driver_id: string;
+          vehicle_label: string;
+          seats_total: number;
+          seats_taken?: number;
+          departure_from: string;
+          departure_at: string;
+          notes?: string | null;
+          cancelled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          match_id?: string;
+          driver_id?: string;
+          vehicle_label?: string;
+          seats_total?: number;
+          seats_taken?: number;
+          departure_from?: string;
+          departure_at?: string;
+          notes?: string | null;
+          cancelled?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "travel_offers_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "travel_offers_driver_id_fkey";
+            columns: ["driver_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      travel_reservations: {
+        Row: {
+          offer_id: string;
+          match_id: string;
+          player_id: string;
+          created_at: string;
+          cancelled_at: string | null;
+        };
+        Insert: {
+          offer_id: string;
+          match_id: string;
+          player_id: string;
+          created_at?: string;
+          cancelled_at?: string | null;
+        };
+        Update: {
+          offer_id?: string;
+          match_id?: string;
+          player_id?: string;
+          created_at?: string;
+          cancelled_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "travel_reservations_offer_id_fkey";
+            columns: ["offer_id"];
+            isOneToOne: false;
+            referencedRelation: "travel_offers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "travel_reservations_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "travel_reservations_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];
@@ -1426,9 +1588,17 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: number;
       };
+      create_monthly_payment_reminders: {
+        Args: Record<PropertyKey, never>;
+        Returns: number;
+      };
       get_auth_user_id_by_email: {
         Args: { p_email: string };
         Returns: string;
+      };
+      reserve_travel_seat: {
+        Args: { p_offer_id: string; p_player_id: string };
+        Returns: void;
       };
     };
     Enums: {

@@ -10,8 +10,8 @@ export type CategoryCode =
 export type TeamGender = "male" | "female" | "mixed";
 
 export const CATEGORY_LABELS: Record<CategoryCode, string> = {
-  benjamin: "Benjamin",
-  alevin: "Alevin",
+  benjamin: "Benjamín",
+  alevin: "Alevín",
   infantil: "Infantil",
   cadete: "Cadete",
   juvenil: "Juvenil",

@@ -65,4 +65,8 @@ public/swe-worker-*.js
 
 # Agent workdirs
 .agents/
+.opencode/
+
+# pnpm store (local)
+.pnpm-store/
 

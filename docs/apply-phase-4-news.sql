@@ -3,8 +3,6 @@
 -- Tablas: news_posts, news_reactions
 -- Reglas: markdown seguro, fijado opcional, caducidad opcional, reacciones (3 tipos)
 
-create extension if not exists pg_trgm;
-
 -- Tabla de noticias
 create table public.news_posts (
   id uuid primary key default gen_random_uuid(),

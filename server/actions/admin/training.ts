@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { insertNotificationsWithPush } from "./notification-dispatch";
 import type { Tables } from "@/types/database";
 import {
   cancelTrainingSessionSchema,
@@ -303,7 +304,6 @@ export async function cancelTrainingSession(sessionId: string, reason: string): 
       `${dateLabel}${blockLabel ? ` · ${blockLabel}` : ""}`,
       `Motivo: ${parsed.data.reason}`,
     ];
-    const adminClient = createAdminClient();
     const rows = playerIds.map((playerId) => ({
       recipient_id: playerId,
       kind: "training_cancelled",
@@ -312,7 +312,7 @@ export async function cancelTrainingSession(sessionId: string, reason: string): 
       href: `/calendar`,
       related_training_session_id: parsed.data.session_id,
     }));
-    const { error: notifyError } = await adminClient.from("notifications").insert(rows);
+    const { error: notifyError } = await insertNotificationsWithPush(rows);
     if (notifyError) {
       throw new Error("La sesión se canceló, pero no pudimos enviar los avisos.");
     }

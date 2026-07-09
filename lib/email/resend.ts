@@ -7,6 +7,61 @@ interface ResendErrorResponse {
   name?: string;
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: string;
+}
+
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+  attachments,
+}: {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  attachments?: EmailAttachment[];
+}): Promise<{ success: boolean; error?: string }> {
+  if (!API_KEY || !FROM_EMAIL) {
+    console.warn("[email] Resend no configurado.");
+    return { success: false, error: "Resend no configurado" };
+  }
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to,
+        subject,
+        text,
+        html,
+        attachments,
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as ResendErrorResponse | null;
+      const message = payload?.message ?? `HTTP ${response.status}`;
+      console.error("[email] Error enviando email:", message);
+      return { success: false, error: message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Error desconocido";
+    console.error("[email] Excepcion enviando email:", message);
+    return { success: false, error: message };
+  }
+}
+
 function getRoleLabel(role: string) {
   return (
     {
@@ -29,25 +84,12 @@ export async function sendAdminAccessRequestNotification({
   fullName: string;
   role: string;
 }): Promise<{ success: boolean; error?: string }> {
-  if (!API_KEY || !FROM_EMAIL) {
-    console.warn("[email] Resend no configurado. No se envia aviso de solicitud.");
-    return { success: false, error: "Resend no configurado" };
-  }
-
   const roleLabel = getRoleLabel(role);
 
-  try {
-    const response = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: FROM_EMAIL,
-        to: ADMIN_EMAIL,
-        subject: "Nueva solicitud de acceso - Morvedre Core",
-        text: `Hola,
+  return sendEmail({
+    to: ADMIN_EMAIL,
+    subject: "Nueva solicitud de acceso - Morvedre Core",
+    text: `Hola,
 
 Has recibido una nueva solicitud de acceso en Morvedre Core.
 
@@ -57,7 +99,7 @@ Tipo: ${roleLabel}
 
 Entra en /admin/access-requests para revisarla.
 `,
-        html: `<p>Hola,</p>
+    html: `<p>Hola,</p>
 <p>Has recibido una nueva solicitud de acceso en Morvedre Core.</p>
 <ul>
   <li><strong>Email:</strong> ${email}</li>
@@ -65,20 +107,5 @@ Entra en /admin/access-requests para revisarla.
   <li><strong>Tipo:</strong> ${roleLabel}</li>
 </ul>
 <p>Entra en <strong>/admin/access-requests</strong> para revisarla.</p>`,
-      }),
-    });
-
-    if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as ResendErrorResponse | null;
-      const message = payload?.message ?? `HTTP ${response.status}`;
-      console.error("[email] Error enviando notificacion:", message);
-      return { success: false, error: message };
-    }
-
-    return { success: true };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Error desconocido";
-    console.error("[email] Excepcion enviando notificacion:", message);
-    return { success: false, error: message };
-  }
+  });
 }

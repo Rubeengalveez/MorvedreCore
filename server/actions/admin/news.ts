@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { insertNotificationsWithPush } from "./notification-dispatch";
 import { requireAdmin } from "./_helpers";
 import {
   createNewsPostSchema,
@@ -280,7 +281,6 @@ async function notifyAllMembersOnNews(
     );
   }
   if (profileIds.length === 0) return;
-  const admin = createAdminClient();
   const rows = profileIds.map((pid) => ({
     recipient_id: pid,
     kind: "news_pinned" as const,
@@ -289,5 +289,5 @@ async function notifyAllMembersOnNews(
     href: `/news/${postId}`,
     related_match_id: null,
   }));
-  await admin.from("notifications").insert(rows);
+  await insertNotificationsWithPush(rows);
 }

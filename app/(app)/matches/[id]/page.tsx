@@ -2,7 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft, MapPin, Clock, Trophy, Award, FileText, UserCheck } from "lucide-react";
+import {
+  ChevronLeft,
+  MapPin,
+  Clock,
+  Trophy,
+  Award,
+  FileText,
+  UserCheck,
+  CarFront,
+} from "lucide-react";
 
 import { Balon, Porteria } from "@/components/brand/pictograms";
 import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
@@ -209,6 +218,20 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
       {/* ─── CONTENT ─── */}
       <div className="flex flex-col gap-5 px-4 pt-5 pb-6">
+        {!match.is_home && match.logistics_enabled && !isPlayed ? (
+          <section className="bg-paper-card border-ink-200 flex items-center gap-4 rounded-lg border p-4">
+            <div className="bg-ball-gold text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-md">
+              <CarFront className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h2 className="text-ink-900 text-base font-black">Organizar desplazamiento</h2>
+              <p className="text-ink-500 text-sm">Coches, plazas y punto de salida</p>
+            </div>
+            <Button asChild size="sm">
+              <Link href={`/matches/${match.id}/travel` as Route}>Ver</Link>
+            </Button>
+          </section>
+        ) : null}
         {/* RSVP (only upcoming matches) */}
         {myStatus && (match.status === "scheduled" || match.status === "in_progress") && (
           <section className="bg-paper-card border-ink-200 flex flex-col gap-3 rounded-2xl border p-5 shadow-sm">

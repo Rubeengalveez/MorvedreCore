@@ -15,6 +15,7 @@ import {
 
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { PushSettings } from "@/components/push/push-settings";
 import { createClient } from "@/lib/supabase/server";
 import { timeAgo } from "@/lib/domain/calendar";
 import { cn } from "@/lib/utils/cn";
@@ -157,6 +158,8 @@ export default async function NotificationsPage() {
         </div>
         <Bell className="text-brand-deep hidden h-7 w-7 sm:block" />
       </header>
+
+      <PushSettings publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
 
       {items.length === 0 ? (
         <div className="border-ink-300 bg-paper flex flex-col items-center gap-3 rounded-md border border-dashed p-8 text-center">

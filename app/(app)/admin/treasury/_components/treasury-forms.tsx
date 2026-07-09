@@ -11,6 +11,7 @@ import {
   assignTreasuryConcept,
   buildTreasuryPeriodClosure,
   markTreasuryLinePaid,
+  sendTreasuryClosureEmail,
   upsertTreasuryConcept,
 } from "@/server/actions/admin/treasury";
 import type { TreasuryDashboard, TreasuryLine } from "@/server/queries/treasury";
@@ -214,6 +215,44 @@ export function PaidButton({ lineId, paid }: { lineId: string; paid: boolean }) 
     >
       {paid ? "Pagado" : "Marcar"}
     </button>
+  );
+}
+
+export function SendClosureEmailButton({
+  closureId,
+  sentToEmail,
+}: {
+  closureId: string;
+  sentToEmail: string | null;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="mt-2 flex flex-col gap-1">
+      <Button
+        type="button"
+        variant="secondary"
+        disabled={pending}
+        onClick={() => {
+          setMessage(null);
+          setError(null);
+          startTransition(async () => {
+            try {
+              await sendTreasuryClosureEmail({ closure_id: closureId, to: sentToEmail });
+              setMessage("Cierre enviado.");
+            } catch (err) {
+              setError(err instanceof Error ? err.message : "No pudimos enviar el cierre.");
+            }
+          });
+        }}
+      >
+        {pending ? "Enviando..." : "Enviar a tesoreria"}
+      </Button>
+      {message ? <p className="text-xs font-bold text-success">{message}</p> : null}
+      {error ? <p className="text-xs font-bold text-goggle-red">{error}</p> : null}
+    </div>
   );
 }
 

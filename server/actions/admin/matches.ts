@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { insertNotificationsWithPush } from "./notification-dispatch";
 import type { Tables } from "@/types/database";
 import {
   createCallupSchema,
@@ -400,14 +401,13 @@ export async function createCallup(input: {
     throw new Error("No pudimos añadir la convocatoria. Inténtalo de nuevo.");
   }
 
-  const adminClient = createAdminClient();
   const scheduledDate = new Date(match.scheduled_at);
   const dateLabel = scheduledDate.toLocaleDateString("es-ES", {
     weekday: "long",
     day: "numeric",
     month: "long",
   });
-  const { error: notifyError } = await adminClient.from("notifications").insert({
+  const { error: notifyError } = await insertNotificationsWithPush({
     recipient_id: parsed.data.player_id,
     kind: "convocatoria",
     title: notificationTitle(match.opponent, "called"),

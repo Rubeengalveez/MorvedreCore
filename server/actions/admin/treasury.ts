@@ -4,6 +4,11 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/resend";
+import {
+  buildTreasuryClosureWorkbook,
+  treasuryClosureFilename,
+} from "@/lib/exports/treasury-export";
 import {
   assignTreasuryConceptSchema,
   buildTreasuryClosureSchema,
@@ -19,6 +24,7 @@ import {
   type TreasuryProfileInput,
   type TreasuryShopOrderInput,
 } from "@/lib/domain/treasury";
+import { getTreasuryClosure } from "@/server/queries/treasury";
 import { requireAdmin } from "./_helpers";
 
 function toError(e: unknown): string {
@@ -244,4 +250,60 @@ export async function markTreasuryLinePaid(input: {
   if (error) throw new Error("No pudimos actualizar el pago: " + errorMessage(error));
   revalidatePath("/admin/treasury");
   revalidatePath("/treasury");
+}
+
+export async function sendTreasuryClosureEmail(input: {
+  closure_id: string;
+  to?: string | null;
+}): Promise<void> {
+  await requireAdmin();
+  const to = input.to?.trim() || process.env.TREASURY_EMAIL || process.env.ADMIN_EMAIL;
+  if (!to) throw new Error("Falta configurar el email de tesoreria.");
+
+  const { closure, lines } = await getTreasuryClosure(input.closure_id);
+  if (!closure) throw new Error("No encontramos el cierre.");
+
+  const buffer = buildTreasuryClosureWorkbook({ closure, lines });
+  const filename = treasuryClosureFilename(closure.period_label);
+  const result = await sendEmail({
+    to,
+    subject: `Cierre de tesoreria - ${closure.period_label}`,
+    text: `Hola,
+
+Adjunto tienes el cierre de tesoreria de ${closure.period_label}.
+
+Total: ${closure.total_cents / 100} EUR
+Lineas: ${lines.length}
+`,
+    html: `<p>Hola,</p>
+<p>Adjunto tienes el cierre de tesoreria de <strong>${closure.period_label}</strong>.</p>
+<ul>
+  <li><strong>Total:</strong> ${(closure.total_cents / 100).toFixed(2)} EUR</li>
+  <li><strong>Lineas:</strong> ${lines.length}</li>
+</ul>`,
+    attachments: [
+      {
+        filename,
+        content: buffer.toString("base64"),
+      },
+    ],
+  });
+
+  if (!result.success) throw new Error(result.error ?? "No pudimos enviar el cierre.");
+
+  const admin = createAdminClient();
+  const raw = db(admin);
+  const { error } = await (
+    raw.from("treasury_period_closures").update({
+      sent_to_email: to,
+      sent_at: new Date().toISOString(),
+      status: "sent",
+    }) as {
+      eq: (column: string, value: string) => Promise<{ error: Error | null }>;
+    }
+  ).eq("id", closure.id);
+  if (error) throw new Error("El email se envio, pero no pudimos marcar el cierre como enviado.");
+
+  revalidatePath("/admin/treasury");
+  revalidatePath(`/admin/treasury/closures/${closure.id}`);
 }

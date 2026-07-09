@@ -486,3 +486,12 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Los pedidos de tienda aprobados o en curso se incorporan automaticamente al cierre del periodo por `requested_at`.
 - El cierre se puede regenerar por temporada + periodo mientras se trabaja en borrador: se reemplazan sus lineas y se recalcula el total.
 - Export Excel protegido por admin en `/api/treasury/closures/[id]/export`.
+
+## 2026-07-09 - Fase 7 Logistica de coches
+
+- Se implementa la logistica de coches por partido visitante en `/matches/[id]/travel`.
+- Un conductor puede ofrecer plazas y un jugador puede reservar asiento desde su perfil activo.
+- El staff del partido puede configurar punto de encuentro, activar/desactivar logistica y ajustar compensacion.
+- La reserva usa `reserve_travel_seat` con bloqueo de fila y triggers defensivos para evitar sobreventa aunque alguien intente escribir por API directa.
+- La compensacion se modela como importe fijo por coche en centimos (`travel_compensation_cents`), no como calculo automatico por kilometros, porque el club decide la cifra por desplazamiento.
+- Documentado el cierre en `23-phase-7-summary.md`.

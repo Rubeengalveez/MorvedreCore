@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PageShell, SectionHeader } from "@/components/ui/page-shell";
 import { getTreasuryClosure } from "@/server/queries/treasury";
 import { formatTreasuryCents } from "@/lib/domain/treasury";
-import { PaidButton } from "../../_components/treasury-forms";
+import { PaidButton, SendClosureEmailButton } from "../../_components/treasury-forms";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -68,6 +68,7 @@ export default async function TreasuryClosurePage({
               Descargar Excel
             </a>
           </Button>
+          <SendClosureEmailButton closureId={closure.id} sentToEmail={closure.sent_to_email} />
         </header>
 
         <section className="flex flex-col gap-2">

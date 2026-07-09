@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { Plus, Boxes, ShoppingCart, Bell, Truck, PackageCheck } from "lucide-react";
+import { Plus, Boxes, ShoppingCart, Bell, Truck, PackageCheck, Download } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { createClient } from "@/lib/supabase/server";
@@ -78,12 +78,20 @@ export default async function AdminShopPage() {
               </h1>
             </div>
           </div>
-          <Link
-            href={"/admin/shop/products/new" as Route}
-            className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-bold"
-          >
-            <Plus className="h-4 w-4" /> Producto
-          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <a
+              href="/api/shop/orders/export"
+              className="border-ink-300 bg-paper-card text-pool-deep inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-sm font-bold"
+            >
+              <Download className="h-4 w-4" /> Excel
+            </a>
+            <Link
+              href={"/admin/shop/products/new" as Route}
+              className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-bold"
+            >
+              <Plus className="h-4 w-4" /> Producto
+            </Link>
+          </div>
         </header>
 
         <div className="flex gap-2 overflow-x-auto pb-3">

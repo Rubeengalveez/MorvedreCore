@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { insertNotificationsWithPush } from "./notification-dispatch";
 import { requireAdmin, requireSessionProfile } from "./_helpers";
 import {
   createShopOrderSchema,
@@ -374,7 +375,6 @@ async function notifyParentsOfOrder(
     .eq("child_profile_id", childId);
   if (!links || links.length === 0) return;
 
-  const admin = createAdminClient();
   const productTitles = products.map((p) => p.title).join(", ");
   const rows = links.map((l) => ({
     recipient_id: l.parent_profile_id,
@@ -384,5 +384,5 @@ async function notifyParentsOfOrder(
     href: `/shop/orders/${orderId}`,
     related_match_id: null,
   }));
-  await admin.from("notifications").insert(rows);
+  await insertNotificationsWithPush(rows);
 }
