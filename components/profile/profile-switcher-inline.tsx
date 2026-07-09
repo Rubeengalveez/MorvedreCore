@@ -38,21 +38,25 @@ export function ProfileSwitcherInline({
 
   const allProfiles = [
     { profile: ownProfile, isOwn: true, label: "Mi perfil" },
-    ...linkedProfiles.map((p) => ({ profile: p, isOwn: false, label: p.full_name.split(" ")[0] ?? p.full_name })),
+    ...linkedProfiles.map((p) => ({
+      profile: p,
+      isOwn: false,
+      label: p.full_name.split(" ")[0] ?? p.full_name,
+    })),
   ];
 
   return (
     <div
       data-profile-switcher-inline
       className={cn(
-        "flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3 shadow-sm transition-opacity",
-        isPending && "opacity-75"
+        "border-ink-300 bg-paper-card flex flex-col gap-2 rounded-md border p-3 shadow-sm transition-opacity",
+        isPending && "opacity-75",
       )}
     >
-      <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-600 leading-none">
+      <span className="text-ink-600 text-[10px] leading-none font-extrabold tracking-wider uppercase">
         Perfiles vinculados
       </span>
-      <div className="flex flex-wrap gap-2.5 mt-1">
+      <div className="mt-1 flex flex-wrap gap-2.5">
         {allProfiles.map(({ profile, label }) => {
           const isActive = profile.id === activeProfile.id;
           const teamColor = profile.team_color ?? "var(--pool-blue)";
@@ -63,10 +67,10 @@ export function ProfileSwitcherInline({
               onClick={() => handleSelect(profile.id)}
               disabled={isPending}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
+                "focus-visible:ring-pool-blue inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all focus-visible:ring-2 focus-visible:outline-none",
                 isActive
                   ? "bg-pool-deep text-paper shadow-sm"
-                  : "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam"
+                  : "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",
               )}
               style={isActive ? { borderColor: teamColor } : undefined}
             >

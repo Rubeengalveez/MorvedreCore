@@ -31,11 +31,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  createSeason,
-  updateSeason,
-  type Season,
-} from "@/server/actions/admin";
+import { createSeason, updateSeason, type Season } from "@/server/actions/admin";
 
 const isoDate = z
   .string()
@@ -54,16 +50,11 @@ const seasonFormSchema = z
 
 type SeasonFormValues = z.infer<typeof seasonFormSchema>;
 
-type FormMode =
-  | { kind: "create" }
-  | { kind: "edit"; season: Season };
+type FormMode = { kind: "create" } | { kind: "edit"; season: Season };
 
 type ActionState = { ok?: true; error?: string } | null;
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const id = formData.get("id");
     const payload = {
@@ -100,26 +91,22 @@ export interface SeasonFormSheetProps {
 export function SeasonFormSheet({ mode, trigger }: SeasonFormSheetProps) {
   const isEdit = mode.kind === "edit";
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
 
   const form = useForm<SeasonFormValues>({
     resolver: zodResolver(seasonFormSchema),
-    defaultValues:
-      isEdit
-        ? {
-            label: mode.season.label,
-            start_date: mode.season.start_date,
-            end_date: mode.season.end_date,
-          }
-        : {
-            label: "",
-            start_date: "",
-            end_date: "",
-          },
+    defaultValues: isEdit
+      ? {
+          label: mode.season.label,
+          start_date: mode.season.start_date,
+          end_date: mode.season.end_date,
+        }
+      : {
+          label: "",
+          start_date: "",
+          end_date: "",
+        },
   });
 
   useEffect(() => {
@@ -147,11 +134,7 @@ export function SeasonFormSheet({ mode, trigger }: SeasonFormSheetProps) {
       <SheetContent size="md">
         <SheetHeader>
           <div className="flex items-center gap-3">
-            <PictogramBadge
-              pictogram={Calendario}
-              color="var(--pool-teal)"
-              size="md"
-            />
+            <PictogramBadge pictogram={Calendario} color="var(--pool-teal)" size="md" />
             <div className="flex flex-col gap-0.5">
               <Eyebrow>Temporada</Eyebrow>
               <SheetTitle className="text-h2">
@@ -246,12 +229,10 @@ export function SeasonFormSheet({ mode, trigger }: SeasonFormSheetProps) {
                 <div
                   role="status"
                   aria-live="polite"
-                  className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 p-3 text-sm text-ink-900"
+                  className="border-success/30 bg-success/10 text-ink-900 flex items-center gap-2 rounded-md border p-3 text-sm"
                 >
-                  <CheckCircle2 className="h-5 w-5 shrink-0 text-success" aria-hidden="true" />
-                  <span className="font-semibold">
-                    Temporada guardada correctamente.
-                  </span>
+                  <CheckCircle2 className="text-success h-5 w-5 shrink-0" aria-hidden="true" />
+                  <span className="font-semibold">Temporada guardada correctamente.</span>
                 </div>
               ) : null}
             </form>

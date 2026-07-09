@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
@@ -29,7 +30,7 @@ function isProfileRow(value: unknown): value is ProfileSummary {
 const PROFILE_SELECT =
   "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password";
 
-export async function getActiveProfileContext(): Promise<ActiveProfileContext | null> {
+export const getActiveProfileContext = cache(async (): Promise<ActiveProfileContext | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -52,9 +53,7 @@ export async function getActiveProfileContext(): Promise<ActiveProfileContext | 
   if (activeId && activeId !== own.id) {
     const { data: link } = await supabase
       .from("parent_child_links")
-      .select(
-        `profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`,
-      )
+      .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`)
       .eq("parent_profile_id", own.id)
       .eq("child_profile_id", activeId)
       .maybeSingle();
@@ -67,9 +66,7 @@ export async function getActiveProfileContext(): Promise<ActiveProfileContext | 
 
   const { data: linkRows } = await supabase
     .from("parent_child_links")
-    .select(
-      `profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`,
-    )
+    .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`)
     .eq("parent_profile_id", own.id);
 
   const linked: ProfileSummary[] = [];
@@ -81,4 +78,4 @@ export async function getActiveProfileContext(): Promise<ActiveProfileContext | 
   }
 
   return { ownProfile: own, activeProfile: active, linkedProfiles: linked };
-}
+});

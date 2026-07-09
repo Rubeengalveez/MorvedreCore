@@ -5,11 +5,7 @@ import type { Route } from "next";
 import { AppShell } from "@/components/layout/app-shell";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 
-export default async function AppLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 

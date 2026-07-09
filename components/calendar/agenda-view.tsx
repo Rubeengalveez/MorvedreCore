@@ -20,7 +20,20 @@ export interface AgendaViewProps {
 function formatLongDate(iso: string): string {
   const d = new Date(iso);
   const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-  const months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+  const months = [
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+  ];
   return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()] ?? ""}`;
 }
 
@@ -41,11 +54,7 @@ interface FlatEvent {
   isHome: boolean;
 }
 
-function flattenEvents(
-  eventsByDay: CalendarData,
-  startIso: string,
-  endIso: string,
-): FlatEvent[] {
+function flattenEvents(eventsByDay: CalendarData, startIso: string, endIso: string): FlatEvent[] {
   const result: FlatEvent[] = [];
   for (const [iso, day] of eventsByDay) {
     if (iso < startIso || iso > endIso) continue;
@@ -132,19 +141,19 @@ export function AgendaView({
           <section
             key={dayIso}
             aria-labelledby={`day-${dayIso}`}
-            className="rounded-lg border border-ink-300 bg-paper/50 p-3"
+            className="border-ink-300 bg-paper/50 rounded-lg border p-3"
           >
             <h3
               id={`day-${dayIso}`}
-              className="mb-2 flex items-center gap-2 font-display text-base font-bold text-brand-deep"
+              className="font-display text-brand-deep mb-2 flex items-center gap-2 text-base font-bold"
             >
               {formatLongDate(dayIso)}
               {isPast ? (
-                <span className="inline-flex h-5 items-center rounded-full bg-ink-300 px-2 text-[10px] font-bold uppercase tracking-wider text-ink-900">
+                <span className="bg-ink-300 text-eyebrow text-ink-900 inline-flex h-5 items-center rounded-full px-2">
                   Pasado
                 </span>
               ) : null}
-              <span className="ml-auto text-[10px] font-bold uppercase tracking-wider text-ink-600">
+              <span className="text-eyebrow text-ink-600 ml-auto">
                 {dayEvents.length} evento{dayEvents.length === 1 ? "" : "s"}
               </span>
             </h3>

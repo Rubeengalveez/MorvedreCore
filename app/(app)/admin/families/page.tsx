@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { MdAdd } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -72,22 +72,20 @@ export default async function FamiliesPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex items-end justify-between gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+          <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
             Familias
           </h1>
-          <p className="text-sm text-ink-600">
-            Vínculos entre tutores y jugadores.
-          </p>
+          <p className="text-ink-600 text-sm">Vínculos entre tutores y jugadores.</p>
         </div>
         <FamilyFormSheet
           parents={parents}
           childrenList={children}
           trigger={
-            <Button size="md" className="shrink-0">
-              <Plus className="h-5 w-5" aria-hidden="true" />
-              <span className="hidden sm:inline">Nuevo</span>
+            <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+              <MdAdd className="h-6 w-6" aria-hidden="true" />
+              <span>Nuevo</span>
             </Button>
           }
         />

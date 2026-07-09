@@ -19,10 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import {
-  formatDateTimeLocal,
-  parseDateTimeLocal,
-} from "@/lib/utils/format";
+import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
 import { updateMatch, type MatchRow, type Team } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
@@ -41,11 +38,7 @@ const STATUS_OPTIONS = [
 ] as const;
 
 const formSchema = z.object({
-  opponent: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres.")
-    .max(100, "Máximo 100 caracteres."),
+  opponent: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
   competition_type: z.enum(["league", "cup", "tournament", "friendly"]),
   status: z.enum(["scheduled", "in_progress", "played", "cancelled", "postponed"]),
   is_home: z.boolean(),
@@ -82,10 +75,8 @@ function Toggle({
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-semibold text-ink-900">{label}</span>
-        {description ? (
-          <span className="text-xs text-ink-600">{description}</span>
-        ) : null}
+        <span className="text-ink-900 text-sm font-semibold">{label}</span>
+        {description ? <span className="text-ink-600 text-xs">{description}</span> : null}
       </div>
       <button
         type="button"
@@ -93,14 +84,14 @@ function Toggle({
         aria-checked={value}
         onClick={() => onChange(!value)}
         className={
-          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper " +
+          "focus-visible:ring-brand-blue focus-visible:ring-offset-paper relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
           (value ? "bg-brand-blue" : "bg-ink-300")
         }
       >
         <span
           aria-hidden="true"
           className={
-            "inline-block h-5 w-5 rounded-full bg-paper transition-transform " +
+            "bg-paper inline-block h-5 w-5 rounded-full transition-transform " +
             (value ? "translate-x-6" : "translate-x-1")
           }
         />
@@ -176,13 +167,13 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
           </Alert>
         ) : null}
 
-        <div className="flex items-center gap-2 rounded-md border border-ink-300 bg-brand-foam/40 p-3 text-sm">
+        <div className="border-ink-300 bg-brand-foam/40 flex items-center gap-2 rounded-md border p-3 text-sm">
           <span
             aria-hidden="true"
             className="inline-block h-3 w-3 rounded-full"
             style={{ backgroundColor: team.color }}
           />
-          <span className="font-semibold text-brand-deep">{team.label}</span>
+          <span className="text-brand-deep font-semibold">{team.label}</span>
           <span className="text-ink-600">· temporada</span>
         </div>
 
@@ -369,7 +360,7 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
                   onBlur={field.onBlur}
                   name={field.name}
                   ref={field.ref}
-                  className="flex w-full rounded border border-ink-300 bg-paper px-4 py-3 text-base text-ink-900 placeholder:text-ink-600/70 transition-colors focus-visible:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:cursor-not-allowed disabled:opacity-50"
+                  className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-brand-blue focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                 />
               </FormControl>
               <FormMessage />

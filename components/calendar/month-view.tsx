@@ -1,7 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils/cn";
-import type { CalendarData, CalendarTraining, CalendarMatch } from "@/server/queries/calendar";
+import { Gorro, SilbatoActivo } from "@/components/brand/pictograms";
+import type { CalendarData, CalendarMatch, CalendarTraining } from "@/server/queries/calendar";
 import {
   getMonthCells,
   isSameLocalDay,
@@ -9,8 +10,6 @@ import {
   weekdayShort,
   type YearMonth,
 } from "@/lib/domain/calendar";
-import { matchColor, trainingColor } from "@/lib/domain/event-colors";
-import { CalendarEventChip } from "./event-card";
 
 export interface MonthViewProps {
   year: number;
@@ -24,54 +23,49 @@ export interface MonthViewProps {
 
 function buildDayItems(
   day: { trainings: CalendarTraining[]; matches: CalendarMatch[] } | undefined,
-): Array<{ kind: "training" | "match"; id: string; title: string; scheduled_at: string; cancelled: boolean; status: string; competition_type: string }> {
+): Array<{
+  kind: "training" | "match";
+  id: string;
+  scheduled_at: string;
+  cancelled: boolean;
+  status: string;
+  team_color: string;
+  team_label: string;
+}> {
   if (!day) return [];
-  const items: Array<{ kind: "training" | "match"; id: string; title: string; scheduled_at: string; cancelled: boolean; status: string; competition_type: string }> = [];
+  const items: Array<{
+    kind: "training" | "match";
+    id: string;
+    scheduled_at: string;
+    cancelled: boolean;
+    status: string;
+    team_color: string;
+    team_label: string;
+  }> = [];
   for (const t of day.trainings) {
     items.push({
       kind: "training",
       id: t.id,
-      title: `Entreno ${t.team_label}`,
       scheduled_at: t.scheduled_at,
       cancelled: t.cancelled,
       status: t.cancelled ? "cancelled" : "scheduled",
-      competition_type: "training",
+      team_color: t.team_color,
+      team_label: t.team_label,
     });
   }
   for (const m of day.matches) {
     items.push({
       kind: "match",
       id: m.id,
-      title: m.is_home ? `${m.team_label} vs ${m.opponent}` : `${m.opponent} vs ${m.team_label}`,
       scheduled_at: m.scheduled_at,
       cancelled: m.status === "cancelled",
       status: m.status,
-      competition_type: m.competition_type,
+      team_color: m.team_color,
+      team_label: m.team_label,
     });
   }
   items.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
   return items;
-}
-
-function getDayColor(items: ReturnType<typeof buildDayItems>): string {
-  const m = items.find((i) => i.kind === "match" && i.status !== "cancelled");
-  if (m) {
-    return matchColor({
-      competitionType: m.competition_type,
-      status: m.status,
-      isPast: new Date(m.scheduled_at) < new Date(),
-      unavailable: false,
-    });
-  }
-  const t = items.find((i) => i.kind === "training" && !i.cancelled);
-  if (t) {
-    return trainingColor({
-      cancelled: t.cancelled,
-      isPast: new Date(t.scheduled_at) < new Date(),
-      unavailable: false,
-    });
-  }
-  return "var(--ink-300)";
 }
 
 export function MonthView({
@@ -86,31 +80,33 @@ export function MonthView({
   const today = new Date();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex h-full flex-col gap-1.5">
       <div
         aria-hidden="true"
-        className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold uppercase tracking-wider text-ink-600"
+        className="border-ink-200/50 text-ink-600 grid grid-cols-7 border-b pb-1 text-center text-xs font-extrabold tracking-[0.08em] uppercase select-none"
       >
         {[1, 2, 3, 4, 5, 6, 7].map((wd) => (
           <span key={wd}>{weekdayShort(wd)}</span>
         ))}
       </div>
+
       <div
         aria-label={`Mes de ${monthLabel({ year, month } as YearMonth)}`}
-        className="grid grid-cols-7 gap-1"
+        className="grid flex-1 grid-cols-7 gap-1"
       >
         {cells.map((cell) => {
-          const day = eventsByDay.get(cell.iso);
-          const items = buildDayItems(day);
+          const items = buildDayItems(eventsByDay.get(cell.iso));
           const unavailable = availabilityByDay.get(cell.iso) === false;
           const isToday = isSameLocalDay(cell.date, today);
           const isSelected = selectedIso === cell.iso;
-          const isPast = cell.date < today;
-          const isWeekend = cell.date.getDay() === 0 || cell.date.getDay() === 6;
           const hasItems = items.length > 0;
-          const accent = hasItems ? getDayColor(items) : "var(--ink-300)";
-          const visibleItems = items.slice(0, 2);
-          const extraCount = items.length - visibleItems.length;
+          const hasTraining = items.some((it) => it.kind === "training" && !it.cancelled);
+          const hasMatch = items.some((it) => it.kind === "match" && it.status !== "cancelled");
+          const hasCancelled = items.some((it) => it.cancelled || it.status === "cancelled");
+          const teamDots = items
+            .filter((it) => !it.cancelled && it.status !== "cancelled")
+            .slice(0, 3);
+
           return (
             <button
               key={cell.iso}
@@ -119,66 +115,80 @@ export function MonthView({
               aria-label={`${cell.iso}${hasItems ? `, ${items.length} evento(s)` : ""}${unavailable ? ", no disponible" : ""}${isToday ? ", hoy" : ""}`}
               aria-pressed={isSelected}
               className={cn(
-                "group relative flex h-16 min-h-16 flex-col items-stretch gap-0.5 rounded border p-1 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:h-20",
+                "group relative flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-md border p-1 text-center transition-all duration-200",
+                "focus-visible:ring-pool-blue focus-visible:ring-offset-paper focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
+                "touch-target active:scale-95",
                 !cell.inMonth
-                  ? "border-transparent bg-transparent text-ink-300"
-                  : isPast
-                    ? "border-ink-300 bg-paper"
-                    : isWeekend
-                      ? "border-ink-300 bg-paper"
-                      : "border-ink-300 bg-paper",
-                isSelected ? "ring-2 ring-pool-blue" : "",
-                isToday ? "ring-1 ring-pool-deep/30" : "",
-                isToday ? "bg-pool-foam/40" : "",
-                isToday ? "border-pool-deep/30" : "",
-                unavailable ? "bg-ink-300/30" : "",
+                  ? "pointer-events-none border-transparent bg-transparent opacity-15"
+                  : isSelected
+                    ? hasMatch
+                      ? "text-paper scale-[1.03] border-amber-600 bg-amber-600 shadow-md"
+                      : hasTraining
+                        ? "border-pool-blue bg-pool-blue text-paper scale-[1.03] shadow-md"
+                        : hasCancelled
+                          ? "border-goggle-red bg-goggle-red text-paper scale-[1.03] shadow-md"
+                          : "border-pool-deep bg-pool-deep text-paper scale-[1.03] shadow-md"
+                    : isToday
+                      ? "border-pool-blue/70 bg-pool-foam/30 text-pool-deep border-2 font-extrabold"
+                      : hasMatch
+                        ? "border-amber-200/60 bg-amber-50 font-extrabold text-amber-900 hover:bg-amber-100"
+                        : hasTraining
+                          ? "border-pool-blue/15 bg-pool-foam/60 text-pool-deep hover:bg-pool-foam font-semibold"
+                          : hasCancelled
+                            ? "border-red-100 bg-red-50 font-semibold text-red-800 hover:bg-red-100/60"
+                            : unavailable
+                              ? "border-ink-200/50 bg-ink-100/60 text-ink-400 opacity-65"
+                              : "border-ink-200/60 bg-paper text-ink-900 hover:bg-ink-50/70",
               )}
             >
-              <div className="flex items-center justify-between">
-                <span
-                  className={cn(
-                    "font-mono text-[11px] font-bold leading-none",
-                    isToday ? "text-pool-deep" : "",
-                    !cell.inMonth && "text-ink-300",
-                  )}
-                >
-                  {cell.day}
-                </span>
-                {hasItems ? (
-                  <span
-                    aria-hidden="true"
-                    className="block h-1.5 w-1.5 rounded-full"
-                    style={{ backgroundColor: accent }}
-                  />
-                ) : unavailable ? (
-                  <span
-                    aria-hidden="true"
-                    className="block h-1.5 w-1.5 rounded-full bg-ink-300 ring-1 ring-ink-600"
-                  />
-                ) : null}
-              </div>
-              {cell.inMonth && visibleItems.length > 0 ? (
-                <div className="flex flex-col gap-0.5 overflow-hidden">
-                  {visibleItems.map((it) => (
-                    <CalendarEventChip
-                      key={it.id}
-                      event={{
-                        id: it.id,
-                        kind: it.kind,
-                        scheduled_at: it.scheduled_at,
-                        title: it.title,
-                        team_label: "",
-                        team_color: accent,
-                        cancelled: it.cancelled,
-                        status: it.status,
-                      }}
+              <span className="font-mono text-sm font-extrabold select-none md:text-base">
+                {cell.day}
+              </span>
+              {cell.inMonth && (hasItems || unavailable) ? (
+                <div className="mt-0.5 flex h-4 items-center justify-center gap-0.5 select-none">
+                  {hasTraining ? (
+                    <SilbatoActivo
+                      className="h-3 w-3 shrink-0"
+                      accent={isSelected ? "#fff" : "var(--pool-blue)"}
                     />
-                  ))}
-                  {extraCount > 0 ? (
-                    <span className="text-[9px] font-bold uppercase tracking-wider text-ink-600">
-                      +{extraCount} más
+                  ) : null}
+                  {hasMatch ? (
+                    <Gorro
+                      className="h-3 w-3 shrink-0"
+                      accent={isSelected ? "#fff" : "var(--ball-gold)"}
+                    />
+                  ) : null}
+                  {hasCancelled ? (
+                    <span
+                      className={cn(
+                        "text-xs font-extrabold",
+                        isSelected ? "text-paper" : "text-goggle-red",
+                      )}
+                    >
+                      X
                     </span>
                   ) : null}
+                  {unavailable && !hasItems ? (
+                    <span
+                      className={cn(
+                        "bg-ink-400 h-1.5 w-1.5 rounded-full",
+                        isSelected && "bg-paper",
+                      )}
+                    />
+                  ) : null}
+                </div>
+              ) : (
+                <div className="mt-0.5 h-4" />
+              )}
+              {teamDots.length > 0 ? (
+                <div className="absolute inset-x-1 bottom-1 flex gap-0.5">
+                  {teamDots.map((item) => (
+                    <span
+                      key={`${item.kind}-${item.id}`}
+                      className="h-0.5 flex-1 rounded-full"
+                      style={{ backgroundColor: isSelected ? "var(--paper)" : item.team_color }}
+                    />
+                  ))}
                 </div>
               ) : null}
             </button>

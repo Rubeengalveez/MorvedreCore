@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Trash2 } from "lucide-react";
+import { MdAutorenew, MdDelete } from "react-icons/md";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
@@ -27,10 +27,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  rosterPlayer,
-  unrosterPlayer,
-} from "@/server/actions/admin";
+import { rosterPlayer, unrosterPlayer } from "@/server/actions/admin";
 
 const dorsalPattern = /^\d{1,2}$/;
 
@@ -50,14 +47,10 @@ type RosterValues = z.infer<typeof rosterSchema>;
 
 type ActionState = { ok?: true; error?: string } | null;
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const teamId = String(formData.get("team_id") ?? "");
   const squad = formData.get("squad_number");
-  const squadNumber =
-    squad && String(squad).trim() !== "" ? Number(squad) : undefined;
+  const squadNumber = squad && String(squad).trim() !== "" ? Number(squad) : undefined;
   try {
     await rosterPlayer({
       team_id: teamId,
@@ -74,7 +67,7 @@ function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="lg" className="w-full" disabled={pending}>
-      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
+      {pending ? <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
       {pending ? "Añadiendo..." : label}
     </Button>
   );
@@ -92,16 +85,9 @@ export interface RosterAddSheetProps {
   trigger: React.ReactNode;
 }
 
-export function RosterAddSheet({
-  teamId,
-  candidates,
-  trigger,
-}: RosterAddSheetProps) {
+export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
 
@@ -154,7 +140,7 @@ export function RosterAddSheet({
               noValidate
             >
               {state?.error ? (
-                <p className="text-sm font-medium text-danger">{state.error}</p>
+                <p className="text-danger text-sm font-medium">{state.error}</p>
               ) : null}
 
               <FormField
@@ -177,7 +163,7 @@ export function RosterAddSheet({
                           onBlur={field.onBlur}
                           name={field.name}
                           ref={field.ref}
-                          className="flex h-12 min-h-12 w-full rounded border border-ink-300 bg-paper px-4 py-2 text-base text-ink-900"
+                          className="border-ink-300 bg-paper text-ink-900 flex h-12 min-h-12 w-full rounded border px-4 py-2 text-base"
                           size={Math.min(8, Math.max(3, filtered.length))}
                         >
                           <option value="">Selecciona un jugador</option>
@@ -263,7 +249,7 @@ export function RosterList({ teamId, rows }: RosterListProps) {
 
   if (rows.length === 0) {
     return (
-      <p className="text-sm italic text-ink-600">
+      <p className="text-ink-600 text-sm italic">
         La plantilla está vacía. Añade el primer jugador con el botón de arriba.
       </p>
     );
@@ -274,31 +260,29 @@ export function RosterList({ teamId, rows }: RosterListProps) {
       {rows.map((r) => (
         <li
           key={r.player_id}
-          className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper px-4 py-3"
+          className="border-ink-300 bg-paper flex items-center gap-3 rounded-md border px-4 py-3"
         >
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-brand-foam font-mono text-base font-bold text-brand-deep">
+          <span className="bg-brand-foam text-brand-deep flex h-10 w-10 shrink-0 items-center justify-center rounded font-mono text-base font-bold">
             {r.squad_number ?? "—"}
           </span>
           <div className="flex flex-1 flex-col">
-            <span className="font-display text-base font-bold text-brand-deep">
-              {r.full_name}
-            </span>
-            <span className="text-xs text-ink-600">
+            <span className="font-display text-brand-deep text-base font-bold">{r.full_name}</span>
+            <span className="text-ink-600 text-xs">
               {r.birth_year ?? "?"} · {r.categoryLabel}
             </span>
           </div>
           <Button
             variant="ghost"
             size="sm"
-            className="h-12 w-12 p-0 text-danger hover:bg-danger/10"
+            className="text-danger hover:bg-danger/10 h-12 w-12 p-0"
             aria-label={`Quitar a ${r.full_name}`}
             disabled={pendingId === r.player_id}
             onClick={() => handleRemove(r.player_id, r.full_name)}
           >
             {pendingId === r.player_id ? (
-              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+              <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
             ) : (
-              <Trash2 className="h-5 w-5" aria-hidden="true" />
+              <MdDelete className="h-5 w-5" aria-hidden="true" />
             )}
           </Button>
         </li>

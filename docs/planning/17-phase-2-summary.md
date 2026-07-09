@@ -48,22 +48,22 @@ build:       24 rutas, 0 errores
 
 ### Tests por categoría
 
-| Suite | Tests | Cobertura |
-|---|---|---|
-| `categories.test.ts` | 15 | boundaries, validaciones, hex, labels |
-| `teams.test.ts` | 20 | regla asimétrica, categorías, escuela |
-| `seasons.test.ts` | 15 | bordes de temporada |
-| `calendar.test.ts` | 33 | month view, format, weekdays, timeAgo |
-| `training.test.ts` | 27 | generación de sesiones desde bloques |
-| `callups.test.ts` | 37 | matriz ascensos, regla B, conflictos, sugerencia |
-| `stats.test.ts` | 9 | computePlayerStats, aggregate |
-| `attendance.test.ts` | 10 | markAllPresent, diff |
-| `ui-primitives.test.tsx` | 22 | smoke de componentes |
-| `import-zod.test.ts` | 38 | import Excel |
-| `admin-actions.test.ts` | 82 | Zod schemas |
-| `rls.test.ts` | 14 (13 skip) | RLS policies |
-| `query-helpers.test.ts` | 10 (9 skip) | query helpers |
-| `example.test.ts` | 3 | cn() |
+| Suite                    | Tests        | Cobertura                                        |
+| ------------------------ | ------------ | ------------------------------------------------ |
+| `categories.test.ts`     | 15           | boundaries, validaciones, hex, labels            |
+| `teams.test.ts`          | 20           | regla asimétrica, categorías, escuela            |
+| `seasons.test.ts`        | 15           | bordes de temporada                              |
+| `calendar.test.ts`       | 33           | month view, format, weekdays, timeAgo            |
+| `training.test.ts`       | 27           | generación de sesiones desde bloques             |
+| `callups.test.ts`        | 37           | matriz ascensos, regla B, conflictos, sugerencia |
+| `stats.test.ts`          | 9            | computePlayerStats, aggregate                    |
+| `attendance.test.ts`     | 10           | markAllPresent, diff                             |
+| `ui-primitives.test.tsx` | 22           | smoke de componentes                             |
+| `import-zod.test.ts`     | 38           | import Excel                                     |
+| `admin-actions.test.ts`  | 82           | Zod schemas                                      |
+| `rls.test.ts`            | 14 (13 skip) | RLS policies                                     |
+| `query-helpers.test.ts`  | 10 (9 skip)  | query helpers                                    |
+| `example.test.ts`        | 3            | cn()                                             |
 
 **Total: 335 tests** (313 pasan siempre, 22 skip sin env Supabase)
 

@@ -40,7 +40,10 @@ const STREAK_LABELS: Record<StreakType, string> = {
   wins_consec: "Partidos ganados seguidos",
 };
 
-const STREAK_PICTOGRAM_HINT: Record<StreakType, "balon" | "exclusion" | "silbato" | "porteria" | "trofeo"> = {
+const STREAK_PICTOGRAM_HINT: Record<
+  StreakType,
+  "balon" | "exclusion" | "silbato" | "porteria" | "trofeo"
+> = {
   goals_consec: "balon",
   excl_consec: "exclusion",
   train_consec: "silbato",
@@ -52,7 +55,9 @@ export function streakLabel(t: StreakType): string {
   return STREAK_LABELS[t];
 }
 
-export function streakPictogramHint(t: StreakType): "balon" | "exclusion" | "silbato" | "porteria" | "trofeo" {
+export function streakPictogramHint(
+  t: StreakType,
+): "balon" | "exclusion" | "silbato" | "porteria" | "trofeo" {
   return STREAK_PICTOGRAM_HINT[t];
 }
 
@@ -73,9 +78,7 @@ export function applyStreak(
   events: StreakEvent[],
   _nowIso: string,
 ): StreakRecord {
-  const sorted = events
-    .slice()
-    .sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
+  const sorted = events.slice().sort((a, b) => a.occurred_at.localeCompare(b.occurred_at));
   let current = 0;
   let best = prev.best_value;
   let bestAt = prev.best_at;
@@ -147,7 +150,13 @@ export function mvpConsecEvents(
 }
 
 export function winsConsecEvents(
-  matches: Array<{ id: string; scheduled_at: string; status: string; final_score_us: number | null; final_score_them: number | null }>,
+  matches: Array<{
+    id: string;
+    scheduled_at: string;
+    status: string;
+    final_score_us: number | null;
+    final_score_them: number | null;
+  }>,
 ): StreakEvent[] {
   return matches
     .filter((m) => m.status === "played" && m.final_score_us != null && m.final_score_them != null)
@@ -182,10 +191,7 @@ export function streakSummary(
   return `${value} ${unit} seguidos`;
 }
 
-export function isStreakVisible(
-  subjectType: StreakSubjectType,
-  currentValue: number,
-): boolean {
+export function isStreakVisible(subjectType: StreakSubjectType, currentValue: number): boolean {
   return currentValue > 0;
 }
 

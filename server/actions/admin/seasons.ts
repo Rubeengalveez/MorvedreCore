@@ -4,11 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
-import {
-  createSeasonSchema,
-  idSchema,
-  updateSeasonSchema,
-} from "@/lib/domain/admin-schemas";
+import { createSeasonSchema, idSchema, updateSeasonSchema } from "@/lib/domain/admin-schemas";
 
 import { requireAdmin } from "./_helpers";
 

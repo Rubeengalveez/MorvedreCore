@@ -33,9 +33,7 @@ export async function getNotificationsForProfile(
   return (data ?? []) as NotificationItem[];
 }
 
-export async function getUnreadNotificationsCount(
-  recipientId: string,
-): Promise<number> {
+export async function getUnreadNotificationsCount(recipientId: string): Promise<number> {
   const supabase = await createClient();
   const { count, error } = await supabase
     .from("notifications")

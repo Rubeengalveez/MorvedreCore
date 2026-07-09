@@ -43,17 +43,20 @@ Todas con RLS, helper functions, triggers.
 ### 4. UI
 
 **Admin:**
+
 - `/admin/trainings` — listar bloques, crear, ver sesiones generadas, pasar lista, cancelar
 - `/admin/matches` — listar partidos, crear, ver detalle
 - `/admin/matches/[id]` — convocatoria, acta, detalles
 
 **Público:**
+
 - `/calendar` — vista mensual con entrenos y partidos
 - `/matches/[id]` — detalle de partido, RSVP del jugador
 - `/profile` — read-only con stats + sección de disponibilidad
 - `/notifications` — buzón in-app
 
 **Componentes:**
+
 - `components/calendar/{month-view, event-sheet}.tsx` — calendario y sheet
 - `components/matches/rsvp-buttons.tsx` — RSVP
 - `components/notifications/{notifications-bell, inbox}.tsx` — campana + buzón

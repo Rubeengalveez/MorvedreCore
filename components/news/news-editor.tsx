@@ -6,10 +6,8 @@ import { Save, Pin, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Markdown } from "@/components/ui/markdown";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/utils/cn";
-import { isValidAudience, isValidReaction, NEWS_LIMITS } from "@/lib/domain/news";
+import { isValidAudience, NEWS_LIMITS } from "@/lib/domain/news";
 
 export interface TeamOption {
   id: string;
@@ -54,8 +52,7 @@ export function NewsEditor({
 }: NewsEditorProps) {
   const [title, setTitle] = useState(initial.title ?? "");
   const [bodyMd, setBodyMd] = useState(initial.body_md ?? "");
-  const [imageUrl, setImageUrl] = useState(initial.image_url ?? null);
-  void setImageUrl;
+  const [imageUrl] = useState(initial.image_url ?? null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [audience, setAudience] = useState<"club" | "team">(
     isValidAudience(initial.audience) ? initial.audience : "club",
@@ -131,7 +128,7 @@ export function NewsEditor({
     <form
       onSubmit={handleSubmit}
       data-news-editor
-      className="flex flex-col gap-3 rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1"
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-md border p-4"
     >
       <div className="flex flex-col gap-1">
         <label htmlFor="news-title" className="text-eyebrow text-ink-600">
@@ -145,7 +142,7 @@ export function NewsEditor({
           maxLength={NEWS_LIMITS.MAX_TITLE}
           required
         />
-        <span className="text-[10px] text-ink-500">
+        <span className="text-ink-500 text-[10px]">
           {title.length}/{NEWS_LIMITS.MAX_TITLE}
         </span>
       </div>
@@ -191,34 +188,32 @@ export function NewsEditor({
           </div>
         ) : (
           <div className="flex flex-col gap-1">
-            <label htmlFor="news-expires" className="text-eyebrow text-ink-600">
+            <label htmlFor="news-expires-inline" className="text-eyebrow text-ink-600">
               Caduca (opcional)
             </label>
             <input
-              id="news-expires"
+              id="news-expires-inline"
               type="datetime-local"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
-              className="h-12 min-h-12 w-full rounded border border-ink-300 bg-paper px-3 text-sm text-pool-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+              className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue h-12 min-h-12 w-full rounded border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
             />
           </div>
         )}
       </div>
 
-      {audience === "team" ? (
-        <div className="flex flex-col gap-1">
-          <label htmlFor="news-expires" className="text-eyebrow text-ink-600">
-            Caduca (opcional)
-          </label>
-          <input
-            id="news-expires"
-            type="datetime-local"
-            value={expiresAt}
-            onChange={(e) => setExpiresAt(e.target.value)}
-            className="h-12 min-h-12 w-full rounded border border-ink-300 bg-paper px-3 text-sm text-pool-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
-          />
-        </div>
-      ) : null}
+      <div className="flex flex-col gap-1">
+        <label htmlFor="news-expires" className="text-eyebrow text-ink-600">
+          Caduca (opcional)
+        </label>
+        <input
+          id="news-expires"
+          type="datetime-local"
+          value={expiresAt}
+          onChange={(e) => setExpiresAt(e.target.value)}
+          className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue h-12 min-h-12 w-full rounded border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none"
+        />
+      </div>
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
@@ -228,13 +223,13 @@ export function NewsEditor({
           <button
             type="button"
             onClick={() => setPreview((v) => !v)}
-            className="text-[10px] font-bold uppercase tracking-wider text-pool-blue hover:underline"
+            className="text-eyebrow text-pool-blue hover:underline"
           >
             {preview ? "Editar" : "Vista previa"}
           </button>
         </div>
         {preview ? (
-          <div className="min-h-[160px] rounded border border-ink-300 bg-paper p-3">
+          <div className="border-ink-300 bg-paper min-h-[160px] rounded border p-3">
             <Markdown>{bodyMd || "_(vacío)_"}</Markdown>
           </div>
         ) : (
@@ -244,11 +239,11 @@ export function NewsEditor({
             onChange={(e) => setBodyMd(e.target.value)}
             placeholder="**Negrita**, _cursiva_, [enlaces](https://...), listas, etc."
             maxLength={NEWS_LIMITS.MAX_BODY}
-            className="min-h-[160px] w-full resize-y rounded border border-ink-300 bg-paper p-3 font-mono text-sm text-pool-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-[160px] w-full resize-y rounded border p-3 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
             required
           />
         )}
-        <span className="text-[10px] text-ink-500">
+        <span className="text-ink-500 text-[10px]">
           {bodyMd.length}/{NEWS_LIMITS.MAX_BODY}
         </span>
       </div>
@@ -265,23 +260,31 @@ export function NewsEditor({
             const f = e.target.files?.[0] ?? null;
             setImageFile(f);
           }}
-          className="h-12 min-h-12 w-full rounded border border-ink-300 bg-paper px-3 text-sm text-pool-deep file:mr-3 file:rounded file:border-0 file:bg-pool-deep file:px-3 file:py-1 file:text-xs file:font-bold file:text-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+          className="border-ink-300 bg-paper text-pool-deep file:bg-pool-deep file:text-paper focus-visible:ring-pool-blue h-12 min-h-12 w-full rounded border px-3 text-sm file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-xs file:font-bold focus-visible:ring-2 focus-visible:outline-none"
         />
         {imageUrl ? (
-          <p className="text-[10px] text-ink-500">
-            Imagen actual: <a href={imageUrl} className="text-pool-blue hover:underline" target="_blank" rel="noreferrer">ver</a>
+          <p className="text-ink-500 text-[10px]">
+            Imagen actual:{" "}
+            <a
+              href={imageUrl}
+              className="text-pool-blue hover:underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              ver
+            </a>
           </p>
         ) : null}
       </div>
 
       <div className="flex flex-col gap-1">
-        <label className="flex items-center gap-2 text-sm text-pool-deep">
+        <label className="text-pool-deep flex items-center gap-2 text-sm">
           <input
             type="checkbox"
             checked={pinned}
             onChange={togglePin}
             disabled={pending || !onPinToggle}
-            className="h-4 w-4 rounded border-ink-300 text-pool-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+            className="border-ink-300 text-pool-deep focus-visible:ring-pool-blue h-4 w-4 rounded focus-visible:ring-2 focus-visible:outline-none"
           />
           <Pin className="h-3.5 w-3.5" aria-hidden="true" />
           Fijar arriba del feed
@@ -291,13 +294,13 @@ export function NewsEditor({
       {error ? (
         <div
           role="alert"
-          className="rounded border border-goggle-red/30 bg-goggle-red/5 px-3 py-2 text-xs font-bold text-goggle-red"
+          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red rounded border px-3 py-2 text-xs font-bold"
         >
           {error}
         </div>
       ) : null}
 
-      <div className="flex items-center justify-between gap-2 border-t border-ink-300 pt-3">
+      <div className="border-ink-300 flex items-center justify-between gap-2 border-t pt-3">
         {mode === "edit" && onDelete ? (
           <Button
             type="button"
@@ -330,7 +333,3 @@ export function NewsEditor({
     </form>
   );
 }
-
-void PictogramBadge;
-void isValidReaction;
-void cn;

@@ -43,18 +43,18 @@
 
 Documentadas en `08-hypotheses-tracker.md`. Resumen del estado actual:
 
-| Hipótesis | Confianza | Validada con | Notas |
-|-----------|-----------|--------------|-------|
-| H-C1: el club quiere centralizar gestión en una sola app | Alta | SRS | Confirmado |
-| H-C2: las personas clave son jugadores, padres, entrenadores, delegados, directiva, admin | Alta | SRS | Confirmado |
-| H-C3: hay dolor real con Cluber por comisiones | Alta | SRS | Implícito |
-| H-V1: el ahorro de comisiones justifica la inversión de construir la app | Media | — | A confirmar |
-| H-V2: el modelo "selección de perfil" padre-hijo resuelve el multi-cuenta | Alta | SRS | Asunción razonable |
-| H-V3: la matriz de ascensos reduce errores administrativos | Alta | SRS | Asunción razonable |
-| H-R1: el club está dispuesto a invertir tiempo de directiva en mantener la app | Media | — | A confirmar (esfuerzo operativo) |
-| H-H1: una PWA accesible desde el navegador móvil es suficiente, no necesitan app nativa | Alta | SRS | Confirmado |
-| H-H2: el canal de distribución es "cada jugador/padre accede por enlace" | Alta | SRS | Confirmado |
-| H-CH1: el equipo de desarrollo (tú o alguien) tiene tiempo para mantenerla varios años | Media | — | A confirmar |
+| Hipótesis                                                                                 | Confianza | Validada con | Notas                            |
+| ----------------------------------------------------------------------------------------- | --------- | ------------ | -------------------------------- |
+| H-C1: el club quiere centralizar gestión en una sola app                                  | Alta      | SRS          | Confirmado                       |
+| H-C2: las personas clave son jugadores, padres, entrenadores, delegados, directiva, admin | Alta      | SRS          | Confirmado                       |
+| H-C3: hay dolor real con Cluber por comisiones                                            | Alta      | SRS          | Implícito                        |
+| H-V1: el ahorro de comisiones justifica la inversión de construir la app                  | Media     | —            | A confirmar                      |
+| H-V2: el modelo "selección de perfil" padre-hijo resuelve el multi-cuenta                 | Alta      | SRS          | Asunción razonable               |
+| H-V3: la matriz de ascensos reduce errores administrativos                                | Alta      | SRS          | Asunción razonable               |
+| H-R1: el club está dispuesto a invertir tiempo de directiva en mantener la app            | Media     | —            | A confirmar (esfuerzo operativo) |
+| H-H1: una PWA accesible desde el navegador móvil es suficiente, no necesitan app nativa   | Alta      | SRS          | Confirmado                       |
+| H-H2: el canal de distribución es "cada jugador/padre accede por enlace"                  | Alta      | SRS          | Confirmado                       |
+| H-CH1: el equipo de desarrollo (tú o alguien) tiene tiempo para mantenerla varios años    | Media     | —            | A confirmar                      |
 
 ## Preguntas por bloque
 

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { MdAdd } from "react-icons/md";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Season, Team } from "@/server/actions/admin";
 
 import { MatchFormSheet } from "./_components/match-form-sheet";
-import {
-  MatchesList,
-  type MatchRow,
-} from "./_components/matches-list";
+import { MatchesList, type MatchRow } from "./_components/matches-list";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -83,31 +80,30 @@ async function loadMatches(): Promise<LoadResult> {
 
   const seasons = (seasonsData ?? []) as SeasonRow[];
   const currentSeason = seasons.find((s) => s.is_current) ?? null;
-  const teamsAll = (teamsData ?? []) as Array<
-    Team & { created_at: string; updated_at: string }
-  >;
+  const teamsAll = (teamsData ?? []) as Array<Team & { created_at: string; updated_at: string }>;
   const teams: TeamRow[] = teamsAll.map((t) => ({
     ...t,
-    season_label:
-      seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
+    season_label: seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
   }));
 
   const teamById = new Map<string, TeamRow>();
   for (const t of teams) teamById.set(t.id, t);
 
-  const matches: MatchRow[] = ((matchesData ?? []) as Array<{
-    id: string;
-    team_id: string;
-    opponent: string;
-    competition_type: string;
-    is_home: boolean;
-    location: string | null;
-    pool_name: string | null;
-    scheduled_at: string;
-    status: string;
-    final_score_us: number | null;
-    final_score_them: number | null;
-  }>).map((m) => {
+  const matches: MatchRow[] = (
+    (matchesData ?? []) as Array<{
+      id: string;
+      team_id: string;
+      opponent: string;
+      competition_type: string;
+      is_home: boolean;
+      location: string | null;
+      pool_name: string | null;
+      scheduled_at: string;
+      status: string;
+      final_score_us: number | null;
+      final_score_them: number | null;
+    }>
+  ).map((m) => {
     const team = teamById.get(m.team_id);
     return {
       ...m,
@@ -130,26 +126,17 @@ async function loadMatches(): Promise<LoadResult> {
 }
 
 export default async function MatchesPage() {
-  const {
-    seasons,
-    teams,
-    matches,
-    defaultTeamId,
-    defaultSeasonId,
-    error,
-  } = await loadMatches();
+  const { seasons, teams, matches, defaultTeamId, defaultSeasonId, error } = await loadMatches();
 
   if (seasons.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
           Partidos
         </h1>
-        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-5 text-center">
-          <p className="text-base font-semibold text-brand-deep">
-            Primero crea una temporada.
-          </p>
-          <p className="mt-1 text-sm text-ink-600">
+        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
+          <p className="text-brand-deep text-base font-semibold">Primero crea una temporada.</p>
+          <p className="text-ink-600 mt-1 text-sm">
             Los partidos pertenecen siempre a una temporada.
           </p>
           <div className="mt-4 flex justify-center">
@@ -164,14 +151,12 @@ export default async function MatchesPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex items-end justify-between gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+          <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
             Partidos
           </h1>
-          <p className="text-sm text-ink-600">
-            Convocatorias, actas y logística de cada partido.
-          </p>
+          <p className="text-ink-600 text-sm">Convocatorias, actas y logística de cada partido.</p>
         </div>
         <MatchFormSheet
           seasons={seasons}
@@ -179,9 +164,9 @@ export default async function MatchesPage() {
           defaultTeamId={defaultTeamId}
           defaultSeasonId={defaultSeasonId}
           trigger={
-            <Button size="md" className="shrink-0">
-              <Plus className="h-5 w-5" aria-hidden="true" />
-              <span className="hidden sm:inline">Nuevo</span>
+            <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+              <MdAdd className="h-6 w-6" aria-hidden="true" />
+              <span>Nuevo</span>
             </Button>
           }
         />

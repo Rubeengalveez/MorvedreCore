@@ -30,24 +30,48 @@ describe("parseProduct", () => {
   });
 
   it("rechaza titulo vacio", () => {
-    expect(parseProduct({ title: "   ", description: "x", category: "x", price_eur: 10 }).ok).toBe(false);
+    expect(parseProduct({ title: "   ", description: "x", category: "x", price_eur: 10 }).ok).toBe(
+      false,
+    );
   });
 
   it("rechaza titulo demasiado largo", () => {
-    expect(parseProduct({ title: "a".repeat(SHOP_LIMITS.MAX_TITLE + 1), description: "x", category: "x", price_eur: 10 }).ok).toBe(false);
+    expect(
+      parseProduct({
+        title: "a".repeat(SHOP_LIMITS.MAX_TITLE + 1),
+        description: "x",
+        category: "x",
+        price_eur: 10,
+      }).ok,
+    ).toBe(false);
   });
 
   it("rechaza precio <= 0", () => {
-    expect(parseProduct({ title: "Bañador", description: "x", category: "x", price_eur: 0 }).ok).toBe(false);
+    expect(
+      parseProduct({ title: "Bañador", description: "x", category: "x", price_eur: 0 }).ok,
+    ).toBe(false);
   });
 
   it("rechaza precio demasiado alto", () => {
-    expect(parseProduct({ title: "Bañador", description: "x", category: "x", price_eur: 9999 }).ok).toBe(false);
+    expect(
+      parseProduct({ title: "Bañador", description: "x", category: "x", price_eur: 9999 }).ok,
+    ).toBe(false);
   });
 
   it("rechaza max_per_order fuera de rango", () => {
-    expect(parseProduct({ title: "x", description: "x", category: "x", price_eur: 10, max_per_order: 0 }).ok).toBe(false);
-    expect(parseProduct({ title: "x", description: "x", category: "x", price_eur: 10, max_per_order: 99 }).ok).toBe(false);
+    expect(
+      parseProduct({ title: "x", description: "x", category: "x", price_eur: 10, max_per_order: 0 })
+        .ok,
+    ).toBe(false);
+    expect(
+      parseProduct({
+        title: "x",
+        description: "x",
+        category: "x",
+        price_eur: 10,
+        max_per_order: 99,
+      }).ok,
+    ).toBe(false);
   });
 
   it("convierte precio a centavos", () => {
@@ -118,7 +142,15 @@ describe("formatCents", () => {
 
 describe("isValidShopOrderStatus", () => {
   it("acepta los 7 estados", () => {
-    for (const s of ["pending_parent", "pending_admin", "rejected", "ordered", "received", "delivered", "cancelled"]) {
+    for (const s of [
+      "pending_parent",
+      "pending_admin",
+      "rejected",
+      "ordered",
+      "received",
+      "delivered",
+      "cancelled",
+    ]) {
       expect(isValidShopOrderStatus(s)).toBe(true);
     }
   });

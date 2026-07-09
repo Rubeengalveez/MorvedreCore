@@ -14,8 +14,7 @@ import { Tabs } from "@/components/ui/tabs";
 import { TeamHero } from "@/components/team/team-hero";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
-import { getStreakForTeam } from "@/server/queries/streaks";
-import type { ActiveStreakRow } from "@/server/queries/streaks";
+import { getStreakForTeam, type ActiveStreakRow } from "@/server/queries/streaks";
 import { getTeamById, getTeamMatches, getTeamRoster, getTeamStaff } from "@/server/queries/teams";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 
@@ -121,13 +120,7 @@ export default async function TeamDetailPage({
 
   const supabase = await createClient();
 
-  const [
-    roster,
-    staff,
-    teamMatches,
-    teamWinStreak,
-    teamSnapshotsRes,
-  ] = await Promise.all([
+  const [roster, staff, teamMatches, teamWinStreak, teamSnapshotsRes] = await Promise.all([
     getTeamRoster(team.id),
     getTeamStaff(team.id),
     getTeamMatches(team.id, 20),
@@ -135,7 +128,9 @@ export default async function TeamDetailPage({
     seasonId
       ? supabase
           .from("ranking_snapshots")
-          .select("player_id, matches_played, matches_called, goals, exclusions, mvp_count, trainings_attended, trainings_total, attendance_pct, attendance_streak")
+          .select(
+            "player_id, matches_played, matches_called, goals, exclusions, mvp_count, trainings_attended, trainings_total, attendance_pct, attendance_streak",
+          )
           .eq("season_id", seasonId)
           .eq("scope", "team")
           .eq("scope_key", team.id)
@@ -226,7 +221,9 @@ export default async function TeamDetailPage({
   const now = new Date();
   const upcomingMatches = teamMatches
     .filter((m) => new Date(m.scheduled_at).getTime() >= now.getTime() - 1000 * 60 * 60 * 6)
-    .filter((m) => m.status === "scheduled" || m.status === "in_progress" || m.status === "postponed")
+    .filter(
+      (m) => m.status === "scheduled" || m.status === "in_progress" || m.status === "postponed",
+    )
     .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
 
   const playedMatches = teamMatches
@@ -251,7 +248,7 @@ export default async function TeamDetailPage({
         </div>
       </LanePattern>
 
-      <div className="bg-paper sticky top-[60px] z-20 -mx-0">
+      <div className="bg-paper sticky top-[var(--top-bar-height)] z-20 -mx-0">
         <div className="mx-auto max-w-2xl">
           <Tabs tabs={TEAM_TABS} active={activeTab} basePath={basePath} />
         </div>
@@ -271,7 +268,12 @@ export default async function TeamDetailPage({
         ) : null}
 
         {activeTab === "jugadores" ? (
-          <TeamPlayersTab roster={roster} teamColor={team.color} staff={staff} snapshots={snapshots} />
+          <TeamPlayersTab
+            roster={roster}
+            teamColor={team.color}
+            staff={staff}
+            snapshots={snapshots}
+          />
         ) : null}
 
         {activeTab === "partidos" ? (
@@ -319,18 +321,16 @@ function TeamPrincipal({
       {/* Resumen compacto: 1 fila horizontal */}
       <section
         aria-label="Resumen del equipo"
-        className="grid grid-cols-3 divide-x divide-ink-200 overflow-hidden rounded-md border border-ink-200 bg-paper-card"
+        className="divide-ink-200 border-ink-200 bg-paper-card grid grid-cols-3 divide-x overflow-hidden rounded-md border"
       >
         {compactSummary.map((item) => (
           <div
             key={item.label}
             className="flex min-w-0 flex-col gap-0.5 px-2 py-2.5 text-center sm:px-3 sm:py-3"
           >
-            <span className="text-[10px] font-bold uppercase tracking-wider text-ink-500">
-              {item.label}
-            </span>
+            <span className="text-eyebrow text-ink-500">{item.label}</span>
             <p
-              className={`font-display text-sm font-extrabold text-pool-deep truncate ${
+              className={`font-display text-pool-deep truncate text-sm font-extrabold ${
                 item.capitalize ? "capitalize" : ""
               }`}
             >
@@ -348,7 +348,7 @@ function TeamPrincipal({
             <div className="flex flex-col gap-1.5">
               <Link
                 href={`/matches/${lastMatch.id}` as Route}
-                className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 <PoolScoreboard
                   mode="final"
@@ -363,7 +363,7 @@ function TeamPrincipal({
                 />
               </Link>
               {lastMatch.final_score_us != null && lastMatch.final_score_them != null ? (
-                <div className="flex items-center gap-1.5 self-start rounded-sm border border-ink-300 bg-paper-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-eyebrow shadow-elev-1">
+                <div className="border-ink-300 bg-paper-card tracking-eyebrow shadow-elev-1 flex items-center gap-1.5 self-start rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase">
                   {lastMatch.final_score_us > lastMatch.final_score_them ? (
                     <span className="text-success">Victoria</span>
                   ) : lastMatch.final_score_us === lastMatch.final_score_them ? (
@@ -371,14 +371,12 @@ function TeamPrincipal({
                   ) : (
                     <span className="text-goggle-red">Derrota</span>
                   )}
-                  <span className="text-ink-600">
-                    · {relativeDay(lastMatch.scheduled_at, now)}
-                  </span>
+                  <span className="text-ink-600">· {relativeDay(lastMatch.scheduled_at, now)}</span>
                 </div>
               ) : null}
             </div>
           ) : (
-            <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-xs text-ink-600">
+            <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-xs">
               No hay partidos jugados.
             </div>
           )}
@@ -389,7 +387,7 @@ function TeamPrincipal({
           {nextMatch ? (
             <Link
               href={`/matches/${nextMatch.id}` as Route}
-              className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+              className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               <PoolScoreboard
                 mode="preview"
@@ -402,7 +400,7 @@ function TeamPrincipal({
               />
             </Link>
           ) : (
-            <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-xs text-ink-600">
+            <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-xs">
               No hay partidos programados.
             </div>
           )}
@@ -415,7 +413,7 @@ function TeamPrincipal({
           <PictogramBadge pictogram={Trophy} color="var(--ball-gold)" size="sm" />
           <h2
             id="team-leaders-heading"
-            className="font-display text-base font-extrabold text-pool-deep"
+            className="font-display text-pool-deep text-base font-extrabold"
           >
             Top del equipo
           </h2>
@@ -448,22 +446,20 @@ function TeamPrincipal({
       {teamWinStreak && teamWinStreak.current_value > 0 ? (
         <div
           data-team-streak
-          className="flex flex-wrap items-center gap-2 rounded-md border border-action/30 bg-action/5 p-3 shadow-elev-1"
+          className="border-action/30 bg-action/5 shadow-elev-1 flex flex-wrap items-center gap-2 rounded-md border p-3"
         >
           <Flame
-            className="h-4 w-4 shrink-0 fill-action text-action animate-pulse"
+            className="fill-action text-action h-4 w-4 shrink-0 animate-pulse"
             aria-hidden="true"
           />
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-action">
+          <span className="text-action text-[10px] font-extrabold tracking-wider uppercase">
             Racha
           </span>
-          <span className="font-mono text-base font-extrabold tabular-nums text-pool-deep">
+          <span className="text-pool-deep font-mono text-base font-extrabold tabular-nums">
             {teamWinStreak.current_value} victorias seguidas
           </span>
           {teamWinStreak.best_value > teamWinStreak.current_value ? (
-            <span className="text-[10px] text-ink-500">
-              (récord: {teamWinStreak.best_value})
-            </span>
+            <span className="text-ink-500 text-[10px]">(récord: {teamWinStreak.best_value})</span>
           ) : null}
         </div>
       ) : null}
@@ -489,7 +485,7 @@ function LeaderStatCard({
   return (
     <div
       data-leader-card={title}
-      className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-2.5 shadow-elev-1 sm:p-3"
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-2.5 sm:p-3"
     >
       <div className="flex items-center gap-1.5">
         <span
@@ -497,34 +493,30 @@ function LeaderStatCard({
           className="inline-block h-2 w-2 shrink-0 rounded-full"
           style={{ backgroundColor: accent }}
         />
-        <span className="text-[10px] font-extrabold uppercase tracking-wider text-ink-600">
+        <span className="text-ink-600 text-[10px] font-extrabold tracking-wider uppercase">
           {title}
         </span>
       </div>
       {player ? (
         <>
           <div className="flex min-w-0 items-center gap-2">
-            <Avatar
-              name={player.full_name}
-              src={player.photo_url}
-              size={32}
-            />
-            <p className="font-display text-xs font-extrabold leading-tight text-pool-deep truncate">
+            <Avatar name={player.full_name} src={player.photo_url} size={32} />
+            <p className="font-display text-pool-deep truncate text-xs leading-tight font-extrabold">
               {player.full_name.split(" ")[0]}
             </p>
           </div>
-          <p className="flex items-baseline gap-1 font-mono text-2xl font-extrabold leading-none tabular-nums text-pool-deep">
+          <p className="text-pool-deep flex items-baseline gap-1 font-mono text-2xl leading-none font-extrabold tabular-nums">
             <span>{player.primary_value}</span>
             {showSuffix ? <span className="text-base">{suffix}</span> : null}
             {!showSuffix ? (
-              <span className="text-[10px] font-bold uppercase tracking-eyebrow text-ink-500">
+              <span className="tracking-eyebrow text-ink-500 text-[10px] font-bold uppercase">
                 {metricLabel}
               </span>
             ) : null}
           </p>
         </>
       ) : (
-        <p className="text-[11px] italic text-ink-500">Sin datos</p>
+        <p className="text-ink-500 text-[11px] italic">Sin datos</p>
       )}
     </div>
   );
@@ -557,7 +549,7 @@ function TeamMatchesTab({
           Próximos partidos
         </Eyebrow>
         {upcoming.length === 0 ? (
-          <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-sm text-ink-600">
+          <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-sm">
             No hay partidos próximos.
           </div>
         ) : (
@@ -566,7 +558,7 @@ function TeamMatchesTab({
               <li key={m.id}>
                 <Link
                   href={`/matches/${m.id}` as Route}
-                  className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                  className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 >
                   <PoolScoreboard
                     mode="preview"
@@ -589,7 +581,7 @@ function TeamMatchesTab({
           Últimos resultados
         </Eyebrow>
         {played.length === 0 ? (
-          <div className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-center text-sm text-ink-600">
+          <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-sm">
             Aún no se ha jugado ningún partido.
           </div>
         ) : (
@@ -600,7 +592,7 @@ function TeamMatchesTab({
                 <li key={m.id} className="flex flex-col gap-1.5">
                   <Link
                     href={`/matches/${m.id}` as Route}
-                    className="block rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                    className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                   >
                     <PoolScoreboard
                       mode="final"
@@ -614,7 +606,7 @@ function TeamMatchesTab({
                       location={m.location ?? m.pool_name ?? null}
                     />
                   </Link>
-                  <div className="flex items-center gap-1.5 self-start rounded-sm border border-ink-300 bg-paper-card px-2 py-0.5 text-[10px] font-bold uppercase tracking-eyebrow shadow-elev-1">
+                  <div className="border-ink-300 bg-paper-card tracking-eyebrow shadow-elev-1 flex items-center gap-1.5 self-start rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase">
                     {result ? <span style={{ color: result.color }}>{result.label}</span> : null}
                     <span className="text-ink-600">
                       · {relativeDay(m.scheduled_at, now)} {timeOf(m.scheduled_at)}
@@ -639,10 +631,3 @@ function resultTag(
   if (us === them) return { label: "Empate", color: "var(--ink-600)" };
   return { label: "Derrota", color: "var(--goggle-red)" };
 }
-
-interface ActiveStreak {
-  type: "goals_consec" | "excl_consec" | "train_consec" | "mvp_consec" | "wins_consec";
-  current_value: number;
-  best_value: number;
-}
-void (0 as unknown as ActiveStreak);

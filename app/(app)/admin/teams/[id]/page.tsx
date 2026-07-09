@@ -8,10 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Team } from "@/server/actions/admin";
 
 import { RosterAddSheet, RosterList, type RosterRow } from "./_components/roster-manager";
-import {
-  StaffAssignSheet,
-  StaffList,
-} from "./_components/staff-manager";
+import { StaffAssignSheet, StaffList } from "./_components/staff-manager";
 import { TeamEditSheet } from "./_components/team-edit-sheet";
 
 export const dynamic = "force-dynamic";
@@ -28,38 +25,32 @@ type StaffRow = {
 async function loadTeam(id: string) {
   const supabase = await createClient();
 
-  const [
-    { data: teamData },
-    { data: staffData },
-    { data: rosterData },
-    { data: allStaffProfiles },
-    { data: candidatePlayers },
-  ] = await Promise.all([
-    supabase
-      .from("teams")
-      .select("id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at")
-      .eq("id", id)
-      .maybeSingle(),
-    supabase
-      .from("team_staff")
-      .select("profile_id, role, profiles!team_staff_profile_id_fkey(full_name)")
-      .eq("team_id", id),
-    supabase
-      .from("team_rosters")
-      .select("player_id, squad_number, profiles!team_rosters_player_id_fkey(full_name, birth_year)")
-      .eq("team_id", id)
-      .is("left_at", null),
-    supabase
-      .from("profiles")
-      .select("id, full_name, birth_year")
-      .order("full_name", { ascending: true })
-      .limit(500),
-    supabase
-      .from("profiles")
-      .select("id, full_name, birth_year")
-      .order("full_name", { ascending: true })
-      .limit(500),
-  ]);
+  const [{ data: teamData }, { data: staffData }, { data: rosterData }, { data: allProfiles }] =
+    await Promise.all([
+      supabase
+        .from("teams")
+        .select(
+          "id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at",
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("team_staff")
+        .select("profile_id, role, profiles!team_staff_profile_id_fkey(full_name)")
+        .eq("team_id", id),
+      supabase
+        .from("team_rosters")
+        .select(
+          "player_id, squad_number, profiles!team_rosters_player_id_fkey(full_name, birth_year)",
+        )
+        .eq("team_id", id)
+        .is("left_at", null),
+      supabase
+        .from("profiles")
+        .select("id, full_name, birth_year")
+        .order("full_name", { ascending: true })
+        .limit(500),
+    ]);
 
   return {
     team: (teamData ?? null) as Team | null,
@@ -73,12 +64,7 @@ async function loadTeam(id: string) {
       squad_number: number | null;
       profiles: unknown;
     }>,
-    allProfiles: (allStaffProfiles ?? []) as Array<{
-      id: string;
-      full_name: string;
-      birth_year: number | null;
-    }>,
-    candidatePlayers: (candidatePlayers ?? []) as Array<{
+    allProfiles: (allProfiles ?? []) as Array<{
       id: string;
       full_name: string;
       birth_year: number | null;
@@ -86,13 +72,9 @@ async function loadTeam(id: string) {
   };
 }
 
-export default async function TeamDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function TeamDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { team, staff, roster, allProfiles, candidatePlayers } = await loadTeam(id);
+  const { team, staff, roster, allProfiles } = await loadTeam(id);
 
   if (!team) {
     notFound();
@@ -144,7 +126,7 @@ export default async function TeamDetailPage({
       category_code: null,
     }));
 
-  const rosterCandidates = candidatePlayers
+  const rosterCandidates = allProfiles
     .filter((p) => !rosterPlayerIds.has(p.id))
     .map((p) => ({
       id: p.id,
@@ -157,16 +139,16 @@ export default async function TeamDetailPage({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
       <header className="flex flex-col gap-3">
-        <div className="flex items-center gap-2 text-sm text-ink-600">
+        <div className="text-ink-600 flex items-center gap-2 text-sm">
           <Link
             href={"/admin/teams" as Route}
-            className="font-semibold text-brand-blue hover:underline focus-visible:underline"
+            className="text-brand-blue font-semibold hover:underline focus-visible:underline"
           >
             ← Equipos
           </Link>
         </div>
         <div
-          className="relative overflow-hidden rounded-md border border-ink-300 bg-paper"
+          className="border-ink-300 bg-paper relative overflow-hidden rounded-md border"
           style={{
             borderTopWidth: "4px",
             borderTopColor: team.color,
@@ -177,78 +159,56 @@ export default async function TeamDetailPage({
         >
           <div className="flex flex-col gap-2 p-5">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tight text-brand-deep">
+              <h1 className="font-display text-brand-deep text-3xl leading-tight font-extrabold tracking-tight">
                 {team.label}
               </h1>
-              <span className="rounded-full border border-ink-300 px-2 py-0.5 text-xs font-semibold text-ink-600">
+              <span className="border-ink-300 text-ink-600 rounded-full border px-2 py-0.5 text-xs font-semibold">
                 {CATEGORY_LABELS[teamCategory]}
               </span>
               {team.team_type === "school" ? (
-                <span className="rounded-full border border-ink-300 px-2 py-0.5 text-xs font-semibold text-ink-600">
+                <span className="border-ink-300 text-ink-600 rounded-full border px-2 py-0.5 text-xs font-semibold">
                   Escuela
                 </span>
               ) : null}
             </div>
             {team.home_pool ? (
-              <p className="text-sm text-ink-600">Piscina: {team.home_pool}</p>
+              <p className="text-ink-600 text-sm">Piscina: {team.home_pool}</p>
             ) : null}
           </div>
         </div>
       </header>
 
-      <section
-        aria-labelledby="staff-heading"
-        className="flex flex-col gap-3"
-      >
+      <section aria-labelledby="staff-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2
-            id="staff-heading"
-            className="font-display text-lg font-bold text-brand-deep"
-          >
+          <h2 id="staff-heading" className="font-display text-brand-deep text-lg font-bold">
             Personal
           </h2>
           <StaffAssignSheet
             teamId={team.id}
             candidates={staffCandidates}
-            trigger={
-              <Button size="sm">Añadir</Button>
-            }
+            trigger={<Button size="sm">Añadir</Button>}
           />
         </div>
         <StaffList teamId={team.id} staff={staffRows} />
       </section>
 
-      <section
-        aria-labelledby="roster-heading"
-        className="flex flex-col gap-3"
-      >
+      <section aria-labelledby="roster-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2
-            id="roster-heading"
-            className="font-display text-lg font-bold text-brand-deep"
-          >
+          <h2 id="roster-heading" className="font-display text-brand-deep text-lg font-bold">
             Plantilla
           </h2>
           <RosterAddSheet
             teamId={team.id}
             candidates={rosterCandidates}
-            trigger={
-              <Button size="sm">Añadir jugador</Button>
-            }
+            trigger={<Button size="sm">Añadir jugador</Button>}
           />
         </div>
-          <RosterList teamId={team.id} rows={rosterRows} />
+        <RosterList teamId={team.id} rows={rosterRows} />
       </section>
 
-      <section
-        aria-labelledby="details-heading"
-        className="flex flex-col gap-3"
-      >
+      <section aria-labelledby="details-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
-          <h2
-            id="details-heading"
-            className="font-display text-lg font-bold text-brand-deep"
-          >
+          <h2 id="details-heading" className="font-display text-brand-deep text-lg font-bold">
             Detalles
           </h2>
           <TeamEditSheet
@@ -260,14 +220,14 @@ export default async function TeamDetailPage({
             }
           />
         </div>
-        <dl className="rounded-md border border-ink-300 bg-paper p-4 text-sm">
+        <dl className="border-ink-300 bg-paper rounded-md border p-4 text-sm">
           <DetailRow label="Color">
             <span
               aria-hidden="true"
-              className="inline-block h-4 w-4 rounded-full border border-ink-300 align-middle"
+              className="border-ink-300 inline-block h-4 w-4 rounded-full border align-middle"
               style={{ backgroundColor: team.color }}
             />
-            <span className="ml-2 font-mono text-xs text-ink-600">{team.color}</span>
+            <span className="text-ink-600 ml-2 font-mono text-xs">{team.color}</span>
           </DetailRow>
           <DetailRow label="Género">{team.gender}</DetailRow>
           <DetailRow label="Tipo">{team.team_type}</DetailRow>
@@ -287,17 +247,11 @@ export default async function TeamDetailPage({
   );
 }
 
-function DetailRow({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-ink-300 py-2 last:border-b-0">
-      <dt className="font-semibold text-ink-600">{label}</dt>
-      <dd className="text-right text-ink-900">{children}</dd>
+    <div className="border-ink-300 flex items-center justify-between gap-3 border-b py-2 last:border-b-0">
+      <dt className="text-ink-600 font-semibold">{label}</dt>
+      <dd className="text-ink-900 text-right">{children}</dd>
     </div>
   );
 }

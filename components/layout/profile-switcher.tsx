@@ -15,14 +15,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  CATEGORY_LABELS,
-  type CategoryCode,
-} from "@/lib/domain/categories";
-import {
-  ACTIVE_COOKIE,
-  type ProfileSummary,
-} from "@/server/queries/profile-types";
+import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { ACTIVE_COOKIE, type ProfileSummary } from "@/server/queries/profile-types";
 import { cn } from "@/lib/utils/cn";
 
 export type { ProfileSummary } from "@/server/queries/profile-types";
@@ -97,17 +91,13 @@ export function ProfileSwitcher({
           aria-label="Cambiar de perfil"
           variant="ghost"
           size="sm"
-          className="h-12 w-12 rounded-full p-0 text-brand-deep hover:bg-brand-foam"
+          className="text-brand-deep hover:bg-brand-foam h-12 w-12 rounded-full p-0"
           style={{
             border: `2px solid ${teamColor}`,
           }}
           disabled={isPending}
         >
-          <Avatar
-            src={activeProfile.photo_url}
-            name={activeProfile.full_name}
-            size={triggerSize}
-          />
+          <Avatar src={activeProfile.photo_url} name={activeProfile.full_name} size={triggerSize} />
         </Button>
       </SheetTrigger>
       <SheetContent size="md" className="gap-0">
@@ -125,11 +115,9 @@ export function ProfileSwitcher({
               disabled={isPending}
               onSelect={handleSelect}
             />
+            {hasLinked ? <div className="bg-ink-300 my-2 h-px" aria-hidden="true" /> : null}
             {hasLinked ? (
-              <div className="my-2 h-px bg-ink-300" aria-hidden="true" />
-            ) : null}
-            {hasLinked ? (
-              <p className="px-2 pb-1 pt-1 text-xs font-semibold uppercase tracking-wider text-ink-600">
+              <p className="text-ink-600 px-2 pt-1 pb-1 text-xs font-semibold tracking-wider uppercase">
                 Familia
               </p>
             ) : null}
@@ -177,7 +165,7 @@ function SwitchRow({
       disabled={disabled}
       aria-label={`${title}${subtitle ? `, ${subtitle}` : ""}${isActive ? ", activo" : ""}`}
       className={cn(
-        "flex items-center gap-3 rounded-md px-2 py-3 text-left transition-colors hover:bg-brand-foam disabled:opacity-50",
+        "hover:bg-brand-foam flex items-center gap-3 rounded-md px-2 py-3 text-left transition-colors disabled:opacity-50",
         isActive ? "bg-brand-foam" : "",
       )}
       style={isActive ? undefined : undefined}
@@ -189,17 +177,10 @@ function SwitchRow({
         <Avatar src={profile.photo_url} name={profile.full_name} size={44} />
       </span>
       <span className="flex flex-1 flex-col">
-        <span className="font-display text-base font-bold text-brand-deep">
-          {title}
-        </span>
-        <span className="text-sm text-ink-600">{subtitle}</span>
+        <span className="font-display text-brand-deep text-base font-bold">{title}</span>
+        <span className="text-ink-600 text-sm">{subtitle}</span>
       </span>
-      {isActive ? (
-        <Check
-          className="h-5 w-5 text-brand-blue"
-          aria-hidden="true"
-        />
-      ) : null}
+      {isActive ? <Check className="text-brand-blue h-5 w-5" aria-hidden="true" /> : null}
     </button>
   );
 }

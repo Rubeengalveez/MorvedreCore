@@ -114,8 +114,7 @@ export async function updatePlayer(
     .update({
       full_name: parsed.data.full_name,
       birth_year: parsed.data.birth_year,
-      gender: parsed.data.gender as
-        | "male" | "female" | "other" | "prefer_not_to_say" | undefined,
+      gender: parsed.data.gender as "male" | "female" | "other" | "prefer_not_to_say" | undefined,
       cap_number: parsed.data.cap_number,
       photo_url: parsed.data.photo_url,
       phone_e164: parsed.data.phone_e164,

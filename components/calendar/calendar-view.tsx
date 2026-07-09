@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Grid3x3, Calendar as CalendarIcon, List } from "lucide-react";
+import {
+  Calendar as CalendarIcon,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Grid3x3,
+  List,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
@@ -13,6 +20,7 @@ import {
   daysInMonth,
   isoDateFromDate,
   monthLabel,
+  todayIso,
   type YearMonth,
 } from "@/lib/domain/calendar";
 import type { CalendarData } from "@/server/queries/calendar";
@@ -62,8 +70,9 @@ export function CalendarView({
   const [yearMonth, setYearMonth] = useState<YearMonth>(() => currentYearMonth());
   const [weekStartIso, setWeekStartIso] = useState<string>(() => startOfWeekIso(new Date()));
   const [viewMode, setViewMode] = useState<ViewMode>("month");
-  const [teamFilter, setTeamFilter] = useState<string>(defaultTeamId ?? "");
-  const [selectedIso, setSelectedIso] = useState<string | null>(null);
+  const initialTeamFilter = teams.length === 1 ? (defaultTeamId ?? teams[0]?.id ?? "") : "";
+  const [teamFilter, setTeamFilter] = useState<string>(initialTeamFilter);
+  const [selectedIso, setSelectedIso] = useState<string>(() => todayIso());
   const [open, setOpen] = useState(false);
 
   const filteredEvents = useMemo(() => {
@@ -72,125 +81,166 @@ export function CalendarView({
     for (const [iso, day] of eventsByDay) {
       const trainings = day.trainings.filter((t) => t.team_id === teamFilter);
       const matches = day.matches.filter((m) => m.team_id === teamFilter);
-      if (trainings.length > 0 || matches.length > 0) {
-        out.set(iso, { trainings, matches });
-      }
+      if (trainings.length > 0 || matches.length > 0) out.set(iso, { trainings, matches });
     }
     return out;
   }, [eventsByDay, teamFilter]);
 
   const selectedDay = selectedIso ? (filteredEvents.get(selectedIso) ?? null) : null;
-
   const agendaStartIso = isoDateFromDate(new Date(yearMonth.year, yearMonth.month, 1));
   const agendaEndIso = isoDateFromDate(
     new Date(yearMonth.year, yearMonth.month + 1, daysInMonth(yearMonth.year, yearMonth.month)),
   );
 
-  function goPrev() {
-    if (viewMode === "month") {
-      setYearMonth(addMonths(yearMonth, -1));
-    } else if (viewMode === "week") {
-      setWeekStartIso(addDaysIso(weekStartIso, -7));
-    } else {
-      setYearMonth(addMonths(yearMonth, -1));
+  const monthOptions = useMemo(() => {
+    const list: Array<{ value: string; label: string }> = [];
+    const today = new Date();
+    for (let i = -6; i <= 6; i += 1) {
+      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
+      const label = d.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
+      list.push({
+        value: `${d.getFullYear()}-${d.getMonth()}`,
+        label: label.charAt(0).toUpperCase() + label.slice(1),
+      });
     }
+    return list;
+  }, []);
+
+  function updateSelectedDayOnMonthNav(newYm: YearMonth) {
+    const dayToSelect = Math.min(
+      new Date(selectedIso).getDate(),
+      daysInMonth(newYm.year, newYm.month),
+    );
+    const pad = (n: number) => String(n).padStart(2, "0");
+    setSelectedIso(`${newYm.year}-${pad(newYm.month + 1)}-${pad(dayToSelect)}`);
+  }
+
+  function goPrev() {
+    if (viewMode === "week") {
+      setWeekStartIso(addDaysIso(weekStartIso, -7));
+      return;
+    }
+    const nextYm = addMonths(yearMonth, -1);
+    setYearMonth(nextYm);
+    updateSelectedDayOnMonthNav(nextYm);
   }
 
   function goNext() {
-    if (viewMode === "month") {
-      setYearMonth(addMonths(yearMonth, 1));
-    } else if (viewMode === "week") {
+    if (viewMode === "week") {
       setWeekStartIso(addDaysIso(weekStartIso, 7));
-    } else {
-      setYearMonth(addMonths(yearMonth, 1));
+      return;
     }
+    const nextYm = addMonths(yearMonth, 1);
+    setYearMonth(nextYm);
+    updateSelectedDayOnMonthNav(nextYm);
   }
 
   function goToday() {
     const today = new Date();
     setYearMonth({ year: today.getFullYear(), month: today.getMonth() });
     setWeekStartIso(startOfWeekIso(today));
+    setSelectedIso(todayIso());
   }
 
+  const navLabel =
+    viewMode === "week"
+      ? `Semana ${weekStartIso.slice(8, 10)}/${weekStartIso.slice(5, 7)}`
+      : monthLabel(yearMonth);
+
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="secondary"
-            size="sm"
+    <div className="flex flex-col gap-2">
+      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-2">
+        <div className="flex items-center justify-between gap-2">
+          <button
+            type="button"
             onClick={goPrev}
             aria-label="Anterior"
-            className="h-9 w-9 p-0"
+            className="border-ink-300 bg-paper text-pool-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
           >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="min-w-[140px] text-center font-display text-base font-extrabold text-pool-deep">
-            {viewMode === "week"
-              ? `Semana del ${weekStartIso}`
-              : monthLabel(yearMonth)}
-          </h2>
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          <div className="relative min-w-0 flex-1">
+            <div className="bg-paper-sunk flex h-9 items-center justify-center gap-1.5 rounded-md px-3">
+              <span className="font-display text-pool-deep truncate text-base font-extrabold">
+                {navLabel}
+              </span>
+              <ChevronDown className="text-ink-600 h-4 w-4 shrink-0" />
+            </div>
+            <select
+              value={`${yearMonth.year}-${yearMonth.month}`}
+              onChange={(e) => {
+                const [y, m] = e.target.value.split("-").map(Number);
+                if (y != null && m != null) {
+                  const newYm = { year: y, month: m };
+                  setYearMonth(newYm);
+                  updateSelectedDayOnMonthNav(newYm);
+                }
+              }}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              title="Seleccionar mes"
+            >
+              {monthOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Siguiente"
+            className="border-ink-300 bg-paper text-pool-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="mt-1.5 grid grid-cols-[1fr_auto] gap-2">
+          <div
+            role="tablist"
+            aria-label="Modo de vista"
+            className="bg-paper-sunk grid h-9 grid-cols-3 rounded-md p-1"
+          >
+            {[
+              { id: "month" as const, Icon: Grid3x3, label: "Mes" },
+              { id: "week" as const, Icon: CalendarIcon, label: "Semana" },
+              { id: "agenda" as const, Icon: List, label: "Agenda" },
+            ].map(({ id, Icon, label }) => (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={viewMode === id}
+                onClick={() => setViewMode(id)}
+                className={cn(
+                  "inline-flex items-center justify-center gap-1 rounded-sm px-1 text-xs font-extrabold transition-all",
+                  viewMode === id ? "bg-pool-deep text-paper shadow-elev-1" : "text-ink-600",
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
           <Button
             variant="secondary"
             size="sm"
-            onClick={goNext}
-            aria-label="Siguiente"
-            className="h-9 w-9 p-0"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
             onClick={goToday}
-            className="ml-1 h-9 text-xs font-bold"
+            className="h-9 rounded-md px-3 text-sm font-extrabold"
           >
             Hoy
           </Button>
         </div>
-        <div
-          role="tablist"
-          aria-label="Modo de vista"
-          className="inline-flex h-10 w-full items-center rounded-md border border-ink-300 bg-paper p-0.5 sm:w-auto"
-        >
-          {[
-            { id: "month" as const, Icon: Grid3x3, label: "Mes" },
-            { id: "week" as const, Icon: CalendarIcon, label: "Semana" },
-            { id: "agenda" as const, Icon: List, label: "Agenda" },
-          ].map(({ id, Icon, label }) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={viewMode === id}
-              onClick={() => setViewMode(id)}
-              className={cn(
-                "inline-flex h-9 min-h-9 flex-1 items-center justify-center gap-1 rounded text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue sm:flex-initial sm:px-3",
-                viewMode === id
-                  ? "bg-pool-deep text-paper"
-                  : "text-ink-600 hover:text-pool-deep",
-              )}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {teams.length > 0 ? (
-        <div className="flex items-center gap-2">
-          <label
-            htmlFor="calendar-team-filter"
-            className="text-[10px] font-bold uppercase tracking-wider text-ink-600"
-          >
-            Equipo
-          </label>
+        {teams.length > 1 ? (
           <Select
             id="calendar-team-filter"
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="h-9 text-sm"
+            className="border-ink-300 bg-paper mt-1.5 h-9 w-full rounded-md border px-3 text-sm font-semibold"
           >
             <option value="">Todos mis equipos</option>
             {teams.map((t) => (
@@ -199,83 +249,75 @@ export function CalendarView({
               </option>
             ))}
           </Select>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
 
-      {viewMode === "month" ? (
-        <MonthView
-          year={yearMonth.year}
-          month={yearMonth.month}
-          eventsByDay={filteredEvents}
-          onDayClick={(iso) => {
-            setSelectedIso(iso);
-            setOpen(true);
-          }}
-          selectedIso={selectedIso ?? undefined}
-          availabilityByDay={availabilityByDay}
-        />
-      ) : viewMode === "week" ? (
-        <WeekView
-          startIso={weekStartIso}
-          eventsByDay={filteredEvents}
-          availabilityByDay={availabilityByDay}
-          userAttendanceBySession={userAttendanceBySession}
-          showAttendance={showAttendance}
-          onDayClick={(iso) => {
-            setSelectedIso(iso);
-            setOpen(true);
-          }}
-          onEventClick={() => {
-            setSelectedIso(null);
-            setOpen(true);
-          }}
-          selectedIso={selectedIso ?? undefined}
-        />
-      ) : (
-        <AgendaView
-          eventsByDay={filteredEvents}
-          rangeStartIso={agendaStartIso}
-          rangeEndIso={agendaEndIso}
-          activeProfileId={activeProfileId}
-          showAttendance={showAttendance}
-          userAttendanceBySession={userAttendanceBySession}
-          emptyMessage="Tu mes en el club. Si convocan a tu hijo, aparecerá aquí. Si no, descansas."
-        />
-      )}
-
-      <div className="flex flex-wrap items-center gap-3 px-1 text-[11px] text-ink-600">
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: "var(--pool-blue)" }}
+      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-2">
+        {viewMode === "month" ? (
+          <MonthView
+            year={yearMonth.year}
+            month={yearMonth.month}
+            eventsByDay={filteredEvents}
+            onDayClick={(iso) => {
+              setSelectedIso(iso);
+              setOpen(true);
+            }}
+            selectedIso={selectedIso}
+            availabilityByDay={availabilityByDay}
           />
+        ) : viewMode === "week" ? (
+          <WeekView
+            startIso={weekStartIso}
+            eventsByDay={filteredEvents}
+            availabilityByDay={availabilityByDay}
+            userAttendanceBySession={userAttendanceBySession}
+            showAttendance={showAttendance}
+            onDayClick={setSelectedIso}
+            onEventClick={(kind, id) => {
+              const dayIso = Array.from(filteredEvents.entries()).find(([, dayEvents]) =>
+                kind === "training"
+                  ? dayEvents.trainings.some((t) => t.id === id)
+                  : dayEvents.matches.some((m) => m.id === id),
+              )?.[0];
+              if (dayIso) setSelectedIso(dayIso);
+              setOpen(true);
+            }}
+            selectedIso={selectedIso}
+            isCoach={isCoach}
+            isAdmin={isAdmin}
+            activeProfileId={activeProfileId}
+          />
+        ) : (
+          <AgendaView
+            eventsByDay={filteredEvents}
+            rangeStartIso={agendaStartIso}
+            rangeEndIso={agendaEndIso}
+            activeProfileId={activeProfileId}
+            showAttendance={showAttendance}
+            userAttendanceBySession={userAttendanceBySession}
+            emptyMessage="Tu mes en el club. Si hay convocatoria, aparece aqui. Si no, descansas."
+          />
+        )}
+      </div>
+
+      <div className="text-ink-600 flex flex-wrap items-center gap-3 px-1 text-xs font-bold">
+        <span className="inline-flex items-center gap-1">
+          <span className="bg-pool-blue h-2 w-2 rounded-full" />
           Entreno
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: "var(--ball-gold)" }}
-          />
+        <span className="inline-flex items-center gap-1">
+          <span className="bg-ball-gold h-2 w-2 rounded-full" />
           Partido
         </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: "var(--goggle-red)" }}
-          />
+        <span className="inline-flex items-center gap-1">
+          <span className="bg-goggle-red h-2 w-2 rounded-full" />
           Cancelado
         </span>
       </div>
 
       <EventSheet
         open={open}
-        onOpenChange={(v) => {
-          setOpen(v);
-          if (!v) setSelectedIso(null);
-        }}
+        onOpenChange={setOpen}
         iso={selectedIso}
         day={selectedDay}
         isCoach={isCoach || isAdmin}
@@ -285,5 +327,3 @@ export function CalendarView({
     </div>
   );
 }
-
-void (0 as unknown as Date);

@@ -4,18 +4,14 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { Check, Truck, PackageCheck, Boxes, X, MessageSquare } from "lucide-react";
+import { Check, Truck, PackageCheck, Boxes, X } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { CapTile } from "@/components/ui/cap-tile";
-import { formatCents } from "@/lib/domain/shop";
-import type { ShopOrderStatus } from "@/lib/domain/shop";
+import { formatCents, type ShopOrderStatus } from "@/lib/domain/shop";
 import { updateShopOrderStatus } from "@/server/actions/admin/shop";
-import type { ShopOrder, ShopProduct } from "@/server/queries/shop";
+import type { ShopOrder } from "@/server/queries/shop";
 
 export interface AdminKanbanCardProps {
   order: ShopOrder;
-  productById: Map<string, ShopProduct>;
 }
 
 const NEXT_STATUS: Record<ShopOrderStatus, ShopOrderStatus | null> = {
@@ -83,26 +79,26 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
   return (
     <article
       data-kanban-card={order.id}
-      className="flex flex-col gap-1.5 rounded-md border border-ink-300 bg-paper p-2.5 shadow-elev-1"
+      className="border-ink-300 bg-paper shadow-elev-1 flex flex-col gap-1.5 rounded-md border p-2.5"
     >
       <div className="flex items-center justify-between gap-1">
         <Link
           href={`/shop/orders/${order.id}` as Route}
-          className="text-[10px] font-bold uppercase tracking-wider text-ink-600 hover:underline"
+          className="text-eyebrow text-ink-600 hover:underline"
         >
           {order.id.slice(0, 8)}
         </Link>
-        <span className="text-[10px] text-ink-500">
+        <span className="text-ink-500 text-[10px]">
           {new Date(order.requested_at).toLocaleDateString("es-ES", {
             day: "numeric",
             month: "short",
           })}
         </span>
       </div>
-      <p className="line-clamp-1 text-xs font-extrabold text-pool-deep">
+      <p className="text-pool-deep line-clamp-1 text-xs font-extrabold">
         {order.requested_by_name ?? "Jugador"}
       </p>
-      <ul className="text-[10px] text-ink-600">
+      <ul className="text-ink-600 text-[10px]">
         {order.items.slice(0, 2).map((i) => (
           <li key={i.id} className="line-clamp-1">
             · {i.quantity} × {i.product_title ?? "?"}
@@ -112,13 +108,13 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
           <li className="text-ink-500">+{order.items.length - 2} más</li>
         ) : null}
       </ul>
-      <p className="font-mono text-sm font-extrabold text-pool-deep">
+      <p className="text-pool-deep font-mono text-sm font-extrabold">
         {formatCents(order.total_cents, order.currency)}
       </p>
       {error ? (
         <div
           role="alert"
-          className="rounded border border-goggle-red/30 bg-goggle-red/5 px-1.5 py-0.5 text-[10px] text-goggle-red"
+          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red rounded border px-1.5 py-0.5 text-[10px]"
         >
           {error}
         </div>
@@ -129,7 +125,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
             type="button"
             onClick={advance}
             disabled={pending}
-            className="inline-flex h-7 flex-1 items-center justify-center gap-1 rounded bg-pool-deep px-1.5 text-[10px] font-extrabold uppercase tracking-wider text-paper hover:bg-ink-900 disabled:opacity-50"
+            className="bg-pool-deep text-paper hover:bg-ink-900 touch-target inline-flex h-10 flex-1 items-center justify-center gap-1 rounded px-2 text-xs font-extrabold tracking-wider uppercase disabled:opacity-50"
           >
             {(() => {
               const Icon = NEXT_ICON[order.status];
@@ -143,7 +139,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
             type="button"
             onClick={cancel}
             disabled={pending}
-            className="inline-flex h-7 w-7 items-center justify-center rounded border border-ink-300 bg-paper text-ink-700 hover:bg-paper-sunk disabled:opacity-50"
+            className="border-ink-300 bg-paper text-ink-700 hover:bg-paper-sunk touch-target inline-flex h-10 w-10 items-center justify-center rounded border disabled:opacity-50"
             aria-label="Cancelar pedido"
             title="Cancelar"
           >
@@ -154,7 +150,3 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
     </article>
   );
 }
-
-void CapTile;
-void MessageSquare;
-void Button;

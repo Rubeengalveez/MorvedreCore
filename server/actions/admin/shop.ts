@@ -3,10 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "./_helpers";
-import { requireSessionProfile } from "./_helpers";
+import { requireAdmin, requireSessionProfile } from "./_helpers";
 import {
   createShopOrderSchema,
   decideShopOrderSchema,
@@ -16,7 +14,6 @@ import {
   upsertShopProductSchema,
 } from "@/lib/domain/admin-schemas";
 import {
-  formatCents,
   isValidShopOrderStatus,
   parseProduct,
   summarizeCart,
@@ -32,16 +29,64 @@ function toError(e: unknown): string {
 async function uploadShopImage(
   productId: string,
   file: File,
-): Promise<string> {
+  index = 0,
+): Promise<{ url: string; path: string }> {
   const admin = createAdminClient();
   const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `shop/${productId}/${Date.now()}.${ext}`;
+  const path = `shop/${productId}/${Date.now()}-${index}.${ext}`;
   const { error } = await admin.storage
     .from("shop-images")
     .upload(path, file, { contentType: file.type, upsert: true });
   if (error) throw new Error("No pudimos subir la imagen: " + error.message);
   const { data: pub } = admin.storage.from("shop-images").getPublicUrl(path);
-  return pub.publicUrl;
+  return { url: pub.publicUrl, path };
+}
+
+async function replaceProductImages(input: {
+  productId: string;
+  title: string;
+  files: File[];
+  coverIndex: number;
+}): Promise<string | null> {
+  if (input.files.length === 0) return null;
+  const admin = createAdminClient();
+  const coverIndex = Math.max(0, Math.min(input.coverIndex, input.files.length - 1));
+  await (
+    admin as unknown as {
+      from: (table: "shop_product_images") => {
+        delete: () => { eq: (column: string, value: string) => Promise<{ error: Error | null }> };
+        insert: (rows: unknown[]) => Promise<{ error: Error | null }>;
+      };
+    }
+  )
+    .from("shop_product_images")
+    .delete()
+    .eq("product_id", input.productId);
+
+  const uploaded = [];
+  for (const [index, file] of input.files.entries()) {
+    uploaded.push(await uploadShopImage(input.productId, file, index));
+  }
+
+  const rows = uploaded.map((image, index) => ({
+    product_id: input.productId,
+    url: image.url,
+    storage_path: image.path,
+    alt: input.title,
+    sort_order: index,
+    is_cover: index === coverIndex,
+  }));
+  const { error } = await (
+    admin as unknown as {
+      from: (table: "shop_product_images") => {
+        insert: (rows: unknown[]) => Promise<{ error: Error | null }>;
+      };
+    }
+  )
+    .from("shop_product_images")
+    .insert(rows);
+  if (error) throw new Error("No pudimos guardar la galeria: " + error.message);
+  return uploaded[coverIndex]?.url ?? uploaded[0]?.url ?? null;
 }
 
 export async function createShopProduct(input: {
@@ -55,6 +100,8 @@ export async function createShopProduct(input: {
   stock?: number | null;
   max_per_order?: number;
   imageFile?: File | null;
+  imageFiles?: File[] | null;
+  coverImageIndex?: number;
 }): Promise<{ id: string }> {
   await requireAdmin();
   const parsed = upsertShopProductSchema.safeParse(input);
@@ -62,7 +109,6 @@ export async function createShopProduct(input: {
   const product = parseProduct(parsed.data);
   if (!product.ok) throw new Error(product.error ?? "Datos inválidos.");
 
-  const supabase = await createClient();
   const me = await requireSessionProfile();
   const admin = createAdminClient();
 
@@ -85,9 +131,21 @@ export async function createShopProduct(input: {
     .single();
   if (error) throw new Error("No pudimos crear el producto: " + error.message);
 
-  if (input.imageFile) {
-    const url = await uploadShopImage(created.id, input.imageFile);
-    await admin.from("shop_products").update({ image_url: url }).eq("id", created.id);
+  const files = input.imageFiles?.length
+    ? input.imageFiles
+    : input.imageFile
+      ? [input.imageFile]
+      : [];
+  if (files.length > 0) {
+    const coverUrl = await replaceProductImages({
+      productId: created.id,
+      title: product.value!.title,
+      files,
+      coverIndex: input.coverImageIndex ?? 0,
+    });
+    if (coverUrl) {
+      await admin.from("shop_products").update({ image_url: coverUrl }).eq("id", created.id);
+    }
   }
 
   revalidatePath("/shop");
@@ -108,6 +166,8 @@ export async function updateShopProduct(input: {
   stock?: number | null;
   max_per_order?: number;
   imageFile?: File | null;
+  imageFiles?: File[] | null;
+  coverImageIndex?: number;
 }): Promise<void> {
   await requireAdmin();
   const parsed = updateShopProductSchema.safeParse(input);
@@ -115,11 +175,20 @@ export async function updateShopProduct(input: {
   const product = parseProduct(parsed.data);
   if (!product.ok) throw new Error(product.error ?? "Datos inválidos.");
 
-  const supabase = await createClient();
   const admin = createAdminClient();
   let imageUrl = product.value!.image_url ?? null;
-  if (input.imageFile) {
-    imageUrl = await uploadShopImage(input.product_id, input.imageFile);
+  const files = input.imageFiles?.length
+    ? input.imageFiles
+    : input.imageFile
+      ? [input.imageFile]
+      : [];
+  if (files.length > 0) {
+    imageUrl = await replaceProductImages({
+      productId: input.product_id,
+      title: product.value!.title,
+      files,
+      coverIndex: input.coverImageIndex ?? 0,
+    });
   }
 
   const { error } = await admin
@@ -150,10 +219,7 @@ export async function deleteShopProduct(input: { product_id: string }): Promise<
   if (!parsed.success) throw new Error(toError(parsed.error));
 
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("shop_products")
-    .delete()
-    .eq("id", input.product_id);
+  const { error } = await admin.from("shop_products").delete().eq("id", input.product_id);
   if (error) throw new Error("No pudimos eliminar el producto: " + error.message);
   revalidatePath("/shop");
   revalidatePath("/admin/shop");
@@ -171,7 +237,6 @@ export async function updateShopOrderStatus(input: {
     throw new Error("Estado de pedido inválido.");
   }
 
-  const supabase = await createClient();
   const me = await requireSessionProfile();
   const admin = createAdminClient();
 
@@ -205,6 +270,7 @@ export async function createShopOrder(input: {
   const parsed = createShopOrderSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
 
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const productIds = Array.from(new Set(parsed.data.items.map((i) => i.product_id)));
   const { data: products, error: pErr } = await supabase
@@ -272,7 +338,6 @@ export async function decideShopOrder(input: {
   const parsed = decideShopOrderSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
 
-  const supabase = await createClient();
   const admin = createAdminClient();
   const now = new Date().toISOString();
 
@@ -301,6 +366,7 @@ async function notifyParentsOfOrder(
   childId: string,
   products: Array<{ id: string; title: string }>,
 ): Promise<void> {
+  const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const { data: links } = await supabase
     .from("parent_child_links")
@@ -320,5 +386,3 @@ async function notifyParentsOfOrder(
   }));
   await admin.from("notifications").insert(rows);
 }
-
-void formatCents;

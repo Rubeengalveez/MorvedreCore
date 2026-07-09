@@ -22,16 +22,20 @@ export interface ParsedTitle {
 export function parseTitle(raw: unknown): ParsedTitle {
   if (typeof raw !== "string") return { ok: false, error: "El título debe ser texto.", value: "" };
   const trimmed = raw.trim();
-  if (trimmed.length < MIN_TITLE) return { ok: false, error: "El título es demasiado corto.", value: "" };
-  if (trimmed.length > MAX_TITLE) return { ok: false, error: `Máximo ${MAX_TITLE} caracteres.`, value: "" };
+  if (trimmed.length < MIN_TITLE)
+    return { ok: false, error: "El título es demasiado corto.", value: "" };
+  if (trimmed.length > MAX_TITLE)
+    return { ok: false, error: `Máximo ${MAX_TITLE} caracteres.`, value: "" };
   return { ok: true, value: trimmed };
 }
 
 export function parseBody(raw: unknown): ParsedTitle {
   if (typeof raw !== "string") return { ok: false, error: "El cuerpo debe ser texto.", value: "" };
   const trimmed = raw.trim();
-  if (trimmed.length < MIN_BODY) return { ok: false, error: "El cuerpo no puede estar vacío.", value: "" };
-  if (trimmed.length > MAX_BODY) return { ok: false, error: `Máximo ${MAX_BODY} caracteres.`, value: "" };
+  if (trimmed.length < MIN_BODY)
+    return { ok: false, error: "El cuerpo no puede estar vacío.", value: "" };
+  if (trimmed.length > MAX_BODY)
+    return { ok: false, error: `Máximo ${MAX_BODY} caracteres.`, value: "" };
   return { ok: true, value: trimmed };
 }
 

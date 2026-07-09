@@ -155,10 +155,7 @@ export interface MyPositionInfo {
   delta_to_prev: number | null;
 }
 
-export function findMyPosition(
-  ranking: RankingRow[],
-  playerId: string,
-): MyPositionInfo | null {
+export function findMyPosition(ranking: RankingRow[], playerId: string): MyPositionInfo | null {
   const idx = ranking.findIndex((r) => r.player_id === playerId);
   if (idx === -1) return null;
   const row = ranking[idx]!;

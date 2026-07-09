@@ -2,22 +2,16 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { Pin, Clock, Users } from "lucide-react";
+import { Pin, Clock } from "lucide-react";
 import { useTransition } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { CapTile } from "@/components/ui/cap-tile";
 import { Markdown } from "@/components/ui/markdown";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { Equipo, Gorro } from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
-import {
-  NEWS_REACTIONS,
-  relativeTime,
-  summarizeBody,
-  type ReactionTally,
-} from "@/lib/domain/news";
+import { NEWS_REACTIONS, relativeTime, summarizeBody, type ReactionTally } from "@/lib/domain/news";
 
 export interface NewsCardData {
   id: string;
@@ -64,14 +58,14 @@ export function NewsCard({ post, variant = "feed", onReact, canReact = true }: N
     <article
       data-news-card={post.id}
       className={cn(
-        "relative overflow-hidden rounded-md border bg-paper-card shadow-elev-1",
+        "bg-paper-card shadow-elev-1 relative overflow-hidden rounded-md border",
         post.pinned ? "border-ball-gold" : "border-ink-300",
       )}
     >
       {post.pinned ? (
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 top-0 flex items-center gap-1.5 bg-ball-gold/15 px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider text-pool-deep"
+          className="bg-ball-gold/15 text-pool-deep absolute inset-x-0 top-0 flex items-center gap-1.5 px-3 py-1 text-[10px] font-extrabold tracking-wider uppercase"
         >
           <Pin className="h-3 w-3" />
           Fijada
@@ -86,37 +80,35 @@ export function NewsCard({ post, variant = "feed", onReact, canReact = true }: N
             className="shrink-0"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+            <p className="text-eyebrow text-ink-600">
               <Link href={href} className="hover:underline">
                 {post.author_name}
               </Link>
               {post.audience === "team" && post.audience_team_label ? (
                 <>
-                  <span className="mx-1 text-ink-300">·</span>
+                  <span className="text-ink-300 mx-1">·</span>
                   <span className="text-ink-600">{post.audience_team_label}</span>
                 </>
               ) : (
                 <>
-                  <span className="mx-1 text-ink-300">·</span>
+                  <span className="text-ink-300 mx-1">·</span>
                   <span className="text-ink-600">Club</span>
                 </>
               )}
             </p>
             <Link
               href={href}
-              className="break-words font-display text-lg font-extrabold leading-tight text-pool-deep hover:underline"
+              className="font-display text-pool-deep text-lg leading-tight font-extrabold break-words hover:underline"
             >
               {post.title}
             </Link>
-            <p className="mt-0.5 inline-flex items-center gap-1 text-[10px] text-ink-600">
+            <p className="text-ink-600 mt-0.5 inline-flex items-center gap-1 text-[10px]">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {relativeTime(post.published_at)}
               {post.expires_at ? (
                 <>
-                  <span className="mx-1 text-ink-300">·</span>
-                  <span className="text-ink-500">
-                    Caduca {relativeTime(post.expires_at)}
-                  </span>
+                  <span className="text-ink-300 mx-1">·</span>
+                  <span className="text-ink-500">Caduca {relativeTime(post.expires_at)}</span>
                 </>
               ) : null}
             </p>
@@ -135,22 +127,17 @@ export function NewsCard({ post, variant = "feed", onReact, canReact = true }: N
             style={{ backgroundColor: "var(--pool-foam)" }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={post.image_url}
-              alt=""
-              className="h-40 w-full object-cover"
-              loading="lazy"
-            />
+            <img src={post.image_url} alt="" className="h-40 w-full object-cover" loading="lazy" />
           </div>
         ) : null}
 
         {variant === "feed" ? (
-          <LanePattern as="div" className="-mx-3 -mb-3 rounded-b-md bg-pool-foam/30" strong={false}>
+          <LanePattern as="div" className="bg-pool-foam/30 -mx-3 -mb-3 rounded-b-md" strong={false}>
             <div className="px-3 py-2">
               <Markdown className="text-sm leading-relaxed">{summary}</Markdown>
               <Link
                 href={href}
-                className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+                className="text-pool-blue mt-1 inline-flex items-center gap-1 text-xs font-bold hover:underline"
               >
                 Leer más
               </Link>
@@ -185,7 +172,7 @@ function ReactionBar({
       role="group"
       aria-label="Reaccionar"
       data-reaction-bar
-      className="flex flex-wrap items-center gap-1.5 border-t border-ink-300 pt-2"
+      className="border-ink-300 flex flex-wrap items-center gap-1.5 border-t pt-2"
     >
       {NEWS_REACTIONS.map((meta) => {
         const tally = reactions.find((r) => r.reaction === meta.id);
@@ -201,7 +188,7 @@ function ReactionBar({
             data-mine={mine}
             aria-pressed={mine}
             className={cn(
-              "inline-flex h-8 min-h-8 items-center gap-1 rounded-full border px-2.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
+              "focus-visible:ring-pool-blue touch-target inline-flex h-10 min-h-10 items-center gap-1 rounded-full border px-3 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none",
               mine
                 ? "border-pool-deep bg-pool-deep text-paper"
                 : count > 0
@@ -218,6 +205,3 @@ function ReactionBar({
     </div>
   );
 }
-
-void CapTile;
-void Users;

@@ -161,9 +161,7 @@ export async function getCalendarData(input: {
   }
 
   const matchIds = Array.from(
-    new Set(
-      ((matchesRes.data ?? []) as Array<{ id: string }>).map((m) => m.id),
-    ),
+    new Set(((matchesRes.data ?? []) as Array<{ id: string }>).map((m) => m.id)),
   );
   if (matchIds.length > 0) {
     const { data: callupsData } = await supabase
@@ -240,10 +238,7 @@ export async function getNextEventForProfile(input: {
       .gte("scheduled_at", nowIso)
       .order("scheduled_at", { ascending: true })
       .limit(5),
-    supabase
-      .from("match_callups")
-      .select("match_id, status")
-      .eq("player_id", profileId),
+    supabase.from("match_callups").select("match_id, status").eq("player_id", profileId),
   ]);
 
   const calledMatchIds = new Set(
@@ -252,12 +247,14 @@ export async function getNextEventForProfile(input: {
       .map((c) => c.match_id),
   );
 
-  const userMatch = ((matchRes.data ?? []) as Array<{
-    id: string;
-    scheduled_at: string;
-    location: string | null;
-    teams: unknown;
-  }>).find((m) => calledMatchIds.has(m.id));
+  const userMatch = (
+    (matchRes.data ?? []) as Array<{
+      id: string;
+      scheduled_at: string;
+      location: string | null;
+      teams: unknown;
+    }>
+  ).find((m) => calledMatchIds.has(m.id));
 
   const nextTraining = (trainingRes.data ?? [])[0] as
     | { id: string; scheduled_at: string; location: string | null; teams: unknown }
@@ -281,7 +278,9 @@ export async function getNextEventForProfile(input: {
     };
   }
   if (matchTime) {
-    const team = Array.isArray(nextUserMatch?.teams) ? nextUserMatch?.teams[0] : nextUserMatch?.teams;
+    const team = Array.isArray(nextUserMatch?.teams)
+      ? nextUserMatch?.teams[0]
+      : nextUserMatch?.teams;
     const teamObj = team as { label?: string; color?: string } | null;
     return {
       kind: "match",
@@ -294,4 +293,3 @@ export async function getNextEventForProfile(input: {
   }
   return null;
 }
-

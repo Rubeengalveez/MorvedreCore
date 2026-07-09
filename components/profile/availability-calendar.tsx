@@ -82,9 +82,7 @@ export function AvailabilityCalendar({
   const windowEnd = useMemo(() => addDaysIso(todayIso, WINDOW_DAYS), [todayIso]);
 
   const [month, setMonth] = useState<YearMonth>(todayMonth);
-  const [overrides, setOverrides] = useState<Map<string, AvailabilityDay>>(
-    () => new Map(),
-  );
+  const [overrides, setOverrides] = useState<Map<string, AvailabilityDay>>(() => new Map());
 
   const availability = useMemo(() => {
     const m = new Map<string, AvailabilityDay>();
@@ -137,12 +135,13 @@ export function AvailabilityCalendar({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-xs text-ink-600 sm:text-sm">
-          Toca un día para marcar tu disponibilidad. El entrenador verá si cuentas para los partidos de esa fecha.
+        <p className="text-ink-600 text-xs sm:text-sm">
+          Toca un día para marcar tu disponibilidad. El entrenador verá si cuentas para los partidos
+          de esa fecha.
         </p>
         <span
           aria-live="polite"
-          className="inline-flex h-6 min-w-12 items-center justify-center rounded-full bg-goggle-red/10 px-2.5 text-eyebrow font-bold text-goggle-red"
+          className="bg-goggle-red/10 text-eyebrow text-goggle-red inline-flex h-6 min-w-12 items-center justify-center rounded-full px-2.5 font-bold"
         >
           {unavailableCount === 0
             ? "Sin marcar"
@@ -150,20 +149,22 @@ export function AvailabilityCalendar({
         </span>
       </div>
 
-      <div className="flex items-center justify-between gap-2 rounded-md border border-ink-300 bg-paper-card px-2 py-2">
+      <div className="border-ink-300 bg-paper-card flex items-center justify-between gap-2 rounded-md border px-2 py-2">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={goToPrevMonth}
           aria-label="Mes anterior"
-          className="h-11 w-11 min-h-11 min-w-11 shrink-0 px-0"
+          className="h-11 min-h-11 w-11 min-w-11 shrink-0 px-0"
         >
           <ChevronLeft className="h-5 w-5" aria-hidden="true" />
         </Button>
         <div className="flex flex-1 flex-col items-center text-center">
-          <span className="text-eyebrow text-ink-600 font-bold uppercase tracking-wider">Disponibilidad</span>
-          <h3 className="font-display text-base font-extrabold leading-tight text-pool-deep sm:text-lg">
+          <span className="text-eyebrow text-ink-600 font-bold tracking-wider uppercase">
+            Disponibilidad
+          </span>
+          <h3 className="font-display text-pool-deep text-base leading-tight font-extrabold sm:text-lg">
             {monthLabel(month)}
           </h3>
         </div>
@@ -173,7 +174,7 @@ export function AvailabilityCalendar({
           size="sm"
           onClick={goToNextMonth}
           aria-label="Mes siguiente"
-          className="h-11 w-11 min-h-11 min-w-11 shrink-0 px-0"
+          className="h-11 min-h-11 w-11 min-w-11 shrink-0 px-0"
         >
           <ChevronRight className="h-5 w-5" aria-hidden="true" />
         </Button>
@@ -183,7 +184,7 @@ export function AvailabilityCalendar({
           size="sm"
           onClick={goToToday}
           disabled={isCurrentMonth}
-          className="h-11 min-h-11 shrink-0 px-3 text-eyebrow font-bold uppercase"
+          className="text-eyebrow h-11 min-h-11 shrink-0 px-3 font-bold uppercase"
         >
           Hoy
         </Button>
@@ -191,7 +192,7 @@ export function AvailabilityCalendar({
 
       <div
         aria-hidden="true"
-        className="grid grid-cols-7 gap-1 px-1 text-center text-[10px] font-bold uppercase tracking-wider text-ink-600 sm:text-[11px]"
+        className="text-eyebrow text-ink-600 grid grid-cols-7 gap-1 px-1 text-center sm:text-[11px]"
       >
         {[1, 2, 3, 4, 5, 6, 7].map((d) => (
           <span key={d}>{weekdayShort(d)}</span>
@@ -215,7 +216,9 @@ export function AvailabilityCalendar({
 
           // Eventos para este día concreto
           const dayMatches = upcomingMatches.filter((m) => m.scheduled_at.startsWith(cell.iso));
-          const daySessions = upcomingSessions.filter((s) => s.scheduled_at.startsWith(cell.iso) && !s.cancelled);
+          const daySessions = upcomingSessions.filter(
+            (s) => s.scheduled_at.startsWith(cell.iso) && !s.cancelled,
+          );
 
           return (
             <button
@@ -235,45 +238,37 @@ export function AvailabilityCalendar({
                       : "Disponible. Toca para marcar como no disponible."
               }
               className={cn(
-                "relative flex h-14 min-h-14 w-full flex-col items-center justify-between p-1 rounded-md border text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper sm:h-16",
+                "focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative flex h-14 min-h-14 w-full flex-col items-center justify-between rounded-md border p-1 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:h-16",
                 inMonth ? "" : "opacity-50",
                 isDisabled
-                  ? "cursor-not-allowed border-transparent bg-paper-sunk/60 text-ink-400"
+                  ? "bg-paper-sunk/60 text-ink-400 cursor-not-allowed border-transparent"
                   : isUnavailable
-                    ? "cursor-pointer border-goggle-red bg-goggle-red/10 font-bold text-goggle-red hover:bg-goggle-red/20 active:scale-[0.97]"
-                    : "cursor-pointer border-ink-300 bg-paper font-semibold text-ink-900 hover:border-pool-blue hover:bg-pool-foam active:scale-[0.97]",
+                    ? "border-goggle-red bg-goggle-red/10 text-goggle-red hover:bg-goggle-red/20 cursor-pointer font-bold active:scale-[0.97]"
+                    : "border-ink-300 bg-paper text-ink-900 hover:border-pool-blue hover:bg-pool-foam cursor-pointer font-semibold active:scale-[0.97]",
                 isToday && !isUnavailable
-                  ? "ring-2 ring-pool-blue/40 bg-pool-foam/60 border-pool-blue/50"
+                  ? "ring-pool-blue/40 bg-pool-foam/60 border-pool-blue/50 ring-2"
                   : "",
-                isToday && isUnavailable
-                  ? "ring-2 ring-pool-blue/30"
-                  : "",
+                isToday && isUnavailable ? "ring-pool-blue/30 ring-2" : "",
               )}
             >
-              <div className="w-full flex items-center justify-between leading-none">
+              <div className="flex w-full items-center justify-between leading-none">
                 <span
-                  className={cn(
-                    "font-mono text-sm tabular-nums",
-                    isToday ? "font-extrabold" : "",
-                  )}
+                  className={cn("font-mono text-sm tabular-nums", isToday ? "font-extrabold" : "")}
                 >
                   {cell.day}
                 </span>
                 {isUnavailable ? (
-                  <X
-                    aria-hidden="true"
-                    className="h-3 w-3 text-goggle-red shrink-0"
-                  />
+                  <X aria-hidden="true" className="text-goggle-red h-3 w-3 shrink-0" />
                 ) : null}
               </div>
 
               {/* Indicadores visuales de partidos y entrenamientos */}
-              <div className="flex gap-1 justify-center w-full min-h-[6px] mb-0.5">
+              <div className="mb-0.5 flex min-h-[6px] w-full justify-center gap-1">
                 {dayMatches.map((m) => (
                   <span
                     key={m.id}
                     title={`Partido vs ${m.opponent}`}
-                    className="h-1.5 w-1.5 rounded-full bg-[#FF6B35] animate-pulse"
+                    className="bg-action h-1.5 w-1.5 animate-pulse rounded-full"
                   />
                 ))}
                 {daySessions.map((s) => (
@@ -290,18 +285,18 @@ export function AvailabilityCalendar({
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-1 text-eyebrow text-ink-600 mt-1">
+      <div className="text-eyebrow text-ink-600 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1.5 px-1">
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden="true"
-            className="inline-block h-3 w-3 rounded border border-ink-300 bg-paper"
+            className="border-ink-300 bg-paper inline-block h-3 w-3 rounded border"
           />
           Disponible
         </span>
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden="true"
-            className="inline-flex h-3 w-3 items-center justify-center rounded border border-goggle-red bg-goggle-red/10 text-goggle-red"
+            className="border-goggle-red bg-goggle-red/10 text-goggle-red inline-flex h-3 w-3 items-center justify-center rounded border"
           >
             <X className="h-2 w-2" aria-hidden="true" />
           </span>
@@ -310,29 +305,20 @@ export function AvailabilityCalendar({
         <span className="inline-flex items-center gap-1.5">
           <span
             aria-hidden="true"
-            className="inline-block h-3 w-3 rounded border border-pool-blue/50 bg-pool-foam/60 ring-2 ring-pool-blue/40"
+            className="border-pool-blue/50 bg-pool-foam/60 ring-pool-blue/40 inline-block h-3 w-3 rounded border ring-2"
           />
           Hoy
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-3 w-3 rounded bg-paper-sunk/60"
-          />
+          <span aria-hidden="true" className="bg-paper-sunk/60 inline-block h-3 w-3 rounded" />
           Pasado
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-1.5 w-1.5 rounded-full bg-[#FF6B35]"
-          />
+          <span aria-hidden="true" className="bg-action inline-block h-1.5 w-1.5 rounded-full" />
           Partido
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <span
-            aria-hidden="true"
-            className="inline-block h-1.5 w-1.5 rounded-full bg-pool-blue"
-          />
+          <span aria-hidden="true" className="bg-pool-blue inline-block h-1.5 w-1.5 rounded-full" />
           Entrenamiento
         </span>
       </div>
@@ -342,7 +328,7 @@ export function AvailabilityCalendar({
         onOpenChange={(open) => {
           if (!open) setSelectedIso(null);
         }}
-        current={selectedIso ? availability.get(selectedIso) ?? null : null}
+        current={selectedIso ? (availability.get(selectedIso) ?? null) : null}
         dayMatches={activeDayMatches}
         daySessions={activeDaySessions}
         onSaved={(iso, next) => {
@@ -434,9 +420,7 @@ function AvailabilitySheetForm({
   router,
   onClose,
 }: AvailabilitySheetFormProps) {
-  const [unavailable, setUnavailable] = useState<boolean>(
-    current?.available === false,
-  );
+  const [unavailable, setUnavailable] = useState<boolean>(current?.available === false);
   const [reason, setReason] = useState<string>(current?.reason ?? "");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -458,11 +442,7 @@ function AvailabilitySheetForm({
         });
         router.refresh();
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "No pudimos guardar. Inténtalo de nuevo.",
-        );
+        setError(err instanceof Error ? err.message : "No pudimos guardar. Inténtalo de nuevo.");
         onError(iso);
       }
     });
@@ -489,35 +469,41 @@ function AvailabilitySheetForm({
       <SheetBody>
         <div className="flex flex-col gap-4">
           {/* Listado de eventos del día */}
-          {(dayMatches.length > 0 || daySessions.length > 0) ? (
-            <div className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600 leading-none">
+          {dayMatches.length > 0 || daySessions.length > 0 ? (
+            <div className="border-ink-300 bg-paper-card flex flex-col gap-2 rounded-md border p-3">
+              <span className="text-eyebrow text-ink-600 leading-none">
                 Eventos programados para hoy:
               </span>
               <ul className="flex flex-col gap-1.5">
                 {dayMatches.map((m) => (
                   <li
                     key={m.id}
-                    className="flex items-center justify-between text-xs rounded border border-[#FF6B35]/30 bg-paper px-2.5 py-1.5"
+                    className="border-action/30 bg-paper flex items-center justify-between rounded border px-2.5 py-1.5 text-xs"
                   >
-                    <span className="font-semibold text-pool-deep flex items-center gap-1.5">
+                    <span className="text-pool-deep flex items-center gap-1.5 font-semibold">
                       🏆 Partido vs {m.opponent}
                     </span>
-                    <span className="font-mono text-ink-500 font-bold shrink-0">
-                      {new Date(m.scheduled_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                    <span className="text-ink-500 shrink-0 font-mono font-bold">
+                      {new Date(m.scheduled_at).toLocaleTimeString("es-ES", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </li>
                 ))}
                 {daySessions.map((s) => (
                   <li
                     key={s.id}
-                    className="flex items-center justify-between text-xs rounded border border-ink-300 bg-paper px-2.5 py-1.5"
+                    className="border-ink-300 bg-paper flex items-center justify-between rounded border px-2.5 py-1.5 text-xs"
                   >
-                    <span className="font-semibold text-pool-deep flex items-center gap-1.5">
+                    <span className="text-pool-deep flex items-center gap-1.5 font-semibold">
                       🏊‍♂️ Entreno · {s.team_label}
                     </span>
-                    <span className="font-mono text-ink-500 font-bold shrink-0">
-                      {new Date(s.scheduled_at).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                    <span className="text-ink-500 shrink-0 font-mono font-bold">
+                      {new Date(s.scheduled_at).toLocaleTimeString("es-ES", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
                     </span>
                   </li>
                 ))}
@@ -526,12 +512,12 @@ function AvailabilitySheetForm({
           ) : null}
 
           {/* Toggle de Disponibilidad */}
-          <div className="flex items-center justify-between gap-3 rounded-md border border-ink-300 bg-paper p-3">
+          <div className="border-ink-300 bg-paper flex items-center justify-between gap-3 rounded-md border p-3">
             <div className="flex flex-col gap-0.5">
-              <span className="text-sm font-semibold text-pool-deep">
+              <span className="text-pool-deep text-sm font-semibold">
                 {unavailable ? "No disponible" : "Disponible"}
               </span>
-              <span className="text-xs text-ink-600">
+              <span className="text-ink-600 text-xs">
                 {unavailable
                   ? "Tu entrenador sabrá que no cuentas para este día."
                   : "Se mostrará como día disponible."}
@@ -545,14 +531,14 @@ function AvailabilitySheetForm({
               onClick={() => setUnavailable((v) => !v)}
               disabled={pending}
               className={cn(
-                "relative inline-flex h-7 w-12 min-h-7 min-w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:cursor-not-allowed disabled:opacity-60",
+                "focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative inline-flex h-7 min-h-7 w-12 min-w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60",
                 unavailable ? "bg-goggle-red" : "bg-ink-300",
               )}
             >
               <span
                 aria-hidden="true"
                 className={cn(
-                  "inline-block h-5 w-5 rounded-full bg-paper shadow-elev-1 transition-transform",
+                  "bg-paper shadow-elev-1 inline-block h-5 w-5 rounded-full transition-transform",
                   unavailable ? "translate-x-6" : "translate-x-1",
                 )}
               />
@@ -563,7 +549,7 @@ function AvailabilitySheetForm({
             <div className="flex flex-col gap-1.5">
               <label
                 htmlFor="availability-reason"
-                className="text-eyebrow text-ink-600 font-bold uppercase tracking-wider"
+                className="text-eyebrow text-ink-600 font-bold tracking-wider uppercase"
               >
                 Motivo (opcional)
               </label>
@@ -577,15 +563,10 @@ function AvailabilitySheetForm({
                 maxLength={MAX_REASON_LENGTH}
                 autoComplete="off"
               />
-              <p className="flex items-center justify-between text-[11px] text-ink-600">
-                <span>
-                  Tu entrenador verá este motivo al preparar la convocatoria.
-                </span>
+              <p className="text-ink-600 flex items-center justify-between text-[11px]">
+                <span>Tu entrenador verá este motivo al preparar la convocatoria.</span>
                 <span
-                  className={cn(
-                    "font-mono tabular-nums",
-                    reasonTooLong ? "text-goggle-red" : "",
-                  )}
+                  className={cn("font-mono tabular-nums", reasonTooLong ? "text-goggle-red" : "")}
                 >
                   {reason.length}/{MAX_REASON_LENGTH}
                 </span>
@@ -596,7 +577,7 @@ function AvailabilitySheetForm({
           {error ? (
             <p
               role="alert"
-              className="rounded border border-goggle-red bg-goggle-red/5 px-3 py-2 text-xs text-goggle-red"
+              className="border-goggle-red bg-goggle-red/5 text-goggle-red rounded border px-3 py-2 text-xs"
             >
               {error}
             </p>
@@ -622,9 +603,7 @@ function AvailabilitySheetForm({
           disabled={pending || reasonTooLong}
           className="flex-1 font-bold uppercase"
         >
-          {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-          ) : null}
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
           Guardar
         </Button>
       </SheetFooter>

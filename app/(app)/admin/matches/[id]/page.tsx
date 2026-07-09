@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Route } from "next";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { MdArrowBack, MdAutoAwesome } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,10 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
-import {
-  formatLongDate,
-  formatTime,
-} from "@/lib/utils/format";
+import { formatLongDate, formatTime } from "@/lib/utils/format";
 import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
 
 import { ActaManager, type ActaEntry } from "./_components/acta-manager";
@@ -69,7 +66,15 @@ async function loadMatch(id: string): Promise<{
   match: MatchWithTeam | null;
   callups: CallupRow[];
   stats: MatchStatRow[];
-  profileMeta: Map<string, { full_name: string; photo_url: string | null; birth_year: number | null; cap_number: number | null }>;
+  profileMeta: Map<
+    string,
+    {
+      full_name: string;
+      photo_url: string | null;
+      birth_year: number | null;
+      cap_number: number | null;
+    }
+  >;
   teamById: Map<string, { id: string; label: string }>;
   availability: Array<{ player_id: string; date: string; available: boolean }>;
 } | null> {
@@ -98,12 +103,16 @@ async function loadMatch(id: string): Promise<{
   ] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at")
+      .select(
+        "id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at",
+      )
       .eq("id", match.team_id)
       .maybeSingle(),
     supabase
       .from("match_callups")
-      .select("match_id, player_id, cap_number, status, confirmed_at, source_team_id, created_at, updated_at")
+      .select(
+        "match_id, player_id, cap_number, status, confirmed_at, source_team_id, created_at, updated_at",
+      )
       .eq("match_id", match.id),
     supabase
       .from("match_stats")
@@ -116,9 +125,7 @@ async function loadMatch(id: string): Promise<{
       .select("id, full_name, photo_url, birth_year, cap_number")
       .order("full_name", { ascending: true })
       .limit(1000),
-    supabase
-      .from("teams")
-      .select("id, label"),
+    supabase.from("teams").select("id, label"),
     supabase
       .from("match_availability")
       .select("player_id, date, available, reason")
@@ -129,7 +136,12 @@ async function loadMatch(id: string): Promise<{
 
   const profileMeta = new Map<
     string,
-    { full_name: string; photo_url: string | null; birth_year: number | null; cap_number: number | null }
+    {
+      full_name: string;
+      photo_url: string | null;
+      birth_year: number | null;
+      cap_number: number | null;
+    }
   >();
   for (const p of profilesData ?? []) {
     profileMeta.set(p.id, {
@@ -146,9 +158,7 @@ async function loadMatch(id: string): Promise<{
   }
 
   const team = (teamData ?? null) as Team | null;
-  const teamInfo = team
-    ? { id: team.id, label: team.label, color: team.color }
-    : null;
+  const teamInfo = team ? { id: team.id, label: team.label, color: team.color } : null;
 
   return {
     match: { ...match, team: teamInfo },
@@ -156,7 +166,11 @@ async function loadMatch(id: string): Promise<{
     stats: (statsData ?? []) as MatchStatRow[],
     profileMeta,
     teamById,
-    availability: (availabilityData ?? []) as Array<{ player_id: string; date: string; available: boolean }>,
+    availability: (availabilityData ?? []) as Array<{
+      player_id: string;
+      date: string;
+      available: boolean;
+    }>,
   };
 }
 
@@ -169,8 +183,7 @@ export default async function MatchDetailPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const tab: Tab = (TABS.find((t) => t.value === sp.tab)?.value ??
-    "convocatoria") as Tab;
+  const tab: Tab = (TABS.find((t) => t.value === sp.tab)?.value ?? "convocatoria") as Tab;
 
   const data = await loadMatch(id);
   if (!data || !data.match) {
@@ -179,22 +192,18 @@ export default async function MatchDetailPage({
   const { match, callups, stats, profileMeta, teamById, availability } = data;
 
   const conflicting = new Set(
-    availability
-      .filter((a) => a.available === false)
-      .map((a) => a.player_id),
+    availability.filter((a) => a.available === false).map((a) => a.player_id),
   );
 
   const callupEntries: CallupEntry[] = callups
     .map((c) => {
       const profile = profileMeta.get(c.player_id);
-      const source = c.source_team_id
-        ? teamById.get(c.source_team_id)?.label ?? null
-        : null;
+      const source = c.source_team_id ? (teamById.get(c.source_team_id)?.label ?? null) : null;
       return {
         callup: c,
         player: profile
           ? {
-              id: profileMeta.get(c.player_id)!.full_name.length > 0 ? c.player_id : c.player_id,
+              id: c.player_id,
               full_name: profile.full_name,
               photo_url: profile.photo_url,
               birth_year: profile.birth_year,
@@ -233,18 +242,18 @@ export default async function MatchDetailPage({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-4">
-      <div className="flex items-center gap-2 text-sm text-ink-600">
+      <div className="text-ink-600 flex items-center gap-2 text-sm">
         <Link
           href={"/admin/matches" as Route}
-          className="inline-flex items-center gap-1 font-semibold text-brand-blue hover:underline focus-visible:underline"
+          className="text-brand-blue inline-flex items-center gap-1 font-semibold hover:underline focus-visible:underline"
         >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          <MdArrowBack className="h-5 w-5" aria-hidden="true" />
           Partidos
         </Link>
       </div>
 
       <header
-        className="relative overflow-hidden rounded-md border border-ink-300 bg-paper"
+        className="border-ink-300 bg-paper relative overflow-hidden rounded-md border"
         style={{
           borderTopWidth: "4px",
           borderTopColor: match.team?.color ?? "var(--brand-blue)",
@@ -253,14 +262,14 @@ export default async function MatchDetailPage({
         }}
       >
         <div className="flex flex-col gap-4 p-5">
-          <div className="flex items-center gap-2 text-xs text-ink-600">
-            <span className="font-mono font-bold uppercase tracking-wider text-brand-deep">
+          <div className="text-ink-600 flex items-center gap-2 text-xs">
+            <span className="text-brand-deep font-mono font-bold tracking-wider uppercase">
               {formatLongDate(scheduledDate)}
             </span>
             <span
               className={cn(
                 "ml-auto inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
-                STATUS_BADGE[match.status] ?? "border border-ink-300 text-ink-600",
+                STATUS_BADGE[match.status] ?? "border-ink-300 text-ink-600 border",
               )}
             >
               {STATUS_LABELS[match.status] ?? match.status}
@@ -268,58 +277,54 @@ export default async function MatchDetailPage({
           </div>
           <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
             <div className="flex flex-col items-center gap-1 text-center sm:items-end sm:text-right">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+              <span className="text-eyebrow text-ink-600">
                 {match.is_home ? "Local" : "Visitante"}
               </span>
-              <span className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
+              <span className="font-display text-brand-deep text-2xl leading-tight font-extrabold sm:text-3xl">
                 {match.team?.label ?? "Equipo"}
               </span>
             </div>
             <div className="flex flex-col items-center gap-1">
-              <span className="font-mono text-sm font-bold text-ink-600">
+              <span className="text-ink-600 font-mono text-sm font-bold">
                 {formatTime(scheduledDate)}
               </span>
               {match.status === "played" &&
               match.final_score_us != null &&
               match.final_score_them != null ? (
                 <span
-                  className="font-mono font-extrabold leading-none text-brand-deep"
+                  className="text-brand-deep font-mono leading-none font-extrabold"
                   style={{ fontSize: "72px" }}
                 >
                   {match.final_score_us} - {match.final_score_them}
                 </span>
               ) : (
-                <span className="font-display text-3xl font-extrabold text-ink-600">
-                  vs
-                </span>
+                <span className="font-display text-ink-600 text-3xl font-extrabold">vs</span>
               )}
             </div>
             <div className="flex flex-col items-center gap-1 text-center sm:items-start sm:text-left">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+              <span className="text-eyebrow text-ink-600">
                 {match.is_home ? "Visitante" : "Local"}
               </span>
-              <span className="font-display text-2xl font-extrabold leading-tight text-brand-deep sm:text-3xl">
+              <span className="font-display text-brand-deep text-2xl leading-tight font-extrabold sm:text-3xl">
                 {match.opponent}
               </span>
             </div>
           </div>
-          <div className="flex flex-wrap items-center justify-center gap-1.5 text-sm text-ink-600">
-            <span className="inline-flex h-6 items-center rounded-full border border-ink-300 px-2 text-[11px] font-semibold text-ink-600">
+          <div className="text-ink-600 flex flex-wrap items-center justify-center gap-1.5 text-sm">
+            <span className="border-ink-300 text-ink-600 inline-flex h-6 items-center rounded-full border px-2 text-[11px] font-semibold">
               {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
             </span>
             {match.is_home ? (
-              <span className="inline-flex h-6 items-center rounded-full bg-brand-foam px-2 text-[11px] font-semibold text-brand-deep">
+              <span className="bg-brand-foam text-brand-deep inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
                 Local
               </span>
             ) : (
-              <span className="inline-flex h-6 items-center rounded-full bg-ink-300/40 px-2 text-[11px] font-semibold text-ink-600">
+              <span className="bg-ink-300/40 text-ink-600 inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
                 Visitante
               </span>
             )}
-            {(match.pool_name || match.location) ? (
-              <span className="text-xs text-ink-600">
-                {match.pool_name ?? match.location}
-              </span>
+            {match.pool_name || match.location ? (
+              <span className="text-ink-600 text-xs">{match.pool_name ?? match.location}</span>
             ) : null}
           </div>
         </div>
@@ -327,12 +332,9 @@ export default async function MatchDetailPage({
 
       <nav
         aria-label="Secciones del partido"
-        className="sticky top-[60px] z-10 -mx-4 border-b border-ink-300 bg-paper px-4"
+        className="border-ink-300 bg-paper sticky top-[var(--top-bar-height)] z-10 -mx-4 border-b px-4"
       >
-        <ul
-          role="tablist"
-          className="no-scrollbar mx-auto flex max-w-2xl gap-1 overflow-x-auto"
-        >
+        <ul role="tablist" className="no-scrollbar mx-auto flex max-w-2xl gap-1 overflow-x-auto">
           {TABS.map((t) => {
             const isActive = tab === t.value;
             return (
@@ -342,17 +344,15 @@ export default async function MatchDetailPage({
                   role="tab"
                   aria-selected={isActive}
                   className={cn(
-                    "relative inline-flex h-12 min-h-12 items-center justify-center whitespace-nowrap px-4 font-display text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
-                    isActive
-                      ? "text-brand-blue"
-                      : "text-ink-600 hover:text-brand-deep",
+                    "font-display focus-visible:ring-brand-blue focus-visible:ring-offset-paper relative inline-flex h-12 min-h-12 items-center justify-center px-4 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                    isActive ? "text-brand-blue" : "text-ink-600 hover:text-brand-deep",
                   )}
                 >
                   {t.label}
                   {isActive ? (
                     <span
                       aria-hidden="true"
-                      className="absolute inset-x-3 bottom-0 h-[3px] rounded-full bg-brand-blue"
+                      className="bg-brand-blue absolute inset-x-3 bottom-0 h-[3px] rounded-full"
                     />
                   ) : null}
                 </Link>
@@ -367,17 +367,15 @@ export default async function MatchDetailPage({
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-col">
-                <h2 className="font-display text-lg font-bold text-brand-deep">
+                <h2 className="font-display text-brand-deep text-lg font-bold">
                   Jugadores convocados
                 </h2>
-                <p className="text-xs text-ink-600">
-                  {callupEntries.length} en la convocatoria
-                </p>
+                <p className="text-ink-600 text-xs">{callupEntries.length} en la convocatoria</p>
               </div>
               <Sheet>
                 <SheetTrigger asChild>
                   <Button size="sm">
-                    <Sparkles className="h-4 w-4" aria-hidden="true" />
+                    <MdAutoAwesome className="h-4 w-4" aria-hidden="true" />
                     Sugerir convocatoria
                   </Button>
                 </SheetTrigger>
@@ -385,8 +383,8 @@ export default async function MatchDetailPage({
                   <SheetHeader>
                     <SheetTitle>Sugerir convocatoria</SheetTitle>
                     <SheetDescription>
-                      Te proponemos los jugadores disponibles. Marca y ajusta
-                      dorsales antes de confirmar.
+                      Te proponemos los jugadores disponibles. Marca y ajusta dorsales antes de
+                      confirmar.
                     </SheetDescription>
                   </SheetHeader>
                   <SheetBody>
@@ -401,9 +399,7 @@ export default async function MatchDetailPage({
 
         {tab === "acta" ? (
           <>
-            <h2 className="font-display text-lg font-bold text-brand-deep">
-              Acta del partido
-            </h2>
+            <h2 className="font-display text-brand-deep text-lg font-bold">Acta del partido</h2>
             <ActaManager
               match={{
                 id: match.id,
@@ -418,42 +414,31 @@ export default async function MatchDetailPage({
 
         {tab === "detalles" ? (
           <>
-            <h2 className="font-display text-lg font-bold text-brand-deep">
-              Detalles del partido
-            </h2>
+            <h2 className="font-display text-brand-deep text-lg font-bold">Detalles del partido</h2>
             {match.team ? (
               <MatchDetailsForm match={match} team={match.team} />
             ) : (
-              <p className="text-sm italic text-ink-600">
-                No se puede editar: falta el equipo.
-              </p>
+              <p className="text-ink-600 text-sm italic">No se puede editar: falta el equipo.</p>
             )}
           </>
         ) : null}
 
         {tab === "logistica" ? (
           <>
-            <h2 className="font-display text-lg font-bold text-brand-deep">
-              Logística
-            </h2>
+            <h2 className="font-display text-brand-deep text-lg font-bold">Logística</h2>
             {match.logistics_enabled ? (
-              <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
-                <p className="text-base font-semibold text-brand-deep">
-                  Próximamente.
-                </p>
-                <p className="mt-1 text-sm text-ink-600">
-                  La gestión de coches y viajes se activa en una fase posterior
-                  (Fase 7).
+              <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
+                <p className="text-brand-deep text-base font-semibold">Próximamente.</p>
+                <p className="text-ink-600 mt-1 text-sm">
+                  La gestión de coches y viajes se activa en una fase posterior (Fase 7).
                 </p>
               </div>
             ) : (
-              <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
-                <p className="text-base font-semibold text-brand-deep">
-                  Logística desactivada.
-                </p>
-                <p className="mt-1 text-sm text-ink-600">
-                  Activa el interruptor de logística en la pestaña &ldquo;Detalles&rdquo;
-                  para empezar a planificar el viaje.
+              <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
+                <p className="text-brand-deep text-base font-semibold">Logística desactivada.</p>
+                <p className="text-ink-600 mt-1 text-sm">
+                  Activa el interruptor de logística en la pestaña &ldquo;Detalles&rdquo; para
+                  empezar a planificar el viaje.
                 </p>
               </div>
             )}

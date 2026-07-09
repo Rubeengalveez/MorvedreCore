@@ -32,6 +32,7 @@ A continuación, la **propuesta de dirección estética** que complementa al log
 "Una app de club de barrio con el rigor visual de un club serio. Limpia, deportiva, muy legible bajo el sol de la piscina, con un punto de calor para que los chavales la sientan suya."
 
 Rechazamos los tres defaults genéricos que detecta `frontend-design`:
+
 - (1) crema + terracota: demasiado "cafetería de barrio"
 - (2) negro + verde ácido: demasiado "startup fintech"
 - (3) broadsheet periodístico: demasiado "diario local"
@@ -40,20 +41,20 @@ El club es **agua**, no tierra, no digital, no papel.
 
 ## Paleta (propuesta)
 
-| Token | Hex | Uso |
-|-------|-----|-----|
+| Token          | Hex       | Uso                               |
+| -------------- | --------- | --------------------------------- |
 | `--brand-deep` | `#0A2E5C` | Cabecera, topbar, texto principal |
-| `--brand-blue` | `#1E5AA8` | Botones primarios, links, foco |
-| `--brand-aqua` | `#3FBAC2` | Acento secundario, badges, info |
-| `--brand-foam` | `#E8F4F8` | Fondo de tarjetas, hover suave |
-| `--ink-900` | `#0F172A` | Texto principal sobre fondo claro |
-| `--ink-600` | `#475569` | Texto secundario, metadata |
-| `--ink-300` | `#CBD5E1` | Bordes, separadores |
-| `--paper` | `#FAFCFE` | Fondo de la app |
-| `--action` | `#FF6B35` | CTA principal, "gol", "confirmar" |
-| `--success` | `#10B981` | Confirmado, asistencia, pagado |
-| `--warning` | `#F59E0B` | Pendiente, espera |
-| `--danger` | `#EF4444` | Cancelado, exclusión, error |
+| `--brand-blue` | `#1E5AA8` | Botones primarios, links, foco    |
+| `--brand-aqua` | `#3FBAC2` | Acento secundario, badges, info   |
+| `--brand-foam` | `#E8F4F8` | Fondo de tarjetas, hover suave    |
+| `--ink-900`    | `#0F172A` | Texto principal sobre fondo claro |
+| `--ink-600`    | `#475569` | Texto secundario, metadata        |
+| `--ink-300`    | `#CBD5E1` | Bordes, separadores               |
+| `--paper`      | `#FAFCFE` | Fondo de la app                   |
+| `--action`     | `#FF6B35` | CTA principal, "gol", "confirmar" |
+| `--success`    | `#10B981` | Confirmado, asistencia, pagado    |
+| `--warning`    | `#F59E0B` | Pendiente, espera                 |
+| `--danger`     | `#EF4444` | Cancelado, exclusión, error       |
 
 Esta paleta está alineada con el SRS ("azules agua, fondos blancos, contrastes en gris oscuro") y añade dos acentos cálidos (naranja de acción, verde de confirmación) para la gamificación.
 
@@ -67,27 +68,29 @@ Ambas son open source y se sirven por `next/font` con `display: swap` y `preload
 
 ## Escala tipográfica (mobile-first)
 
-| Token | px | Uso |
-|-------|----|----|
-| `text-xs` | 12 | Etiquetas, captions |
-| `text-sm` | 14 | Metadata |
-| `text-base` | 16 | Body |
-| `text-lg` | 18 | Lead, subtítulos |
-| `text-xl` | 20 | Card title |
-| `text-2xl` | 24 | Section title |
-| `text-3xl` | 30 | Hero number (goles, ranking) |
-| `text-4xl` | 36 | Gorro en acta, número grande |
+| Token       | px  | Uso                          |
+| ----------- | --- | ---------------------------- |
+| `text-xs`   | 12  | Etiquetas, captions          |
+| `text-sm`   | 14  | Metadata                     |
+| `text-base` | 16  | Body                         |
+| `text-lg`   | 18  | Lead, subtítulos             |
+| `text-xl`   | 20  | Card title                   |
+| `text-2xl`  | 24  | Section title                |
+| `text-3xl`  | 30  | Hero number (goles, ranking) |
+| `text-4xl`  | 36  | Gorro en acta, número grande |
 
 Tamaños base para touch: 16px mínimo en input para evitar zoom en iOS.
 
 ## Layout signature: "gorro + ola"
 
 La **ola horizontal** es el leitmotiv visual. Aparece en:
+
 - Cabecera de tarjetas de partido: una banda inferior ondulada con el color de equipo.
 - Separador entre secciones del dashboard.
 - Empty states: una ola con texto motivador.
 
 El **gorro de waterpolo** es el segundo leitmotiv, en forma de pictograma plano usado para identificar:
+
 - El dorsal de un jugador en la convocatoria.
 - La insignia de equipo en el escudo.
 - El icono de "resultado" en el acta.

@@ -1294,6 +1294,128 @@ export type Database = {
           },
         ];
       };
+      access_requests: {
+        Row: {
+          id: string;
+          email: string;
+          full_name: string;
+          role: string;
+          birth_year: number | null;
+          gender: Database["public"]["Enums"]["gender"] | null;
+          relation: Database["public"]["Enums"]["parent_relation"] | null;
+          status: string;
+          candidate_profile_id: string | null;
+          approved_by_profile_id: string | null;
+          approved_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          full_name: string;
+          role: string;
+          birth_year?: number | null;
+          gender?: Database["public"]["Enums"]["gender"] | null;
+          relation?: Database["public"]["Enums"]["parent_relation"] | null;
+          status?: string;
+          candidate_profile_id?: string | null;
+          approved_by_profile_id?: string | null;
+          approved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          full_name?: string;
+          role?: string;
+          birth_year?: number | null;
+          gender?: Database["public"]["Enums"]["gender"] | null;
+          relation?: Database["public"]["Enums"]["parent_relation"] | null;
+          status?: string;
+          candidate_profile_id?: string | null;
+          approved_by_profile_id?: string | null;
+          approved_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "access_requests_candidate_profile_id_fkey";
+            columns: ["candidate_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "access_requests_approved_by_profile_id_fkey";
+            columns: ["approved_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      access_request_children: {
+        Row: {
+          request_id: string;
+          child_profile_id: string;
+        };
+        Insert: {
+          request_id: string;
+          child_profile_id: string;
+        };
+        Update: {
+          request_id?: string;
+          child_profile_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "access_request_children_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "access_requests";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "access_request_children_child_profile_id_fkey";
+            columns: ["child_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      app_settings: {
+        Row: {
+          key: string;
+          value: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          key: string;
+          value: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          key?: string;
+          value?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "app_settings_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       swap_current_season: {
@@ -1303,6 +1425,10 @@ export type Database = {
       archive_expired_news: {
         Args: Record<PropertyKey, never>;
         Returns: number;
+      };
+      get_auth_user_id_by_email: {
+        Args: { p_email: string };
+        Returns: string;
       };
     };
     Enums: {

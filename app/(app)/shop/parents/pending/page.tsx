@@ -28,40 +28,36 @@ export default async function ParentPendingPage() {
       <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
         <Link
           href={"/shop" as Route}
-          className="inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
         >
           <ShoppingCart className="h-3 w-3" />
           Tienda
         </Link>
         <header className="flex items-center gap-2">
-          <Inbox className="h-6 w-6 text-pool-deep" aria-hidden="true" />
+          <Inbox className="text-pool-deep h-6 w-6" aria-hidden="true" />
           <div>
             <Eyebrow>Solicitudes pendientes</Eyebrow>
-            <h1 className="font-display text-2xl font-extrabold text-pool-deep">
-              Aprobar compras
-            </h1>
+            <h1 className="font-display text-pool-deep text-2xl font-extrabold">Aprobar compras</h1>
           </div>
         </header>
-        <p className="text-sm text-ink-600">
+        <p className="text-ink-600 text-sm">
           Tu hijo/a quiere comprar algo. Revisa y aprueba o rechaza.
         </p>
 
         {orders.length === 0 ? (
-          <div className="rounded-md border border-dashed border-ink-300 bg-paper-card p-6 text-center">
-            <Inbox className="mx-auto h-8 w-8 text-ink-300" aria-hidden="true" />
-            <p className="mt-2 text-sm text-ink-600">
-              No hay solicitudes pendientes.
-            </p>
+          <div className="border-ink-300 bg-paper-card rounded-md border border-dashed p-6 text-center">
+            <Inbox className="text-ink-300 mx-auto h-8 w-8" aria-hidden="true" />
+            <p className="text-ink-600 mt-2 text-sm">No hay solicitudes pendientes.</p>
           </div>
         ) : (
           <ul className="flex flex-col gap-2.5">
             {orders.map((o) => (
               <li
                 key={o.id}
-                className="rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
+                className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-3"
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+                  <span className="text-eyebrow text-ink-600">
                     {o.requested_by_name ?? "Tu hijo/a"} ·{" "}
                     {new Date(o.requested_at).toLocaleDateString("es-ES", {
                       day: "numeric",
@@ -69,7 +65,7 @@ export default async function ParentPendingPage() {
                     })}
                   </span>
                   <span
-                    className="inline-flex h-5 items-center rounded-full px-2 text-[10px] font-extrabold uppercase tracking-wider"
+                    className="inline-flex h-5 items-center rounded-full px-2 text-[10px] font-extrabold tracking-wider uppercase"
                     style={{
                       backgroundColor: "var(--warning)20",
                       color: "var(--warning)",
@@ -78,24 +74,19 @@ export default async function ParentPendingPage() {
                     {SHOP_ORDER_STATUS_LABELS[o.status]}
                   </span>
                 </div>
-                <p className="mt-1 font-mono text-2xl font-extrabold text-pool-deep">
+                <p className="text-pool-deep mt-1 font-mono text-2xl font-extrabold">
                   {formatCents(o.total_cents, o.currency)}
                 </p>
-                <ul className="mt-1 text-[11px] text-ink-600">
+                <ul className="text-ink-600 mt-1 text-[11px]">
                   {o.items.map((i) => (
-                    <li
-                      key={i.id}
-                      className="line-clamp-1"
-                    >
+                    <li key={i.id} className="line-clamp-1">
                       · {i.quantity} × {i.product_title}
                       {i.size ? ` (${i.size})` : ""}
                     </li>
                   ))}
                 </ul>
                 {o.notes ? (
-                  <p className="mt-2 text-[11px] italic text-ink-700">
-                    “{o.notes}”
-                  </p>
+                  <p className="text-ink-700 mt-2 text-[11px] italic">“{o.notes}”</p>
                 ) : null}
                 <ParentDecisionForm orderId={o.id} />
               </li>

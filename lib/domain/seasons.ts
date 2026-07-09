@@ -26,11 +26,7 @@ export function inferSeasonForDate(date: Date): Season {
   return { label: formatSeasonLabel(start, end), start, end };
 }
 
-export function seasonContainsDate(
-  seasonStart: Date,
-  seasonEnd: Date,
-  date: Date,
-): boolean {
+export function seasonContainsDate(seasonStart: Date, seasonEnd: Date, date: Date): boolean {
   const t = date.getTime();
   return t >= seasonStart.getTime() && t <= seasonEnd.getTime();
 }

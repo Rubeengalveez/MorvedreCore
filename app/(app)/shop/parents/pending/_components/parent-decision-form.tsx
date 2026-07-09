@@ -33,7 +33,7 @@ export function ParentDecisionForm({ orderId }: ParentDecisionFormProps) {
       {error ? (
         <div
           role="alert"
-          className="mb-2 rounded border border-goggle-red/30 bg-goggle-red/5 px-2 py-1 text-[11px] font-bold text-goggle-red"
+          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red mb-2 rounded border px-2 py-1 text-[11px] font-bold"
         >
           {error}
         </div>

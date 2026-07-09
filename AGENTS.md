@@ -9,6 +9,7 @@
 150-250 personas en el club (jugadores desde Benjamín hasta Absoluto + padres + staff + directiva). El usuario (Rubén / `galvillo9@gmail.com`) es admin total, entrenador de Cadete B y Juvenil, y jugador. **El club nunca usó Cluber**: la app se construye desde cero con objetivo de coste 0 y autosuficiencia tecnológica.
 
 **Particularidades del club** (ver `00-decisions-log.md`):
+
 - 3 entrenadores: Vega (Benjamín), Vitaliy (Alevín, Infantil, Cadete A, Absoluto), Rubén (Cadete B, Juvenil).
 - 7 equipos competitivos + 1 "Escuela" especial (3 niños, 2 días/semana, 100€/temporada, sin partidos).
 - Estructura directiva: 3 "deportivos" + Eva (secretaria) + Mónica (tesorera) + Sol (tienda). No hay presidente.
@@ -38,6 +39,7 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 **Fase 5 — Tienda. COMPLETADA, compilando, validada, push a `main`.** Ver `docs/planning/20-phase-5-summary.md` para el detalle.
 
 Pendiente para probar en el cloud:
+
 - Aplicar la migración `0028_shop.sql` en el SQL Editor de Supabase
 - Login con `galvillo9@gmail.com` / `Morvedre2026!`
 - Ir a `/admin/shop` y crear un producto de prueba
@@ -49,6 +51,7 @@ Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de c
 ### Lo que ya está implementado (Fase 0 + 1 + 2)
 
 **Fase 0:**
+
 - Scaffold Next.js 16 + TS strict + Tailwind v4
 - Diseño system con tokens del club + 12 pictogramas custom
 - Componentes UI base + AppShell con bottom nav
@@ -56,6 +59,7 @@ Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de c
 - PWA: manifest, service worker, iconos
 
 **Fase 1:**
+
 - 8 migraciones + seed con 3 temporadas
 - Panel admin completo (6 secciones)
 - Vistas públicas: /team, /team/[id], dashboard
@@ -63,12 +67,13 @@ Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de c
 - Import desde Excel
 
 **Fase 2:**
+
 - 8 migraciones (training_blocks, training_sessions, training_attendance, matches, match_availability, match_callups, match_stats, notifications)
 - 5 funciones de dominio (training, callups, stats, attendance, calendar)
 - Server actions: training (8), matches (11), availability (2), notifications (3)
 - Panel: /admin/trainings + /admin/matches (con convocatoria sugerida)
 - Vistas: /calendar (month view), /matches/[id] (con RSVP), /profile (con disponibilidad), /notifications (buzón)
-- Bottom nav 5 tabs: Inicio, Calendario, Equipo, Tienda, Yo
+- Bottom nav 5 tabs: Inicio, Calendario, Rankings, Equipo, Tienda. Top bar: Noticias (megáfono), Admin (priv.), Notificaciones, Perfil/avatar.
 
 ### Decisiones cerradas (ver `docs/planning/00-decisions-log.md`)
 
@@ -140,3 +145,8 @@ Próxima fase: **Fase 6 — Tesorería** (conceptos tarifarios, generación de c
 - **Sobre estilo visual**: `06-visual-identity.md`, `10-design-direction.md` y `18-visual-identity-v2.md` (la versión evolucionada con los tokens y componentes identitarios aplicados en Fase 3).
 - **Sobre la estructura de una fase**: `12-phase-0-summary.md`, `15-phase-1-summary.md` o `17-phase-2-summary.md`.
 - **Sobre errores a evitar**: `13-lessons-learned.md`.
+- **Sobre el login con Google (cuando falla con 400)**: `docs/auth-setup-google.md` y `node scripts/check-auth-config.mjs` para diagnóstico automático.
+
+## Scripts utiles
+
+- `node scripts/check-auth-config.mjs` — diagnostica si Google OAuth esta bien configurado en Supabase (providers habilitados, redirect URLs, etc).

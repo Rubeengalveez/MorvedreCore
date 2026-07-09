@@ -32,10 +32,7 @@ export default async function NewAdminNewsPage() {
     .maybeSingle();
   if (!adminRole) redirect("/dashboard");
 
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id, label")
-    .order("label");
+  const { data: teams } = await supabase.from("teams").select("id, label").order("label");
   const teamOptions: TeamOption[] = (teams ?? []).map((t) => ({
     id: (t as { id: string }).id,
     label: (t as { label: string }).label,
@@ -72,7 +69,7 @@ export default async function NewAdminNewsPage() {
       <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
         <Link
           href={"/admin/news" as Route}
-          className="inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
         >
           <ArrowLeft className="h-3 w-3" />
           Noticias
@@ -80,17 +77,11 @@ export default async function NewAdminNewsPage() {
         <header className="flex items-center gap-2">
           <PictogramBadge pictogram={Megaphone} color="var(--pool-deep)" size="md" />
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-pool-deep">
-              Nueva noticia
-            </h1>
-            <p className="text-xs text-ink-600">Publica en el tablón del club.</p>
+            <h1 className="font-display text-pool-deep text-2xl font-extrabold">Nueva noticia</h1>
+            <p className="text-ink-600 text-xs">Publica en el tablón del club.</p>
           </div>
         </header>
-        <NewsEditor
-          mode="create"
-          teams={teamOptions}
-          onSubmit={handleSubmit}
-        />
+        <NewsEditor mode="create" teams={teamOptions} onSubmit={handleSubmit} />
       </div>
     </div>
   );

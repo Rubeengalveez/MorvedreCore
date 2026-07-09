@@ -15,15 +15,7 @@ const MONTHS_ES = [
 
 const WEEKDAYS_SHORT = ["L", "M", "X", "J", "V", "S", "D"];
 
-const WEEKDAYS_LONG = [
-  "Lunes",
-  "Martes",
-  "Miércoles",
-  "Jueves",
-  "Viernes",
-  "Sábado",
-  "Domingo",
-];
+const WEEKDAYS_LONG = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
 export interface YearMonth {
   year: number;
@@ -80,7 +72,6 @@ export function weekdayMonFirst(date: Date): number {
 export function getMonthCells(year: number, month: number): MonthCell[] {
   const firstOfMonth = new Date(year, month, 1);
   const firstWeekday = weekdayMonFirst(firstOfMonth);
-  const total = daysInMonth(year, month);
 
   const start = new Date(year, month, 1 - (firstWeekday - 1));
   const cells: MonthCell[] = [];
@@ -96,7 +87,6 @@ export function getMonthCells(year: number, month: number): MonthCell[] {
       date: d,
     });
   }
-  void total;
   return cells;
 }
 
@@ -147,6 +137,49 @@ export function timeAgo(iso: string, now: Date = new Date()): string {
   if (diffMo < 12) return `hace ${diffMo} mes${diffMo === 1 ? "" : "es"}`;
   const diffY = Math.floor(diffD / 365);
   return `hace ${diffY} año${diffY === 1 ? "" : "s"}`;
+}
+
+export function formatRelativeIso(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return "—";
+  const diffMs = then.getTime() - now.getTime();
+  const abs = Math.abs(diffMs);
+  const min = 60 * 1000;
+  const hr = 60 * min;
+  const day = 24 * hr;
+  if (abs < min) return "ahora mismo";
+  if (abs < hr) return Math.round(abs / min) + " min";
+  if (abs < day) return Math.round(abs / hr) + " h";
+  if (abs < 7 * day) return Math.round(abs / day) + " d";
+  return then.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+}
+
+export function formatRelativeUpcoming(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return "—";
+  const diffMs = then.getTime() - now.getTime();
+  const diffH = Math.round(diffMs / (60 * 60 * 1000));
+  if (diffH < 0) return "hace " + Math.abs(diffH) + "h";
+  if (diffH < 1) return "ahora";
+  if (diffH < 24) return "en " + diffH + "h";
+  const diffD = Math.round(diffH / 24);
+  if (diffD < 7) return "en " + diffD + "d";
+  return "en " + Math.round(diffD / 7) + "sem";
+}
+
+export function formatShortRelative(iso: string, now: Date = new Date()): string {
+  const then = new Date(iso);
+  if (Number.isNaN(then.getTime())) return "—";
+  const dayMs = 24 * 60 * 60 * 1000;
+  const diff = Math.round((then.getTime() - now.getTime()) / dayMs);
+  if (diff === 0) return "hoy";
+  if (diff === 1) return "mañana";
+  if (diff > 1 && diff < 7) return "en " + diff + " días";
+  return then.toLocaleDateString("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
 }
 
 export function isSameLocalDay(a: Date, b: Date): boolean {

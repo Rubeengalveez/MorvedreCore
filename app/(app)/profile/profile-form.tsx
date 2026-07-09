@@ -21,10 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  updateProfile,
-  type UpdateProfileState,
-} from "@/server/actions/profile";
+import { updateProfile, type UpdateProfileState } from "@/server/actions/profile";
 import type { Tables } from "@/types/database";
 
 const yearPattern = /^\d{4}$/;
@@ -34,11 +31,7 @@ const urlPattern = /^https?:\/\/.+/;
 const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const profileFormSchema = z.object({
-  full_name: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres.")
-    .max(100, "Máximo 100 caracteres."),
+  full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
   photo_url: z
     .string()
     .trim()
@@ -49,11 +42,7 @@ const profileFormSchema = z.object({
     .trim()
     .optional()
     .refine(
-      (v) =>
-        !v ||
-        (yearPattern.test(v) &&
-          Number(v) >= 1900 &&
-          Number(v) <= 2100),
+      (v) => !v || (yearPattern.test(v) && Number(v) >= 1900 && Number(v) <= 2100),
       "Año entre 1900 y 2100.",
     ),
   cap_number: z
@@ -61,9 +50,7 @@ const profileFormSchema = z.object({
     .trim()
     .optional()
     .refine(
-      (v) =>
-        !v ||
-        (dorsalPattern.test(v) && Number(v) >= 0 && Number(v) <= 99),
+      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 0 && Number(v) <= 99),
       "Dorsal entre 0 y 99.",
     ),
   phone_e164: z
@@ -76,11 +63,7 @@ const profileFormSchema = z.object({
     .trim()
     .optional()
     .refine((v) => !v || emailPattern.test(v), "Email inválido."),
-  notes: z
-    .string()
-    .trim()
-    .max(1000, "Máximo 1000 caracteres.")
-    .optional(),
+  notes: z.string().trim().max(1000, "Máximo 1000 caracteres.").optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -89,9 +72,7 @@ function SubmitButton() {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="lg" className="w-full" disabled={pending}>
-      {pending ? (
-        <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-      ) : null}
+      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
       {pending ? "Guardando..." : "Guardar"}
     </Button>
   );
@@ -102,10 +83,7 @@ export interface ProfileFormProps {
 }
 
 export function ProfileForm({ profile }: ProfileFormProps) {
-  const [state, formAction] = useActionState<UpdateProfileState, FormData>(
-    updateProfile,
-    null,
-  );
+  const [state, formAction] = useActionState<UpdateProfileState, FormData>(updateProfile, null);
   const [, startTransition] = useTransition();
 
   const form = useForm<ProfileFormValues>({
@@ -322,12 +300,10 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                   onBlur={field.onBlur}
                   name={field.name}
                   ref={field.ref}
-                  className="flex w-full rounded border border-ink-300 bg-paper px-4 py-3 text-base text-ink-900 placeholder:text-ink-600/70 transition-colors focus-visible:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                  className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-brand-blue focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                 />
               </FormControl>
-              <FormDescription>
-                Solo tú verás este texto. Máx. 1000 caracteres.
-              </FormDescription>
+              <FormDescription>Solo tú verás este texto. Máx. 1000 caracteres.</FormDescription>
               <FormMessage />
             </FormItem>
           )}
@@ -337,7 +313,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           <SubmitButton />
           <Link
             href={"/profile" as Route}
-            className="text-center text-sm font-semibold text-brand-blue hover:underline focus-visible:underline focus-visible:outline-none"
+            className="text-brand-blue text-center text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
           >
             Volver a mi perfil
           </Link>

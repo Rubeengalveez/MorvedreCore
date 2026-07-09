@@ -170,10 +170,10 @@ describe("computeRanking", () => {
 
 describe("findMyPosition", () => {
   it("returns null when the player is not in the ranking", () => {
-    const ranking = computeRanking(
-      [makePlayer({ player_id: "p-1", goals: 5 })],
-      { metric: "goals", scope: { kind: "all" } },
-    );
+    const ranking = computeRanking([makePlayer({ player_id: "p-1", goals: 5 })], {
+      metric: "goals",
+      scope: { kind: "all" },
+    });
     expect(findMyPosition(ranking, "nope")).toBeNull();
   });
 
@@ -196,10 +196,7 @@ describe("findMyPosition", () => {
 
   it("returns null delta_to_next for the leader", () => {
     const ranking = computeRanking(
-      [
-        makePlayer({ player_id: "p-1", goals: 10 }),
-        makePlayer({ player_id: "p-2", goals: 5 }),
-      ],
+      [makePlayer({ player_id: "p-1", goals: 10 }), makePlayer({ player_id: "p-2", goals: 5 })],
       { metric: "goals", scope: { kind: "all" } },
     );
     const info = findMyPosition(ranking, "p-1");
@@ -209,10 +206,7 @@ describe("findMyPosition", () => {
 
   it("returns null delta_to_prev for the last player", () => {
     const ranking = computeRanking(
-      [
-        makePlayer({ player_id: "p-1", goals: 10 }),
-        makePlayer({ player_id: "p-2", goals: 5 }),
-      ],
+      [makePlayer({ player_id: "p-1", goals: 10 }), makePlayer({ player_id: "p-2", goals: 5 })],
       { metric: "goals", scope: { kind: "all" } },
     );
     const info = findMyPosition(ranking, "p-2");

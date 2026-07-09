@@ -121,8 +121,7 @@ export function computePlayerStats(
   );
   const trainings_attended = playerAttendance.filter((a) => a.present).length;
   const trainings_total = playerTeamSessions.length;
-  const attendance_pct =
-    trainings_total > 0 ? (trainings_attended / trainings_total) * 100 : 0;
+  const attendance_pct = trainings_total > 0 ? (trainings_attended / trainings_total) * 100 : 0;
 
   const sessionAttendanceById = new Map<string, boolean>();
   for (const a of playerAttendance) {

@@ -8,8 +8,8 @@ import type { Database } from "@/types/database";
 
 const HAS_ENV = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -46,10 +46,7 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-async function createAuthUser(
-  client: SupabaseClient<Database>,
-  email: string,
-): Promise<string> {
+async function createAuthUser(client: SupabaseClient<Database>, email: string): Promise<string> {
   const { data, error } = await client.auth.admin.createUser({
     email,
     password: PASSWORD,
@@ -61,10 +58,7 @@ async function createAuthUser(
   return data.user.id;
 }
 
-async function deleteAuthUser(
-  client: SupabaseClient<Database>,
-  userId: string,
-): Promise<void> {
+async function deleteAuthUser(client: SupabaseClient<Database>, userId: string): Promise<void> {
   await client.auth.admin.deleteUser(userId);
 }
 
@@ -87,8 +81,8 @@ async function cleanupTestData(): Promise<void> {
     await admin.from("seasons").delete().eq("id", testSeasonId);
   }
 
-  const profileIds = [coachProfileId, delegateProfileId, playerProfileId].filter(
-    (x): x is string => Boolean(x),
+  const profileIds = [coachProfileId, delegateProfileId, playerProfileId].filter((x): x is string =>
+    Boolean(x),
   );
   if (profileIds.length > 0) {
     await admin.from("user_roles").delete().in("profile_id", profileIds);
@@ -114,10 +108,7 @@ describe.skipIf(!HAS_ENV)("Challenger Tests (integration)", () => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    coachAuthUserId = await createAuthUser(
-      admin,
-      `${TEST_PREFIX.toLowerCase()}-coach@test.local`,
-    );
+    coachAuthUserId = await createAuthUser(admin, `${TEST_PREFIX.toLowerCase()}-coach@test.local`);
     delegateAuthUserId = await createAuthUser(
       admin,
       `${TEST_PREFIX.toLowerCase()}-delegate@test.local`,

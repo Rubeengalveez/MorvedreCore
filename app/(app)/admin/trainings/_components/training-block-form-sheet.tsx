@@ -52,14 +52,8 @@ const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
 
 const formSchema = z.object({
   team_id: z.string().uuid("Selecciona un equipo."),
-  label: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres.")
-    .max(100, "Máximo 100 caracteres."),
-  weekdays: z
-    .array(z.number().int().min(1).max(7))
-    .min(1, "Selecciona al menos un día."),
+  label: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
+  weekdays: z.array(z.number().int().min(1).max(7)).min(1, "Selecciona al menos un día."),
   start_date: z.string().min(1, "Fecha de inicio obligatoria."),
   end_date: z.string().min(1, "Fecha de fin obligatoria."),
   start_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora de inicio inválida."),
@@ -77,15 +71,10 @@ type ActionState =
 
 type TeamOption = Team & { season_label: string };
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const weekdaysRaw = formData.getAll("weekdays").map((v) => Number(v));
-    const weekdays = weekdaysRaw.filter(
-      (n) => Number.isInteger(n) && n >= 1 && n <= 7,
-    );
+    const weekdays = weekdaysRaw.filter((n) => Number.isInteger(n) && n >= 1 && n <= 7);
     const block = await createTrainingBlock({
       team_id: String(formData.get("team_id") ?? ""),
       label: String(formData.get("label") ?? ""),
@@ -119,13 +108,7 @@ function SubmitButton({ label }: { label: string }) {
   );
 }
 
-function WeekdaysField({
-  value,
-  onChange,
-}: {
-  value: number[];
-  onChange: (v: number[]) => void;
-}) {
+function WeekdaysField({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
   function toggle(day: number) {
     if (value.includes(day)) {
       onChange(value.filter((v) => v !== day));
@@ -134,11 +117,7 @@ function WeekdaysField({
     }
   }
   return (
-    <div
-      role="group"
-      aria-label="Días de la semana"
-      className="flex flex-wrap gap-2"
-    >
+    <div role="group" aria-label="Días de la semana" className="flex flex-wrap gap-2">
       {WEEKDAYS.map((d) => {
         const active = value.includes(d);
         return (
@@ -148,7 +127,7 @@ function WeekdaysField({
             onClick={() => toggle(d)}
             aria-pressed={active}
             className={cn(
-              "inline-flex h-12 w-12 min-h-12 items-center justify-center rounded border font-display text-base font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+              "font-display focus-visible:ring-brand-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
               active
                 ? "border-brand-blue bg-brand-blue text-paper"
                 : "border-ink-300 bg-paper text-ink-600 hover:border-brand-blue hover:text-brand-deep",
@@ -179,15 +158,11 @@ export function TrainingBlockFormSheet({
   initial,
 }: TrainingBlockFormSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
   const isEdit = initial != null;
 
-  const initialTeamId =
-    initial?.team_id ?? defaultTeamId ?? teams[0]?.id ?? "";
+  const initialTeamId = initial?.team_id ?? defaultTeamId ?? teams[0]?.id ?? "";
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -237,12 +212,10 @@ export function TrainingBlockFormSheet({
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent size="lg">
         <SheetHeader>
-          <SheetTitle>
-            {isEdit ? "Editar bloque" : "Nuevo bloque de entrenamientos"}
-          </SheetTitle>
+          <SheetTitle>{isEdit ? "Editar bloque" : "Nuevo bloque de entrenamientos"}</SheetTitle>
           <SheetDescription>
-            Define los días, horario y lugar. Al guardar, se generarán las
-            sesiones correspondientes.
+            Define los días, horario y lugar. Al guardar, se generarán las sesiones
+            correspondientes.
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
@@ -275,9 +248,7 @@ export function TrainingBlockFormSheet({
                         disabled={isEdit}
                       >
                         {seasons.map((s) => {
-                          const seasonTeams = teams.filter(
-                            (t) => t.season_id === s.id,
-                          );
+                          const seasonTeams = teams.filter((t) => t.season_id === s.id);
                           if (seasonTeams.length === 0) return null;
                           return (
                             <optgroup
@@ -327,14 +298,9 @@ export function TrainingBlockFormSheet({
                   <FormItem>
                     <FormLabel>Días de la semana</FormLabel>
                     <FormControl>
-                      <WeekdaysField
-                        value={field.value}
-                        onChange={field.onChange}
-                      />
+                      <WeekdaysField value={field.value} onChange={field.onChange} />
                     </FormControl>
-                    <FormDescription>
-                      Toca los días que se entrena en este bloque.
-                    </FormDescription>
+                    <FormDescription>Toca los días que se entrena en este bloque.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -476,9 +442,7 @@ export function TrainingBlockFormSheet({
           </Form>
         </SheetBody>
         <SheetFooter>
-          <SubmitButton
-            label={isEdit ? "Guardar cambios" : "Crear y generar sesiones"}
-          />
+          <SubmitButton label={isEdit ? "Guardar cambios" : "Crear y generar sesiones"} />
         </SheetFooter>
       </SheetContent>
     </Sheet>

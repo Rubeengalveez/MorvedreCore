@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { MdSearch } from "react-icons/md";
 
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
@@ -32,9 +32,7 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
     const q = search.toLowerCase().trim();
     if (!q) return base;
     return base.filter(
-      (t) =>
-        t.label.toLowerCase().includes(q) ||
-        (t.coachName ?? "").toLowerCase().includes(q),
+      (t) => t.label.toLowerCase().includes(q) || (t.coachName ?? "").toLowerCase().includes(q),
     );
   }, [teamsBySeason, filter, search]);
 
@@ -42,17 +40,10 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
         <div className="flex flex-1 flex-col gap-1.5">
-          <label
-            htmlFor="season-filter"
-            className="text-eyebrow text-ink-600"
-          >
+          <label htmlFor="season-filter" className="text-eyebrow text-ink-600">
             Temporada
           </label>
-          <Select
-            id="season-filter"
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-          >
+          <Select id="season-filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
             {seasons.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.label}
@@ -63,15 +54,12 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
           </Select>
         </div>
         <div className="flex flex-1 flex-col gap-1.5">
-          <label
-            htmlFor="team-search"
-            className="text-eyebrow text-ink-600"
-          >
+          <label htmlFor="team-search" className="text-eyebrow text-ink-600">
             Buscar
           </label>
           <div className="relative">
-            <Search
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-600"
+            <MdSearch
+              className="text-ink-600 pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2"
               aria-hidden="true"
             />
             <Input
@@ -87,16 +75,12 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
       </div>
 
       {teams.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-ink-300 bg-paper-card p-6 text-center">
-          <PictogramBadge
-            pictogram={Equipo}
-            color="var(--pool-blue)"
-            size="lg"
-          />
-          <p className="font-display text-base font-extrabold text-pool-deep">
+        <div className="border-ink-300 bg-paper-card flex flex-col items-center gap-3 rounded-md border border-dashed p-6 text-center">
+          <PictogramBadge pictogram={Equipo} color="var(--pool-blue)" size="lg" />
+          <p className="font-display text-pool-deep text-base font-extrabold">
             No hay equipos en esta temporada.
           </p>
-          <p className="max-w-sm text-sm text-ink-600">
+          <p className="text-ink-600 max-w-sm text-sm">
             Crea el primer equipo para empezar a asignar jugadores.
           </p>
         </div>
@@ -107,7 +91,7 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
               <a
                 href={`/admin/teams/${t.id}`}
                 data-team-card={t.id}
-                className="group flex h-full flex-col overflow-hidden rounded-md border border-ink-300 bg-paper-card shadow-elev-1 transition-all hover:border-pool-blue hover:shadow-elev-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+                className="group border-ink-300 bg-paper-card shadow-elev-1 hover:border-pool-blue hover:shadow-elev-3 focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex h-full flex-col overflow-hidden rounded-md border transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
               >
                 <div
                   aria-hidden="true"
@@ -116,42 +100,36 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
                 />
                 <div className="flex flex-1 flex-col gap-3 p-4">
                   <div className="flex items-start gap-3">
-                    <PictogramBadge
-                      pictogram={Equipo}
-                      color={t.color}
-                      size="md"
-                    />
+                    <PictogramBadge pictogram={Equipo} color={t.color} size="md" />
                     <div className="flex min-w-0 flex-1 flex-col">
-                      <h3 className="line-clamp-2 font-display text-lg font-extrabold leading-tight text-pool-deep">
+                      <h3 className="font-display text-pool-deep line-clamp-2 text-lg leading-tight font-extrabold">
                         {t.label}
                       </h3>
-                      <span className="text-eyebrow text-ink-600">
-                        {t.categoryLabel}
-                      </span>
+                      <span className="text-eyebrow text-ink-600">{t.categoryLabel}</span>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <span className="inline-flex h-6 items-center rounded-sm border border-ink-300 bg-paper-card px-2 text-eyebrow text-ink-700">
+                    <span className="border-ink-300 bg-paper-card text-eyebrow text-ink-700 inline-flex h-6 items-center rounded-sm border px-2">
                       {t.genderLabel}
                     </span>
                     {t.team_type === "school" ? (
-                      <span className="inline-flex h-6 items-center rounded-sm bg-pool-foam px-2 text-eyebrow text-pool-deep">
+                      <span className="bg-pool-foam text-eyebrow text-pool-deep inline-flex h-6 items-center rounded-sm px-2">
                         Escuela
                       </span>
                     ) : null}
-                    <span className="inline-flex h-6 items-center rounded-sm bg-ink-300/30 px-2 text-eyebrow text-ink-900">
+                    <span className="bg-ink-300/30 text-eyebrow text-ink-900 inline-flex h-6 items-center rounded-sm px-2">
                       <span className="text-mono-num">{t.playerCount}</span>
-                      <span className="ml-1 normal-case tracking-flat text-ink-600">
-                        jugadores
-                      </span>
+                      <span className="tracking-flat text-ink-600 ml-1 normal-case">jugadores</span>
                     </span>
                   </div>
-                  <div className="border-t border-ink-300 pt-3 text-xs text-ink-600">
-                    <Eyebrow as="span" className="text-ink-400">Entrenador</Eyebrow>
+                  <div className="border-ink-300 text-ink-600 border-t pt-3 text-xs">
+                    <Eyebrow as="span" className="text-ink-400">
+                      Entrenador
+                    </Eyebrow>
                     <p
                       className={
                         "mt-0.5 font-semibold" +
-                        (t.coachName ? " text-pool-deep" : " italic text-ink-600")
+                        (t.coachName ? " text-pool-deep" : " text-ink-600 italic")
                       }
                     >
                       {t.coachName ?? "Sin asignar"}

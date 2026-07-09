@@ -30,7 +30,7 @@ export function PictogramBadge({
       data-pictogram-badge
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full text-paper",
+        "text-paper inline-flex shrink-0 items-center justify-center rounded-full",
         s.wrap,
         className,
       )}

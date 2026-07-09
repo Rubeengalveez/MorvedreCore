@@ -201,38 +201,42 @@ export async function getDashboardData(input: {
         category_code: string;
         color: string;
       };
-      const [{ count: playerCount }, { data: coachRow }, { data: nextTrainingRow }, { data: nextMatchRow }] =
-        await Promise.all([
-          admin
-            .from("team_rosters")
-            .select("id", { count: "exact", head: true })
-            .eq("team_id", firstTeamId)
-            .is("left_at", null),
-          admin
-            .from("team_staff")
-            .select("profiles!team_staff_profile_id_fkey(full_name)")
-            .eq("team_id", firstTeamId)
-            .eq("role", "head_coach")
-            .maybeSingle(),
-          admin
-            .from("training_sessions")
-            .select("scheduled_at")
-            .eq("team_id", firstTeamId)
-            .eq("cancelled", false)
-            .gte("scheduled_at", now.toISOString())
-            .order("scheduled_at", { ascending: true })
-            .limit(1)
-            .maybeSingle(),
-          admin
-            .from("matches")
-            .select("scheduled_at")
-            .eq("team_id", firstTeamId)
-            .in("status", ["scheduled", "in_progress"])
-            .gte("scheduled_at", now.toISOString())
-            .order("scheduled_at", { ascending: true })
-            .limit(1)
-            .maybeSingle(),
-        ]);
+      const [
+        { count: playerCount },
+        { data: coachRow },
+        { data: nextTrainingRow },
+        { data: nextMatchRow },
+      ] = await Promise.all([
+        admin
+          .from("team_rosters")
+          .select("id", { count: "exact", head: true })
+          .eq("team_id", firstTeamId)
+          .is("left_at", null),
+        admin
+          .from("team_staff")
+          .select("profiles!team_staff_profile_id_fkey(full_name)")
+          .eq("team_id", firstTeamId)
+          .eq("role", "head_coach")
+          .maybeSingle(),
+        admin
+          .from("training_sessions")
+          .select("scheduled_at")
+          .eq("team_id", firstTeamId)
+          .eq("cancelled", false)
+          .gte("scheduled_at", now.toISOString())
+          .order("scheduled_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+        admin
+          .from("matches")
+          .select("scheduled_at")
+          .eq("team_id", firstTeamId)
+          .in("status", ["scheduled", "in_progress"])
+          .gte("scheduled_at", now.toISOString())
+          .order("scheduled_at", { ascending: true })
+          .limit(1)
+          .maybeSingle(),
+      ]);
       const coachProfile = Array.isArray(coachRow?.profiles)
         ? coachRow.profiles[0]
         : coachRow?.profiles;
@@ -252,7 +256,9 @@ export async function getDashboardData(input: {
   const recentActivity: DashboardActivity[] = [];
   const { data: recentMatches } = await admin
     .from("matches")
-    .select("id, opponent, scheduled_at, status, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)")
+    .select(
+      "id, opponent, scheduled_at, status, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
+    )
     .in("team_id", teamIds)
     .order("scheduled_at", { ascending: false })
     .limit(5);
@@ -312,7 +318,10 @@ export async function getDashboardData(input: {
       .from("training_sessions")
       .select("id, scheduled_at, team_id, teams!training_sessions_team_id_fkey(label, color)")
       .in("id", sessionIds);
-    const sessionMap = new Map<string, { scheduled_at: string; team_label: string; team_color: string }>();
+    const sessionMap = new Map<
+      string,
+      { scheduled_at: string; team_label: string; team_color: string }
+    >();
     for (const s of sessions ?? []) {
       const sr = s as { id: string; scheduled_at: string; teams: unknown };
       const team = Array.isArray(sr.teams) ? sr.teams[0] : sr.teams;
@@ -344,28 +353,26 @@ export async function getDashboardData(input: {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
 
-  const [matchStatsRes, monthSessionsRes, monthAttendanceRes, allAttendanceRes] = await Promise.all([
-    admin
-      .from("match_stats")
-      .select("goals")
-      .eq("player_id", profileId),
-    admin
-      .from("training_sessions")
-      .select("id, scheduled_at, cancelled")
-      .in("team_id", teamIds)
-      .gte("scheduled_at", monthStart.toISOString())
-      .lt("scheduled_at", monthEnd.toISOString()),
-    admin
-      .from("training_attendance")
-      .select("session_id, present")
-      .eq("player_id", profileId),
-    admin
-      .from("training_attendance")
-      .select("session_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled)")
-      .eq("player_id", profileId)
-      .order("marked_at", { ascending: false })
-      .limit(50),
-  ]);
+  const [matchStatsRes, monthSessionsRes, monthAttendanceRes, allAttendanceRes] = await Promise.all(
+    [
+      admin.from("match_stats").select("goals").eq("player_id", profileId),
+      admin
+        .from("training_sessions")
+        .select("id, scheduled_at, cancelled")
+        .in("team_id", teamIds)
+        .gte("scheduled_at", monthStart.toISOString())
+        .lt("scheduled_at", monthEnd.toISOString()),
+      admin.from("training_attendance").select("session_id, present").eq("player_id", profileId),
+      admin
+        .from("training_attendance")
+        .select(
+          "session_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled)",
+        )
+        .eq("player_id", profileId)
+        .order("marked_at", { ascending: false })
+        .limit(50),
+    ],
+  );
 
   const goals = (matchStatsRes.data ?? []).reduce(
     (acc, row) => acc + ((row as { goals: number }).goals ?? 0),
@@ -385,9 +392,7 @@ export async function getDashboardData(input: {
     (r) => r.present && monthSessionIds.has(r.session_id),
   ).length;
   const monthAttendancePct =
-    monthSessionIds.size > 0
-      ? Math.round((monthAttended / monthSessionIds.size) * 100)
-      : 0;
+    monthSessionIds.size > 0 ? Math.round((monthAttended / monthSessionIds.size) * 100) : 0;
 
   let attendanceStreak = 0;
   const attendanceBySession = new Map<string, boolean>();
@@ -397,11 +402,13 @@ export async function getDashboardData(input: {
   }>) {
     attendanceBySession.set(r.session_id, r.present);
   }
-  const sessionsOrdered = ((allAttendanceRes.data ?? []) as Array<{
-    session_id: string;
-    present: boolean;
-    training_sessions: unknown;
-  }>)
+  const sessionsOrdered = (
+    (allAttendanceRes.data ?? []) as Array<{
+      session_id: string;
+      present: boolean;
+      training_sessions: unknown;
+    }>
+  )
     .map((s) => {
       const ts = Array.isArray(s.training_sessions) ? s.training_sessions[0] : s.training_sessions;
       const session = ts as { scheduled_at?: string; cancelled?: boolean } | null;

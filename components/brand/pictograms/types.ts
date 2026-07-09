@@ -14,9 +14,6 @@ export const DEFAULT_PICTOGRAM_PROPS = {
   strokeLinejoin: "round" as const,
 };
 
-export function withAccent(
-  style: CSSProperties | undefined,
-  accent: string,
-): CSSProperties {
+export function withAccent(style: CSSProperties | undefined, accent: string): CSSProperties {
   return { ...style, "--pictogram-accent": accent } as CSSProperties;
 }

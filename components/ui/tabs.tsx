@@ -44,16 +44,14 @@ export function Tabs({ tabs, active, basePath, className }: TabsProps) {
             data-tab-id={tab.id}
             data-active={isActive}
             className={cn(
-              "font-display relative inline-flex min-h-[44px] shrink-0 items-center justify-center px-5 text-sm font-bold whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pool-blue",
-              isActive
-                ? "text-pool-blue"
-                : "text-ink-500 hover:text-ink-700",
+              "font-display focus-visible:ring-pool-blue relative inline-flex min-h-[44px] shrink-0 items-center justify-center px-5 text-sm font-bold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+              isActive ? "text-pool-blue" : "text-ink-500 hover:text-ink-700",
             )}
           >
             {isActive ? (
               <span
                 aria-hidden="true"
-                className="absolute inset-x-0 bottom-0 h-[2px] bg-pool-blue rounded-t-sm"
+                className="bg-pool-blue absolute inset-x-0 bottom-0 h-[2px] rounded-t-sm"
               />
             ) : null}
             {tab.label}

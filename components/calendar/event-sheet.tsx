@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin, ChevronRight, Check, X } from "lucide-react";
 import type { Route } from "next";
 
 import { Gorro } from "@/components/brand/pictograms";
@@ -62,13 +62,10 @@ export function EventSheet({
         </SheetHeader>
         <SheetBody>
           {day && (day.trainings.length > 0 || day.matches.length > 0) ? (
-            <ul className="flex flex-col gap-3 pb-[env(safe-area-inset-bottom)]">
+            <ul className="flex flex-col gap-4 pb-[env(safe-area-inset-bottom)]">
               {day.trainings.map((t) => (
                 <li key={t.id}>
-                  <TrainingRow
-                    training={t}
-                    isCoach={isCoach || isAdmin}
-                  />
+                  <TrainingRow training={t} isCoach={isCoach || isAdmin} />
                 </li>
               ))}
               {day.matches.map((m) => (
@@ -85,7 +82,7 @@ export function EventSheet({
               ))}
             </ul>
           ) : (
-            <p className="text-sm text-ink-600">
+            <p className="text-ink-600 text-sm">
               Nada en el calendario este día. Aprovéchalo para descansar.
             </p>
           )}
@@ -95,7 +92,7 @@ export function EventSheet({
   );
 }
 
-function TrainingRow({
+export function TrainingRow({
   training,
   isCoach,
 }: {
@@ -103,56 +100,64 @@ function TrainingRow({
   isCoach: boolean;
 }) {
   return (
-    <article className="flex items-start gap-3 rounded-md border border-ink-300 bg-paper p-4">
+    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md">
+      {/* Decorative vertical color stripe */}
       <span
         aria-hidden="true"
-        className="mt-1 block h-8 w-1 shrink-0 self-stretch rounded-full"
+        className="absolute top-0 bottom-0 left-0 w-1.5"
         style={{ backgroundColor: training.team_color }}
       />
-      <div className="flex flex-1 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-base font-semibold text-brand-deep">
+
+      <div className="flex flex-col gap-2 pl-1.5">
+        {/* Header Row */}
+        <div className="flex items-center justify-between gap-2 select-none">
+          <span className="text-pool-blue text-[10px] font-black tracking-widest uppercase">
+            {training.team_label}
+          </span>
+          <span className="border-pool-blue/15 bg-pool-foam text-pool-deep rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+            Entrenamiento
+          </span>
+        </div>
+
+        {/* Time and Title Row */}
+        <div className="mt-1 flex items-baseline gap-3 select-none">
+          <span className="text-pool-deep shrink-0 font-mono text-xl font-black tracking-tight">
             {formatTimeOfDay(training.scheduled_at)}
           </span>
-          <span className="text-sm font-semibold text-ink-900">
-            Entreno {training.team_label}
-          </span>
-          {training.block_label ? (
-            <span className="rounded-full border border-ink-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-600">
-              {training.block_label}
-            </span>
-          ) : null}
-          {training.cancelled ? (
-            <span
-              className={cn(
-                "inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
-                "bg-danger/15 text-danger",
-              )}
-            >
-              Cancelado
-            </span>
-          ) : null}
+          <h4 className="text-ink-950 text-sm leading-tight font-extrabold">
+            {training.cancelled ? (
+              <span className="text-ink-400 line-through">Sesión de entrenamiento</span>
+            ) : (
+              "Sesión de agua y táctica"
+            )}
+          </h4>
         </div>
-        {training.location ? (
-          <p className="text-sm text-ink-600">{training.location}</p>
-        ) : null}
-        {training.cancelled && training.cancellation_reason ? (
-          <p className="text-sm text-danger">{training.cancellation_reason}</p>
-        ) : null}
-        <p className="text-xs text-ink-600">
-          Duración: {training.duration_minutes} min
-        </p>
-        {isCoach ? (
-          <p className="text-xs text-ink-600">
-            Pasa lista desde el panel de administración.
+
+        {/* Location & Details */}
+        {training.location && (
+          <p className="text-ink-600 mt-1 flex items-center gap-1.5 text-xs font-semibold select-none">
+            <MapPin className="text-ink-400 h-4 w-4 shrink-0" />
+            <span>{training.location}</span>
           </p>
+        )}
+
+        {training.cancelled ? (
+          <div className="bg-danger/10 border-danger/20 text-danger mt-1 rounded-xl border p-3 text-xs font-bold">
+            Cancelado: {training.cancellation_reason || "Sin motivo especificado"}
+          </div>
         ) : null}
+
+        {/* Footer */}
+        <div className="border-ink-200/40 text-ink-500 mt-2.5 flex items-center justify-between border-t pt-3 text-[10px] font-extrabold tracking-wider uppercase select-none">
+          <span>Duración: {training.duration_minutes} min</span>
+          {isCoach && <span className="text-pool-teal">Pasar lista en admin</span>}
+        </div>
       </div>
     </article>
   );
 }
 
-function MatchRow({
+export function MatchRow({
   match,
   isCoach,
   activeProfileId,
@@ -165,172 +170,127 @@ function MatchRow({
 }) {
   const router = useRouter();
   const isCalled = match.callup_status != null;
-  const isMyCallup = isCalled;
   const href = `/matches/${match.id}` as Route;
+
   return (
-    <article className="flex items-start gap-3 rounded-md border border-ink-300 bg-paper p-4">
+    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-5 shadow-sm transition-all hover:shadow-md">
+      {/* Decorative vertical team color stripe */}
       <span
         aria-hidden="true"
-        className="mt-1 block h-8 w-1 shrink-0 self-stretch rounded-full"
+        className="absolute top-0 bottom-0 left-0 w-1.5"
         style={{ backgroundColor: match.team_color }}
       />
-      <div className="flex flex-1 flex-col gap-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-base font-semibold text-brand-deep">
-            {formatTimeOfDay(match.scheduled_at)}
-          </span>
-          <span className="text-sm font-semibold text-ink-900">
-            {match.team_label}
-            <span className="text-ink-600"> vs </span>
-            {match.opponent}
-          </span>
-          <span className="rounded-full border border-ink-300 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-ink-600">
-            {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-          </span>
-          {match.status === "cancelled" ? (
-            <span
-              className={cn(
-                "inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
-                "bg-danger/15 text-danger",
-              )}
-            >
-              Cancelado
-            </span>
-          ) : null}
-          {match.status === "played" ? (
-            <span className="inline-flex h-6 items-center rounded-full bg-success/15 px-2 text-[11px] font-semibold text-success">
-              Jugado
-            </span>
-          ) : null}
-        </div>
-        {match.pool_name ? (
-          <p className="text-sm text-ink-600">{match.pool_name}</p>
-        ) : null}
-        {match.location && match.location !== match.pool_name ? (
-          <p className="text-sm text-ink-600">{match.location}</p>
-        ) : null}
-        {match.status === "played" &&
-        match.final_score_us != null &&
-        match.final_score_them != null ? (
-          <p className="font-mono text-base font-bold text-brand-deep">
-            {match.final_score_us} - {match.final_score_them}
-          </p>
-        ) : null}
 
-        {isMyCallup && match.callup_status ? (
-          <div className="flex flex-col gap-2">
-            <CallupBadge
-              status={match.callup_status}
-              cap={match.cap_number}
-            />
-            {match.callup_status !== "withdrawn" ? (
-              <RsvpControls
-                matchId={match.id}
-                currentStatus={match.callup_status}
-                onChanged={onChanged}
-                router={router}
-                playerId={activeProfileId}
-              />
+      <div className="flex flex-col gap-3 pl-1.5">
+        {/* Header Row */}
+        <div className="flex items-center justify-between gap-2 select-none">
+          <span className="text-pool-blue text-[10px] font-black tracking-widest uppercase">
+            {match.team_label}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <span className="border-ink-300 bg-paper text-ink-600 rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+              {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+            </span>
+            {match.status === "cancelled" ? (
+              <span className="bg-danger/10 border-danger/20 text-danger rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+                Cancelado
+              </span>
+            ) : match.status === "played" ? (
+              <span className="bg-success/10 border-success/20 text-success rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+                Jugado
+              </span>
             ) : null}
           </div>
-        ) : null}
+        </div>
 
-        <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="secondary">
-            <Link href={href}>Ver partido</Link>
+        {/* Visual Scoreboard (High hierarchy, extremely clear for kids & elderly) */}
+        <div className="flex items-center justify-between gap-2 py-2 select-none">
+          {/* Team 1: Morvedre */}
+          <div className="flex max-w-[40%] flex-1 items-center gap-2">
+            <Gorro className="h-6 w-6 shrink-0" accent={match.team_color} />
+            <span className="text-ink-950 truncate text-xs font-black">Morvedre</span>
+          </div>
+
+          {/* Time or Score Center */}
+          <div className="flex min-w-[70px] shrink-0 justify-center">
+            {match.status === "played" &&
+            match.final_score_us != null &&
+            match.final_score_them != null ? (
+              <span className="bg-pool-deep text-paper border-pool-deep rounded-lg border px-3 py-1 font-mono text-sm font-black tracking-widest shadow-sm md:text-base">
+                {match.final_score_us}-{match.final_score_them}
+              </span>
+            ) : (
+              <span className="bg-ink-100 text-pool-deep border-ink-200 rounded-lg border px-2.5 py-1 font-mono text-xs font-black md:text-sm">
+                {formatTimeOfDay(match.scheduled_at)}
+              </span>
+            )}
+          </div>
+
+          {/* Team 2: Opponent */}
+          <div className="flex max-w-[40%] flex-1 items-center justify-end gap-2 text-right">
+            <span className="text-ink-950 truncate text-xs font-black">{match.opponent}</span>
+            <Gorro className="h-6 w-6 shrink-0" accent="#A0AEC0" />
+          </div>
+        </div>
+
+        {/* Location Info */}
+        {match.pool_name && (
+          <p className="text-ink-600 flex items-center gap-1.5 text-xs font-semibold select-none">
+            <MapPin className="text-ink-400 h-4 w-4 shrink-0" />
+            <span className="truncate">{match.pool_name}</span>
+          </p>
+        )}
+        {match.location && match.location !== match.pool_name && (
+          <p className="text-ink-500 truncate pl-5 text-[11px] leading-none font-semibold select-none">
+            {match.location}
+          </p>
+        )}
+
+        {/* RSVP Section (Big, Clean, Touch-Safe Buttons) */}
+        {isCalled && match.callup_status && (
+          <div className="border-ink-200/40 mt-1.5 border-t pt-3">
+            <PremiumRsvpSection
+              matchId={match.id}
+              currentStatus={match.callup_status}
+              onChanged={onChanged}
+              router={router}
+              playerId={activeProfileId}
+            />
+          </div>
+        )}
+
+        {/* Action Button: View Convocatoria */}
+        <div className="border-ink-200/40 mt-1 flex flex-col gap-2 border-t pt-3 select-none">
+          <Button
+            asChild
+            size="sm"
+            variant="secondary"
+            className="hover:bg-ink-100/50 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl text-xs font-extrabold"
+          >
+            <Link href={href}>
+              <span>Ver convocatoria completa</span>
+              <ChevronRight className="h-3.5 w-3.5" />
+            </Link>
           </Button>
-          {isCoach ? (
-            <Button asChild size="sm" variant="ghost">
-              <Link href={`/admin/matches/${match.id}` as Route}>Editar convocatoria</Link>
+          {isCoach && (
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="text-ink-600 hover:text-pool-deep h-8 w-full cursor-pointer text-[10px] font-extrabold"
+            >
+              <Link href={`/admin/matches/${match.id}` as Route}>
+                Editar convocatoria (Entrenador)
+              </Link>
             </Button>
-          ) : null}
+          )}
         </div>
       </div>
     </article>
   );
 }
 
-function CallupBadge({
-  status,
-  cap,
-}: {
-  status: string;
-  cap: number | null;
-}) {
-  const label = callupLabel(status);
-  const tone = callupTone(status);
-  return (
-    <div
-      className={cn(
-        "flex flex-wrap items-center gap-2 rounded-md border p-3",
-        tone.bgClass,
-        tone.borderClass,
-      )}
-    >
-      <Gorro
-        className="h-7 w-7 shrink-0"
-        accent={cap != null ? "var(--brand-blue)" : "var(--brand-aqua)"}
-      />
-      <div className="flex flex-1 flex-col">
-        <span className="text-xs font-semibold uppercase tracking-wider text-ink-600">
-          Tu convocatoria
-        </span>
-        <span className={cn("font-display text-sm font-bold", tone.textClass)}>
-          {label}
-          {cap != null ? ` · Gorro #${cap}` : ""}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function callupLabel(status: string): string {
-  switch (status) {
-    case "called":
-      return "Convocado";
-    case "confirmed":
-      return "Confirmado";
-    case "declined":
-      return "Has rechazado";
-    case "withdrawn":
-      return "Te has dado de baja";
-    case "no_show":
-      return "No te presentaste";
-    default:
-      return status;
-  }
-}
-
-function callupTone(status: string): {
-  bgClass: string;
-  borderClass: string;
-  textClass: string;
-} {
-  switch (status) {
-    case "confirmed":
-      return {
-        bgClass: "bg-success/10",
-        borderClass: "border-success/30",
-        textClass: "text-success",
-      };
-    case "declined":
-    case "no_show":
-    case "withdrawn":
-      return {
-        bgClass: "bg-danger/10",
-        borderClass: "border-danger/30",
-        textClass: "text-danger",
-      };
-    default:
-      return {
-        bgClass: "bg-brand-foam",
-        borderClass: "border-brand-aqua/30",
-        textClass: "text-brand-deep",
-      };
-  }
-}
-
-function RsvpControls({
+function PremiumRsvpSection({
   matchId,
   currentStatus,
   onChanged,
@@ -354,45 +314,64 @@ function RsvpControls({
         onChanged();
         router.refresh();
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "No pudimos guardar tu respuesta.",
-        );
+        setError(err instanceof Error ? err.message : "No pudimos guardar tu respuesta.");
       }
     });
   }
 
+  const isConfirmed = currentStatus === "confirmed" || currentStatus === "called";
+  const isDeclined =
+    currentStatus === "declined" || currentStatus === "withdrawn" || currentStatus === "no_show";
+
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex flex-wrap gap-2">
-        <Button
-          size="md"
-          variant="primary"
-          disabled={pending || currentStatus === "confirmed"}
-          onClick={() => send("confirmed")}
-        >
-          {pending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-          Confirmo
-        </Button>
-        <Button
-          size="md"
-          variant="danger"
-          disabled={pending || currentStatus === "declined"}
-          onClick={() => send("declined")}
-        >
-          No puedo
-        </Button>
-        <Button
-          size="md"
-          variant="secondary"
+    <div className="flex flex-col gap-2 select-none">
+      <span className="text-ink-500 text-[9px] font-black tracking-widest uppercase">
+        ¿Confirmas tu asistencia?
+      </span>
+
+      <div className="flex gap-2.5">
+        {/* Green Button: Confirm */}
+        <button
+          type="button"
           disabled={pending}
-          onClick={() => send("withdrawn")}
+          onClick={() => send("confirmed")}
+          className={cn(
+            "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border text-xs font-extrabold transition-all active:scale-[0.97]",
+            isConfirmed
+              ? "text-paper border-emerald-600 bg-emerald-600 shadow-sm"
+              : "bg-paper border-emerald-500/25 text-emerald-700 hover:bg-emerald-50/50",
+          )}
         >
-          Cambiar de opinión
-        </Button>
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin text-current" />
+          ) : (
+            <Check className="h-4 w-4 shrink-0" />
+          )}
+          <span>{isConfirmed ? "Asistiré" : "Confirmar"}</span>
+        </button>
+
+        {/* Red Button: Decline */}
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => send("declined")}
+          className={cn(
+            "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border text-xs font-extrabold transition-all active:scale-[0.97]",
+            isDeclined
+              ? "text-paper border-red-600 bg-red-600 shadow-sm"
+              : "bg-paper border-red-500/25 text-red-600 hover:bg-red-50/50",
+          )}
+        >
+          {pending ? (
+            <Loader2 className="h-4 w-4 animate-spin text-current" />
+          ) : (
+            <X className="h-4 w-4 shrink-0" />
+          )}
+          <span>{isDeclined ? "No puedo ir" : "Denegar"}</span>
+        </button>
       </div>
-      {error ? <p className="text-xs text-danger">{error}</p> : null}
+
+      {error ? <p className="text-danger mt-0.5 text-[10px] font-semibold">{error}</p> : null}
       <p className="sr-only">Convocatoria para el jugador {playerId}</p>
     </div>
   );

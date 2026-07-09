@@ -15,11 +15,7 @@ import { relativeTime } from "@/lib/domain/news";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getActiveProfileContext();
   if (!ctx) return { title: "Noticia — Morvedre Core" };
@@ -28,11 +24,7 @@ export async function generateMetadata({
   return { title: `${post.title} — Morvedre Core` };
 }
 
-export default async function NewsDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function NewsDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
@@ -52,14 +44,14 @@ export default async function NewsDetailPage({
       <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
         <Link
           href={"/news" as Route}
-          className="inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
         >
           <ArrowLeft className="h-3 w-3" />
           Noticias
         </Link>
-        <article className="rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1">
+        <article className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-4">
           {post.pinned ? (
-            <div className="mb-2 inline-flex items-center gap-1 rounded-sm bg-ball-gold/15 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-pool-deep">
+            <div className="bg-ball-gold/15 text-pool-deep mb-2 inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-[10px] font-extrabold tracking-wider uppercase">
               <Pin className="h-3 w-3" />
               Fijada
             </div>
@@ -72,24 +64,24 @@ export default async function NewsDetailPage({
               className="shrink-0"
             />
             <div className="min-w-0 flex-1">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-ink-600">
+              <p className="text-eyebrow text-ink-600">
                 {post.author_name}
                 {post.audience_team_label ? (
                   <>
-                    <span className="mx-1 text-ink-300">·</span>
+                    <span className="text-ink-300 mx-1">·</span>
                     <span className="text-ink-600">{post.audience_team_label}</span>
                   </>
                 ) : (
                   <>
-                    <span className="mx-1 text-ink-300">·</span>
+                    <span className="text-ink-300 mx-1">·</span>
                     <span className="text-ink-600">Club</span>
                   </>
                 )}
               </p>
-              <h1 className="break-words font-display text-2xl font-extrabold leading-tight text-pool-deep">
+              <h1 className="font-display text-pool-deep text-2xl leading-tight font-extrabold break-words">
                 {post.title}
               </h1>
-              <p className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-ink-600">
+              <p className="text-ink-600 mt-0.5 inline-flex items-center gap-1 text-[11px]">
                 <Clock className="h-3 w-3" aria-hidden="true" />
                 {relativeTime(post.published_at)}
               </p>
@@ -108,11 +100,7 @@ export default async function NewsDetailPage({
             <Markdown>{post.body_md}</Markdown>
           </div>
         </article>
-        <NewsCard
-          post={post as NewsCardData}
-          canReact={true}
-          onReact={react}
-        />
+        <NewsCard post={post as NewsCardData} canReact={true} onReact={react} />
       </div>
     </div>
   );

@@ -63,10 +63,7 @@ const teamEditSchema = z
     notes: z.string().trim().max(1000).optional().or(z.literal("")),
   })
   .refine(
-    (data) =>
-      data.label.trim().length > 0 &&
-      data.label.length <= 50 &&
-      data.color.length > 0,
+    (data) => data.label.trim().length > 0 && data.label.length <= 50 && data.color.length > 0,
     { message: "Datos inválidos.", path: ["label"] },
   );
 
@@ -74,19 +71,14 @@ type TeamEditValues = z.infer<typeof teamEditSchema>;
 
 type ActionState = { ok?: true; error?: string } | null;
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const id = String(formData.get("id") ?? "");
   try {
     await updateTeam(id, {
       label: String(formData.get("label") ?? ""),
       category_code: String(formData.get("category_code") ?? "") as Team["category_code"],
       gender: String(formData.get("gender") ?? "") as Team["gender"],
-      team_type: String(formData.get("team_type") ?? "competitive") as
-        | "competitive"
-        | "school",
+      team_type: String(formData.get("team_type") ?? "competitive") as "competitive" | "school",
       color: String(formData.get("color") ?? ""),
       home_pool: String(formData.get("home_pool") ?? "") || null,
       notes: String(formData.get("notes") ?? "") || null,
@@ -114,10 +106,7 @@ export interface TeamEditSheetProps {
 
 export function TeamEditSheet({ team, trigger }: TeamEditSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
 
   const form = useForm<TeamEditValues>({
@@ -297,7 +286,7 @@ export function TeamEditSheet({ team, trigger }: TeamEditSheetProps) {
                             onBlur={field.onBlur}
                             name={field.name}
                             ref={field.ref}
-                            className="h-12 w-12 shrink-0 cursor-pointer rounded border border-ink-300 bg-paper p-1"
+                            className="border-ink-300 bg-paper h-12 w-12 shrink-0 cursor-pointer rounded border p-1"
                           />
                           <Input
                             value={field.value}

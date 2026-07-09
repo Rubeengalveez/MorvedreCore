@@ -5,10 +5,7 @@ async function loginAsAdmin(page: Page) {
   await page.getByLabel("Email").fill("galvillo9@gmail.com");
   await page.getByLabel(/contrase/i).fill(process.env.TEST_PASSWORD ?? "Rga7707Rga:1");
   await page.getByRole("button", { name: /entrar/i }).click();
-  await page.waitForURL(
-    (url) => !url.toString().includes("?"),
-    { timeout: 10_000 },
-  );
+  await page.waitForURL((url) => !url.toString().includes("?"), { timeout: 10_000 });
   if (page.url().includes("change-password")) {
     await page.getByLabel(/nueva contraseña/i).fill("Rga7707Rga:1");
     await page.getByLabel(/repite/i).fill("Rga7707Rga:1");

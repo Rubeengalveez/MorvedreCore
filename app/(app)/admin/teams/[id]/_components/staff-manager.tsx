@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Trash2 } from "lucide-react";
+import { MdAutorenew, MdDelete } from "react-icons/md";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
@@ -53,10 +53,7 @@ type StaffValues = z.infer<typeof staffSchema>;
 
 type ActionState = { ok?: true; error?: string } | null;
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   const teamId = String(formData.get("team_id") ?? "");
   try {
     await assignStaff({
@@ -74,7 +71,7 @@ function SubmitButton({ label }: { label: string }) {
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="lg" className="w-full" disabled={pending}>
-      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
+      {pending ? <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
       {pending ? "Asignando..." : label}
     </Button>
   );
@@ -86,16 +83,9 @@ export interface StaffAssignSheetProps {
   trigger: React.ReactNode;
 }
 
-export function StaffAssignSheet({
-  teamId,
-  candidates,
-  trigger,
-}: StaffAssignSheetProps) {
+export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
 
@@ -243,9 +233,7 @@ export function StaffList({ teamId, staff }: StaffListProps) {
 
   if (staff.length === 0) {
     return (
-      <p className="text-sm italic text-ink-600">
-        Aún no has asignado personal a este equipo.
-      </p>
+      <p className="text-ink-600 text-sm italic">Aún no has asignado personal a este equipo.</p>
     );
   }
 
@@ -256,28 +244,28 @@ export function StaffList({ teamId, staff }: StaffListProps) {
         return (
           <li
             key={key}
-            className="flex items-center justify-between gap-3 rounded-md border border-ink-300 bg-paper px-4 py-3"
+            className="border-ink-300 bg-paper flex items-center justify-between gap-3 rounded-md border px-4 py-3"
           >
             <div className="flex flex-col">
-              <span className="font-display text-base font-bold text-brand-deep">
+              <span className="font-display text-brand-deep text-base font-bold">
                 {s.full_name}
               </span>
-              <span className="text-xs font-semibold uppercase tracking-wider text-ink-600">
+              <span className="text-ink-600 text-xs font-semibold tracking-wider uppercase">
                 {RELATION_OPTIONS[s.role]}
               </span>
             </div>
             <Button
               variant="ghost"
               size="sm"
-              className="h-12 w-12 p-0 text-danger hover:bg-danger/10"
+              className="text-danger hover:bg-danger/10 h-12 w-12 p-0"
               aria-label={`Quitar ${s.full_name}`}
               disabled={pendingId === key}
               onClick={() => handleRemove(s.profile_id, s.role, s.full_name)}
             >
               {pendingId === key ? (
-                <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
               ) : (
-                <Trash2 className="h-5 w-5" aria-hidden="true" />
+                <MdDelete className="h-5 w-5" aria-hidden="true" />
               )}
             </Button>
           </li>

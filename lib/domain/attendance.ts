@@ -53,10 +53,7 @@ export interface AttendanceDiff {
   changed: { before: AttendanceRow; after: AttendanceRow }[];
 }
 
-export function diffAttendance(
-  existing: AttendanceRow[],
-  next: AttendanceRow[],
-): AttendanceDiff {
+export function diffAttendance(existing: AttendanceRow[], next: AttendanceRow[]): AttendanceDiff {
   const existingByPlayer = new Map(existing.map((a) => [a.player_id, a]));
   const nextByPlayer = new Map(next.map((a) => [a.player_id, a]));
 

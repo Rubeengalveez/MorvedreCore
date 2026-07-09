@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { Route } from "next";
+
 import { cn } from "@/lib/utils/cn";
 import { ChevronDerecha } from "@/components/brand/pictograms";
-
 import { CapTile } from "@/components/ui/cap-tile";
 import { CategoryBadge } from "@/components/team/category-badge";
 import type { TeamListItem } from "@/server/queries/teams";
@@ -23,51 +23,51 @@ export function TeamListCard({ team, isMyTeam = false }: TeamListCardProps) {
       data-team-card
       data-my-team={isMyTeam}
       className={cn(
-        "group relative flex items-center gap-3 overflow-hidden rounded-md border bg-paper-card p-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2",
+        "group bg-paper-card shadow-elev-1 focus-visible:ring-pool-blue relative flex min-h-[84px] items-center gap-3 overflow-hidden rounded-md border p-3 transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
         isMyTeam
-          ? "hover:shadow-elev-2"
-          : "border-ink-300 hover:border-pool-blue hover:shadow-elev-1",
+          ? "shadow-elev-2 hover:shadow-elev-3"
+          : "border-ink-300 hover:border-pool-blue hover:shadow-elev-2",
       )}
       style={{
         borderColor: isMyTeam ? team.color : undefined,
-        borderLeftWidth: isMyTeam ? "3px" : undefined,
+        borderLeftWidth: isMyTeam ? "4px" : undefined,
       }}
     >
       <div className="min-w-0 flex-1">
-        <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+        <div className="mb-1 flex flex-wrap items-center gap-1.5">
           <CategoryBadge code={team.category_code} />
           {isMyTeam ? (
             <span
-              className="text-eyebrow inline-flex items-center rounded-sm px-1.5 py-0.5 text-paper"
+              className="text-paper inline-flex min-h-6 items-center rounded-sm px-2 text-xs font-extrabold tracking-[0.08em] uppercase"
               style={{ backgroundColor: team.color }}
             >
               Mi equipo
             </span>
           ) : null}
           {team.team_type === "school" ? (
-            <span className="text-eyebrow inline-flex items-center rounded-sm border border-ink-300 px-1.5 py-0.5 text-ink-600">
+            <span className="border-ink-300 text-ink-600 inline-flex min-h-6 items-center rounded-sm border px-2 text-xs font-extrabold tracking-[0.08em] uppercase">
               Escuela
             </span>
           ) : null}
         </div>
-        <p className="line-clamp-1 font-display text-base font-extrabold leading-tight text-pool-deep">
+        <p className="font-display text-pool-deep line-clamp-1 text-lg leading-tight font-extrabold">
           {team.label}
         </p>
-        <p className="mt-0.5 text-xs text-ink-500">
+        <p className="text-ink-600 mt-1 line-clamp-1 text-sm font-medium">
           {team.player_count} {team.player_count === 1 ? "jugador" : "jugadores"}
-          {team.coach_name ? <> · {team.coach_name}</> : null}
+          {team.coach_name ? <> / {team.coach_name}</> : null}
         </p>
       </div>
       {featuredLabel ? (
-        <div className="flex shrink-0 flex-col items-center gap-0.5">
+        <div className="bg-paper-sunk flex shrink-0 items-center gap-2 rounded-sm px-2 py-1.5">
           <CapTile number={featuredCap} teamColor={team.color} size="sm" />
-          <span className="line-clamp-1 max-w-[60px] text-center text-[10px] font-medium text-ink-600">
+          <span className="text-ink-700 hidden max-w-[72px] truncate text-sm font-bold min-[360px]:block">
             {featuredLabel.split(" ")[0]}
           </span>
         </div>
       ) : (
         <ChevronDerecha
-          className="h-4 w-4 shrink-0 text-ink-300 transition-transform group-hover:translate-x-0.5"
+          className="text-ink-300 h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5"
           accent="currentColor"
         />
       )}

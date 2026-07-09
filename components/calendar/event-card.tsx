@@ -53,21 +53,31 @@ function formatDuration(startIso: string, durationMinutes: number): string {
   return `${formatTime(startIso)}–${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
 }
 
-export function CalendarEventChip({ event, size = "sm", className }: {
+export function CalendarEventChip({
+  event,
+  size = "sm",
+  className,
+}: {
   event: CalendarEventBase & { title: string };
   size?: "sm" | "md";
   className?: string;
 }) {
-  const color = event.kind === "match"
-    ? matchColor({ competitionType: (event as { competition_type?: string }).competition_type ?? "league", status: event.status ?? "scheduled", isPast: false, unavailable: false })
-    : trainingColor({ cancelled: !!event.cancelled, isPast: false, unavailable: false });
+  const color =
+    event.kind === "match"
+      ? matchColor({
+          competitionType: (event as { competition_type?: string }).competition_type ?? "league",
+          status: event.status ?? "scheduled",
+          isPast: false,
+          unavailable: false,
+        })
+      : trainingColor({ cancelled: !!event.cancelled, isPast: false, unavailable: false });
 
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-sm px-1.5 text-paper font-semibold leading-none",
-        size === "sm" ? "h-4 text-[9px]" : "h-5 text-[10px]",
-        event.cancelled && "opacity-50 line-through",
+        "text-paper inline-flex items-center gap-1 rounded-sm px-1.5 leading-none font-semibold",
+        size === "sm" ? "h-4 text-[10px]" : "h-5 text-[11px]",
+        event.cancelled && "line-through opacity-50",
         className,
       )}
       style={{ backgroundColor: color }}
@@ -90,7 +100,7 @@ function Badge({
   return (
     <span
       className={cn(
-        "inline-flex h-5 items-center rounded-sm px-2 text-eyebrow text-paper",
+        "text-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-2",
         className,
       )}
       style={{ backgroundColor: bg }}
@@ -149,29 +159,27 @@ function EventBody({
                 </Badge>
               ) : null}
               {showAttendance && userAttendance === false ? (
-                <span className="inline-flex h-5 items-center gap-0.5 rounded-sm bg-danger/10 px-2 text-eyebrow text-danger">
+                <span className="bg-danger/10 text-eyebrow text-danger inline-flex h-5 items-center gap-0.5 rounded-sm px-2">
                   <X className="h-2.5 w-2.5" /> No asististe
-              </span>
+                </span>
               ) : null}
             </div>
             <p
               className={cn(
-                "mt-1 font-display text-sm font-extrabold leading-tight text-pool-deep",
+                "font-display text-pool-deep mt-1 text-sm leading-tight font-extrabold",
                 isPast && "opacity-80",
                 isCancelled && "line-through opacity-60",
               )}
             >
               {event.title}
             </p>
-            {event.subtitle ? (
-              <p className="text-[11px] text-ink-600">{event.subtitle}</p>
-            ) : null}
+            {event.subtitle ? <p className="text-ink-600 text-[11px]">{event.subtitle}</p> : null}
           </div>
         </div>
       </div>
       {event.callup_name ? (
         <div
-          className="flex items-center gap-2 rounded-md border border-ink-300 bg-pool-foam/40 p-2"
+          className="border-ink-300 bg-pool-foam/40 flex items-center gap-2 rounded-md border p-2"
           style={{ borderLeftWidth: "3px", borderLeftColor: color }}
         >
           {event.callup_cap_number != null ? (
@@ -181,16 +189,10 @@ function EventBody({
               size="sm"
             />
           ) : (
-            <Avatar
-              src={event.callup_photo_url ?? null}
-              name={event.callup_name}
-              size={28}
-            />
+            <Avatar src={event.callup_photo_url ?? null} name={event.callup_name} size={28} />
           )}
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-1 text-xs font-semibold text-pool-deep">
-              {event.callup_name}
-            </p>
+            <p className="text-pool-deep line-clamp-1 text-xs font-semibold">{event.callup_name}</p>
             {event.callup_status ? (
               <Eyebrow tone="muted">
                 {event.callup_status === "confirmed" ? "Confirmado" : "Convocado"}
@@ -199,7 +201,7 @@ function EventBody({
           </div>
         </div>
       ) : null}
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-ink-300 pt-2 text-[11px] text-ink-600">
+      <div className="border-ink-300 text-ink-600 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-[11px]">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {timeStr}
@@ -234,9 +236,15 @@ export function CalendarEventCard({
   userAttendance?: boolean | null;
   className?: string;
 }) {
-  const color = event.kind === "match"
-    ? matchColor({ competitionType: event.competition_type ?? "league", status: event.status ?? "scheduled", isPast: !!isPast, unavailable: false })
-    : trainingColor({ cancelled: !!event.cancelled, isPast: !!isPast, unavailable: false });
+  const color =
+    event.kind === "match"
+      ? matchColor({
+          competitionType: event.competition_type ?? "league",
+          status: event.status ?? "scheduled",
+          isPast: !!isPast,
+          unavailable: false,
+        })
+      : trainingColor({ cancelled: !!event.cancelled, isPast: !!isPast, unavailable: false });
   const timeStr = event.duration_minutes
     ? formatDuration(event.scheduled_at, event.duration_minutes)
     : formatTime(event.scheduled_at);
@@ -267,7 +275,7 @@ export function CalendarEventCard({
     return (
       <Link href={href as Route} className={baseClass}>
         {body}
-        <div className="-mt-1 -mb-1 self-end text-ink-300 transition-transform group-hover:translate-x-0.5 group-hover:text-ink-600">
+        <div className="text-ink-300 group-hover:text-ink-600 -mt-1 -mb-1 self-end transition-transform group-hover:translate-x-0.5">
           <ChevronRight className="h-4 w-4" />
         </div>
       </Link>
@@ -286,15 +294,15 @@ export function CalendarEmptyState({
   cta?: { href: string; label: string };
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-md border-2 border-dashed border-ink-300 bg-paper/50 p-6 text-center">
-      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-pool-foam text-ink-600">
+    <div className="border-ink-300 bg-paper/50 flex flex-col items-center gap-2 rounded-md border-2 border-dashed p-6 text-center">
+      <div className="bg-pool-foam text-ink-600 flex h-12 w-12 items-center justify-center rounded-full">
         {icon ?? <Calendar className="h-5 w-5" />}
       </div>
-      <p className="text-sm font-semibold text-ink-900">{message}</p>
+      <p className="text-ink-900 text-sm font-semibold">{message}</p>
       {cta ? (
         <Link
           href={cta.href as Route}
-          className="inline-flex h-9 items-center gap-1.5 rounded-md bg-pool-deep px-3 text-xs font-bold text-paper transition-colors hover:bg-ink-900"
+          className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold transition-colors"
         >
           {cta.label}
         </Link>
@@ -318,12 +326,9 @@ export function CalendarAlert({
   return (
     <div
       role="status"
-      className={cn(
-        "flex items-start gap-2 rounded-md border p-2.5 text-xs",
-        styles[variant],
-      )}
+      className={cn("flex items-start gap-2 rounded-md border p-2.5 text-xs", styles[variant])}
     >
-      <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+      <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <p className="flex-1">{message}</p>
     </div>
   );

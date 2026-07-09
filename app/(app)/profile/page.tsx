@@ -9,26 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import {
-  Equipo,
-  Gorro,
-  Porteria,
-  SilbatoActivo,
-  Trofeo,
-  Usuario,
-} from "@/components/brand/pictograms";
+import { Equipo, Gorro, Porteria, SilbatoActivo, Trofeo } from "@/components/brand/pictograms";
 import { ProfileSwitcherInline } from "@/components/profile/profile-switcher-inline";
-import { AvailabilityCalendar, type AvailabilityDay } from "@/components/profile/availability-calendar";
-import { todayIso, addDaysIso } from "@/lib/domain/calendar";
 import {
-  CATEGORY_LABELS,
-  inferCategory,
-  type CategoryCode,
-} from "@/lib/domain/categories";
+  AvailabilityCalendar,
+  type AvailabilityDay,
+} from "@/components/profile/availability-calendar";
+import { todayIso, addDaysIso } from "@/lib/domain/calendar";
+import { CATEGORY_LABELS, inferCategory, type CategoryCode } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/server/actions/auth";
 import { computePlayerStats } from "@/lib/domain/stats";
-import { getNextEventForProfile, type NextEvent } from "@/server/queries/calendar";
+import { getRankings } from "@/server/queries/rankings";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
 
@@ -69,29 +61,19 @@ function extractYear(value: unknown): number | null {
 
 export default async function ProfilePage() {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
-
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
   const { activeProfile, ownProfile, linkedProfiles } = ctx;
 
-  const season = await supabase
-    .from("seasons")
-    .select("id, is_current")
-    .eq("is_current", true)
-    .maybeSingle();
-  const seasonId = season.data?.id ?? null;
+  const [seasonRes, ownProfileRolesRes] = await Promise.all([
+    supabase.from("seasons").select("id, is_current").eq("is_current", true).maybeSingle(),
+    supabase.from("user_roles").select("role, scope_team_id").eq("profile_id", ownProfile.id),
+  ]);
+  const seasonId = seasonRes.data?.id ?? null;
 
-  const ownProfileRoles = await supabase
-    .from("user_roles")
-    .select("role, scope_team_id")
-    .eq("profile_id", ownProfile.id);
-
-  const roles = ((ownProfileRoles.data ?? []) as Array<{ role: string; scope_team_id: string | null }>)
+  const roles = (
+    (ownProfileRolesRes.data ?? []) as Array<{ role: string; scope_team_id: string | null }>
+  )
     .map((r) => r.role)
     .filter((r) => r in ROLE_LABELS)
     .sort((a, b) => (ROLE_PRIORITY[a] ?? 99) - (ROLE_PRIORITY[b] ?? 99));
@@ -100,9 +82,7 @@ export default async function ProfilePage() {
   const isPlayer = roles.includes("player");
   const isCoach = roles.includes("coach");
 
-  const teams = seasonId
-    ? await getTeamsForProfileInSeason(activeProfile.id, seasonId)
-    : [];
+  const teams = seasonId ? await getTeamsForProfileInSeason(activeProfile.id, seasonId) : [];
 
   const teamIds = teams.map((t) => t.id);
   const primaryTeam = teams[0] ?? null;
@@ -138,7 +118,9 @@ export default async function ProfilePage() {
       .gte("marked_at", oneYearAgo),
     supabase
       .from("matches")
-      .select("id, scheduled_at, status, opponent, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)")
+      .select(
+        "id, scheduled_at, status, opponent, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
+      )
       .in("team_id", teamIds.length > 0 ? teamIds : ["00000000-0000-0000-0000-000000000000"])
       .lte("scheduled_at", new Date().toISOString())
       .order("scheduled_at", { ascending: false })
@@ -158,7 +140,9 @@ export default async function ProfilePage() {
     isCoach
       ? supabase
           .from("matches")
-          .select("id, scheduled_at, opponent, status, teams!matches_team_id_fkey(id, label, color)")
+          .select(
+            "id, scheduled_at, opponent, status, teams!matches_team_id_fkey(id, label, color)",
+          )
           .in("team_id", teamIds.length > 0 ? teamIds : ["00000000-0000-0000-0000-000000000000"])
           .in("status", ["scheduled", "in_progress"])
           .gte("scheduled_at", new Date().toISOString())
@@ -181,12 +165,13 @@ export default async function ProfilePage() {
       .order("scheduled_at", { ascending: true }),
   ]);
 
-  const nextEvent: NextEvent | null = teamIds.length > 0
-    ? await getNextEventForProfile({ teamIds, profileId: activeProfile.id, now })
-    : null;
-  void nextEvent;
-
-  const availability: AvailabilityDay[] = ((availabilityData.data ?? []) as Array<{ date: string; available: boolean; reason: string | null }>).map((row) => ({
+  const availability: AvailabilityDay[] = (
+    (availabilityData.data ?? []) as Array<{
+      date: string;
+      available: boolean;
+      reason: string | null;
+    }>
+  ).map((row) => ({
     iso: row.date,
     available: row.available,
     reason: row.reason,
@@ -211,11 +196,38 @@ export default async function ProfilePage() {
   const playerStats = computePlayerStats(
     activeProfile.id,
     seasonId ?? "",
-    ((allSessions.data ?? []) as unknown as Array<{ id: string; team_id: string; cancelled: boolean; scheduled_at: string }>),
-    ((attendanceData.data ?? []) as unknown as Array<{ session_id: string; player_id: string; present: boolean }>),
-    ((allMatches.data ?? []) as unknown as Array<{ id: string; team_id: string; status: "scheduled" | "in_progress" | "played" | "cancelled" | "postponed"; scheduled_at: string; final_score_us: number | null; final_score_them: number | null; season_id: string }>),
-    ((callupsData.data ?? []) as unknown as Array<{ match_id: string; player_id: string; status: "called" | "confirmed" | "declined" | "withdrawn" | "no_show" }>),
-    [] as Array<{ match_id: string; player_id: string; goals: number; exclusions: number; mvp: boolean }>,
+    (allSessions.data ?? []) as unknown as Array<{
+      id: string;
+      team_id: string;
+      cancelled: boolean;
+      scheduled_at: string;
+    }>,
+    (attendanceData.data ?? []) as unknown as Array<{
+      session_id: string;
+      player_id: string;
+      present: boolean;
+    }>,
+    (allMatches.data ?? []) as unknown as Array<{
+      id: string;
+      team_id: string;
+      status: "scheduled" | "in_progress" | "played" | "cancelled" | "postponed";
+      scheduled_at: string;
+      final_score_us: number | null;
+      final_score_them: number | null;
+      season_id: string;
+    }>,
+    (callupsData.data ?? []) as unknown as Array<{
+      match_id: string;
+      player_id: string;
+      status: "called" | "confirmed" | "declined" | "withdrawn" | "no_show";
+    }>,
+    [] as Array<{
+      match_id: string;
+      player_id: string;
+      goals: number;
+      exclusions: number;
+      mvp: boolean;
+    }>,
   );
 
   const birthYear = extractYear(activeProfile.birth_year);
@@ -228,13 +240,15 @@ export default async function ProfilePage() {
     }
   }
 
-  const coachUpcoming = ((coachMatchesRes.data ?? []) as Array<{
-    id: string;
-    scheduled_at: string;
-    opponent: string;
-    status: string;
-    teams: unknown;
-  }>).map((row) => {
+  const coachUpcoming = (
+    (coachMatchesRes.data ?? []) as Array<{
+      id: string;
+      scheduled_at: string;
+      opponent: string;
+      status: string;
+      teams: unknown;
+    }>
+  ).map((row) => {
     const teamRaw = Array.isArray(row.teams) ? row.teams[0] : row.teams;
     const team = teamRaw as { id?: string; label?: string; color?: string } | null;
     return {
@@ -271,8 +285,7 @@ export default async function ProfilePage() {
     },
   ];
 
-  const showStatsGrid =
-    playerStats.matches_played > 0 || playerStats.trainings_total > 0;
+  const showStatsGrid = playerStats.matches_played > 0 || playerStats.trainings_total > 0;
 
   return (
     <div className="relative">
@@ -288,7 +301,7 @@ export default async function ProfilePage() {
 
         {/* Hero compacto: avatar + nombre + badges en una sola línea horizontal */}
         <header
-          className="overflow-hidden rounded-md border border-ink-200 bg-paper-card"
+          className="border-ink-200 bg-paper-card overflow-hidden rounded-md border"
           style={{ borderTopWidth: "3px", borderTopColor: teamColor }}
         >
           <div className="flex items-center gap-3 p-3">
@@ -299,26 +312,22 @@ export default async function ProfilePage() {
               teamColor={teamColor}
             />
             <div className="min-w-0 flex-1">
-              <h1 className="font-display text-lg font-extrabold leading-tight tracking-tight text-pool-deep truncate">
+              <h1 className="font-display text-pool-deep truncate text-lg leading-tight font-extrabold tracking-tight">
                 {activeProfile.full_name}
               </h1>
               <div className="mt-1 flex flex-wrap items-center gap-1.5">
                 {primaryRole ? (
-                  <span className="inline-flex h-5 items-center rounded-sm bg-pool-deep px-1.5 text-[10px] font-bold uppercase tracking-eyebrow text-paper">
+                  <span className="bg-pool-deep tracking-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-1.5 text-[10px] font-bold uppercase">
                     {ROLE_LABELS[primaryRole]}
                   </span>
                 ) : null}
                 {categoryLabel ? (
-                  <span className="inline-flex h-5 items-center rounded-sm border border-ink-200 px-1.5 text-[10px] font-bold uppercase tracking-eyebrow text-ink-700">
+                  <span className="border-ink-200 tracking-eyebrow text-ink-700 inline-flex h-5 items-center rounded-sm border px-1.5 text-[10px] font-bold uppercase">
                     {CATEGORY_LABELS[categoryLabel as CategoryCode]}
                   </span>
                 ) : null}
                 {activeProfile.cap_number != null ? (
-                  <CapTile
-                    number={activeProfile.cap_number}
-                    teamColor={teamColor}
-                    size="sm"
-                  />
+                  <CapTile number={activeProfile.cap_number} teamColor={teamColor} size="sm" />
                 ) : null}
               </div>
             </div>
@@ -329,13 +338,13 @@ export default async function ProfilePage() {
         {showStatsGrid ? (
           <section
             aria-label="Estadísticas de la temporada"
-            className="grid grid-cols-4 gap-1 overflow-hidden rounded-md border border-ink-200 bg-paper-card shadow-elev-1"
+            className="border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-2 gap-1 overflow-hidden rounded-md border sm:grid-cols-4"
           >
             {stats.map((s, i) => (
               <div
                 key={s.label}
                 className={`flex flex-col items-center gap-0.5 px-1 py-3 ${
-                  i < stats.length - 1 ? "border-r border-ink-200" : ""
+                  i < stats.length - 1 ? "border-ink-200 border-r" : ""
                 }`}
               >
                 <span
@@ -343,12 +352,10 @@ export default async function ProfilePage() {
                   className="inline-block h-1 w-6 rounded-full"
                   style={{ backgroundColor: s.color }}
                 />
-                <p
-                  className="font-mono text-xl font-extrabold leading-none tabular-nums text-pool-deep"
-                >
+                <p className="text-pool-deep font-mono text-xl leading-none font-extrabold tabular-nums">
                   {s.value}
                 </p>
-                <p className="text-[9px] font-bold uppercase tracking-eyebrow text-ink-600">
+                <p className="tracking-eyebrow text-ink-600 text-[10px] font-bold uppercase">
                   {s.label}
                 </p>
               </div>
@@ -358,25 +365,29 @@ export default async function ProfilePage() {
 
         {/* Mi posición en rankings (si es player) */}
         {isPlayer && seasonId ? (
-          <PlayerRankingSummary profileId={activeProfile.id} seasonId={seasonId} />
+          <PlayerRankingSummary
+            profileId={activeProfile.id}
+            seasonId={seasonId}
+            birthYear={activeProfile.birth_year}
+          />
         ) : null}
 
         {/* Tu equipo (link) */}
         {primaryTeam ? (
           <Link
             href={`/team/${primaryTeam.id}` as Route}
-            className="flex items-center justify-between rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1 transition-colors hover:bg-pool-foam"
+            className="border-ink-300 bg-paper-card shadow-elev-1 hover:bg-pool-foam flex items-center justify-between rounded-md border p-3 transition-colors"
           >
             <div className="flex items-center gap-3">
               <PictogramBadge pictogram={Equipo} color={primaryTeam.color} size="md" />
               <div>
                 <Eyebrow>Tu equipo</Eyebrow>
-                <p className="font-display text-base font-extrabold text-pool-deep">
+                <p className="font-display text-pool-deep text-base font-extrabold">
                   {primaryTeam.label}
                 </p>
               </div>
             </div>
-            <ChevronRight className="h-5 w-5 text-ink-600" />
+            <ChevronRight className="text-ink-600 h-5 w-5" />
           </Link>
         ) : null}
 
@@ -384,13 +395,13 @@ export default async function ProfilePage() {
         {isCoach && coachUpcoming.length > 0 ? (
           <section
             aria-labelledby="coach-week-heading"
-            className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
+            className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3"
           >
             <div className="flex items-center gap-2">
               <PictogramBadge pictogram={SilbatoActivo} color="var(--pool-teal)" size="sm" />
               <h2
                 id="coach-week-heading"
-                className="font-display text-sm font-extrabold text-pool-deep"
+                className="font-display text-pool-deep text-sm font-extrabold"
               >
                 Mis equipos esta semana
               </h2>
@@ -400,7 +411,7 @@ export default async function ProfilePage() {
                 <li key={m.id}>
                   <Link
                     href={`/matches/${m.id}` as Route}
-                    className="flex items-center gap-2.5 rounded-md border-2 p-2 transition-colors hover:bg-pool-foam"
+                    className="hover:bg-pool-foam flex items-center gap-2.5 rounded-md border-2 p-2 transition-colors"
                     style={{
                       borderColor: m.team_color,
                       backgroundColor: `color-mix(in oklab, ${m.team_color} 5%, var(--paper))`,
@@ -409,11 +420,11 @@ export default async function ProfilePage() {
                     <PictogramBadge pictogram={Gorro} color={m.team_color} size="sm" />
                     <div className="min-w-0 flex-1">
                       <Eyebrow style={{ color: m.team_color }}>{m.team_label}</Eyebrow>
-                      <p className="line-clamp-1 font-display text-sm font-extrabold text-pool-deep">
+                      <p className="font-display text-pool-deep line-clamp-1 text-sm font-extrabold">
                         vs {m.opponent}
                       </p>
                     </div>
-                    <span className="shrink-0 text-[10px] font-bold uppercase tracking-eyebrow text-ink-600">
+                    <span className="tracking-eyebrow text-ink-600 shrink-0 text-[10px] font-bold uppercase">
                       {new Date(m.scheduled_at).toLocaleDateString("es-ES", {
                         weekday: "short",
                         day: "numeric",
@@ -430,17 +441,18 @@ export default async function ProfilePage() {
         {/* Disponibilidad (1 sola sección) */}
         <section
           aria-labelledby="availability-heading"
-          className="rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
+          className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-3"
         >
           <div className="mb-3 flex flex-col gap-1">
             <h2
               id="availability-heading"
-              className="font-display text-base font-extrabold text-pool-deep"
+              className="font-display text-pool-deep text-base font-extrabold"
             >
               Disponibilidad
             </h2>
-            <p className="text-xs text-ink-600">
-              Toca un día para marcar si no podrás asistir. Tu entrenador lo verá al preparar la convocatoria.
+            <p className="text-ink-600 text-xs">
+              Toca un día para marcar si no podrás asistir. Tu entrenador lo verá al preparar la
+              convocatoria.
             </p>
           </div>
           <AvailabilityCalendar
@@ -455,21 +467,21 @@ export default async function ProfilePage() {
         <div className="grid grid-cols-2 gap-2 pt-1">
           <Link
             href={"/profile/edit" as Route}
-            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md bg-pool-deep text-sm font-bold text-paper transition-colors hover:bg-ink-900"
+            className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-11 items-center justify-center gap-1.5 rounded-md text-sm font-bold transition-colors"
           >
             <User className="h-4 w-4" aria-hidden="true" />
             Editar perfil
           </Link>
           <Link
             href={"/change-password" as Route}
-            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper-card text-sm font-bold text-ink-900 transition-colors hover:bg-pool-foam"
+            className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam inline-flex h-11 items-center justify-center gap-1.5 rounded-md border text-sm font-bold transition-colors"
           >
             Contraseña
           </Link>
           {isAdmin ? (
             <Link
               href={"/admin" as Route}
-              className="col-span-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-md border border-ink-300 bg-paper-card text-sm font-bold text-ink-900 transition-colors hover:bg-pool-foam"
+              className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam col-span-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-md border text-sm font-bold transition-colors"
             >
               <PictogramBadge pictogram={Porteria} color="var(--pool-deep)" size="sm" />
               Panel de administración
@@ -478,12 +490,7 @@ export default async function ProfilePage() {
         </div>
 
         <form action={signOut} className="pt-1">
-          <Button
-            type="submit"
-            variant="secondary"
-            size="md"
-            className="w-full"
-          >
+          <Button type="submit" variant="secondary" size="md" className="w-full">
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar sesión
           </Button>
@@ -496,25 +503,14 @@ export default async function ProfilePage() {
 async function PlayerRankingSummary({
   profileId,
   seasonId,
+  birthYear,
 }: {
   profileId: string;
   seasonId: string;
+  birthYear: number | null;
 }) {
-  const { getRankings } = await import("@/server/queries/rankings");
-  const { inferCategory } = await import("@/lib/domain/categories");
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const profileRes = await supabase
-    .from("profiles")
-    .select("birth_year, cap_number, full_name, photo_url, team_color")
-    .eq("id", profileId)
-    .maybeSingle();
-  const profile = profileRes.data as
-    | { birth_year: number | null; cap_number: number | null; full_name: string; photo_url: string | null; team_color: string | null }
-    | null;
-  if (!profile?.birth_year) return null;
-
-  const categoryCode = inferCategory(profile.birth_year, new Date().getFullYear());
+  if (birthYear == null) return null;
+  const categoryCode = inferCategory(birthYear, new Date().getFullYear());
   if (!categoryCode) return null;
 
   const [goalsRank, attendanceRank] = await Promise.all([
@@ -538,21 +534,21 @@ async function PlayerRankingSummary({
   return (
     <section
       aria-labelledby="my-rankings-heading"
-      className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3"
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <PictogramBadge pictogram={Trofeo} color="var(--ball-gold)" size="sm" />
           <h2
             id="my-rankings-heading"
-            className="font-display text-sm font-extrabold text-pool-deep"
+            className="font-display text-pool-deep text-sm font-extrabold"
           >
             Tu posición en los rankings
           </h2>
         </div>
         <Link
           href={"/rankings" as Route}
-          className="text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue text-xs font-bold hover:underline"
         >
           Ver todo
         </Link>
@@ -603,23 +599,19 @@ function RankingMiniCard({
   accent: string;
 }) {
   return (
-    <div className="flex flex-col items-center gap-0.5 rounded-md border border-ink-300 bg-pool-foam/40 p-2">
-      <p className="text-[9px] font-bold uppercase tracking-eyebrow text-ink-600">
-        {label}
-      </p>
+    <div className="border-ink-300 bg-pool-foam/40 flex flex-col items-center gap-0.5 rounded-md border p-2">
+      <p className="tracking-eyebrow text-ink-600 text-[10px] font-bold uppercase">{label}</p>
       <span
-        className="inline-flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 font-mono text-base font-extrabold leading-none tabular-nums text-paper"
+        className="text-paper inline-flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 font-mono text-base leading-none font-extrabold tabular-nums"
         style={{ backgroundColor: accent }}
       >
         {position}
       </span>
-      <p className="font-mono text-sm font-extrabold leading-none tabular-nums text-pool-deep">
+      <p className="text-pool-deep font-mono text-sm leading-none font-extrabold tabular-nums">
         {value}
         {suffix}
       </p>
-      <p className="text-[9px] uppercase tracking-eyebrow text-ink-500">
-        de {totalPlayers}
-      </p>
+      <p className="tracking-eyebrow text-ink-500 text-[10px] uppercase">de {totalPlayers}</p>
     </div>
   );
 }
@@ -644,18 +636,12 @@ function RankingRelativeCard({
         ? "Líder en asist."
         : `A ${attendanceDelta} del 1º en asist.`;
   return (
-    <div className="flex flex-col items-center gap-0.5 rounded-md border border-ink-300 bg-pool-foam/40 p-2">
-      <p className="text-[9px] font-bold uppercase tracking-eyebrow text-ink-600">
-        Reta al líder
-      </p>
-      <p className="text-center font-display text-[10px] font-extrabold leading-tight text-pool-deep">
+    <div className="border-ink-300 bg-pool-foam/40 flex flex-col items-center gap-0.5 rounded-md border p-2">
+      <p className="tracking-eyebrow text-ink-600 text-[10px] font-bold uppercase">Reta al líder</p>
+      <p className="font-display text-pool-deep text-center text-xs leading-tight font-extrabold">
         {goalTxt}
       </p>
-      {attTxt ? (
-        <p className="text-center text-[9px] font-medium text-ink-600">{attTxt}</p>
-      ) : null}
+      {attTxt ? <p className="text-ink-600 text-center text-[10px] font-medium">{attTxt}</p> : null}
     </div>
   );
 }
-
-void Usuario;

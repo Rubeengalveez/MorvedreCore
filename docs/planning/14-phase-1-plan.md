@@ -15,10 +15,12 @@ Que el admin (Rubén) pueda crear la temporada actual, los 7 equipos competitivo
 ### 1. Base de datos (migraciones)
 
 **`supabase/migrations/0003_seasons.sql`**
+
 - Tabla `seasons` con `is_current` (solo una activa a la vez, índice parcial único)
 - Seed: la temporada 2025/2026 como inactiva + 2026/2027 como activa (estamos en junio 2026, así la 25/26 está en su último mes)
 
 **`supabase/migrations/0004_teams.sql`**
+
 - Tabla `teams` con:
   - `category_code` enum extendido con `escuela`
   - `team_type` enum `competitive | school`
@@ -27,16 +29,19 @@ Que el admin (Rubén) pueda crear la temporada actual, los 7 equipos competitivo
 - Índice único `(season_id, label)`
 
 **`supabase/migrations/0005_team_staff.sql`**
+
 - Tabla `team_staff` con `role` enum `head_coach | assistant_coach | delegate | physical_trainer`
 - FK a `teams` y `profiles` con `on delete cascade`
 - Constraint: una persona no puede tener 2 veces el mismo role en el mismo equipo
 
 **`supabase/migrations/0006_team_rosters.sql`**
+
 - Tabla `team_rosters` con `joined_at`, `left_at`, `squad_number`
 - Constraint: `left_at > joined_at` o ambos null
 - Una persona puede estar en varios equipos de la misma season si cambia de equipo a mitad de temporada
 
 **`supabase/migrations/0007_profiles_extend.sql`**
+
 - Añadir columnas a `profiles`:
   - `team_color` text (default por categoría, lo setea el admin al crear equipo y se copia al profile)
   - `school_enrolled` boolean (true si está en escuela)
@@ -45,28 +50,33 @@ Que el admin (Rubén) pueda crear la temporada actual, los 7 equipos competitivo
 ### 2. Funciones de dominio (`lib/domain/`)
 
 **`lib/domain/categories.ts`**
+
 - `inferCategory(birthYear, currentYear): CategoryCode` — función pura testeable
 - `ageIndex(birthYear, currentYear): number`
 - `isValidCategory(category): boolean`
 - Tabla cerrada: 11=benjamín, 12-13=alevín, 14-15=infantil, 16-17=cadete, 18-19=juvenil, 20+=absoluto
 
 **`lib/domain/teams.ts`**
+
 - `defaultCategoryColor(category): string` — color por defecto
 - `defaultTeamGender(category): 'male' | 'female' | 'mixed'` — benjamín/alevín/infantil = mixed, cadete/juvenil/absoluto = male
 - `canRosterPlayer(player, team): boolean` — verifica que el player cabe en la categoría del team (la categoría del team permite N-1 a N+1)
 
 **`lib/domain/seasons.ts`**
+
 - `inferCurrentSeason(): {label, start, end}` — para "hoy es 2026-06-26 → temporada 2025/2026 activa hasta jul 2026"
 - `isInSeason(season, date): boolean`
 
 ### 3. Panel admin (`/admin`)
 
 **Layout**: `app/(app)/admin/layout.tsx` con tabs/sub-navegación:
+
 - Tabs: Temporadas | Equipos | Jugadores | Familias | Staff | Configuración
 - Solo accesible para usuarios con rol `admin`
 - Si no eres admin, redirige a `/dashboard`
 
 **Sub-páginas**:
+
 - `app/(app)/admin/seasons/page.tsx` — lista de temporadas + crear temporada
 - `app/(app)/admin/seasons/new/page.tsx` — formulario de crear
 - `app/(app)/admin/teams/page.tsx` — lista de equipos por temporada
@@ -79,6 +89,7 @@ Que el admin (Rubén) pueda crear la temporada actual, los 7 equipos competitivo
 - `app/(app)/admin/staff/page.tsx` — asignaciones de staff a equipos
 
 **Server Actions** (`server/actions/admin/`):
+
 - `seasons.ts` — createSeason, updateSeason, setCurrentSeason, archiveSeason
 - `teams.ts` — createTeam, updateTeam, assignStaff, unassignStaff
 - `players.ts` — createPlayer, updatePlayer, assignToTeam, removeFromTeam, importFromExcel
@@ -90,6 +101,7 @@ Todos con validación Zod, manejo de errores, mensajes en español.
 ### 4. Vistas públicas
 
 **`/team/[team-slug]`** (`app/(app)/team/[teamId]/page.tsx`):
+
 - Foto/logo del equipo (placeholder con color del equipo)
 - Nombre: "Cadete B"
 - Categoría + entrenador
@@ -98,6 +110,7 @@ Todos con validación Zod, manejo de errores, mensajes en español.
 - Si eres admin: también
 
 **`/team`** (reemplaza el placeholder) — vista que muestra el equipo del perfil activo:
+
 - Si eres jugador: tu equipo
 - Si eres coach: tus equipos
 - Si eres padre: el equipo del perfil activo (hijo seleccionado)
@@ -105,6 +118,7 @@ Todos con validación Zod, manejo de errores, mensajes en español.
 ### 5. Selector de perfil (`profile-switcher.tsx`)
 
 Ya existe en Fase 0. Lo extendemos para:
+
 - Cargar los hijos del profile activo desde `parent_child_links`
 - Si eres admin, mostrar también tu propio perfil
 - Cambio de perfil actualiza la cookie + el dashboard
@@ -112,16 +126,19 @@ Ya existe en Fase 0. Lo extendemos para:
 ### 6. Dashboard actualizado
 
 Cuando hay datos:
+
 - "Tu próximo partido" con la fecha del próximo partido del equipo del perfil activo
 - Stats strip: goles (del perfil activo), asistencia (del perfil activo), dorsal (del perfil activo)
 - "Tu equipo" con link a `/team`
 
 Cuando no hay datos (estado actual):
+
 - Mantener los empty states
 
 ### 7. Import desde Excel
 
 **`scripts/import-players.mjs`**:
+
 - Lee un archivo Excel con columnas: nombre_completo, año_nacimiento, dorsal_opcional, categoria_opcional, dni_tutor_opcional, email_tutor_opcional, telefono_opcional
 - Crea auth users para los tutores si no existen
 - Crea profiles
@@ -181,10 +198,10 @@ Cuando no hay datos (estado actual):
 
 ## Riesgos y mitigaciones
 
-| Riesgo | Mitigación |
-|---|---|
-| RLS demasiado permisiva | `TO authenticated` + `USING` predicate + tests de RLS con servicio |
-| Admin UI con permisos rotos | Verificar en cada Server Action con `is_admin()` |
-| Import Excel con datos sucios | Validación Zod por fila, reporte de errores, no abortar todo |
-| Performance con 200 jugadores | Paginación, búsqueda client-side o server-side con índices |
-| Categoría calculada mal | Tests exhaustivos de la función pura |
+| Riesgo                        | Mitigación                                                         |
+| ----------------------------- | ------------------------------------------------------------------ |
+| RLS demasiado permisiva       | `TO authenticated` + `USING` predicate + tests de RLS con servicio |
+| Admin UI con permisos rotos   | Verificar en cada Server Action con `is_admin()`                   |
+| Import Excel con datos sucios | Validación Zod por fila, reporte de errores, no abortar todo       |
+| Performance con 200 jugadores | Paginación, búsqueda client-side o server-side con índices         |
+| Categoría calculada mal       | Tests exhaustivos de la función pura                               |

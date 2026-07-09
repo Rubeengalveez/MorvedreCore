@@ -54,10 +54,7 @@ async function main() {
   console.log(`Recomputando rankings y rachas para la temporada ${season.id}...`);
 
   // Obtener todos los jugadores
-  const { data: players } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("license_active", true);
+  const { data: players } = await supabase.from("profiles").select("id").eq("license_active", true);
 
   if (!players) {
     console.log("No se encontraron jugadores activos.");

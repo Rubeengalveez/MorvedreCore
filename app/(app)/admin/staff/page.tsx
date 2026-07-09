@@ -1,13 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 
-import {
-  StaffClient,
-} from "./_components/staff-client";
-import type {
-  PersonOption,
-  StaffRow,
-  TeamOption,
-} from "./_components/staff-manager";
+import { StaffClient } from "./_components/staff-client";
+import type { PersonOption, StaffRow, TeamOption } from "./_components/staff-manager";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -31,11 +25,7 @@ async function loadData(): Promise<{
 }> {
   const supabase = await createClient();
 
-  const [
-    { data: staffData },
-    { data: teamsData },
-    { data: profilesData },
-  ] = await Promise.all([
+  const [{ data: staffData }, { data: teamsData }, { data: profilesData }] = await Promise.all([
     supabase
       .from("team_staff")
       .select(
@@ -56,9 +46,9 @@ async function loadData(): Promise<{
     const teamRaw = Array.isArray(r.team) ? r.team[0] : r.team;
     const team = teamRaw as { id?: string; label?: string; season?: unknown } | null;
     const seasonRaw = team?.season;
-    const season = (Array.isArray(seasonRaw) ? seasonRaw[0] : seasonRaw) as
-      | { label?: string }
-      | null;
+    const season = (Array.isArray(seasonRaw) ? seasonRaw[0] : seasonRaw) as {
+      label?: string;
+    } | null;
     const profileRaw = Array.isArray(r.profile) ? r.profile[0] : r.profile;
     const profile = profileRaw as { full_name?: string } | null;
     return {
@@ -71,11 +61,13 @@ async function loadData(): Promise<{
     };
   });
 
-  const teams: TeamOption[] = ((teamsData ?? []) as Array<{
-    id: string;
-    label: string;
-    season: unknown;
-  }>).map((t) => {
+  const teams: TeamOption[] = (
+    (teamsData ?? []) as Array<{
+      id: string;
+      label: string;
+      season: unknown;
+    }>
+  ).map((t) => {
     const sRaw = Array.isArray(t.season) ? t.season[0] : t.season;
     const s = sRaw as { label?: string } | null;
     return {
@@ -85,7 +77,7 @@ async function loadData(): Promise<{
     };
   });
 
-  const people: PersonOption[] = ((profilesData ?? []) as PersonOption[]);
+  const people: PersonOption[] = (profilesData ?? []) as PersonOption[];
 
   return { rows, teams, people };
 }

@@ -18,11 +18,7 @@ export const metadata = {
   title: "Editar noticia (admin) — Morvedre Core",
 };
 
-export default async function EditAdminNewsPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function EditAdminNewsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
@@ -41,10 +37,7 @@ export default async function EditAdminNewsPage({
   const post = await getNewsPost(id, activeProfile.id);
   if (!post) notFound();
 
-  const { data: teams } = await supabase
-    .from("teams")
-    .select("id, label")
-    .order("label");
+  const { data: teams } = await supabase.from("teams").select("id, label").order("label");
   const teamOptions: TeamOption[] = (teams ?? []).map((t) => ({
     id: (t as { id: string }).id,
     label: (t as { label: string }).label,
@@ -92,7 +85,7 @@ export default async function EditAdminNewsPage({
       <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
         <Link
           href={"/admin/news" as Route}
-          className="inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
         >
           <ArrowLeft className="h-3 w-3" />
           Noticias
@@ -100,10 +93,8 @@ export default async function EditAdminNewsPage({
         <header className="flex items-center gap-2">
           <PictogramBadge pictogram={Megaphone} color="var(--pool-deep)" size="md" />
           <div>
-            <h1 className="font-display text-2xl font-extrabold text-pool-deep">
-              Editar noticia
-            </h1>
-            <p className="text-xs text-ink-600">Modifica el contenido del tablón.</p>
+            <h1 className="font-display text-pool-deep text-2xl font-extrabold">Editar noticia</h1>
+            <p className="text-ink-600 text-xs">Modifica el contenido del tablón.</p>
           </div>
         </header>
         <NewsEditor

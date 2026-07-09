@@ -16,7 +16,7 @@ export function CategoryBadge({ code, className, tone = "soft" }: CategoryBadgeP
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold leading-none",
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs leading-none font-semibold",
         textColor,
         isSolid ? "" : "border",
         className,

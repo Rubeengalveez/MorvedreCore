@@ -6,8 +6,8 @@ import type { Database } from "@/types/database";
 
 const HAS_ENV = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -48,10 +48,7 @@ vi.mock("next/headers", () => ({
     }),
 }));
 
-async function createAuthUser(
-  client: SupabaseClient<Database>,
-  email: string,
-): Promise<string> {
+async function createAuthUser(client: SupabaseClient<Database>, email: string): Promise<string> {
   const { data, error } = await client.auth.admin.createUser({
     email,
     password: PASSWORD,
@@ -63,10 +60,7 @@ async function createAuthUser(
   return data.user.id;
 }
 
-async function deleteAuthUser(
-  client: SupabaseClient<Database>,
-  userId: string,
-): Promise<void> {
+async function deleteAuthUser(client: SupabaseClient<Database>, userId: string): Promise<void> {
   await client.auth.admin.deleteUser(userId);
 }
 
@@ -125,22 +119,10 @@ describe.skipIf(!HAS_ENV)("RLS policies (integration)", () => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    adminAuthUserId = await createAuthUser(
-      admin,
-      `${TEST_PREFIX}-admin@test.local`,
-    );
-    regularAuthUserId = await createAuthUser(
-      admin,
-      `${TEST_PREFIX}-regular@test.local`,
-    );
-    parentAuthUserId = await createAuthUser(
-      admin,
-      `${TEST_PREFIX}-parent@test.local`,
-    );
-    unrelatedAuthUserId = await createAuthUser(
-      admin,
-      `${TEST_PREFIX}-unrelated@test.local`,
-    );
+    adminAuthUserId = await createAuthUser(admin, `${TEST_PREFIX}-admin@test.local`);
+    regularAuthUserId = await createAuthUser(admin, `${TEST_PREFIX}-regular@test.local`);
+    parentAuthUserId = await createAuthUser(admin, `${TEST_PREFIX}-parent@test.local`);
+    unrelatedAuthUserId = await createAuthUser(admin, `${TEST_PREFIX}-unrelated@test.local`);
 
     const { data: adminProfile } = await admin
       .from("profiles")
@@ -154,13 +136,11 @@ describe.skipIf(!HAS_ENV)("RLS policies (integration)", () => {
     adminProfileId = adminProfile?.id ?? null;
 
     if (adminProfileId) {
-      await admin
-        .from("user_roles")
-        .insert({
-          profile_id: adminProfileId,
-          role: "admin",
-          scope_team_id: null,
-        });
+      await admin.from("user_roles").insert({
+        profile_id: adminProfileId,
+        role: "admin",
+        scope_team_id: null,
+      });
     }
 
     const { data: regularProfile } = await admin

@@ -28,16 +28,16 @@ export default async function CartPage() {
       <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
         <Link
           href={"/shop" as Route}
-          className="inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
         >
           <ArrowLeft className="h-3 w-3" />
           Seguir comprando
         </Link>
         <header className="flex items-center gap-2">
-          <ShoppingCart className="h-6 w-6 text-pool-deep" aria-hidden="true" />
+          <ShoppingCart className="text-pool-deep h-6 w-6" aria-hidden="true" />
           <div>
             <Eyebrow>Tu carrito</Eyebrow>
-            <h1 className="font-display text-2xl font-extrabold text-pool-deep">
+            <h1 className="font-display text-pool-deep text-2xl font-extrabold">
               Solicitud de compra
             </h1>
           </div>

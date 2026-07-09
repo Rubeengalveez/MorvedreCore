@@ -12,10 +12,7 @@ import {
   markAttendanceSchema,
   updateTrainingBlockSchema,
 } from "@/lib/domain/admin-schemas";
-import {
-  generateSessionsFromBlock,
-  type TrainingBlock,
-} from "@/lib/domain/training";
+import { generateSessionsFromBlock, type TrainingBlock } from "@/lib/domain/training";
 
 import { requireCoachOf } from "./_helpers";
 
@@ -180,10 +177,7 @@ export async function deleteTrainingBlock(id: string): Promise<void> {
 
   await requireCoachOf(existing.team_id);
 
-  const { error } = await supabase
-    .from("training_blocks")
-    .delete()
-    .eq("id", parsedId.data.id);
+  const { error } = await supabase.from("training_blocks").delete().eq("id", parsedId.data.id);
 
   throwIfError(error, "No pudimos eliminar el bloque. Inténtalo de nuevo.");
 
@@ -237,9 +231,7 @@ export async function generateSessionsFromBlockAction(
     }));
 
   if (toInsert.length > 0) {
-    const { error: insertError } = await supabase
-      .from("training_sessions")
-      .insert(toInsert);
+    const { error: insertError } = await supabase.from("training_sessions").insert(toInsert);
 
     throwIfError(insertError, "No pudimos generar las sesiones. Inténtalo de nuevo.");
   }
@@ -250,10 +242,7 @@ export async function generateSessionsFromBlockAction(
   return { created: toInsert.length };
 }
 
-export async function cancelTrainingSession(
-  sessionId: string,
-  reason: string,
-): Promise<void> {
+export async function cancelTrainingSession(sessionId: string, reason: string): Promise<void> {
   const parsed = cancelTrainingSessionSchema.safeParse({
     session_id: sessionId,
     reason,
@@ -323,9 +312,7 @@ export async function cancelTrainingSession(
       href: `/calendar`,
       related_training_session_id: parsed.data.session_id,
     }));
-    const { error: notifyError } = await adminClient
-      .from("notifications")
-      .insert(rows);
+    const { error: notifyError } = await adminClient.from("notifications").insert(rows);
     if (notifyError) {
       throw new Error("La sesión se canceló, pero no pudimos enviar los avisos.");
     }
@@ -420,9 +407,7 @@ export async function markAttendance(input: {
   return { updated: upsertRows.length };
 }
 
-export async function markAllPresent(
-  sessionId: string,
-): Promise<{ updated: number }> {
+export async function markAllPresent(sessionId: string): Promise<{ updated: number }> {
   const parsedId = idSchema.safeParse({ id: sessionId });
   if (!parsedId.success) {
     throw new Error("Identificador inválido.");
@@ -463,9 +448,7 @@ export async function markAllPresent(
 
   throwIfError(existingError, "No pudimos comprobar la asistencia existente.");
 
-  const existingByPlayer = new Map(
-    (existing ?? []).map((row) => [row.player_id, row]),
-  );
+  const existingByPlayer = new Map((existing ?? []).map((row) => [row.player_id, row]));
 
   const upsertRows = playerIds.map((playerId) => {
     const row = existingByPlayer.get(playerId);

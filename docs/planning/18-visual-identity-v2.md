@@ -43,111 +43,111 @@ El azul actual es correcto pero **seguro**. La evoluciono en 3 frentes:
 ```css
 :root {
   /* === POOL (núcleo) === */
-  --pool-deep:    #062048;   /* azul piscina profunda, header / hero / texto principal */
-  --pool-blue:    #1657A8;   /* azul piscina, primary buttons / links / focus */
-  --pool-teal:    #0E8C8E;   /* teal piscina, info / badges / confirmación suave */
-  --pool-foam:    #E2EFF4;   /* espuma, fondo de cards suaves / hover */
-  --pool-ice:     #F4F8FB;   /* hielo, fondo de patrones / separadores muy sutiles */
+  --pool-deep: #062048; /* azul piscina profunda, header / hero / texto principal */
+  --pool-blue: #1657a8; /* azul piscina, primary buttons / links / focus */
+  --pool-teal: #0e8c8e; /* teal piscina, info / badges / confirmación suave */
+  --pool-foam: #e2eff4; /* espuma, fondo de cards suaves / hover */
+  --pool-ice: #f4f8fb; /* hielo, fondo de patrones / separadores muy sutiles */
 
   /* === ACENTOS DE MARCA === */
-  --ball-gold:    #F4C430;   /* amarillo balón, pichichi #1, highlight hero */
-  --goggle-red:   #D63B2F;   /* rojo del logo, exclusión / derrota / MVP rival */
-  --action:       #FF6B35;   /* naranja acción, CTA primario (sin tocar) */
+  --ball-gold: #f4c430; /* amarillo balón, pichichi #1, highlight hero */
+  --goggle-red: #d63b2f; /* rojo del logo, exclusión / derrota / MVP rival */
+  --action: #ff6b35; /* naranja acción, CTA primario (sin tocar) */
 
   /* === INK (texto) === */
-  --ink-900:      #0F172A;   /* texto principal sobre claro */
-  --ink-700:      #334155;   /* texto fuerte secundario */
-  --ink-600:      #475569;   /* texto secundario, metadata */
-  --ink-400:      #94A3B8;   /* placeholder, ayuda */
-  --ink-300:      #CBD5E1;   /* bordes, separadores */
-  --ink-200:      #E2E8F0;   /* divisores muy sutiles */
+  --ink-900: #0f172a; /* texto principal sobre claro */
+  --ink-700: #334155; /* texto fuerte secundario */
+  --ink-600: #475569; /* texto secundario, metadata */
+  --ink-400: #94a3b8; /* placeholder, ayuda */
+  --ink-300: #cbd5e1; /* bordes, separadores */
+  --ink-200: #e2e8f0; /* divisores muy sutiles */
 
   /* === PAPER (fondos) === */
-  --paper:        #FAFCFE;   /* fondo app */
-  --paper-card:   #FFFFFF;   /* fondo de cards sobre paper */
-  --paper-sunk:   #F1F5F9;   /* fondo hundido, input deshabilitado */
+  --paper: #fafcfe; /* fondo app */
+  --paper-card: #ffffff; /* fondo de cards sobre paper */
+  --paper-sunk: #f1f5f9; /* fondo hundido, input deshabilitado */
 
   /* === SEMÁNTICOS === */
-  --success:      #10B981;   /* confirmado, asistencia, pagado (sin tocar) */
-  --warning:      #F59E0B;   /* pendiente, espera (sin tocar) */
-  --danger:       #EF4444;   /* cancelado, error genérico (sin tocar) */
+  --success: #10b981; /* confirmado, asistencia, pagado (sin tocar) */
+  --warning: #f59e0b; /* pendiente, espera (sin tocar) */
+  --danger: #ef4444; /* cancelado, error genérico (sin tocar) */
   /* Goggle-red se usa también como "danger" semántico del waterpolo (exclusión). */
 
   /* === EQUIPO (color dinámico por equipo, no es var) === */
   /* Las cards lo reciben como prop `teamColor` y se usa directamente. */
 
   /* === RADIOS === */
-  --r-0:    0;     /* dorsal number, marcador (rectangular, solidez) */
-  --r-xs:   4px;   /* badges minúsculos */
-  --r-sm:   6px;   /* chips, inputs (era --radius-sm) */
-  --r-md:   10px;  /* cards (bajamos de 12 a 10, más solidez) */
-  --r-lg:   16px;  /* hero cards, empty states */
-  --r-xl:   24px;  /* welcome screen, modal de login */
-  --r-pill: 9999px;/* avatares, badges round */
+  --r-0: 0; /* dorsal number, marcador (rectangular, solidez) */
+  --r-xs: 4px; /* badges minúsculos */
+  --r-sm: 6px; /* chips, inputs (era --radius-sm) */
+  --r-md: 10px; /* cards (bajamos de 12 a 10, más solidez) */
+  --r-lg: 16px; /* hero cards, empty states */
+  --r-xl: 24px; /* welcome screen, modal de login */
+  --r-pill: 9999px; /* avatares, badges round */
 
   /* === SOMBRAS === */
   --shadow-1: 0 0 0 1px var(--ink-300);
-  --shadow-2: 0 1px 2px rgba(6,32,72,0.04), 0 0 0 1px var(--ink-300);
-  --shadow-3: 0 4px 12px rgba(6,32,72,0.08), 0 0 0 1px var(--ink-300);
-  --shadow-4: 0 8px 24px rgba(6,32,72,0.12), 0 0 0 1px var(--ink-300);
-  --shadow-5: 0 16px 48px rgba(6,32,72,0.16);
+  --shadow-2: 0 1px 2px rgba(6, 32, 72, 0.04), 0 0 0 1px var(--ink-300);
+  --shadow-3: 0 4px 12px rgba(6, 32, 72, 0.08), 0 0 0 1px var(--ink-300);
+  --shadow-4: 0 8px 24px rgba(6, 32, 72, 0.12), 0 0 0 1px var(--ink-300);
+  --shadow-5: 0 16px 48px rgba(6, 32, 72, 0.16);
   --shadow-pool: inset 0 -2px 0 0 var(--pool-blue); /* detalle acuático, sutil */
 
   /* === ESPACIADO (escala 4px) === */
-  --s-1:  4px;
-  --s-2:  8px;
-  --s-3:  12px;
-  --s-4:  16px;
-  --s-5:  20px;
-  --s-6:  24px;
-  --s-8:  32px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-8: 32px;
   --s-10: 40px;
   --s-12: 48px;
   --s-16: 64px;
 
   /* === TIPOGRAFÍA NUMÉRICA === */
   --tracking-tight: -0.02em;
-  --tracking-flat:  0;
-  --tracking-wide:  0.04em;
+  --tracking-flat: 0;
+  --tracking-wide: 0.04em;
   --tracking-eyebrow: 0.12em; /* para small caps de labels */
 }
 
 /* === ALIAS DE COMPATIBILIDAD (no romper nada existente) === */
 :root {
-  --brand-deep:  var(--pool-deep);
-  --brand-blue:  var(--pool-blue);
-  --brand-aqua:  var(--pool-teal);
-  --brand-foam:  var(--pool-foam);
-  --brand-ball:  var(--ball-gold);
-  --radius-sm:   var(--r-sm);
-  --radius:      var(--r-sm);
-  --radius-md:   var(--r-md);
-  --radius-lg:   var(--r-lg);
+  --brand-deep: var(--pool-deep);
+  --brand-blue: var(--pool-blue);
+  --brand-aqua: var(--pool-teal);
+  --brand-foam: var(--pool-foam);
+  --brand-ball: var(--ball-gold);
+  --radius-sm: var(--r-sm);
+  --radius: var(--r-sm);
+  --radius-md: var(--r-md);
+  --radius-lg: var(--r-lg);
   --radius-full: var(--r-pill);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --pool-deep:   #021024;   /* agua nocturna, casi negro azulado */
-    --pool-blue:   #2E78D6;   /* un poco más claro para que destaque */
-    --pool-teal:   #2BB3B5;
-    --pool-foam:   #0E1A30;
-    --pool-ice:    #0A1426;
-    --paper:       #0A1426;
-    --paper-card:  #10203A;
-    --paper-sunk:  #08111F;
-    --ink-900:     #F1F5F9;
-    --ink-700:     #CBD5E1;
-    --ink-600:     #94A3B8;
-    --ink-400:     #64748B;
-    --ink-300:     #334155;
-    --ink-200:     #1E293B;
-    --ball-gold:   #F4C430;
-    --goggle-red:  #E25A4D;
-    --shadow-1:    0 0 0 1px var(--ink-300);
-    --shadow-2:    0 1px 2px rgba(0,0,0,0.4), 0 0 0 1px var(--ink-300);
-    --shadow-3:    0 4px 12px rgba(0,0,0,0.5), 0 0 0 1px var(--ink-300);
-    --shadow-4:    0 8px 24px rgba(0,0,0,0.6), 0 0 0 1px var(--ink-300);
+    --pool-deep: #021024; /* agua nocturna, casi negro azulado */
+    --pool-blue: #2e78d6; /* un poco más claro para que destaque */
+    --pool-teal: #2bb3b5;
+    --pool-foam: #0e1a30;
+    --pool-ice: #0a1426;
+    --paper: #0a1426;
+    --paper-card: #10203a;
+    --paper-sunk: #08111f;
+    --ink-900: #f1f5f9;
+    --ink-700: #cbd5e1;
+    --ink-600: #94a3b8;
+    --ink-400: #64748b;
+    --ink-300: #334155;
+    --ink-200: #1e293b;
+    --ball-gold: #f4c430;
+    --goggle-red: #e25a4d;
+    --shadow-1: 0 0 0 1px var(--ink-300);
+    --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--ink-300);
+    --shadow-3: 0 4px 12px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--ink-300);
+    --shadow-4: 0 8px 24px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--ink-300);
   }
 }
 ```
@@ -168,14 +168,14 @@ const config: Config = {
           blue: "var(--pool-blue)",
           teal: "var(--pool-teal)",
           foam: "var(--pool-foam)",
-          ice:  "var(--pool-ice)",
+          ice: "var(--pool-ice)",
         },
-        ball:  { gold: "var(--ball-gold)" },
-        goggle:{ red:  "var(--goggle-red)" },
+        ball: { gold: "var(--ball-gold)" },
+        goggle: { red: "var(--goggle-red)" },
         paper: {
           DEFAULT: "var(--paper)",
-          card:    "var(--paper-card)",
-          sunk:    "var(--paper-sunk)",
+          card: "var(--paper-card)",
+          sunk: "var(--paper-sunk)",
         },
         ink: {
           200: "var(--ink-200)",
@@ -188,12 +188,12 @@ const config: Config = {
       },
       borderRadius: {
         none: "var(--r-0)",
-        xs:   "var(--r-xs)",
-        sm:   "var(--r-sm)",
+        xs: "var(--r-xs)",
+        sm: "var(--r-sm)",
         DEFAULT: "var(--r-sm)",
-        md:   "var(--r-md)",
-        lg:   "var(--r-lg)",
-        xl:   "var(--r-xl)",
+        md: "var(--r-md)",
+        lg: "var(--r-lg)",
+        xl: "var(--r-xl)",
         full: "var(--r-pill)",
       },
       boxShadow: {
@@ -202,15 +202,15 @@ const config: Config = {
         "elev-3": "var(--shadow-3)",
         "elev-4": "var(--shadow-4)",
         "elev-5": "var(--shadow-5)",
-        "pool":   "var(--shadow-pool)",
+        pool: "var(--shadow-pool)",
       },
       letterSpacing: {
-        "eyebrow": "var(--tracking-eyebrow)",
+        eyebrow: "var(--tracking-eyebrow)",
       },
       fontFamily: {
         display: "var(--font-manrope)",
-        sans:    "var(--font-inter)",
-        mono:    "var(--font-jetbrains-mono)",
+        sans: "var(--font-inter)",
+        mono: "var(--font-jetbrains-mono)",
       },
     },
   },
@@ -222,18 +222,18 @@ export default config;
 
 ### Hex cheat-sheet
 
-| Token              | Hex       | Nombre humano              | Cuándo NO usarlo                                     |
-|--------------------|-----------|----------------------------|------------------------------------------------------|
-| `pool-deep`        | `#062048` | Piscina profunda           | Sobre `pool-deep` (nunca texto blanco sobre sí mismo)|
-| `pool-blue`        | `#1657A8` | Piscina                    | Texto body, solo títulos, links y CTAs               |
-| `pool-teal`        | `#0E8C8E` | Teal piscina               | Botones primarios, solo info/badges                  |
-| `pool-foam`        | `#E2EFF4` | Espuma                     | Texto sobre él (queda lavado), solo fondos           |
-| `pool-ice`         | `#F4F8FB` | Hielo                      | Cards grandes, solo separadores muy sutiles          |
-| `ball-gold`        | `#F4C430` | Balón                      | Texto small (no legible), solo highlights grandes    |
-| `goggle-red`       | `#D63B2F` | Gafas de bucear            | "Ver más" o info, reservado a exclusión/derrota      |
-| `action`           | `#FF6B35` | Acción                     | Decoración, solo CTA principal                        |
-| `success`          | `#10B981` | -                          | Texto deshabilitado                                  |
-| `danger`           | `#EF4444` | -                          | Cuando hay un matiz emocional waterpolo (→ goggle)   |
+| Token        | Hex       | Nombre humano    | Cuándo NO usarlo                                      |
+| ------------ | --------- | ---------------- | ----------------------------------------------------- |
+| `pool-deep`  | `#062048` | Piscina profunda | Sobre `pool-deep` (nunca texto blanco sobre sí mismo) |
+| `pool-blue`  | `#1657A8` | Piscina          | Texto body, solo títulos, links y CTAs                |
+| `pool-teal`  | `#0E8C8E` | Teal piscina     | Botones primarios, solo info/badges                   |
+| `pool-foam`  | `#E2EFF4` | Espuma           | Texto sobre él (queda lavado), solo fondos            |
+| `pool-ice`   | `#F4F8FB` | Hielo            | Cards grandes, solo separadores muy sutiles           |
+| `ball-gold`  | `#F4C430` | Balón            | Texto small (no legible), solo highlights grandes     |
+| `goggle-red` | `#D63B2F` | Gafas de bucear  | "Ver más" o info, reservado a exclusión/derrota       |
+| `action`     | `#FF6B35` | Acción           | Decoración, solo CTA principal                        |
+| `success`    | `#10B981` | -                | Texto deshabilitado                                   |
+| `danger`     | `#EF4444` | -                | Cuando hay un matiz emocional waterpolo (→ goggle)    |
 
 ---
 
@@ -247,20 +247,20 @@ Lo que sí formalizo es la **escala tipográfica con intención**, no solo tama�
 
 ### Type scale con función
 
-| Token              | Mobile / Desktop | Font / Weight / Tracking         | Función                                                |
-|--------------------|------------------|----------------------------------|--------------------------------------------------------|
-| `text-score-xl`    | 56 / 64          | JetBrains Mono 800, tight        | Marcador final. Solo el bloque PoolScoreboard.         |
-| `text-score-lg`    | 40 / 48          | JetBrains Mono 800, tight        | Dorsal grande en CapTile XL, top 1 Pichichi.           |
-| `text-display`     | 32 / 40          | Manrope 800, tight               | H1 de página, número de racha destacado.              |
-| `text-h1`          | 26 / 32          | Manrope 800, tight               | H1 mobile, header de sección principal.                |
-| `text-h2`          | 20 / 22          | Manrope 700, flat                | H2, títulos de card, nombres de jugador.              |
-| `text-h3`          | 17 / 18          | Manrope 700, flat                | H3, subtítulos, "Convocatoria", "Acta".               |
-| `text-lead`        | 17 / 18          | Inter 500, flat                  | Subtítulo debajo de h1, mensaje motivador.            |
-| `text-body`        | 16 / 16          | Inter 400, flat                  | Body, descripciones, párrafos.                        |
-| `text-meta`        | 14 / 14          | Inter 500, flat                  | Metadata, fecha, lugar, "12 jugadores".               |
-| `text-caption`     | 13 / 13          | Inter 500, flat                  | Caption, ayuda, hints.                                 |
-| `text-eyebrow`     | 11 / 11          | Inter 700, eyebrow (0.12em)      | Labels uppercase: "PARTIDO", "TU TEMPORADA".          |
-| `text-mono-num`    | 14-32 / igual    | JetBrains Mono 600, tabular      | Dorsales inline, scores secundarios, %, rachas.       |
+| Token           | Mobile / Desktop | Font / Weight / Tracking    | Función                                         |
+| --------------- | ---------------- | --------------------------- | ----------------------------------------------- |
+| `text-score-xl` | 56 / 64          | JetBrains Mono 800, tight   | Marcador final. Solo el bloque PoolScoreboard.  |
+| `text-score-lg` | 40 / 48          | JetBrains Mono 800, tight   | Dorsal grande en CapTile XL, top 1 Pichichi.    |
+| `text-display`  | 32 / 40          | Manrope 800, tight          | H1 de página, número de racha destacado.        |
+| `text-h1`       | 26 / 32          | Manrope 800, tight          | H1 mobile, header de sección principal.         |
+| `text-h2`       | 20 / 22          | Manrope 700, flat           | H2, títulos de card, nombres de jugador.        |
+| `text-h3`       | 17 / 18          | Manrope 700, flat           | H3, subtítulos, "Convocatoria", "Acta".         |
+| `text-lead`     | 17 / 18          | Inter 500, flat             | Subtítulo debajo de h1, mensaje motivador.      |
+| `text-body`     | 16 / 16          | Inter 400, flat             | Body, descripciones, párrafos.                  |
+| `text-meta`     | 14 / 14          | Inter 500, flat             | Metadata, fecha, lugar, "12 jugadores".         |
+| `text-caption`  | 13 / 13          | Inter 500, flat             | Caption, ayuda, hints.                          |
+| `text-eyebrow`  | 11 / 11          | Inter 700, eyebrow (0.12em) | Labels uppercase: "PARTIDO", "TU TEMPORADA".    |
+| `text-mono-num` | 14-32 / igual    | JetBrains Mono 600, tabular | Dorsales inline, scores secundarios, %, rachas. |
 
 ### Reglas de uso
 
@@ -364,7 +364,10 @@ El dorsal como objeto. Ver detalle en §6.
 Círculo de 28-40px con pictograma 1-stroke dentro, fondo de color de equipo, foreground blanco. Es el sustituto de los iconos Lucide en cualquier sitio donde el icono tiene peso identitario (goles, convocatoria, partido, entreno, MVP, exclusión).
 
 ```tsx
-<span className="inline-flex h-9 w-9 items-center justify-center rounded-full" style={{ backgroundColor: teamColor, color: "#fff" }}>
+<span
+  className="inline-flex h-9 w-9 items-center justify-center rounded-full"
+  style={{ backgroundColor: teamColor, color: "#fff" }}
+>
   <Balon className="h-5 w-5" accent="none" />
 </span>
 ```
@@ -390,29 +393,30 @@ Combinación de **eyebrow label** (eyebrow 0.12em, uppercase) + **número de ín
 ```ts
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap font-display font-semibold transition-all " +
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper " +
-  "disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] " +
-  "rounded-[var(--r-sm)]",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper " +
+    "disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] " +
+    "rounded-[var(--r-sm)]",
   {
     variants: {
       variant: {
-        primary:   "bg-pool-blue text-paper hover:bg-pool-deep active:bg-pool-deep focus-visible:ring-pool-blue",
-        deep:      "bg-pool-deep text-paper hover:bg-ink-900 focus-visible:ring-pool-deep",
+        primary:
+          "bg-pool-blue text-paper hover:bg-pool-deep active:bg-pool-deep focus-visible:ring-pool-blue",
+        deep: "bg-pool-deep text-paper hover:bg-ink-900 focus-visible:ring-pool-deep",
         secondary: "border border-ink-300 bg-paper-card text-pool-deep hover:bg-pool-foam",
-        ghost:     "text-pool-deep hover:bg-pool-foam",
-        danger:    "bg-goggle-red text-paper hover:opacity-90 focus-visible:ring-goggle-red",
-        success:   "bg-success text-paper hover:opacity-90 focus-visible:ring-success",
-        gold:      "bg-ball-gold text-pool-deep hover:opacity-90 focus-visible:ring-ball-gold", // CTA celebración
+        ghost: "text-pool-deep hover:bg-pool-foam",
+        danger: "bg-goggle-red text-paper hover:opacity-90 focus-visible:ring-goggle-red",
+        success: "bg-success text-paper hover:opacity-90 focus-visible:ring-success",
+        gold: "bg-ball-gold text-pool-deep hover:opacity-90 focus-visible:ring-ball-gold", // CTA celebración
       },
       size: {
-        sm:  "h-11 min-h-11 px-4 text-sm",
-        md:  "h-12 min-h-12 px-5 text-base",
-        lg:  "h-14 min-h-14 px-6 text-base",
-        xl:  "h-16 min-h-16 px-7 text-lg", // para "Confirmo" / "No puedo" del RSVP
+        sm: "h-11 min-h-11 px-4 text-sm",
+        md: "h-12 min-h-12 px-5 text-base",
+        lg: "h-14 min-h-14 px-6 text-base",
+        xl: "h-16 min-h-16 px-7 text-lg", // para "Confirmo" / "No puedo" del RSVP
       },
     },
     defaultVariants: { variant: "primary", size: "md" },
-  }
+  },
 );
 ```
 
@@ -421,27 +425,24 @@ Cambios clave: `gold` para "Confirmo" (en RSVP y convocatoria — el botón cele
 ### `Card` — añadir variantes
 
 ```tsx
-const cardVariants = cva(
-  "rounded-md border bg-paper-card text-ink-900",
-  {
-    variants: {
-      variant: {
-        default: "border-ink-300",
-        sunk:    "border-ink-300 bg-pool-foam/40",
-        stripe:  "border-ink-300", // usa <CardStripe teamColor /> hijo
-        lane:    "border-ink-300 relative overflow-hidden", // usa <LanePattern /> hijo
-        elev:    "border-ink-300 shadow-elev-2 hover:shadow-elev-3",
-      },
-      padding: {
-        none: "",
-        sm:   "p-3",
-        md:   "p-4",
-        lg:   "p-5",
-      },
+const cardVariants = cva("rounded-md border bg-paper-card text-ink-900", {
+  variants: {
+    variant: {
+      default: "border-ink-300",
+      sunk: "border-ink-300 bg-pool-foam/40",
+      stripe: "border-ink-300", // usa <CardStripe teamColor /> hijo
+      lane: "border-ink-300 relative overflow-hidden", // usa <LanePattern /> hijo
+      elev: "border-ink-300 shadow-elev-2 hover:shadow-elev-3",
     },
-    defaultVariants: { variant: "default", padding: "md" },
-  }
-);
+    padding: {
+      none: "",
+      sm: "p-3",
+      md: "p-4",
+      lg: "p-5",
+    },
+  },
+  defaultVariants: { variant: "default", padding: "md" },
+});
 ```
 
 ### `Avatar` — color dinámico
@@ -455,11 +456,15 @@ export function Avatar({ src, name, size = 40, teamColor, className, style }: Av
     <span
       className="inline-flex shrink-0 items-center justify-center rounded-full font-display font-extrabold text-paper"
       style={{
-        width: size, height: size, fontSize: Math.max(11, Math.round(size * 0.4)),
+        width: size,
+        height: size,
+        fontSize: Math.max(11, Math.round(size * 0.4)),
         backgroundColor: teamColor ?? "var(--pool-blue)",
         ...style,
       }}
-    >{initials}</span>
+    >
+      {initials}
+    </span>
   );
 }
 ```
@@ -498,6 +503,7 @@ Invento estos porque responden a huecos reales de la app (rankings, alineación,
 ```
 
 Tres tamaños:
+
 - `sm` (28×32): en listas, junto a avatar
 - `md` (48×56): en convocatoria, en roster
 - `xl` (96×112): en "Tu gorro: #7" del RSVP, en top 1 Pichichi
@@ -522,13 +528,23 @@ const sizeMap = {
   xl: { w: 96, h: 112, font: 56 },
 };
 
-export function CapTile({ cap, teamColor, size = "md", variant = "default", className }: CapTileProps) {
+export function CapTile({
+  cap,
+  teamColor,
+  size = "md",
+  variant = "default",
+  className,
+}: CapTileProps) {
   const s = sizeMap[size];
   return (
     <div
-      className={cn("relative inline-flex items-center justify-center font-mono text-paper shadow-elev-2", className)}
+      className={cn(
+        "relative inline-flex items-center justify-center font-mono text-paper shadow-elev-2",
+        className,
+      )}
       style={{
-        width: s.w, height: s.h,
+        width: s.w,
+        height: s.h,
         backgroundColor: teamColor,
         fontSize: s.font,
         fontWeight: 800,
@@ -550,6 +566,7 @@ export function CapTile({ cap, teamColor, size = "md", variant = "default", clas
 ```
 
 Donde se usa:
+
 - `match/[id]` — convocatoria, "Tu gorro: #7" (XL con `mine`)
 - `team/[id]` — roster (SM, con `goalkeeper` si cap es 1 o el indicado)
 - `admin/matches/[id]` — acta y convocatoria (MD, con drag handle)
@@ -590,11 +607,11 @@ export interface PoolScoreboardProps {
   mode: "preview" | "final" | "live";
   homeTeam: { label: string; color: string; score?: number };
   awayTeam: { label: string; color: string; score?: number };
-  scheduledAt: string;          // ISO
-  competitionLabel: string;      // "Liga", "Copa", "Torneo"
-  isHome: boolean;               // si nuestro equipo juega en casa
-  period?: number;               // 1-4
-  clock?: string;                // "04:32"
+  scheduledAt: string; // ISO
+  competitionLabel: string; // "Liga", "Copa", "Torneo"
+  isHome: boolean; // si nuestro equipo juega en casa
+  period?: number; // 1-4
+  clock?: string; // "04:32"
   mvp?: { name: string; cap?: number } | null;
   exclusion?: { player: string; secondsLeft: number } | null; // live only
   className?: string;
@@ -602,6 +619,7 @@ export interface PoolScoreboardProps {
 ```
 
 **Variantes:**
+
 - `preview`: hora grande en mono, "VS" central, sin scores, franjas con color tenue.
 - `final`: scores 56px mono 800, franjas opacas, "FIN" en eyebrow.
 - `live`: scores con parpadeo sutil, período en mono, exclusion timer en la franja lateral del equipo rival con `goggle-red`.
@@ -615,7 +633,9 @@ export interface PoolScoreboardProps {
   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-0">
     {/* HOME */}
     <div className="flex flex-col items-center gap-1 p-4">
-      <span className="text-eyebrow" style={{ color: homeColor }}>{homeShortLabel}</span>
+      <span className="text-eyebrow" style={{ color: homeColor }}>
+        {homeShortLabel}
+      </span>
       {mode === "final" || mode === "live" ? (
         <span className="text-score-xl text-pool-deep">{homeScore}</span>
       ) : (
@@ -646,9 +666,9 @@ export interface PoolScoreboardProps {
   </div>
 
   {/* Footer con MVP / exclusión / sede */}
-  <div className="flex items-center gap-2 border-t border-ink-300 bg-pool-foam/40 px-4 py-2">
+  <div className="bg-pool-foam/40 flex items-center gap-2 border-t border-ink-300 px-4 py-2">
     <span className="text-eyebrow text-ink-600">{competitionLabel}</span>
-    {mvp ? <span className="ml-auto text-meta text-pool-deep">MVP: {mvp.name}</span> : null}
+    {mvp ? <span className="text-meta ml-auto text-pool-deep">MVP: {mvp.name}</span> : null}
   </div>
 
   {/* Franjas laterales */}
@@ -658,6 +678,7 @@ export interface PoolScoreboardProps {
 ```
 
 Donde se usa:
+
 - `match/[id]` (hero) — modo `preview`, `final` o `live` según `status`
 - `team/[id]` (último resultado) — modo `final`
 - Dashboard `NextEventCard` (top hero) — modo `preview` cuando hay partido
@@ -697,10 +718,10 @@ export interface PichichiPodiumProps {
     fullName: string;
     photoUrl: string | null;
     teamColor: string;
-    value: number;          // goles
+    value: number; // goles
     capNumber?: number;
   }>;
-  caption?: string;          // "Goleadores · Temporada 25-26"
+  caption?: string; // "Goleadores · Temporada 25-26"
   mineProfileId?: string;
   className?: string;
 }
@@ -711,12 +732,13 @@ Animación: el #1 entra con scale 0.8 → 1 + opacity 0 → 1 (200ms ease-out), 
 ```tsx
 <div className="grid grid-cols-3 items-end gap-2">
   {top3[1] && <PodiumStep rank={2} entry={top3[1]} delay={100} />}
-  {top3[0] && <PodiumStep rank={1} entry={top3[0]} delay={0}   medal="gold" />}
+  {top3[0] && <PodiumStep rank={1} entry={top3[0]} delay={0} medal="gold" />}
   {top3[2] && <PodiumStep rank={3} entry={top3[2]} delay={200} />}
 </div>
 ```
 
 Donde se usa:
+
 - `/rankings` (Fase 3) — pichichi
 - `/rankings` (Fase 3) — MVP ranking con misma forma
 - Pantalla final de temporada
@@ -747,8 +769,8 @@ Donde se usa:
 ```tsx
 export interface LaneCallupProps {
   goalkeeper: CallupSlot;
-  fieldPlayers: CallupSlot[];        // 6 jugadores en posiciones
-  bench: CallupSlot[];               // los 6 suplentes
+  fieldPlayers: CallupSlot[]; // 6 jugadores en posiciones
+  bench: CallupSlot[]; // los 6 suplentes
   teamColor: string;
   onSlotClick?: (playerId: string) => void;
   mineProfileId?: string;
@@ -783,7 +805,7 @@ Carlos · #7          14s          ╠═══════╗
 export interface ExclusionTimerProps {
   playerName: string;
   capNumber?: number;
-  totalSeconds?: number;   // default 20
+  totalSeconds?: number; // default 20
   secondsLeft: number;
   teamColor: string;
   size?: "sm" | "md";
@@ -793,6 +815,7 @@ export interface ExclusionTimerProps {
 Animación: la barra decrece con `transition: width 1s linear` refrescada cada segundo. Cuando llega a 0, parpadea 1 vez y desaparece.
 
 Usado en:
+
 - Acta (entrada manual de exclusión con timer en vivo en partidos en directo)
 - Resultado del partido (línea "Exclusiones: 3 · Carlos (2), Iker (1)")
 
@@ -818,7 +841,11 @@ export function PictogramBadge({
   const iconMap = { xs: "h-3 w-3", sm: "h-4 w-4", md: "h-5 w-5", lg: "h-6 w-6" };
   return (
     <span
-      className={cn("inline-flex items-center justify-center rounded-full text-paper", sizeMap[size], className)}
+      className={cn(
+        "inline-flex items-center justify-center rounded-full text-paper",
+        sizeMap[size],
+        className,
+      )}
       style={{ backgroundColor: color }}
     >
       <Pictogram className={iconMap[size]} />
@@ -833,18 +860,18 @@ Donde se usa: en lugar de `<Trophy /> Lucide` en activity feed, en headers de pa
 
 ## 7. Motion (sutil, con función)
 
-| Evento                                  | Motion                                                              | Duración / Easing              |
-|-----------------------------------------|---------------------------------------------------------------------|--------------------------------|
-| Entrada de página principal (dashboard) | Fade-in + slide-up 8px                                              | 240ms, ease-out                |
-| Tap en card/botón                       | `active:scale-[0.97]` (ya existe)                                   | 80ms, ease-out                 |
-| Toast / notif guardada                  | Slide-in desde arriba + fade                                        | 200ms, ease-out                |
-| Número en stats (goles, racha)          | Count-up de 0 al valor                                              | 600ms, ease-out                |
-| CapTile aparece en convocatoria         | Pop-in (scale 0.7 → 1 + opacity 0 → 1)                              | 180ms, cubic-bezier(0.34,1.56) |
-| Pichichi podio #1                       | Pop-in con corona girando 15° → 0°                                  | 300ms, ease-out                |
-| Exclusion timer                         | Width transition                                                    | 1000ms linear por segundo      |
-| Cambio tab (en `/admin/matches/[id]`)  | View transition (cross-fade)                                        | 150ms                          |
-| RSVP confirmado                         | Check que se dibuja con stroke-dasharray                             | 220ms, ease-out                |
-| Ola separadora                          | Slide-in horizontal desde la izquierda                              | 400ms, ease-out                |
+| Evento                                  | Motion                                   | Duración / Easing              |
+| --------------------------------------- | ---------------------------------------- | ------------------------------ |
+| Entrada de página principal (dashboard) | Fade-in + slide-up 8px                   | 240ms, ease-out                |
+| Tap en card/botón                       | `active:scale-[0.97]` (ya existe)        | 80ms, ease-out                 |
+| Toast / notif guardada                  | Slide-in desde arriba + fade             | 200ms, ease-out                |
+| Número en stats (goles, racha)          | Count-up de 0 al valor                   | 600ms, ease-out                |
+| CapTile aparece en convocatoria         | Pop-in (scale 0.7 → 1 + opacity 0 → 1)   | 180ms, cubic-bezier(0.34,1.56) |
+| Pichichi podio #1                       | Pop-in con corona girando 15° → 0°       | 300ms, ease-out                |
+| Exclusion timer                         | Width transition                         | 1000ms linear por segundo      |
+| Cambio tab (en `/admin/matches/[id]`)   | View transition (cross-fade)             | 150ms                          |
+| RSVP confirmado                         | Check que se dibuja con stroke-dasharray | 220ms, ease-out                |
+| Ola separadora                          | Slide-in horizontal desde la izquierda   | 400ms, ease-out                |
 
 **Regla de oro:** si la animación no informa al usuario de algo (qué pasó, qué cambió, dónde está), se quita. La decoración animada envejece mal.
 
@@ -856,43 +883,43 @@ Donde se usa: en lugar de `<Trophy /> Lucide` en activity feed, en headers de pa
 
 ### Lo que se queda (merece conservarse)
 
-| Pieza actual                                       | Por qué se queda                                                                 |
-|----------------------------------------------------|----------------------------------------------------------------------------------|
-| Pictogramas custom (gorro, balon, ola, silbato...) | Son la base de la identidad. Solo los pulimos (gorro más detallado, ver §6.1).   |
+| Pieza actual                                       | Por qué se queda                                                                  |
+| -------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Pictogramas custom (gorro, balon, ola, silbato...) | Son la base de la identidad. Solo los pulimos (gorro más detallado, ver §6.1).    |
 | `water-divider`                                    | La idea es buena. Solo lo mejoramos con dirección, color de equipo y 3 variantes. |
-| Tipografía (Manrope + Inter + Mono)                | Decisión correcta. Sin cambios.                                                  |
-| Bottom nav de 5 tabs con dot indicator             | Funciona. Solo cambiamos el dot por `ball-gold` (más contraste que el actual).   |
-| Color dinámico por equipo en bordes de cards       | La idea es buena. La llevamos más lejos (cards teñidas, franjas de scoreboard).  |
-| Tono cercano y segunda persona                     | Se queda. La UI tiene que seguir sonando "Rubén del Puerto".                     |
-| Empty states con copy específico                   | Se queda. Solo añadimos un pictograma en lugar de Lucide.                       |
-| Estructura `lib/domain/*` como funciones puras    | Ortogonal al visual, se queda.                                                   |
-| Alias de compatibilidad (`--brand-deep` = pool)    | Esto permite migrar gradualmente sin tocar todos los call-sites.                 |
+| Tipografía (Manrope + Inter + Mono)                | Decisión correcta. Sin cambios.                                                   |
+| Bottom nav de 5 tabs con dot indicator             | Funciona. Solo cambiamos el dot por `ball-gold` (más contraste que el actual).    |
+| Color dinámico por equipo en bordes de cards       | La idea es buena. La llevamos más lejos (cards teñidas, franjas de scoreboard).   |
+| Tono cercano y segunda persona                     | Se queda. La UI tiene que seguir sonando "Rubén del Puerto".                      |
+| Empty states con copy específico                   | Se queda. Solo añadimos un pictograma en lugar de Lucide.                         |
+| Estructura `lib/domain/*` como funciones puras     | Ortogonal al visual, se queda.                                                    |
+| Alias de compatibilidad (`--brand-deep` = pool)    | Esto permite migrar gradualmente sin tocar todos los call-sites.                  |
 
 ### Lo que se tira (sin remordimiento)
 
-| Pieza actual                                                              | Por qué se va                                                                                     |
-|---------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------|
-| `bg-brand-blue` en todos los botones primarios                            | Diferenciamos con `gold` para CTAs de celebración, `deep` para "ver detalle", `pool-blue` para primarios. |
-| `rounded-md 12px` en cards                                                | Bajamos a 10px (`r--md`). Cards más serias, menos "blanditas".                                    |
-| `border-ink-300 bg-paper rounded-md` en TODAS las cards                    | Introducimos 4 variantes (`default`, `sunk`, `stripe`, `lane`, `elev`). La misma card no puede valer para "Resultado del partido" que para "Notas". |
-| Score 72px inline en hero de partido                                      | Reemplazado por `PoolScoreboard`. Es el cambio identitario más fuerte.                            |
-| `color-mix(in oklab, ${color} 6%, var(--paper))` repetido inline          | Centralizar en variantes de Card (`<Card variant="stripe" teamColor={...}>`).                     |
-| Lucide `Trophy` para resultados                                           | Reemplazado por `PictogramBadge` con `Balon` (gol) o `Porteria` (MVP).                            |
-| Lucide `Calendar` con `bg-brand-foam` en empty states                     | Reemplazado por pictograma custom en pictogram badge.                                              |
-| `borderTopWidth: "4px"` + `borderLeftWidth: "4px"` inline en hero partido| Reemplazado por `PoolScoreboard` que gestiona las franjas internamente.                           |
-| `font-bold` en h1 con `text-2xl sm:text-3xl`                              | Subimos a `text-h1` (26/32) o `text-display` (32/40) según contexto.                              |
-| `bg-brand-foam/30` para SeasonStatCard                                    | Usar `bg-pool-foam/50` con un `border-l-2` del color del stat (success/blue/action).             |
+| Pieza actual                                                              | Por qué se va                                                                                                                                       |
+| ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bg-brand-blue` en todos los botones primarios                            | Diferenciamos con `gold` para CTAs de celebración, `deep` para "ver detalle", `pool-blue` para primarios.                                           |
+| `rounded-md 12px` en cards                                                | Bajamos a 10px (`r--md`). Cards más serias, menos "blanditas".                                                                                      |
+| `border-ink-300 bg-paper rounded-md` en TODAS las cards                   | Introducimos 4 variantes (`default`, `sunk`, `stripe`, `lane`, `elev`). La misma card no puede valer para "Resultado del partido" que para "Notas". |
+| Score 72px inline en hero de partido                                      | Reemplazado por `PoolScoreboard`. Es el cambio identitario más fuerte.                                                                              |
+| `color-mix(in oklab, ${color} 6%, var(--paper))` repetido inline          | Centralizar en variantes de Card (`<Card variant="stripe" teamColor={...}>`).                                                                       |
+| Lucide `Trophy` para resultados                                           | Reemplazado por `PictogramBadge` con `Balon` (gol) o `Porteria` (MVP).                                                                              |
+| Lucide `Calendar` con `bg-brand-foam` en empty states                     | Reemplazado por pictograma custom en pictogram badge.                                                                                               |
+| `borderTopWidth: "4px"` + `borderLeftWidth: "4px"` inline en hero partido | Reemplazado por `PoolScoreboard` que gestiona las franjas internamente.                                                                             |
+| `font-bold` en h1 con `text-2xl sm:text-3xl`                              | Subimos a `text-h1` (26/32) o `text-display` (32/40) según contexto.                                                                                |
+| `bg-brand-foam/30` para SeasonStatCard                                    | Usar `bg-pool-foam/50` con un `border-l-2` del color del stat (success/blue/action).                                                                |
 
 ### Lo que se evoluciona (manteniendo la idea, subiendo el listón)
 
-| Pieza actual                                   | Evolución                                                                              |
-|------------------------------------------------|----------------------------------------------------------------------------------------|
-| `text-[10px] font-bold uppercase tracking-wider` repetido 8+ veces | Centralizar en `text-eyebrow` utility.                                                 |
-| `font-mono text-xl font-bold` para dorsales     | `CapTile` con tamaño y color. El dorsal pasa de texto a objeto.                        |
-| Avatar con iniciales en `bg-brand-blue` fijo   | Avatar con color de equipo del jugador (`teamColor` prop).                             |
-| Calendario con chips de color por evento       | Chip con el pictograma dentro (no solo el color). Más identidad, menos "tabla de Excel".|
-| `WeekEventCard` 180px min-width                | Cambio a `CapTile` SM + hora + nombre del partido. Más denso y más visual.             |
-| Dot indicator del bottom nav en `bg-brand-ball`| Se queda, pero le damos contraste: ball-gold sólido, 6px en vez de 4px.                |
+| Pieza actual                                                       | Evolución                                                                                |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `text-[10px] font-bold uppercase tracking-wider` repetido 8+ veces | Centralizar en `text-eyebrow` utility.                                                   |
+| `font-mono text-xl font-bold` para dorsales                        | `CapTile` con tamaño y color. El dorsal pasa de texto a objeto.                          |
+| Avatar con iniciales en `bg-brand-blue` fijo                       | Avatar con color de equipo del jugador (`teamColor` prop).                               |
+| Calendario con chips de color por evento                           | Chip con el pictograma dentro (no solo el color). Más identidad, menos "tabla de Excel". |
+| `WeekEventCard` 180px min-width                                    | Cambio a `CapTile` SM + hora + nombre del partido. Más denso y más visual.               |
+| Dot indicator del bottom nav en `bg-brand-ball`                    | Se queda, pero le damos contraste: ball-gold sólido, 6px en vez de 4px.                  |
 
 ---
 

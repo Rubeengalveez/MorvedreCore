@@ -7,6 +7,7 @@
 ### Base de datos
 
 5 migraciones + 1 fix:
+
 - `0003_seasons.sql` — temporadas con `is_current` (1 sola activa via índice único parcial)
 - `0004_teams.sql` — equipos con `team_type` (`competitive` | `school`), `color` hex, `gender`, `category_code` extendido con `escuela`
 - `0005_team_staff.sql` — staff de equipo (`head_coach`, `assistant_coach`, `delegate`, `physical_trainer`)
@@ -39,6 +40,7 @@ Seed con 3 temporadas (24/25 archived, 25/26 archived, 26/27 actual).
 - `tests/integration/query-helpers.test.ts` — 10 tests (9 skip sin env)
 
 Para correr los tests de integración con Supabase real:
+
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=https://...
 NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_...
@@ -53,6 +55,7 @@ pnpm test:run
 ### Panel admin (`/admin`)
 
 Layout con guard de admin + 6 sub-pestañas:
+
 - **Temporadas** (`/admin/seasons`): lista + crear/editar/archivar/marcar actual
 - **Equipos** (`/admin/teams`): grid filtrable por temporada + detalle con secciones de personal/plantilla/detalles
 - **Jugadores** (`/admin/players`): tabla con búsqueda + alta individual
@@ -72,6 +75,7 @@ Home `/admin` con resumen: temporada actual, conteos por categoría, quick-links
 ### Import desde Excel
 
 `scripts/import-players.mjs`:
+
 - Lee xlsx o csv
 - Valida cada fila con Zod
 - Idempotente: salta duplicados (mismo `full_name` + `birth_year`)
@@ -89,6 +93,7 @@ Template en `data/import-template.csv`.
 ### Query helpers
 
 `server/queries/`:
+
 - `seasons.ts` — `getCurrentSeason()`
 - `active-profile.ts` — `getActiveProfileContext()` (resuelve propio / activo / hijos del cookie)
 - `teams.ts` — `getTeamById`, `getTeamRoster`, `getTeamStaff`, `getTeamsForProfileInSeason`
@@ -115,12 +120,14 @@ build:       18 rutas, 0 errores
 Después de cerrar la fase, se hizo una auditoría profunda. Se encontraron **4 críticos, 18 altos, 47 medios, 25 bajos**. Todos los críticos y los altos prioritarios arreglados en commits separados.
 
 **Críticos corregidos**:
+
 - `must_change_password` siempre se persistía como `true` (bug en el toggle del form)
 - `next.config.ts` faltaba `images.remotePatterns` (avatares externos reventaban)
 - `CategoryBadge` blanco sobre blanco en escuela (contraste WCAG)
 - RLS de `profiles` revisada — la restrictiva rompía flujos de club; se mantuvo la abierta con view `profiles_public` para uso futuro
 
 **Altos corregidos**:
+
 - Confirmaciones en archiveSeason, unroster, unassign, unlink
 - `setCurrentSeason` ahora atómico via RPC
 - `canRosterPlayer` usa el año de la season del equipo (no el actual)
@@ -130,6 +137,7 @@ Después de cerrar la fase, se hizo una auditoría profunda. Se encontraron **4 
 - `updateProfileSchema` extraída a `lib/domain/admin-schemas.ts` (sin `license_active`)
 
 **Refinamientos UX** tras feedback del usuario:
+
 - Pictograma de Tienda + 5ª tab en bottom nav (placeholder `/shop`)
 - Perfil: read-only en `/profile` (avatar + stats + Editar/Cerrar sesión), edit en `/profile/edit`
 - `license_active` removido del form de usuario (solo admin/directiva pueden editarlo)
@@ -146,6 +154,7 @@ Después de cerrar la fase, se hizo una auditoría profunda. Se encontraron **4 
    - Debe devolver "Success"
 
 2. **Arrancar la app** (si no está ya):
+
    ```bash
    cd "C:\Users\galvi\Documents\Morvedre core"
    pnpm dev

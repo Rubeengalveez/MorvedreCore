@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUpRight, Loader2, ShieldAlert } from "lucide-react";
+import { MdNorthEast, MdAutorenew, MdWarning } from "react-icons/md";
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -16,9 +16,7 @@ export interface SuggestCallupSheetProps {
   matchId: string;
 }
 
-export function SuggestCallupSheet({
-  matchId,
-}: SuggestCallupSheetProps) {
+export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,9 +28,7 @@ export function SuggestCallupSheet({
   const [doneCount, setDoneCount] = useState<number | null>(null);
 
   function closeAndRefresh() {
-    const close = document.querySelector<HTMLButtonElement>(
-      'button[aria-label="Cerrar"]',
-    );
+    const close = document.querySelector<HTMLButtonElement>('button[aria-label="Cerrar"]');
     close?.click();
     router.refresh();
   }
@@ -90,9 +86,7 @@ export function SuggestCallupSheet({
       for (const s of targets) {
         const capRaw = capOverrides[s.player_id];
         const cap =
-          capRaw && capRaw.trim() !== "" && Number.isFinite(Number(capRaw))
-            ? Number(capRaw)
-            : null;
+          capRaw && capRaw.trim() !== "" && Number.isFinite(Number(capRaw)) ? Number(capRaw) : null;
         try {
           await createCallup({
             match_id: matchId,
@@ -117,8 +111,8 @@ export function SuggestCallupSheet({
 
   if (loading) {
     return (
-      <div className="flex items-center gap-3 text-sm text-ink-600">
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+      <div className="text-ink-600 flex items-center gap-3 text-sm">
+        <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
         Analizando plantilla y disponibilidad...
       </div>
     );
@@ -160,9 +154,9 @@ export function SuggestCallupSheet({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-ink-600">
-        Hemos propuesto {suggestions.length} jugadores. Selecciona quién
-        convocar y ajusta los dorsales si lo necesitas.
+      <p className="text-ink-600 text-sm">
+        Hemos propuesto {suggestions.length} jugadores. Selecciona quién convocar y ajusta los
+        dorsales si lo necesitas.
       </p>
       {commitError ? (
         <Alert variant="danger" title="Error">
@@ -176,7 +170,7 @@ export function SuggestCallupSheet({
             <li
               key={s.player_id}
               className={cn(
-                "flex items-center gap-3 rounded-md border bg-paper p-3",
+                "bg-paper flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between",
                 isSelected
                   ? s.is_substitute
                     ? "border-ink-300"
@@ -184,66 +178,71 @@ export function SuggestCallupSheet({
                   : "border-ink-300 opacity-70",
               )}
             >
-              <input
-                type="checkbox"
-                checked={isSelected}
-                onChange={() => toggle(s.player_id)}
-                aria-label={`Convocar a ${s.full_name}`}
-                className="h-5 w-5 accent-brand-blue"
-              />
-              <Avatar name={s.full_name} size={40} />
-              <div className="flex flex-1 flex-col">
-                <span className="font-display text-base font-bold text-brand-deep">
-                  {s.full_name}
-                </span>
-                <div className="flex flex-wrap items-center gap-1.5 text-xs text-ink-600">
-                  <span className="inline-flex h-5 items-center rounded-full border border-ink-300 px-1.5 text-[10px] font-semibold">
-                    {CATEGORY_LABELS[s.category_code as CategoryCode] ??
-                      s.category_code}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggle(s.player_id)}
+                  aria-label={`Convocar a ${s.full_name}`}
+                  className="accent-brand-blue h-6 w-6 shrink-0"
+                />
+                <Avatar name={s.full_name} size={40} />
+                <div className="flex flex-col">
+                  <span className="font-display text-brand-deep text-base font-bold">
+                    {s.full_name}
                   </span>
-                  {s.is_ascending ? (
-                    <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-brand-foam px-1.5 text-[10px] font-semibold text-brand-deep">
-                      <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
-                      Asciende
+                  <div className="text-ink-600 mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
+                    <span className="border-ink-300 inline-flex h-5 items-center rounded-full border px-1.5 text-[10px] font-semibold">
+                      {CATEGORY_LABELS[s.category_code as CategoryCode] ?? s.category_code}
                     </span>
-                  ) : null}
-                  {s.is_substitute ? (
-                    <span className="inline-flex h-5 items-center rounded-full bg-ink-300/40 px-1.5 text-[10px] font-semibold text-ink-600">
-                      Suplente
-                    </span>
-                  ) : null}
-                  {s.has_conflict ? (
-                    <span className="inline-flex h-5 items-center gap-0.5 rounded-full bg-danger/15 px-1.5 text-[10px] font-semibold text-danger">
-                      <ShieldAlert className="h-3 w-3" aria-hidden="true" />
-                      No disponible
-                    </span>
-                  ) : null}
+                    {s.is_ascending ? (
+                      <span className="bg-brand-foam text-brand-deep inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+                        <MdNorthEast className="h-3.5 w-3.5" aria-hidden="true" />
+                        Asciende
+                      </span>
+                    ) : null}
+                    {s.is_substitute ? (
+                      <span className="bg-ink-300/40 text-ink-600 inline-flex h-5 items-center rounded-full px-1.5 text-[10px] font-semibold">
+                        Suplente
+                      </span>
+                    ) : null}
+                    {s.has_conflict ? (
+                      <span className="bg-danger/15 text-danger inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+                        <MdWarning className="h-3.5 w-3.5" aria-hidden="true" />
+                        No disponible
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
-              <Input
-                type="number"
-                min={0}
-                max={99}
-                placeholder="Dorsal"
-                value={capOverrides[s.player_id] ?? ""}
-                onChange={(e) => setCap(s.player_id, e.target.value)}
-                disabled={!isSelected}
-                className="w-20"
-              />
+              <div className="border-ink-200 flex items-center justify-between gap-3 border-t pt-2 sm:border-t-0 sm:pt-0">
+                <div className="flex items-center gap-1.5">
+                  <label
+                    htmlFor={`dorsal-${s.player_id}`}
+                    className="text-ink-600 text-[11px] font-bold whitespace-nowrap uppercase"
+                  >
+                    Dorsal
+                  </label>
+                  <Input
+                    id={`dorsal-${s.player_id}`}
+                    type="number"
+                    min={0}
+                    max={99}
+                    placeholder="7"
+                    value={capOverrides[s.player_id] ?? ""}
+                    onChange={(e) => setCap(s.player_id, e.target.value)}
+                    disabled={!isSelected}
+                    className="h-10 w-16 px-1 py-1 text-center font-mono text-sm"
+                  />
+                </div>
+              </div>
             </li>
           );
         })}
       </ul>
       <div className="flex flex-col gap-2">
-        <Button
-          type="button"
-          size="lg"
-          onClick={commit}
-          disabled={committing}
-        >
-          {committing ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-          ) : null}
+        <Button type="button" size="lg" onClick={commit} disabled={committing}>
+          {committing ? <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
           {committing ? "Guardando..." : "Confirmar selección"}
         </Button>
         <Button

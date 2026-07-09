@@ -23,7 +23,9 @@ function toError(e: unknown): string {
 
 async function getMyProfileId(): Promise<string> {
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) throw new Error("No has iniciado sesión.");
   const { data: profile } = await supabase
     .from("profiles")
@@ -106,7 +108,12 @@ export async function createNewsPost(input: {
     await admin.from("news_posts").update({ image_url: url }).eq("id", created.id);
   }
 
-  await notifyAllMembersOnNews(parsed.data.audience, parsed.data.audience_team_id, created.id, parsed.data.title);
+  await notifyAllMembersOnNews(
+    parsed.data.audience,
+    parsed.data.audience_team_id,
+    created.id,
+    parsed.data.title,
+  );
   revalidatePath("/news");
   revalidatePath("/admin/news");
   revalidatePath("/dashboard");
@@ -175,10 +182,7 @@ export async function deleteNewsPost(input: { post_id: string }): Promise<void> 
   revalidatePath("/admin/news");
 }
 
-export async function togglePinNews(input: {
-  post_id: string;
-  pinned: boolean;
-}): Promise<void> {
+export async function togglePinNews(input: { post_id: string; pinned: boolean }): Promise<void> {
   await requireAdmin();
   const parsed = togglePinNewsSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
@@ -197,7 +201,9 @@ export async function reactToNews(input: {
   reaction: "like" | "fire" | "thanks";
 }): Promise<void> {
   const supabase = await createClient();
-  const { data: { user: me } } = await supabase.auth.getUser();
+  const {
+    data: { user: me },
+  } = await supabase.auth.getUser();
   if (!me) throw new Error("No has iniciado sesión.");
   const { data: profile } = await supabase
     .from("profiles")
@@ -234,13 +240,11 @@ export async function reactToNews(input: {
       .eq("id", (existing as { id: string }).id);
     if (error) throw new Error("No pudimos quitar la reacción: " + error.message);
   } else {
-    const { error } = await supabase
-      .from("news_reactions")
-      .insert({
-        post_id: input.post_id,
-        profile_id: profile.id,
-        reaction: parsed.data.reaction,
-      });
+    const { error } = await supabase.from("news_reactions").insert({
+      post_id: input.post_id,
+      profile_id: profile.id,
+      reaction: parsed.data.reaction,
+    });
     if (error) throw new Error("No pudimos guardar la reacción: " + error.message);
   }
   revalidatePath("/news");

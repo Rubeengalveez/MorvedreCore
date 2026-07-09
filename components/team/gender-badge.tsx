@@ -16,7 +16,7 @@ export function GenderBadge({ gender, className }: GenderBadgeProps) {
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full border border-ink-300 bg-paper px-2.5 py-1 text-xs font-semibold leading-none text-ink-600",
+        "border-ink-300 bg-paper text-ink-600 inline-flex items-center rounded-full border px-2.5 py-1 text-xs leading-none font-semibold",
         className,
       )}
     >

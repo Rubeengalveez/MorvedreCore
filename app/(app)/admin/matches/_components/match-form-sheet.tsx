@@ -29,15 +29,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import {
-  formatDateTimeLocal,
-  parseDateTimeLocal,
-} from "@/lib/utils/format";
-import {
-  createMatch,
-  type Season,
-  type Team,
-} from "@/server/actions/admin";
+import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
+import { createMatch, type Season, type Team } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
   { value: "league", label: "Liga" },
@@ -48,11 +41,7 @@ const COMPETITION_OPTIONS = [
 
 const formSchema = z.object({
   team_id: z.string().uuid("Selecciona un equipo."),
-  opponent: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres.")
-    .max(100, "Máximo 100 caracteres."),
+  opponent: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
   competition_type: z.enum(["league", "cup", "tournament", "friendly"]),
   is_home: z.boolean(),
   location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
@@ -68,10 +57,7 @@ type ActionState = { ok?: true; error?: string } | null;
 
 type TeamOption = Team & { season_label: string };
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const localStr = String(formData.get("scheduled_at_local") ?? "");
     const dt = parseDateTimeLocal(localStr);
@@ -128,10 +114,8 @@ function Toggle({
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex flex-col gap-0.5">
-        <span className="text-sm font-semibold text-ink-900">{label}</span>
-        {description ? (
-          <span className="text-xs text-ink-600">{description}</span>
-        ) : null}
+        <span className="text-ink-900 text-sm font-semibold">{label}</span>
+        {description ? <span className="text-ink-600 text-xs">{description}</span> : null}
       </div>
       <button
         type="button"
@@ -139,14 +123,14 @@ function Toggle({
         aria-checked={value}
         onClick={() => onChange(!value)}
         className={
-          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper " +
+          "focus-visible:ring-brand-blue focus-visible:ring-offset-paper relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
           (value ? "bg-brand-blue" : "bg-ink-300")
         }
       >
         <span
           aria-hidden="true"
           className={
-            "inline-block h-5 w-5 rounded-full bg-paper transition-transform " +
+            "bg-paper inline-block h-5 w-5 rounded-full transition-transform " +
             (value ? "translate-x-6" : "translate-x-1")
           }
         />
@@ -171,15 +155,10 @@ export function MatchFormSheet({
   trigger,
 }: MatchFormSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
 
-  const defaultTeam = defaultTeamId
-    ? teams.find((t) => t.id === defaultTeamId) ?? null
-    : null;
+  const defaultTeam = defaultTeamId ? (teams.find((t) => t.id === defaultTeamId) ?? null) : null;
   const resolvedSeasonId = defaultSeasonId
     ? defaultSeasonId
     : defaultTeam
@@ -271,9 +250,7 @@ export function MatchFormSheet({
                         ref={field.ref}
                       >
                         {seasons.map((s) => {
-                          const seasonTeams = teams.filter(
-                            (t) => t.season_id === s.id,
-                          );
+                          const seasonTeams = teams.filter((t) => t.season_id === s.id);
                           if (seasonTeams.length === 0) return null;
                           return (
                             <optgroup
@@ -456,7 +433,7 @@ export function MatchFormSheet({
                         onBlur={field.onBlur}
                         name={field.name}
                         ref={field.ref}
-                        className="flex w-full rounded border border-ink-300 bg-paper px-4 py-3 text-base text-ink-900 placeholder:text-ink-600/70 transition-colors focus-visible:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:cursor-not-allowed disabled:opacity-50"
+                        className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-brand-blue focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                       />
                     </FormControl>
                     <FormMessage />

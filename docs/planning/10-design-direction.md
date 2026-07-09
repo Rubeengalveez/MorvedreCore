@@ -33,22 +33,22 @@ Pesos: 600-800 en headings, 400-500 en body, 500 en mono.
 
 Paleta extendida (basada en el logo + la decisión de identidad):
 
-| Token | Hex | Uso |
-|-------|-----|-----|
-| `--brand-deep` | `#0A2E5C` | Cabecera, topbar, texto principal |
-| `--brand-blue` | `#1E5AA8` | Botones primarios, links, foco |
-| `--brand-aqua` | `#3FBAC2` | Acento secundario, info, badges |
-| `--brand-foam` | `#E8F4F8` | Fondo de tarjetas suaves, hover |
-| `--brand-ball` | `#F4C430` | Amarillo balón — highlights, top 1 |
-| `--ink-900` | `#0F172A` | Texto sobre fondo claro |
-| `--ink-600` | `#475569` | Texto secundario |
-| `--ink-300` | `#CBD5E1` | Bordes, separadores |
-| `--paper` | `#FAFCFE` | Fondo de la app |
-| `--action` | `#FF6B35` | CTA, "gol", "confirmar" |
-| `--success` | `#10B981` | Confirmado, asistencia, pagado |
-| `--warning` | `#F59E0B` | Pendiente, espera |
-| `--danger` | `#EF4444` | Cancelado, exclusión, error |
-| `--team-color` | dinámico | Color del equipo del jugador actual (chip pequeño en la topbar) |
+| Token          | Hex       | Uso                                                             |
+| -------------- | --------- | --------------------------------------------------------------- |
+| `--brand-deep` | `#0A2E5C` | Cabecera, topbar, texto principal                               |
+| `--brand-blue` | `#1E5AA8` | Botones primarios, links, foco                                  |
+| `--brand-aqua` | `#3FBAC2` | Acento secundario, info, badges                                 |
+| `--brand-foam` | `#E8F4F8` | Fondo de tarjetas suaves, hover                                 |
+| `--brand-ball` | `#F4C430` | Amarillo balón — highlights, top 1                              |
+| `--ink-900`    | `#0F172A` | Texto sobre fondo claro                                         |
+| `--ink-600`    | `#475569` | Texto secundario                                                |
+| `--ink-300`    | `#CBD5E1` | Bordes, separadores                                             |
+| `--paper`      | `#FAFCFE` | Fondo de la app                                                 |
+| `--action`     | `#FF6B35` | CTA, "gol", "confirmar"                                         |
+| `--success`    | `#10B981` | Confirmado, asistencia, pagado                                  |
+| `--warning`    | `#F59E0B` | Pendiente, espera                                               |
+| `--danger`     | `#EF4444` | Cancelado, exclusión, error                                     |
+| `--team-color` | dinámico  | Color del equipo del jugador actual (chip pequeño en la topbar) |
 
 **Cada equipo tendrá un color identificativo** que el admin elige al crearlo. Se usa como acento en la cabecera de la tarjeta de partido, en el avatar del jugador, en las stats de su equipo. Pequeño, constante, identificativo.
 

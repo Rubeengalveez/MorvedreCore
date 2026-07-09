@@ -293,9 +293,7 @@ export async function createCallup(input: {
   }
 
   if (player.birth_year == null) {
-    throw new Error(
-      "El jugador no tiene año de nacimiento. No se puede comprobar la categoría.",
-    );
+    throw new Error("El jugador no tiene año de nacimiento. No se puede comprobar la categoría.");
   }
 
   const { data: roster, error: rosterError } = await supabase
@@ -318,8 +316,9 @@ export async function createCallup(input: {
     .select("player_id, cap_number")
     .eq("match_id", parsed.data.match_id);
 
-  const [{ data: allTeams }, { data: availability }, { data: existingCallups }] =
-    await Promise.all([allTeamsPromise, availabilityPromise, existingCallupsPromise]);
+  const [{ data: allTeams }, { data: availability }, { data: existingCallups }] = await Promise.all(
+    [allTeamsPromise, availabilityPromise, existingCallupsPromise],
+  );
 
   if (existingCallups?.some((c) => c.player_id === parsed.data.player_id)) {
     throw new Error("El jugador ya está convocado en este partido.");
@@ -334,25 +333,15 @@ export async function createCallup(input: {
   const playerCurrentTeamId = roster?.team_id ?? null;
   if (
     playerCurrentTeamId &&
-    isPlayerBRuleBlocked(
-      parsed.data.player_id,
-      playerCurrentTeamId,
-      targetTeam.id,
-      teamsForCallup,
-    )
+    isPlayerBRuleBlocked(parsed.data.player_id, playerCurrentTeamId, targetTeam.id, teamsForCallup)
   ) {
     throw new Error("Regla B: este jugador no puede subir a este equipo.");
   }
 
   const currentYear = new Date().getFullYear();
   const playerCategory = safeInferCategory(player.birth_year, currentYear);
-  if (
-    playerCategory &&
-    !canCallUpTo(playerCategory, targetTeam.category_code as CategoryCode)
-  ) {
-    throw new Error(
-      "El jugador no puede ser convocado en este equipo (categoría no compatible).",
-    );
+  if (playerCategory && !canCallUpTo(playerCategory, targetTeam.category_code as CategoryCode)) {
+    throw new Error("El jugador no puede ser convocado en este equipo (categoría no compatible).");
   }
 
   const conflict = findConflicts(
@@ -453,10 +442,7 @@ export async function updateCallup(
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  if (
-    parsed.data.cap_number === undefined &&
-    parsed.data.status === undefined
-  ) {
+  if (parsed.data.cap_number === undefined && parsed.data.status === undefined) {
     throw new Error("No hay cambios para guardar.");
   }
 
@@ -470,8 +456,7 @@ export async function updateCallup(
   }
   if (parsed.data.status) {
     update.status = parsed.data.status;
-    update.confirmed_at =
-      parsed.data.status === "confirmed" ? new Date().toISOString() : null;
+    update.confirmed_at = parsed.data.status === "confirmed" ? new Date().toISOString() : null;
   }
 
   const supabase = await createClient();
@@ -538,9 +523,7 @@ export async function setMyCallupStatus(input: {
     throw new Error("El partido no existe.");
   }
   if (match.status !== "scheduled" && match.status !== "in_progress") {
-    throw new Error(
-      "Este partido ya no admite cambios de convocatoria. Habla con tu entrenador.",
-    );
+    throw new Error("Este partido ya no admite cambios de convocatoria. Habla con tu entrenador.");
   }
 
   const update: {
@@ -548,8 +531,7 @@ export async function setMyCallupStatus(input: {
     confirmed_at: string | null;
   } = {
     status: parsed.data.status,
-    confirmed_at:
-      parsed.data.status === "confirmed" ? new Date().toISOString() : null,
+    confirmed_at: parsed.data.status === "confirmed" ? new Date().toISOString() : null,
   };
 
   const { data, error } = await supabase
@@ -676,9 +658,7 @@ export async function recordMatchStat(input: {
 
   throwIfError(callupError, "No pudimos comprobar la convocatoria.");
   if (!callup) {
-    throw new Error(
-      "Solo puedes registrar estadísticas de jugadores que estaban convocados.",
-    );
+    throw new Error("Solo puedes registrar estadísticas de jugadores que estaban convocados.");
   }
 
   const { data: existing, error: existingError } = await supabase
@@ -812,10 +792,7 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
     { data: availability, error: availabilityError },
   ] = await Promise.all([
     supabase.from("teams").select("id, category_code, label"),
-    supabase
-      .from("team_rosters")
-      .select("team_id, player_id")
-      .is("left_at", null),
+    supabase.from("team_rosters").select("team_id, player_id").is("left_at", null),
     supabase.from("profiles").select("id, full_name, birth_year, cap_number"),
     supabase
       .from("match_availability")

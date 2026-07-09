@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Trash2, Upload, X } from "lucide-react";
-import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +20,7 @@ export interface ShopEditorFormInitial {
   price_eur: number;
   currency: string;
   image_url: string | null;
+  images?: Array<{ id: string; url: string; is_cover: boolean; sort_order: number }>;
   sizes: string[];
   available: boolean;
   stock: number | null;
@@ -38,7 +38,9 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  const [coverImageIndex, setCoverImageIndex] = useState(0);
+  const [previews, setPreviews] = useState<string[]>([]);
   const [sizesText, setSizesText] = useState((initial?.sizes ?? []).join(", "));
 
   const [form, setForm] = useState<ShopEditorFormInitial>({
@@ -54,12 +56,17 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
     max_per_order: initial?.max_per_order ?? 10,
   });
 
-  function update<K extends keyof ShopEditorFormInitial>(
-    key: K,
-    value: ShopEditorFormInitial[K],
-  ) {
+  function update<K extends keyof ShopEditorFormInitial>(key: K, value: ShopEditorFormInitial[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  useEffect(() => {
+    const next = imageFiles.map((file) => URL.createObjectURL(file));
+    setPreviews(next);
+    return () => {
+      for (const url of next) URL.revokeObjectURL(url);
+    };
+  }, [imageFiles]);
 
   function save() {
     setError(null);
@@ -80,7 +87,8 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             available: form.available,
             stock: form.stock,
             max_per_order: form.max_per_order,
-            imageFile,
+            imageFiles,
+            coverImageIndex,
           });
         } else {
           await updateShopProduct({
@@ -94,7 +102,8 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             available: form.available,
             stock: form.stock,
             max_per_order: form.max_per_order,
-            imageFile,
+            imageFiles,
+            coverImageIndex,
           });
         }
         router.push("/admin/shop" as never);
@@ -123,14 +132,10 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
         e.preventDefault();
         save();
       }}
-      className="flex flex-col gap-3 rounded-md border border-ink-300 bg-paper-card p-4 shadow-elev-1"
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-md border p-4"
     >
       <Field label="Título">
-        <Input
-          value={form.title}
-          onChange={(e) => update("title", e.target.value)}
-          required
-        />
+        <Input value={form.title} onChange={(e) => update("title", e.target.value)} required />
       </Field>
       <Field label="Categoría">
         <Input
@@ -145,7 +150,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           value={form.description}
           onChange={(e) => update("description", e.target.value)}
           rows={4}
-          className="min-h-[100px] w-full rounded border border-ink-300 bg-paper px-3 py-2 text-sm text-pool-deep focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+          className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-[100px] w-full rounded border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
           required
         />
       </Field>
@@ -193,54 +198,105 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           min={0}
           max={1000}
           value={form.stock ?? ""}
-          onChange={(e) =>
-            update("stock", e.target.value === "" ? null : Number(e.target.value))
-          }
+          onChange={(e) => update("stock", e.target.value === "" ? null : Number(e.target.value))}
         />
       </Field>
-      <Field label="Imagen">
+      <Field label="Fotos del producto">
         <input
           ref={fileRef}
           type="file"
+          multiple
           accept="image/jpeg,image/png,image/webp"
-          onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+          onChange={(e) => {
+            const files = Array.from(e.target.files ?? []).slice(0, 8);
+            setImageFiles(files);
+            setCoverImageIndex(0);
+          }}
           className="hidden"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-2">
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="inline-flex h-9 items-center gap-1.5 rounded border border-ink-300 bg-paper px-3 text-xs font-bold text-pool-deep hover:bg-pool-foam"
+            className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border px-3 text-sm font-extrabold"
           >
-            <Upload className="h-3.5 w-3.5" />
-            {imageFile ? imageFile.name : "Subir imagen"}
+            <Upload className="h-4 w-4" />
+            {imageFiles.length > 0
+              ? `${imageFiles.length} foto${imageFiles.length === 1 ? "" : "s"} seleccionada${imageFiles.length === 1 ? "" : "s"}`
+              : "Subir fotos"}
           </button>
-          {form.image_url ? (
-            <div className="flex items-center gap-1.5">
+          {previews.length > 0 ? (
+            <div className="grid grid-cols-4 gap-2">
+              {previews.map((url, index) => (
+                <button
+                  key={url}
+                  type="button"
+                  onClick={() => setCoverImageIndex(index)}
+                  className={cn(
+                    "bg-paper-sunk relative aspect-square overflow-hidden rounded-md border",
+                    coverImageIndex === index
+                      ? "border-action ring-action/25 ring-2"
+                      : "border-ink-300",
+                  )}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  {coverImageIndex === index ? (
+                    <span className="bg-action text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-[0.62rem] font-extrabold uppercase">
+                      Portada
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
+          ) : initial?.images?.length ? (
+            <div className="grid grid-cols-4 gap-2">
+              {initial.images
+                .slice()
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((image) => (
+                  <div
+                    key={image.id}
+                    className="border-ink-300 bg-paper-sunk relative aspect-square overflow-hidden rounded-md border"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={image.url} alt="" className="h-full w-full object-cover" />
+                    {image.is_cover ? (
+                      <span className="bg-pool-deep text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-center text-[0.62rem] font-extrabold uppercase">
+                        Portada
+                      </span>
+                    ) : null}
+                  </div>
+                ))}
+            </div>
+          ) : form.image_url ? (
+            <div className="border-ink-300 bg-paper flex items-center gap-2 rounded-md border p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={form.image_url}
-                alt="preview"
-                className="h-9 w-9 rounded object-cover"
-              />
+              <img src={form.image_url} alt="" className="h-12 w-12 rounded object-cover" />
+              <span className="text-ink-700 min-w-0 flex-1 text-sm font-semibold">
+                Imagen actual
+              </span>
               <button
                 type="button"
                 onClick={() => {
                   update("image_url", null);
-                  setImageFile(null);
+                  setImageFiles([]);
                 }}
-                className="inline-flex h-7 w-7 items-center justify-center rounded text-ink-600 hover:bg-paper-sunk"
+                className="text-ink-600 hover:bg-paper-sunk inline-flex h-9 w-9 items-center justify-center rounded-md"
                 aria-label="Quitar imagen"
               >
-                <X className="h-3 w-3" />
+                <X className="h-4 w-4" />
               </button>
             </div>
           ) : null}
+          <p className="text-ink-600 text-xs leading-snug font-medium">
+            Puedes subir hasta 8 fotos. Toca una foto seleccionada para marcarla como portada.
+          </p>
         </div>
       </Field>
       <label
         className={cn(
-          "flex items-center gap-2 rounded-md border border-ink-300 bg-paper p-2 text-sm text-pool-deep",
+          "border-ink-300 bg-paper text-pool-deep flex items-center gap-2 rounded-md border p-2 text-sm",
         )}
       >
         <input
@@ -254,12 +310,12 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
       {error ? (
         <div
           role="alert"
-          className="rounded border border-goggle-red/30 bg-goggle-red/5 px-3 py-2 text-xs font-bold text-goggle-red"
+          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red rounded border px-3 py-2 text-xs font-bold"
         >
           {error}
         </div>
       ) : null}
-      <div className="flex items-center justify-between gap-2 border-t border-ink-300 pt-3">
+      <div className="border-ink-300 flex items-center justify-between gap-2 border-t pt-3">
         {mode === "edit" ? (
           <Button
             type="button"
@@ -281,13 +337,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
   );
 }
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="flex flex-col gap-1">
       <span className="text-eyebrow text-ink-700">{label}</span>
@@ -295,5 +345,3 @@ function Field({
     </label>
   );
 }
-
-void Image;

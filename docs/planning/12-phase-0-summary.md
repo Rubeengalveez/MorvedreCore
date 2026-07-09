@@ -77,4 +77,3 @@ Login con `galvillo9@gmail.com` y `MorvedreTemporal2026!`. La app te obliga a ca
 - `main` — siempre deployable, contiene el código validado
 - `feature/fase-0-scaffold` — rama de trabajo de esta fase (mergeada a main)
 - Próximas features deberían ir en `feature/<nombre-descriptivo>`
-

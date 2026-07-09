@@ -47,10 +47,7 @@ type StaffValues = z.infer<typeof staffSchema>;
 
 type ActionState = { ok?: true; error?: string } | null;
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     await assignStaff({
       team_id: String(formData.get("team_id") ?? ""),
@@ -92,10 +89,7 @@ export interface StaffFormSheetProps {
 
 export function StaffFormSheet({ teams, people, trigger }: StaffFormSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
   const [personSearch, setPersonSearch] = useState("");
 
@@ -137,9 +131,7 @@ export function StaffFormSheet({ teams, people, trigger }: StaffFormSheetProps) 
       <SheetContent size="lg">
         <SheetHeader>
           <SheetTitle>Nueva asignación</SheetTitle>
-          <SheetDescription>
-            Asigna un rol de personal a una persona en un equipo.
-          </SheetDescription>
+          <SheetDescription>Asigna un rol de personal a una persona en un equipo.</SheetDescription>
         </SheetHeader>
         <SheetBody>
           <Form {...form}>
@@ -150,7 +142,7 @@ export function StaffFormSheet({ teams, people, trigger }: StaffFormSheetProps) 
               noValidate
             >
               {state?.error ? (
-                <p className="text-sm font-medium text-danger">{state.error}</p>
+                <p className="text-danger text-sm font-medium">{state.error}</p>
               ) : null}
 
               <FormField
@@ -273,12 +265,7 @@ export interface StaffTableProps {
   teams: Array<{ id: string; label: string; season_label: string }>;
 }
 
-export function StaffTable({
-  rows,
-  teamFilter,
-  onTeamFilterChange,
-  teams,
-}: StaffTableProps) {
+export function StaffTable({ rows, teamFilter, onTeamFilterChange, teams }: StaffTableProps) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
@@ -301,10 +288,7 @@ export function StaffTable({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <label
-          htmlFor="staff-team-filter"
-          className="text-sm font-semibold text-ink-600"
-        >
+        <label htmlFor="staff-team-filter" className="text-ink-600 text-sm font-semibold">
           Filtrar por equipo
         </label>
         <Select
@@ -322,67 +306,104 @@ export function StaffTable({
       </div>
 
       {rows.length === 0 ? (
-        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-6 text-center">
-          <p className="text-base font-semibold text-brand-deep">
-            Sin cuerpo técnico.
-          </p>
-          <p className="mt-1 text-sm text-ink-600">
+        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
+          <p className="text-brand-deep text-base font-semibold">Sin cuerpo técnico.</p>
+          <p className="text-ink-600 mt-1 text-sm">
             Asigna al menos un entrenador para activar el equipo.
           </p>
         </div>
       ) : (
-        <div className="-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
-          <table className="w-full min-w-[520px] border-separate border-spacing-0 text-left">
-            <thead>
-              <tr className="text-xs uppercase tracking-wider text-ink-600">
-                <th className="border-b border-ink-300 px-3 py-2 font-semibold">Persona</th>
-                <th className="border-b border-ink-300 px-3 py-2 font-semibold">Equipo</th>
-                <th className="border-b border-ink-300 px-3 py-2 font-semibold">Rol</th>
-                <th className="border-b border-ink-300 px-3 py-2 text-right font-semibold">
-                  <span className="sr-only">Acciones</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r) => {
-                const key = `${r.team_id}-${r.profile_id}-${r.role}`;
-                const isPending = pendingKey === key;
-                return (
-                  <tr key={key} className="text-base">
-                    <td className="border-b border-ink-300 px-3 py-3 font-display font-bold text-brand-deep">
+        <>
+          <ul className="flex flex-col gap-2 sm:hidden">
+            {rows.map((r) => {
+              const key = `${r.team_id}-${r.profile_id}-${r.role}`;
+              const isPending = pendingKey === key;
+              return (
+                <li
+                  key={key}
+                  className="border-ink-300 bg-paper-card shadow-elev-1 flex items-center gap-3 rounded-md border p-3"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-brand-deep truncate text-sm font-bold">
                       {r.profile_name}
-                    </td>
-                    <td className="border-b border-ink-300 px-3 py-3">
-                      <div className="flex flex-col">
-                        <span className="text-ink-900">{r.team_label}</span>
-                        <span className="text-xs text-ink-600">{r.season_label}</span>
-                      </div>
-                    </td>
-                    <td className="border-b border-ink-300 px-3 py-3 text-sm text-ink-600">
-                      {ROLE_LABEL[r.role]}
-                    </td>
-                    <td className="border-b border-ink-300 px-3 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-12 w-12 p-0 text-danger hover:bg-danger/10"
-                        aria-label={`Quitar a ${r.profile_name}`}
-                        disabled={isPending}
-                        onClick={() => handleRemove(r)}
-                      >
-                        {isPending ? (
-                          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                        ) : (
-                          <Trash2 className="h-5 w-5" aria-hidden="true" />
-                        )}
-                      </Button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                    </p>
+                    <p className="text-ink-600 text-xs">{ROLE_LABEL[r.role]}</p>
+                    <p className="text-ink-600 truncate text-xs">
+                      {r.team_label} · {r.season_label}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-danger hover:bg-danger/10 touch-target h-11 w-11 shrink-0 p-0"
+                    aria-label={`Quitar a ${r.profile_name}`}
+                    disabled={isPending}
+                    onClick={() => handleRemove(r)}
+                  >
+                    {isPending ? (
+                      <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                    ) : (
+                      <Trash2 className="h-5 w-5" aria-hidden="true" />
+                    )}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+
+          <div className="hidden sm:block">
+            <table className="w-full border-separate border-spacing-0 text-left">
+              <thead>
+                <tr className="text-ink-600 text-xs tracking-wider uppercase">
+                  <th className="border-ink-300 border-b px-3 py-2 font-semibold">Persona</th>
+                  <th className="border-ink-300 border-b px-3 py-2 font-semibold">Equipo</th>
+                  <th className="border-ink-300 border-b px-3 py-2 font-semibold">Rol</th>
+                  <th className="border-ink-300 border-b px-3 py-2 text-right font-semibold">
+                    <span className="sr-only">Acciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r) => {
+                  const key = `${r.team_id}-${r.profile_id}-${r.role}`;
+                  const isPending = pendingKey === key;
+                  return (
+                    <tr key={key} className="text-base">
+                      <td className="border-ink-300 font-display text-brand-deep border-b px-3 py-3 font-bold">
+                        {r.profile_name}
+                      </td>
+                      <td className="border-ink-300 border-b px-3 py-3">
+                        <div className="flex flex-col">
+                          <span className="text-ink-900">{r.team_label}</span>
+                          <span className="text-ink-600 text-xs">{r.season_label}</span>
+                        </div>
+                      </td>
+                      <td className="border-ink-300 text-ink-600 border-b px-3 py-3 text-sm">
+                        {ROLE_LABEL[r.role]}
+                      </td>
+                      <td className="border-ink-300 border-b px-3 py-3 text-right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-danger hover:bg-danger/10 h-12 w-12 p-0"
+                          aria-label={`Quitar a ${r.profile_name}`}
+                          disabled={isPending}
+                          onClick={() => handleRemove(r)}
+                        >
+                          {isPending ? (
+                            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+                          ) : (
+                            <Trash2 className="h-5 w-5" aria-hidden="true" />
+                          )}
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
     </div>
   );

@@ -122,10 +122,7 @@ async function loadContextForNotifications(
     new Set(items.map((i) => i.recipient_id).filter((v): v is string => v != null)),
   );
   if (profileIds.length > 0) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, photo_url")
-      .in("id", profileIds);
+    const { data } = await supabase.from("profiles").select("id, photo_url").in("id", profileIds);
     for (const p of (data ?? []) as Array<{ id: string; photo_url: string | null }>) {
       photoByProfile.set(p.id, p.photo_url);
     }
@@ -139,9 +136,7 @@ export default async function NotificationsPage() {
   if (!ctx) redirect("/login");
 
   const [items, unread] = await Promise.all([
-    getNotificationsForProfile(ctx.activeProfile.id, 100).catch(
-      () => [] as NotificationItem[],
-    ),
+    getNotificationsForProfile(ctx.activeProfile.id, 100).catch(() => [] as NotificationItem[]),
     getUnreadNotificationsCount(ctx.activeProfile.id).catch(() => 0),
   ]);
 
@@ -151,24 +146,23 @@ export default async function NotificationsPage() {
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex items-end justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-brand-deep">
+          <h1 className="font-display text-brand-deep text-[28px] leading-[1.1] font-extrabold tracking-tight">
             Notificaciones
           </h1>
-          <p className="text-sm text-ink-600">
+          <p className="text-ink-600 text-sm">
             {unread > 0
               ? `${unread} sin leer de ${items.length} totales.`
               : "Estás al día con todo."}
           </p>
         </div>
-        <Bell className="hidden h-7 w-7 text-brand-deep sm:block" />
+        <Bell className="text-brand-deep hidden h-7 w-7 sm:block" />
       </header>
 
       {items.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-ink-300 bg-paper p-8 text-center">
-          <Check className="h-10 w-10 text-success" />
-          <p className="text-sm text-ink-600">
-            Sin novedades. Cuando convoquen a un jugador o cancelen un entreno,
-            aparecerá aquí.
+        <div className="border-ink-300 bg-paper flex flex-col items-center gap-3 rounded-md border border-dashed p-8 text-center">
+          <Check className="text-success h-10 w-10" />
+          <p className="text-ink-600 text-sm">
+            Sin novedades. Cuando convoquen a un jugador o cancelen un entreno, aparecerá aquí.
           </p>
         </div>
       ) : (
@@ -177,7 +171,7 @@ export default async function NotificationsPage() {
             <NotificationRow
               key={n.id}
               item={n}
-              match={n.related_match_id ? matchById.get(n.related_match_id) ?? null : null}
+              match={n.related_match_id ? (matchById.get(n.related_match_id) ?? null) : null}
               photoUrl={photoByProfile.get(n.recipient_id) ?? null}
             />
           ))}
@@ -234,7 +228,7 @@ function NotificationRow({
     >
       <span
         aria-hidden="true"
-        className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+        className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
         style={{
           backgroundColor: `color-mix(in oklab, ${meta.color} 15%, var(--paper))`,
         }}
@@ -243,11 +237,9 @@ function NotificationRow({
       </span>
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-display text-base font-bold text-brand-deep">
-            {item.title}
-          </span>
+          <span className="font-display text-brand-deep text-base font-bold">{item.title}</span>
           <span
-            className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-paper"
+            className="text-paper rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase"
             style={{ backgroundColor: meta.color }}
           >
             {meta.label}
@@ -255,15 +247,15 @@ function NotificationRow({
         </div>
         {item.kind === "convocatoria" && match ? (
           <div
-            className="flex items-center gap-2 rounded-md border border-ink-300 bg-paper p-2"
+            className="border-ink-300 bg-paper flex items-center gap-2 rounded-md border p-2"
             style={{ borderLeftWidth: "3px", borderLeftColor: match.team_color }}
           >
             <Avatar src={photoUrl} name={item.title} size={28} />
             <div className="min-w-0 flex-1">
-              <p className="line-clamp-1 text-sm font-semibold text-brand-deep">
+              <p className="text-brand-deep line-clamp-1 text-sm font-semibold">
                 vs {match.opponent}
               </p>
-              <p className="text-[10px] text-ink-600">
+              <p className="text-ink-600 text-[10px]">
                 {formatDayShort(match.scheduled_at)} · {formatClock(match.scheduled_at)}
               </p>
             </div>
@@ -272,26 +264,23 @@ function NotificationRow({
             </Button>
           </div>
         ) : item.kind === "match_reminder" && match ? (
-          <p className="text-sm text-ink-900">
-            Mañana tienes partido contra{" "}
-            <span className="font-semibold">{match.opponent}</span> a las{" "}
-            <span className="font-mono">{formatClock(match.scheduled_at)}</span>.
+          <p className="text-ink-900 text-sm">
+            Mañana tienes partido contra <span className="font-semibold">{match.opponent}</span> a
+            las <span className="font-mono">{formatClock(match.scheduled_at)}</span>.
           </p>
         ) : item.kind === "training_cancelled" ? (
-          <p className="text-sm text-ink-900">
+          <p className="text-ink-900 text-sm">
             El entreno de hoy se canceló. {item.body ? `Motivo: ${item.body}` : null}
           </p>
         ) : item.body ? (
-          <p className="whitespace-pre-line text-sm text-ink-900">{item.body}</p>
+          <p className="text-ink-900 text-sm whitespace-pre-line">{item.body}</p>
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-[11px] text-ink-600">
-            {timeAgo(item.created_at)}
-          </span>
+          <span className="text-ink-600 text-[11px]">{timeAgo(item.created_at)}</span>
           {item.href ? (
             <Link
               href={item.href as Route}
-              className="inline-flex items-center gap-0.5 text-xs font-semibold text-brand-blue hover:underline focus-visible:underline focus-visible:outline-none"
+              className="text-brand-blue inline-flex items-center gap-0.5 text-xs font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
             >
               Abrir
               <ChevronRight className="h-3.5 w-3.5" />

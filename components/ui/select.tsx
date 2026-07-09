@@ -13,7 +13,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
         <select
           ref={ref}
           className={cn(
-            "flex h-12 min-h-12 w-full appearance-none rounded border border-ink-300 bg-paper px-4 pr-10 py-2 text-base text-ink-900 transition-colors focus-visible:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:cursor-not-allowed disabled:opacity-50",
+            "border-ink-300 bg-paper text-ink-900 focus-visible:border-brand-blue focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex h-12 min-h-12 w-full appearance-none rounded border px-4 py-2 pr-10 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
             className,
           )}
           {...props}
@@ -28,7 +28,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-ink-600"
+          className="text-ink-600 pointer-events-none absolute top-1/2 right-3 h-5 w-5 -translate-y-1/2"
         >
           <path d="M 6 9 L 12 15 L 18 9" />
         </svg>

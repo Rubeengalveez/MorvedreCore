@@ -5,6 +5,7 @@ Plan en fases. Cada fase termina con un **demo funcional** que se puede enseñar
 Estimaciones optimistas. La realidad dirá.
 
 ## Fase 0 — Cimientos (1 semana)
+
 > Demo: "Me logueo y veo una pantalla con mi nombre, mi rol y el icono de Morvedre Core"
 
 - [ ] Scaffold del proyecto (Next 15, TS strict, Tailwind v4, shadcn/ui)
@@ -21,6 +22,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] CI básico: GitHub Actions → lint + typecheck + build
 
 ## Fase 1 — Estructura deportiva (1 semana)
+
 > Demo: "El admin crea una temporada, los equipos y mete a los jugadores con su año de nacimiento"
 
 - [ ] Migración: tablas `seasons`, `teams`, `team_staff`, `team_rosters`, `profiles`, `user_roles`
@@ -33,6 +35,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Asignación de staff (entrenadores, delegados)
 
 ## Fase 2 — Entrenamientos y partidos (1.5 semanas)
+
 > Demo: "El entrenador crea el bloque de septiembre, la app genera 30 sesiones, marca asistencia y el delegado mete el acta"
 
 - [ ] Migración: `training_blocks`, `training_sessions`, `training_attendance`, `matches`
@@ -47,6 +50,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Notificación push al confirmar convocatoria
 
 ## Fase 3 — Estadísticas y rankings (1 semana)
+
 > Demo: "El delegado mete goles y exclusiones tras el partido y los rankings se recalculan"
 
 - [x] Migración: `match_stats`
@@ -61,6 +65,7 @@ Estimaciones optimistas. La realidad dirá.
 - [x] Bottom nav con tab "Rankings" + pictograma `Trofeo`
 
 ## Fase 4 — Noticias y tablón (0.5 semanas)
+
 > Demo: "La directiva publica que la piscina está cerrada, todos reciben push, la gente reacciona"
 
 - [ ] Migración: `news_posts`, `news_reactions`
@@ -70,6 +75,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Caducidad automática (cron diario)
 
 ## Fase 5 — Tienda (1 semana)
+
 > Demo: "El cadete pide una sudadera, el padre aprueba, la encargada ve el pedido en el Kanban"
 
 - [ ] Migración: `shop_products`, `shop_orders`, `shop_order_items`
@@ -82,6 +88,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Export a Excel de pedidos agrupados por producto
 
 ## Fase 6 — Tesorería (1 semana)
+
 > Demo: "Llega el día 1, pulso 'Generar cierre de mes' y la tesorera recibe un Excel en su email"
 
 - [ ] Migración: `treasury_concepts`, `treasury_period_closures`, `treasury_lines`
@@ -95,6 +102,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Cron: recordatorio el día 25 del mes
 
 ## Fase 7 — Logística de coches (0.5 semanas)
+
 > Demo: "El delegado activa coches, un padre se ofrece con 3 plazas, los jugadores reservan"
 
 - [ ] Migración: `travel_offers`, `travel_reservations`
@@ -105,6 +113,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Compensación por km configurable en el partido
 
 ## Fase 8 — Históricos y leyendas (0.5 semanas)
+
 > Demo: "Pulso 'Iniciar nueva temporada 2026/2027', todo se archiva, y un juvenil de primer año ya no aparece en la lista del infantil"
 
 - [ ] Migración: `historical_player_stats`, `historical_team_matchups`, `audit_log`
@@ -115,6 +124,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Recalculo de categorías en bloque
 
 ## Fase 9 — Polish, a11y, offline (1 semana)
+
 > Demo: "Lighthouse PWA 95+, WCAG AA, funciona sin conexión en las pantallas de solo lectura"
 
 - [ ] Auditoría accesibilidad (lectores de pantalla, contraste, foco visible)
@@ -127,6 +137,7 @@ Estimaciones optimistas. La realidad dirá.
 - [ ] Backup semanal automatizado de la DB a Storage
 
 ## Fase 10 — Lanzamiento (1 semana)
+
 > Demo: "El club entero está dado de alta y la app es la fuente oficial de la temporada"
 
 - [ ] Import masivo de jugadores desde Cluber (Excel)
@@ -140,11 +151,11 @@ Estimaciones optimistas. La realidad dirá.
 
 ## Riesgos identificados
 
-| Riesgo | Mitigación |
-|--------|------------|
-| Plan free de Supabase se queda corto | 200 usuarios es trivial para el plan free, monitorear tamaño DB y storage desde día 1 |
-| iOS PWA: push notifications limitadas | Safari aún no soporta push estándar en PWA; fallback in-app + email |
-| Onboarding de 200 personas:谁来 da de alta a quién | Script SQL de bootstrap + invitación por email en lote |
-| Resistencia al cambio (persona de 55 años) | Sesión presencial + manual visual + botón "ayuda" en cada pantalla |
-| Padres separados con acceso al hijo | Soporte multi-tutor en `parent_child_links` (ya previsto) |
-| Datos RGPD | Consentimiento firmado antes de primera subida de foto; derecho de supresión implementado |
+| Riesgo                                             | Mitigación                                                                                |
+| -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Plan free de Supabase se queda corto               | 200 usuarios es trivial para el plan free, monitorear tamaño DB y storage desde día 1     |
+| iOS PWA: push notifications limitadas              | Safari aún no soporta push estándar en PWA; fallback in-app + email                       |
+| Onboarding de 200 personas:谁来 da de alta a quién | Script SQL de bootstrap + invitación por email en lote                                    |
+| Resistencia al cambio (persona de 55 años)         | Sesión presencial + manual visual + botón "ayuda" en cada pantalla                        |
+| Padres separados con acceso al hijo                | Soporte multi-tutor en `parent_child_links` (ya previsto)                                 |
+| Datos RGPD                                         | Consentimiento firmado antes de primera subida de foto; derecho de supresión implementado |

@@ -108,7 +108,9 @@ describe("computePlayerStats", () => {
     );
     const attendanceRows: TrainingAttendanceLite[] = [
       ...Array.from({ length: 8 }, (_, i) => attendance({ session_id: `s-${i}`, present: true })),
-      ...Array.from({ length: 2 }, (_, i) => attendance({ session_id: `s-${i + 8}`, present: false })),
+      ...Array.from({ length: 2 }, (_, i) =>
+        attendance({ session_id: `s-${i + 8}`, present: false }),
+      ),
     ];
     const matches = [match({ id: "m-1", team_id: "team-1" })];
     const callups = [callup({ match_id: "m-1" })];
@@ -131,10 +133,7 @@ describe("computePlayerStats", () => {
       match({ id: "m-1", season_id: "season-1" }),
       match({ id: "m-2", season_id: "season-2" }),
     ];
-    const callups: CallupLite[] = [
-      callup({ match_id: "m-1" }),
-      callup({ match_id: "m-2" }),
-    ];
+    const callups: CallupLite[] = [callup({ match_id: "m-1" }), callup({ match_id: "m-2" })];
     const result = computePlayerStats("p-1", "season-1", [], [], matches, callups, []);
     expect(result.matches_played).toBe(1);
     expect(result.matches_called).toBe(1);

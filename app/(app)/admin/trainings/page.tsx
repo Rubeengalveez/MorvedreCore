@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { MdAdd } from "react-icons/md";
 import Link from "next/link";
 import type { Route } from "next";
 
@@ -82,13 +82,10 @@ async function loadTrainings(): Promise<LoadResult> {
   const seasons = (seasonsData ?? []) as SeasonRow[];
   const currentSeason = seasons.find((s) => s.is_current) ?? null;
 
-  const teamsAll = (teamsData ?? []) as Array<
-    Team & { created_at: string; updated_at: string }
-  >;
+  const teamsAll = (teamsData ?? []) as Array<Team & { created_at: string; updated_at: string }>;
   const teams: TeamRow[] = teamsAll.map((t) => ({
     ...t,
-    season_label:
-      seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
+    season_label: seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
   }));
 
   const defaultTeamId =
@@ -158,9 +155,7 @@ async function loadTrainings(): Promise<LoadResult> {
       .select("id, full_name, photo_url, cap_number")
       .order("full_name", { ascending: true })
       .limit(1000),
-    supabase
-      .from("training_attendance")
-      .select("session_id, player_id, present, reason"),
+    supabase.from("training_attendance").select("session_id, player_id, present, reason"),
   ]);
 
   const loadError = sessionsError ?? rosterError ?? profilesError ?? attendanceError;
@@ -272,16 +267,13 @@ export default async function TrainingsPage() {
   if (seasons.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
           Entrenamientos
         </h1>
-        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-5 text-center">
-          <p className="text-base font-semibold text-brand-deep">
-            Primero crea una temporada.
-          </p>
-          <p className="mt-1 text-sm text-ink-600">
-            Los bloques de entrenamientos pertenecen a un equipo de una
-            temporada.
+        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
+          <p className="text-brand-deep text-base font-semibold">Primero crea una temporada.</p>
+          <p className="text-ink-600 mt-1 text-sm">
+            Los bloques de entrenamientos pertenecen a un equipo de una temporada.
           </p>
           <div className="mt-4 flex justify-center">
             <Button asChild size="md">
@@ -296,14 +288,12 @@ export default async function TrainingsPage() {
   if (teams.length === 0) {
     return (
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
           Entrenamientos
         </h1>
-        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-5 text-center">
-          <p className="text-base font-semibold text-brand-deep">
-            Primero crea un equipo.
-          </p>
-          <p className="mt-1 text-sm text-ink-600">
+        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
+          <p className="text-brand-deep text-base font-semibold">Primero crea un equipo.</p>
+          <p className="text-ink-600 mt-1 text-sm">
             Los bloques de entrenamientos se asignan a un equipo.
           </p>
           <div className="mt-4 flex justify-center">
@@ -318,12 +308,12 @@ export default async function TrainingsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex items-end justify-between gap-3">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+          <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
             Entrenamientos
           </h1>
-          <p className="text-sm text-ink-600">
+          <p className="text-ink-600 text-sm">
             Bloques de entrenamiento, sesiones y lista de asistencia.
           </p>
         </div>
@@ -334,9 +324,9 @@ export default async function TrainingsPage() {
             defaultTeamId={defaultTeamId}
             defaultSeasonId={currentSeasonId}
             trigger={
-              <Button size="md" className="shrink-0">
-                <Plus className="h-5 w-5" aria-hidden="true" />
-                <span className="hidden sm:inline">Nuevo bloque</span>
+              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                <MdAdd className="h-6 w-6" aria-hidden="true" />
+                <span>Nuevo bloque</span>
               </Button>
             }
           />

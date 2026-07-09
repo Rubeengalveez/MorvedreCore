@@ -39,7 +39,7 @@ export function Medal({ rank, size = "md", className }: MedalProps) {
       <span
         aria-hidden="true"
         className={cn(
-          "mt-0.5 inline-flex items-center justify-center rounded-full border-2 font-display font-extrabold",
+          "font-display mt-0.5 inline-flex items-center justify-center rounded-full border-2 font-extrabold",
           sz.ring,
           sz.num,
         )}

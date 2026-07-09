@@ -66,10 +66,13 @@ export function parseProduct(input: unknown): ParsedProduct {
   const v = input as Record<string, unknown>;
   const title = typeof v.title === "string" ? v.title.trim() : "";
   if (title.length < MIN_TITLE) return { ok: false, error: "El título es demasiado corto." };
-  if (title.length > MAX_TITLE) return { ok: false, error: "Máximo " + MAX_TITLE + " caracteres en el título." };
+  if (title.length > MAX_TITLE)
+    return { ok: false, error: "Máximo " + MAX_TITLE + " caracteres en el título." };
   const description = typeof v.description === "string" ? v.description.trim() : "";
-  if (description.length < MIN_DESCRIPTION) return { ok: false, error: "La descripción no puede estar vacía." };
-  if (description.length > MAX_DESCRIPTION) return { ok: false, error: "Máximo " + MAX_DESCRIPTION + " caracteres en la descripción." };
+  if (description.length < MIN_DESCRIPTION)
+    return { ok: false, error: "La descripción no puede estar vacía." };
+  if (description.length > MAX_DESCRIPTION)
+    return { ok: false, error: "Máximo " + MAX_DESCRIPTION + " caracteres en la descripción." };
   const category = typeof v.category === "string" ? v.category.trim() : "";
   if (category.length < 1) return { ok: false, error: "La categoría es obligatoria." };
   if (category.length > 40) return { ok: false, error: "La categoría es demasiado larga." };
@@ -83,11 +86,18 @@ export function parseProduct(input: unknown): ParsedProduct {
   const priceCents = Math.round(priceEur * 100);
   if (priceCents < MIN_CENTS) return { ok: false, error: "El precio es demasiado bajo." };
   if (priceCents > MAX_CENTS) return { ok: false, error: "El precio es demasiado alto." };
-  const currency = typeof v.currency === "string" && v.currency.length > 0 ? v.currency : DEFAULT_CURRENCY;
+  const currency =
+    typeof v.currency === "string" && v.currency.length > 0 ? v.currency : DEFAULT_CURRENCY;
   if (currency.length > 4) return { ok: false, error: "Moneda inválida." };
   const imageUrl = typeof v.image_url === "string" && v.image_url.length > 0 ? v.image_url : null;
-  if (imageUrl && imageUrl.length > 500) return { ok: false, error: "URL de imagen demasiado larga." };
-  const sizes = Array.isArray(v.sizes) ? v.sizes.filter((s) => typeof s === "string" && s.length > 0).map((s) => String(s).trim()).filter((s) => s.length > 0 && s.length <= 20) : [];
+  if (imageUrl && imageUrl.length > 500)
+    return { ok: false, error: "URL de imagen demasiado larga." };
+  const sizes = Array.isArray(v.sizes)
+    ? v.sizes
+        .filter((s) => typeof s === "string" && s.length > 0)
+        .map((s) => String(s).trim())
+        .filter((s) => s.length > 0 && s.length <= 20)
+    : [];
   const available = v.available === false ? false : true;
   const stock = typeof v.stock === "number" ? Math.floor(v.stock) : null;
   if (stock !== null && (stock < 0 || stock > 1000)) return { ok: false, error: "Stock inválido." };
@@ -179,7 +189,12 @@ export function summarizeCart(
     });
     total += subtotal;
   }
-  return { ok: true, lines, total_cents: total, item_count: items.reduce((acc, i) => acc + i.quantity, 0) };
+  return {
+    ok: true,
+    lines,
+    total_cents: total,
+    item_count: items.reduce((acc, i) => acc + i.quantity, 0),
+  };
 }
 
 export function formatCents(cents: number, currency: string = DEFAULT_CURRENCY): string {

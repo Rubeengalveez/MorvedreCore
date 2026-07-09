@@ -52,8 +52,7 @@ const playerFormSchema = z.object({
     .trim()
     .optional()
     .refine(
-      (v) =>
-        !v || (yearPattern.test(v) && Number(v) >= 1900 && Number(v) <= 2100),
+      (v) => !v || (yearPattern.test(v) && Number(v) >= 1900 && Number(v) <= 2100),
       "Año entre 1900 y 2100.",
     ),
   gender: z.enum(["male", "female", "other", "prefer_not_to_say"]),
@@ -89,10 +88,7 @@ type PlayerFormValues = z.infer<typeof playerFormSchema>;
 
 type ActionState = { ok?: true; error?: string } | null;
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     const birthYear = formData.get("birth_year");
     const cap = formData.get("cap_number");
@@ -146,10 +142,8 @@ function Toggle({
   return (
     <div className="flex items-center justify-between gap-3">
       <label htmlFor={id} className="flex cursor-pointer flex-col gap-0.5">
-        <span className="text-sm font-semibold text-ink-900">{label}</span>
-        {description ? (
-          <span className="text-xs text-ink-600">{description}</span>
-        ) : null}
+        <span className="text-ink-900 text-sm font-semibold">{label}</span>
+        {description ? <span className="text-ink-600 text-xs">{description}</span> : null}
       </label>
       <button
         id={id}
@@ -159,14 +153,14 @@ function Toggle({
         aria-label={label}
         onClick={() => onChange(!value)}
         className={
-          "relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper " +
+          "focus-visible:ring-brand-blue focus-visible:ring-offset-paper relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
           (value ? "bg-brand-blue" : "bg-ink-300")
         }
       >
         <span
           aria-hidden="true"
           className={
-            "inline-block h-5 w-5 rounded-full bg-paper transition-transform " +
+            "bg-paper inline-block h-5 w-5 rounded-full transition-transform " +
             (value ? "translate-x-6" : "translate-x-1")
           }
         />
@@ -181,10 +175,7 @@ export interface PlayerFormSheetProps {
 
 export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
 
   const form = useForm<PlayerFormValues>({
@@ -467,7 +458,7 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
                         onBlur={field.onBlur}
                         name={field.name}
                         ref={field.ref}
-                        className="flex w-full rounded border border-ink-300 bg-paper px-4 py-3 text-base text-ink-900 placeholder:text-ink-600/70 transition-colors focus-visible:outline-none focus-visible:border-brand-blue focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper disabled:cursor-not-allowed disabled:opacity-50"
+                        className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-brand-blue focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                       />
                     </FormControl>
                     <FormMessage />

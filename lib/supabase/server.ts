@@ -1,8 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
+import { cache } from "react";
 import { cookies } from "next/headers";
 import type { Database } from "@/lib/supabase/types";
 
-export async function createClient() {
+export const createClient = cache(async () => {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -22,7 +23,11 @@ export async function createClient() {
       setAll(cookiesToSet) {
         try {
           for (const { name, value, options } of cookiesToSet) {
-            cookieStore.set(name, value, options);
+            const cookieOptions = { ...options };
+            if (process.env.NODE_ENV !== "production") {
+              cookieOptions.secure = false;
+            }
+            cookieStore.set(name, value, cookieOptions);
           }
         } catch {
           return;
@@ -30,4 +35,4 @@ export async function createClient() {
       },
     },
   });
-}
+});

@@ -15,6 +15,7 @@
 **Lo que pasó**: Añadí `"pnpm": { "onlyBuiltDependencies": ["sharp", "unrs-resolver"] }` a `package.json` pensando que funcionaría. pnpm 11+ ignora ese campo y lo lee de `pnpm-workspace.yaml` con la sintaxis `allowBuilds:`.
 
 **Lo correcto**: en `pnpm-workspace.yaml`:
+
 ```yaml
 allowBuilds:
   sharp: true
@@ -26,6 +27,7 @@ allowBuilds:
 **Lo que pasó**: el `git push` fallaba con "Permission denied to Rga9rga" porque Windows Credential Manager tenía una credencial cacheada de OTRA cuenta de GitHub.
 
 **Lo correcto**: limpiar credenciales cacheadas antes del primer push si se sospecha que puede haber conflicto:
+
 ```powershell
 cmdkey /list:LegacyGeneric*target=git:https://github.com*
 cmdkey /delete:LegacyGeneric:target=git:https://github.com
@@ -266,6 +268,7 @@ Auditoría de Fase 2 en producción. 0 críticos, 5 medios seguridad, 7 medios a
 **Regla 2**: SIEMPRE probar el flujo end-to-end con Playwright ANTES de declarar una fase como completa. El error fue que validé que el form renderiza (200 OK en /login) pero no validé que el submit funciona y redirige. Eso requiere tests e2e con el flujo real.
 
 **Test e2e añadido** (`tests/e2e/login.spec.ts`):
+
 - El form renderiza con título, inputs, botón
 - El form tiene `method="post"`
 - Submit NO pone la password en la URL
@@ -298,6 +301,7 @@ Auditoría profunda de Fase 2 (entrenamientos y partidos). 4 críticos, 5 altos,
 ### Patrón para futuras auditorías
 
 Cuando hagas una auditoría seria:
+
 1. Lee **todos** los archivos del scope, no solo los que crees problemáticos
 2. Clasifica cada issue por severidad (🔴🟠🟡🟢) **antes** de empezar a arreglar
 3. Reporta primero, arregla después. No mezclar.
@@ -306,4 +310,3 @@ Cuando hagas una auditoría seria:
 6. **Verifica que los issues reportados siguen vigentes** leyendo el código actual, no el que la subagente tenía cuando arrancó.
 
 Patrón usado en esta auditoría: subagente dedicado con prompt estructurado por categorías (bugs, security, edge cases, UX, code quality, performance, a11y, tests, docs).
-

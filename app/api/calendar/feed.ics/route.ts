@@ -9,8 +9,14 @@ import type { Tables } from "@/types/database";
 
 const querySchema = z.object({
   team: z.string().uuid().optional(),
-  from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  from: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  to: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 type CalendarTraining = Tables<"training_sessions", "Row">;
@@ -51,23 +57,15 @@ function foldLine(line: string): string {
   return out.join("\r\n");
 }
 
-function trainingToVEvent(
-  t: CalendarTraining,
-  teamLabel: string,
-  teamColor: string,
-): string {
+function trainingToVEvent(t: CalendarTraining, teamLabel: string, teamColor: string): string {
   const start = formatIcsDate(t.scheduled_at, false);
   const end = formatIcsDate(
-    new Date(
-      new Date(t.scheduled_at).getTime() + t.duration_minutes * 60_000,
-    ).toISOString(),
+    new Date(new Date(t.scheduled_at).getTime() + t.duration_minutes * 60_000).toISOString(),
     false,
   );
   const summary = escapeIcs(`Entreno ${teamLabel}`);
   const desc = escapeIcs(
-    t.cancelled
-      ? `Cancelado. Motivo: ${t.cancellation_reason ?? ""}`
-      : (t.location ?? ""),
+    t.cancelled ? `Cancelado. Motivo: ${t.cancellation_reason ?? ""}` : (t.location ?? ""),
   );
   return [
     "BEGIN:VEVENT",
@@ -88,11 +86,7 @@ function trainingToVEvent(
     .join("\r\n");
 }
 
-function matchToVEvent(
-  m: CalendarMatch,
-  teamLabel: string,
-  teamColor: string,
-): string {
+function matchToVEvent(m: CalendarMatch, teamLabel: string, teamColor: string): string {
   const start = formatIcsDate(m.scheduled_at, false);
   const end = formatIcsDate(
     new Date(new Date(m.scheduled_at).getTime() + 2 * 60 * 60_000).toISOString(),
@@ -110,7 +104,8 @@ function matchToVEvent(
     .filter(Boolean)
     .join("\\n");
   const uid = `match-${m.id}@morvedre-core`;
-  const status = m.status === "cancelled" ? "CANCELLED" : m.status === "postponed" ? "CANCELLED" : "CONFIRMED";
+  const status =
+    m.status === "cancelled" ? "CANCELLED" : m.status === "postponed" ? "CANCELLED" : "CONFIRMED";
   return [
     "BEGIN:VEVENT",
     `UID:${uid}`,
@@ -153,9 +148,7 @@ export async function GET(request: Request) {
   }
 
   const teams = await getTeamsForProfileInSeason(activeProfile.id, season.id);
-  const teamsFiltered = parsed.data.team
-    ? teams.filter((t) => t.id === parsed.data.team)
-    : teams;
+  const teamsFiltered = parsed.data.team ? teams.filter((t) => t.id === parsed.data.team) : teams;
   const teamIds = teamsFiltered.map((t) => t.id);
   const teamIdToLabel = new Map<string, string>();
   for (const t of teamsFiltered) {
@@ -225,11 +218,7 @@ export async function GET(request: Request) {
   });
 }
 
-function generateIcs(
-  trainingVEvents: string[],
-  matchVEvents: string[],
-  calName: string,
-): string {
+function generateIcs(trainingVEvents: string[], matchVEvents: string[], calName: string): string {
   const now = formatIcsDate(new Date().toISOString(), false);
   return [
     "BEGIN:VCALENDAR",

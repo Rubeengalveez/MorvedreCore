@@ -19,7 +19,7 @@ const SheetOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-ink-900/50 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "bg-ink-900/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 backdrop-blur-sm",
       className,
     )}
     {...props}
@@ -35,7 +35,7 @@ const sheetContentVariants = cva(
         sm: "max-h-[35vh]",
         md: "max-h-[55vh]",
         lg: "max-h-[80vh]",
-        full: "h-[calc(100dvh-1.5rem)]",
+        full: "h-[calc(100dvh-1.5rem)] pt-[env(safe-area-inset-top)]",
       },
     },
     defaultVariants: {
@@ -45,7 +45,8 @@ const sheetContentVariants = cva(
 );
 
 export interface SheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
+  extends
+    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
     VariantProps<typeof sheetContentVariants> {
   showClose?: boolean;
 }
@@ -61,11 +62,11 @@ const SheetContent = React.forwardRef<
       className={cn(sheetContentVariants({ size }), "rounded-t-md", className)}
       {...props}
     >
-      <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-ink-300" />
+      <div className="bg-ink-300 mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full" />
       {showClose ? (
         <DialogPrimitive.Close
           aria-label="Cerrar"
-          className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded text-ink-600 transition-colors hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+          className="text-ink-600 hover:bg-brand-foam focus-visible:ring-brand-blue focus-visible:ring-offset-paper touch-target absolute top-[max(1rem,env(safe-area-inset-top))] right-4 inline-flex h-11 w-11 items-center justify-center rounded transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <X className="h-5 w-5" aria-hidden="true" />
         </DialogPrimitive.Close>
@@ -76,14 +77,8 @@ const SheetContent = React.forwardRef<
 ));
 SheetContent.displayName = DialogPrimitive.Content.displayName;
 
-const SheetHeader = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn("flex flex-col gap-1.5 px-5 pt-1 text-left", className)}
-    {...props}
-  />
+const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("flex flex-col gap-1.5 px-5 pt-1 text-left sm:pt-2", className)} {...props} />
 );
 SheetHeader.displayName = "SheetHeader";
 
@@ -93,10 +88,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn(
-      "font-display text-xl font-bold text-brand-deep",
-      className,
-    )}
+    className={cn("font-display text-brand-deep text-xl font-bold", className)}
     {...props}
   />
 ));
@@ -108,31 +100,19 @@ const SheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn("text-sm text-ink-600", className)}
+    className={cn("text-ink-600 text-sm", className)}
     {...props}
   />
 ));
 SheetDescription.displayName = DialogPrimitive.Description.displayName;
 
-const SheetBody = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
+const SheetBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("flex-1 overflow-y-auto px-5", className)} {...props} />
 );
 SheetBody.displayName = "SheetBody";
 
-const SheetFooter = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col gap-2 border-t border-ink-300 p-5",
-      className,
-    )}
-    {...props}
-  />
+const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("border-ink-300 flex flex-col gap-2 border-t p-5", className)} {...props} />
 );
 SheetFooter.displayName = "SheetFooter";
 

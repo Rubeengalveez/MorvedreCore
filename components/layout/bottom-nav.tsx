@@ -3,22 +3,16 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
+import { MdHome, MdCalendarMonth, MdEmojiEvents, MdGroups, MdStorefront } from "react-icons/md";
 
-import {
-  Calendario,
-  Equipo,
-  Inicio,
-  Tienda,
-  Trofeo,
-} from "@/components/brand/pictograms";
 import { cn } from "@/lib/utils/cn";
 
 const items = [
-  { href: "/dashboard", label: "Inicio", Pictogram: Inicio },
-  { href: "/calendar", label: "Calendario", Pictogram: Calendario },
-  { href: "/rankings", label: "Rankings", Pictogram: Trofeo },
-  { href: "/team", label: "Equipo", Pictogram: Equipo },
-  { href: "/shop", label: "Tienda", Pictogram: Tienda },
+  { href: "/dashboard", label: "Inicio", Icon: MdHome },
+  { href: "/calendar", label: "Calendario", Icon: MdCalendarMonth },
+  { href: "/rankings", label: "Rankings", Icon: MdEmojiEvents },
+  { href: "/team", label: "Equipo", Icon: MdGroups },
+  { href: "/shop", label: "Tienda", Icon: MdStorefront },
 ] as const;
 
 export function BottomNav() {
@@ -26,41 +20,32 @@ export function BottomNav() {
 
   return (
     <nav
-      aria-label="Navegación principal Morvedre Core"
+      aria-label="Navegacion principal Morvedre Core"
       data-bottom-nav
-      className="fixed inset-x-0 bottom-0 z-30 border-t-2 border-pool-deep bg-paper-card pb-[env(safe-area-inset-bottom)]"
-      style={{ boxShadow: "0 -2px 16px rgba(6,32,72,0.07)" }}
+      className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--bottom-nav-height)] px-3 pb-[max(env(safe-area-inset-bottom),8px)]"
     >
-      <ul className="mx-auto flex h-[60px] max-w-2xl items-stretch">
+      <ul className="border-ink-300/90 bg-paper-card/96 shadow-elev-5 mx-auto grid h-14 max-w-2xl grid-cols-5 items-stretch rounded-lg border p-1 backdrop-blur-md">
         {items.map((item) => {
-          const Pictogram = item.Pictogram;
+          const Icon = item.Icon;
           const href = item.href;
-          const isActive =
-            pathname === href || pathname.startsWith(`${href}/`);
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
           return (
-            <li key={href} className="relative flex-1">
-              {isActive ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-2 top-0 h-[2px] rounded-b-sm bg-pool-deep"
-                />
-              ) : null}
+            <li key={href} className="min-w-0">
               <Link
                 href={href as Route}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex h-full w-full flex-col items-center justify-center gap-[3px] px-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-inset",
-                  isActive ? "text-pool-deep" : "text-ink-400 hover:text-ink-600",
+                  "focus-visible:ring-pool-blue relative flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-md px-1 transition-all focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+                  isActive
+                    ? "bg-pool-deep text-paper shadow-sm"
+                    : "text-ink-500 hover:bg-pool-foam/70 hover:text-pool-deep",
                 )}
               >
-                <Pictogram
-                  className="h-6 w-6 shrink-0"
-                  accent={isActive ? "var(--pool-deep)" : "currentColor"}
-                />
+                <Icon className="h-5 w-5 shrink-0" />
                 <span
                   className={cn(
-                    "text-[10px] leading-none tracking-wide",
-                    isActive ? "font-extrabold text-pool-deep" : "font-medium",
+                    "max-w-full truncate text-[11px] leading-none",
+                    isActive ? "text-paper font-extrabold" : "font-semibold",
                   )}
                 >
                   {item.label}

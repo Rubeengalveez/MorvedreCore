@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Loader2, X } from "lucide-react";
+import { MdCheck, MdAutorenew, MdClose } from "react-icons/md";
 import { useMemo, useState, useTransition } from "react";
 
 import { Alert } from "@/components/ui/alert";
@@ -8,10 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
-import {
-  formatShortDate,
-  formatTime,
-} from "@/lib/utils/format";
+import { formatShortDate, formatTime } from "@/lib/utils/format";
 import { markAllPresent, markAttendance } from "@/server/actions/admin";
 
 export interface AttendancePlayer {
@@ -60,7 +57,7 @@ export function AttendanceSheet({
       ...prev,
       [playerId]: {
         present,
-        reason: present ? "" : prev[playerId]?.reason ?? "",
+        reason: present ? "" : (prev[playerId]?.reason ?? ""),
       },
     }));
   }
@@ -118,17 +115,13 @@ export function AttendanceSheet({
     });
   }
 
-  const presentCount = players.filter(
-    (p) => (rows[p.id]?.present ?? p.present) === true,
-  ).length;
+  const presentCount = players.filter((p) => (rows[p.id]?.present ?? p.present) === true).length;
 
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
-        <h2 className="font-display text-xl font-bold text-brand-deep">
-          Pasar lista
-        </h2>
-        <p className="text-sm text-ink-600">
+        <h2 className="font-display text-brand-deep text-xl font-bold">Pasar lista</h2>
+        <p className="text-ink-600 text-sm">
           {sessionLabel} · {presentCount} de {players.length} presentes
         </p>
       </header>
@@ -153,9 +146,9 @@ export function AttendanceSheet({
         className="w-full"
       >
         {markingAll ? (
-          <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+          <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
         ) : (
-          <Check className="h-5 w-5" aria-hidden="true" />
+          <MdCheck className="h-5 w-5" aria-hidden="true" />
         )}
         Marcar todos disponibles
       </Button>
@@ -168,20 +161,18 @@ export function AttendanceSheet({
             <li
               key={p.id}
               className={cn(
-                "flex flex-col gap-2 rounded-md border bg-paper p-3",
+                "bg-paper flex flex-col gap-2 rounded-md border p-3",
                 isPresent ? "border-success/30" : "border-danger/30",
               )}
             >
               <div className="flex items-center gap-3">
                 <Avatar name={p.full_name} src={p.photo_url} size={40} />
                 <div className="flex flex-1 flex-col">
-                  <span className="font-display text-base font-bold text-brand-deep">
+                  <span className="font-display text-brand-deep text-base font-bold">
                     {p.full_name}
                   </span>
                   {p.cap_number != null ? (
-                    <span className="font-mono text-xs text-ink-600">
-                      Dorsal {p.cap_number}
-                    </span>
+                    <span className="text-ink-600 font-mono text-xs">Dorsal {p.cap_number}</span>
                   ) : null}
                 </div>
                 <div
@@ -195,13 +186,13 @@ export function AttendanceSheet({
                     aria-pressed={isPresent}
                     aria-label="Presente"
                     className={cn(
-                      "inline-flex h-12 w-12 min-h-12 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                      "focus-visible:ring-brand-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                       isPresent
                         ? "border-success bg-success text-paper"
                         : "border-ink-300 bg-paper text-ink-600 hover:border-success",
                     )}
                   >
-                    <Check className="h-5 w-5" aria-hidden="true" />
+                    <MdCheck className="h-5 w-5" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
@@ -209,13 +200,13 @@ export function AttendanceSheet({
                     aria-pressed={!isPresent}
                     aria-label="Ausente"
                     className={cn(
-                      "inline-flex h-12 w-12 min-h-12 items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+                      "focus-visible:ring-brand-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                       !isPresent
                         ? "border-danger bg-danger text-paper"
                         : "border-ink-300 bg-paper text-ink-600 hover:border-danger",
                     )}
                   >
-                    <X className="h-5 w-5" aria-hidden="true" />
+                    <MdClose className="h-5 w-5" aria-hidden="true" />
                   </button>
                 </div>
               </div>
@@ -233,24 +224,11 @@ export function AttendanceSheet({
       </ul>
 
       <div className="flex flex-col gap-2 pt-2">
-        <Button
-          type="button"
-          size="lg"
-          onClick={handleSave}
-          disabled={pending || markingAll}
-        >
-          {pending ? (
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-          ) : null}
+        <Button type="button" size="lg" onClick={handleSave} disabled={pending || markingAll}>
+          {pending ? <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
           {pending ? "Guardando..." : "Guardar lista"}
         </Button>
-        <Button
-          type="button"
-          size="md"
-          variant="secondary"
-          onClick={onClose}
-          disabled={pending}
-        >
+        <Button type="button" size="md" variant="secondary" onClick={onClose} disabled={pending}>
           Cancelar
         </Button>
       </div>

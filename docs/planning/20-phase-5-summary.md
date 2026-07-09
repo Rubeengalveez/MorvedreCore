@@ -27,7 +27,7 @@
 - updateShopOrderStatus (admin, mueve el pedido en el Kanban)
 - createShopOrder (player, valida productos y notifica a los parents)
 - decideShopOrder (parent, approve o reject)
-- requireSessionProfile helper anadido a _helpers.ts
+- requireSessionProfile helper anadido a \_helpers.ts
 
 ### Server queries (server/queries/shop.ts)
 

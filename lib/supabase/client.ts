@@ -17,6 +17,9 @@ export function getSupabaseBrowserClient() {
 
   client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey, {
     isSingleton: true,
+    cookieOptions: {
+      secure: process.env.NODE_ENV === "production",
+    },
   });
 
   return client;

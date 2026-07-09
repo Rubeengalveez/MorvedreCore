@@ -6,19 +6,12 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { Equipo } from "@/components/brand/pictograms";
-import {
-  CATEGORY_LABELS,
-  type CategoryCode,
-  type TeamGender,
-} from "@/lib/domain/categories";
+import { CATEGORY_LABELS, type CategoryCode, type TeamGender } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team } from "@/server/actions/admin";
 
 import { TeamFormSheet } from "./_components/team-form-sheet";
-import {
-  TeamsGrid,
-  type TeamCardData,
-} from "./_components/teams-grid";
+import { TeamsGrid, type TeamCardData } from "./_components/teams-grid";
 
 const GENDER_LABELS: Record<TeamGender, string> = {
   male: "Masculino",
@@ -64,14 +57,13 @@ async function loadData(): Promise<LoadResult> {
       .order("start_date", { ascending: false }),
     supabase
       .from("teams")
-      .select("id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at"),
+      .select(
+        "id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at",
+      ),
     supabase
       .from("team_staff")
       .select("team_id, profile_id, role, profiles!team_staff_profile_id_fkey(full_name)"),
-    supabase
-      .from("team_rosters")
-      .select("team_id, player_id")
-      .is("left_at", null),
+    supabase.from("team_rosters").select("team_id, player_id").is("left_at", null),
   ]);
 
   const firstError = seasonsError ?? teamsError;
@@ -144,31 +136,21 @@ export default async function TeamsPage() {
         <LanePattern className="absolute inset-0" />
         <div className="relative z-[1] mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4">
           <header className="flex items-start gap-3">
-            <PictogramBadge
-              pictogram={Equipo}
-              color="var(--pool-blue)"
-              size="lg"
-            />
+            <PictogramBadge pictogram={Equipo} color="var(--pool-blue)" size="lg" />
             <div className="flex flex-col gap-0.5">
               <Eyebrow>Estructura del club</Eyebrow>
-              <h1 className="font-display text-2xl font-extrabold tracking-tight text-pool-deep">
+              <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
                 Equipos
               </h1>
-              <p className="text-sm text-ink-600">
-                Configura los equipos y asigna plantilla.
-              </p>
+              <p className="text-ink-600 text-sm">Configura los equipos y asigna plantilla.</p>
             </div>
           </header>
-          <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-ink-300 bg-paper-card p-6 text-center">
-            <PictogramBadge
-              pictogram={Equipo}
-              color="var(--pool-blue)"
-              size="lg"
-            />
-            <p className="font-display text-base font-extrabold text-pool-deep">
+          <div className="border-ink-300 bg-paper-card flex flex-col items-center gap-3 rounded-md border border-dashed p-6 text-center">
+            <PictogramBadge pictogram={Equipo} color="var(--pool-blue)" size="lg" />
+            <p className="font-display text-pool-deep text-base font-extrabold">
               Primero crea una temporada.
             </p>
-            <p className="max-w-sm text-sm text-ink-600">
+            <p className="text-ink-600 max-w-sm text-sm">
               Los equipos pertenecen siempre a una temporada.
             </p>
             <div className="mt-2">
@@ -186,28 +168,22 @@ export default async function TeamsPage() {
     <div className="relative">
       <LanePattern className="absolute inset-0" />
       <div className="relative z-[1] mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4">
-        <header className="flex items-end justify-between gap-3">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-start gap-3">
-            <PictogramBadge
-              pictogram={Equipo}
-              color="var(--pool-blue)"
-              size="lg"
-            />
+            <PictogramBadge pictogram={Equipo} color="var(--pool-blue)" size="lg" />
             <div className="flex flex-col gap-0.5">
               <Eyebrow>Estructura del club</Eyebrow>
-              <h1 className="font-display text-2xl font-extrabold tracking-tight text-pool-deep">
+              <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
                 Equipos
               </h1>
-              <p className="text-sm text-ink-600">
-                Configura los equipos y asigna plantilla.
-              </p>
+              <p className="text-ink-600 text-sm">Configura los equipos y asigna plantilla.</p>
             </div>
           </div>
           <TeamFormSheet
             seasons={seasons}
             defaultSeasonId={currentSeasonId ?? seasons[0]!.id}
             trigger={
-              <Button size="md" className="shrink-0">
+              <Button size="md" className="w-full shrink-0 sm:w-auto">
                 <Plus className="h-5 w-5" aria-hidden="true" />
                 <span className="hidden sm:inline">Nuevo</span>
                 <span className="sr-only sm:hidden">Nuevo equipo</span>

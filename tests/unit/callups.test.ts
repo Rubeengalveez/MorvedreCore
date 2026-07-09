@@ -13,8 +13,16 @@ import {
 
 const CADETE_A: TeamForCallup = { id: "team-cadete-a", category_code: "cadete", label: "Cadete A" };
 const CADETE_B: TeamForCallup = { id: "team-cadete-b", category_code: "cadete", label: "Cadete B" };
-const INFANTIL_A: TeamForCallup = { id: "team-infantil-a", category_code: "infantil", label: "Infantil A" };
-const JUVENIL_UNICO: TeamForCallup = { id: "team-juvenil", category_code: "juvenil", label: "Juvenil único" };
+const INFANTIL_A: TeamForCallup = {
+  id: "team-infantil-a",
+  category_code: "infantil",
+  label: "Infantil A",
+};
+const JUVENIL_UNICO: TeamForCallup = {
+  id: "team-juvenil",
+  category_code: "juvenil",
+  label: "Juvenil único",
+};
 const ESCUELA: TeamForCallup = { id: "team-escuela", category_code: "escuela", label: "Escuela" };
 
 function player(overrides: Partial<PlayerForCallup>): PlayerForCallup {
@@ -160,8 +168,20 @@ describe("suggestCallup", () => {
 
   it("includes every player in the target team as starter candidates", () => {
     const ownPlayers = [
-      player({ id: "p-1", full_name: "Ana", category_code: "cadete", cap_number: 4, current_team_id: CADETE_A.id }),
-      player({ id: "p-2", full_name: "Bea", category_code: "cadete", cap_number: 7, current_team_id: CADETE_A.id }),
+      player({
+        id: "p-1",
+        full_name: "Ana",
+        category_code: "cadete",
+        cap_number: 4,
+        current_team_id: CADETE_A.id,
+      }),
+      player({
+        id: "p-2",
+        full_name: "Bea",
+        category_code: "cadete",
+        cap_number: 7,
+        current_team_id: CADETE_A.id,
+      }),
     ];
     const suggestions = suggestCallup({
       targetTeam: CADETE_A,
@@ -194,8 +214,20 @@ describe("suggestCallup", () => {
 
   it("includes players from lower categories (ascending)", () => {
     const players = [
-      player({ id: "p-1", full_name: "Ana", category_code: "cadete", cap_number: 1, current_team_id: CADETE_A.id }),
-      player({ id: "p-2", full_name: "Bea", category_code: "infantil", cap_number: 9, current_team_id: INFANTIL_A.id }),
+      player({
+        id: "p-1",
+        full_name: "Ana",
+        category_code: "cadete",
+        cap_number: 1,
+        current_team_id: CADETE_A.id,
+      }),
+      player({
+        id: "p-2",
+        full_name: "Bea",
+        category_code: "infantil",
+        cap_number: 9,
+        current_team_id: INFANTIL_A.id,
+      }),
     ];
     const suggestions = suggestCallup({
       targetTeam: CADETE_A,
@@ -212,9 +244,7 @@ describe("suggestCallup", () => {
   });
 
   it("marks players with availability conflicts", () => {
-    const players = [
-      player({ id: "p-1", full_name: "Ana", current_team_id: CADETE_A.id }),
-    ];
+    const players = [player({ id: "p-1", full_name: "Ana", current_team_id: CADETE_A.id })];
     const availability: AvailabilityRow[] = [
       { player_id: "p-1", date: "2026-10-10", available: false, reason: "Médico" },
     ];
@@ -269,8 +299,18 @@ describe("suggestCallup", () => {
 
   it("excludes players more than one category below the target (too young to call up)", () => {
     const players = [
-      player({ id: "p-1", full_name: "Ana", category_code: "cadete", current_team_id: CADETE_A.id }),
-      player({ id: "p-2", full_name: "Bea", category_code: "benjamin", current_team_id: "team-benjamin" }),
+      player({
+        id: "p-1",
+        full_name: "Ana",
+        category_code: "cadete",
+        current_team_id: CADETE_A.id,
+      }),
+      player({
+        id: "p-2",
+        full_name: "Bea",
+        category_code: "benjamin",
+        current_team_id: "team-benjamin",
+      }),
     ];
     const suggestions = suggestCallup({
       targetTeam: CADETE_A,
@@ -286,32 +326,22 @@ describe("suggestCallup", () => {
 describe("defaultCapForPlayer", () => {
   it("returns the player's profile cap when it is free", () => {
     expect(
-      defaultCapForPlayer(
-        "p-1",
-        { cap_number: 7 },
-        CADETE_A.id,
-        [{ player_id: "other", cap_number: 4 }],
-      ),
+      defaultCapForPlayer("p-1", { cap_number: 7 }, CADETE_A.id, [
+        { player_id: "other", cap_number: 4 },
+      ]),
     ).toBe(7);
   });
 
   it("returns the profile cap even when null (no cap to assign)", () => {
-    expect(
-      defaultCapForPlayer("p-1", { cap_number: null }, CADETE_A.id, []),
-    ).toBeNull();
+    expect(defaultCapForPlayer("p-1", { cap_number: null }, CADETE_A.id, [])).toBeNull();
   });
 
   it("finds the next free cap when the profile cap is taken", () => {
     expect(
-      defaultCapForPlayer(
-        "p-1",
-        { cap_number: 5 },
-        CADETE_A.id,
-        [
-          { player_id: "a", cap_number: 5 },
-          { player_id: "b", cap_number: 4 },
-        ],
-      ),
+      defaultCapForPlayer("p-1", { cap_number: 5 }, CADETE_A.id, [
+        { player_id: "a", cap_number: 5 },
+        { player_id: "b", cap_number: 4 },
+      ]),
     ).toBe(6);
   });
 

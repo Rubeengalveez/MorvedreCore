@@ -122,7 +122,8 @@ export function findConflicts(
   scheduledAt: Date | string,
   availability: AvailabilityRow[],
 ): boolean {
-  const date = typeof scheduledAt === "string" ? scheduledAt.slice(0, 10) : formatLocalDate(scheduledAt);
+  const date =
+    typeof scheduledAt === "string" ? scheduledAt.slice(0, 10) : formatLocalDate(scheduledAt);
   return availability.some(
     (a) => a.player_id === playerId && a.date === date && a.available === false,
   );
@@ -138,14 +139,7 @@ export interface SuggestCallupArgs {
 }
 
 export function suggestCallup(args: SuggestCallupArgs): CallupSuggestion[] {
-  const {
-    targetTeam,
-    scheduledAt,
-    allTeams,
-    allPlayers,
-    allAvailability,
-    max = 13,
-  } = args;
+  const { targetTeam, scheduledAt, allTeams, allPlayers, allAvailability, max = 13 } = args;
   const scheduledDate =
     typeof scheduledAt === "string" ? scheduledAt.slice(0, 10) : formatLocalDate(scheduledAt);
   const targetIdx = categoryIndex(targetTeam.category_code);

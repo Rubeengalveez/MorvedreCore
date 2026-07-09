@@ -1,8 +1,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
-export interface EyebrowProps
-  extends Omit<React.HTMLAttributes<HTMLElement>, "children"> {
+export interface EyebrowProps extends Omit<React.HTMLAttributes<HTMLElement>, "children"> {
   children?: React.ReactNode;
   className?: string;
   as?: "span" | "p" | "div" | "h1" | "h2" | "h3" | "h4";

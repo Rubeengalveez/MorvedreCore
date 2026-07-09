@@ -27,6 +27,7 @@ export const metadata: Metadata = {
   title: "Morvedre Core",
   description: "La app del Waterpolo Morvedre",
   applicationName: "Morvedre Core",
+  manifest: "/manifest.webmanifest",
   icons: {
     icon: [
       { url: "/brand/icon-192.png", sizes: "192x192", type: "image/png" },
@@ -52,7 +53,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",
-  userScalable: false,
+  userScalable: true,
   themeColor: "#0A2E5C",
 };
 
@@ -62,14 +63,29 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="es"
-      className={`${manrope.variable} ${inter.variable} ${jetbrainsMono.variable}`}
-    >
-      <body className="min-h-dvh bg-paper text-ink-900 font-sans antialiased">
+    <html lang="es" className={`${manrope.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  const swUrl = ${JSON.stringify(process.env.NODE_ENV === "production" ? "/sw.js" : "/sw-dev.js")};
+                  navigator.serviceWorker.register(swUrl).then(function(reg) {
+                    console.log('SW registered:', reg.scope);
+                  }).catch(function(err) {
+                    console.error('SW registration failed:', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
+      </head>
+      <body className="bg-paper text-ink-900 min-h-dvh font-sans antialiased">
         <a
           href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-50 focus:rounded focus:bg-brand-deep focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-paper focus:shadow-lg"
+          className="focus:bg-brand-deep focus:text-paper sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-lg"
         >
           Saltar al contenido principal
         </a>

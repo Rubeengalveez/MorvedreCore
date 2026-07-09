@@ -80,7 +80,7 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
       .eq("season_id", input.season_id)
       .eq("subject_type", "player")
       .eq("streak_type", input.streak_type ?? "train_consec");
-    
+
     if (streakRows) {
       for (const r of streakRows) {
         streakMap.set(r.subject_id, {
@@ -91,7 +91,9 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
     }
   }
 
-  const playerIds = Array.from(new Set(((snapshots ?? []) as SnapshotRow[]).map((s) => s.player_id)));
+  const playerIds = Array.from(
+    new Set(((snapshots ?? []) as SnapshotRow[]).map((s) => s.player_id)),
+  );
   const { data: profiles } = playerIds.length
     ? await supabase
         .from("profiles")
@@ -106,12 +108,29 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
         .is("left_at", null)
     : { data: [] };
 
-  const profileMap = new Map<string, { full_name: string; photo_url: string | null; cap_number: number | null; birth_year: number | null }>();
-  for (const p of (profiles ?? []) as Array<{ id: string; full_name: string; photo_url: string | null; cap_number: number | null; birth_year: number | null }>) {
+  const profileMap = new Map<
+    string,
+    {
+      full_name: string;
+      photo_url: string | null;
+      cap_number: number | null;
+      birth_year: number | null;
+    }
+  >();
+  for (const p of (profiles ?? []) as Array<{
+    id: string;
+    full_name: string;
+    photo_url: string | null;
+    cap_number: number | null;
+    birth_year: number | null;
+  }>) {
     profileMap.set(p.id, p);
   }
 
-  const teamByPlayer = new Map<string, { id: string; label: string; color: string; category_code: string }>();
+  const teamByPlayer = new Map<
+    string,
+    { id: string; label: string; color: string; category_code: string }
+  >();
   for (const r of (rosters ?? []) as Array<{ player_id: string; teams: unknown }>) {
     const t = Array.isArray(r.teams) ? r.teams[0] : r.teams;
     const team = t as { id: string; label: string; color: string; category_code: string } | null;
@@ -127,14 +146,17 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
     const birthYear = profile?.birth_year ?? null;
     const inferredCategory: CategoryCode =
       birthYear != null
-        ? (ageToCategory(currentYear - birthYear) ?? (team?.category_code as CategoryCode) ?? "cadete")
-        : (team?.category_code as CategoryCode) ?? "cadete";
+        ? (ageToCategory(currentYear - birthYear) ??
+          (team?.category_code as CategoryCode) ??
+          "cadete")
+        : ((team?.category_code as CategoryCode) ?? "cadete");
 
-    const streakVal = input.metric === "streak"
-      ? (input.streak_order === "best"
+    const streakVal =
+      input.metric === "streak"
+        ? input.streak_order === "best"
           ? (streakMap.get(s.player_id)?.best ?? 0)
-          : (streakMap.get(s.player_id)?.current ?? 0))
-      : s.attendance_streak;
+          : (streakMap.get(s.player_id)?.current ?? 0)
+        : s.attendance_streak;
 
     return {
       player_id: s.player_id,
@@ -183,25 +205,24 @@ function ageToCategory(age: number): CategoryCode | null {
 export interface RankingsPageMeta {
   season: { id: string; label: string };
   categories: Array<{ code: CategoryCode; label: string; player_count: number }>;
-  teams: Array<{ id: string; label: string; category_code: CategoryCode; color: string; player_count: number }>;
+  teams: Array<{
+    id: string;
+    label: string;
+    category_code: CategoryCode;
+    color: string;
+    player_count: number;
+  }>;
   available_seasons: Array<{ id: string; label: string; is_current: boolean }>;
 }
 
 export async function getRankingsMeta(activeSeasonId?: string): Promise<RankingsPageMeta> {
   const supabase = await createClient();
 
-  const [{ data: seasons }, { data: teams }, { data: rosters }] = await Promise.all([
-    supabase.from("seasons").select("id, label, is_current").order("label", { ascending: false }),
-    supabase
-      .from("teams")
-      .select("id, label, category_code, color, season_id")
-      .eq("season_id", activeSeasonId ?? ""),
-    supabase
-      .from("team_rosters")
-      .select("team_id, left_at"),
-  ]);
-
-  const seasonList = ((seasons ?? []) as Array<{ id: string; label: string; is_current: boolean }>);
+  const { data: seasons } = await supabase
+    .from("seasons")
+    .select("id, label, is_current")
+    .order("label", { ascending: false });
+  const seasonList = (seasons ?? []) as Array<{ id: string; label: string; is_current: boolean }>;
   const current = activeSeasonId
     ? seasonList.find((s) => s.id === activeSeasonId)
     : seasonList.find((s) => s.is_current);
@@ -215,9 +236,23 @@ export async function getRankingsMeta(activeSeasonId?: string): Promise<Rankings
     };
   }
 
-  const seasonTeams = ((teams ?? []) as Array<{ id: string; label: string; category_code: string; color: string; season_id: string }>).filter(
-    (t) => t.season_id === season.id,
-  );
+  const [{ data: teams }, { data: rosters }] = await Promise.all([
+    supabase
+      .from("teams")
+      .select("id, label, category_code, color, season_id")
+      .eq("season_id", season.id),
+    supabase.from("team_rosters").select("team_id, left_at"),
+  ]);
+
+  const seasonTeams = (
+    (teams ?? []) as Array<{
+      id: string;
+      label: string;
+      category_code: string;
+      color: string;
+      season_id: string;
+    }>
+  ).filter((t) => t.season_id === season.id);
 
   const countsByTeam = new Map<string, number>();
   for (const r of (rosters ?? []) as Array<{ team_id: string; left_at: string | null }>) {
@@ -288,7 +323,9 @@ export async function getOpponentHistory(input: {
   const supabase = await createClient();
   let query = supabase
     .from("opponent_stats")
-    .select("opponent, matches_played, wins, draws, losses, goals_for, goals_against, last_match_at, team_id, teams!opponent_stats_team_id_fkey(label, color)")
+    .select(
+      "opponent, matches_played, wins, draws, losses, goals_for, goals_against, last_match_at, team_id, teams!opponent_stats_team_id_fkey(label, color)",
+    )
     .eq("season_id", input.season_id)
     .order("last_match_at", { ascending: false });
   if (input.team_id) {
@@ -297,18 +334,20 @@ export async function getOpponentHistory(input: {
   const { data, error } = await query;
   if (error) return [];
 
-  const rows = ((data ?? []) as Array<{
-    opponent: string;
-    matches_played: number;
-    wins: number;
-    draws: number;
-    losses: number;
-    goals_for: number;
-    goals_against: number;
-    last_match_at: string | null;
-    team_id: string;
-    teams: unknown;
-  }>).map((r) => {
+  const rows = (
+    (data ?? []) as Array<{
+      opponent: string;
+      matches_played: number;
+      wins: number;
+      draws: number;
+      losses: number;
+      goals_for: number;
+      goals_against: number;
+      last_match_at: string | null;
+      team_id: string;
+      teams: unknown;
+    }>
+  ).map((r) => {
     const t = Array.isArray(r.teams) ? r.teams[0] : r.teams;
     const team = t as { label?: string } | null;
     return {

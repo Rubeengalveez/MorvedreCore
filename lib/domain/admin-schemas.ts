@@ -112,23 +112,10 @@ export const unrosterSchema = z.object({
 });
 
 export const genderEnum = z.enum(["male", "female", "other", "prefer_not_to_say"]);
-export const userRoleEnum = z.enum([
-  "admin",
-  "coach",
-  "delegate",
-  "directiva",
-  "parent",
-  "player",
-]);
-export const parentRelationEnum = z.enum([
-  "mother",
-  "father",
-  "legal_guardian",
-  "other",
-]);
+export const userRoleEnum = z.enum(["admin", "coach", "delegate", "directiva", "parent", "player"]);
+export const parentRelationEnum = z.enum(["mother", "father", "legal_guardian", "other"]);
 
-export const emptyToNull = (v: unknown) =>
-  typeof v === "string" && v.trim() === "" ? null : v;
+export const emptyToNull = (v: unknown) => (typeof v === "string" && v.trim() === "" ? null : v);
 
 export const nullIfEmpty = (v: unknown) =>
   v == null || (typeof v === "string" && v.trim() === "") ? null : v;
@@ -186,7 +173,10 @@ export const updatePlayerSchema = z
       .optional(),
     phone_e164: z.preprocess(
       emptyToNull,
-      z.string().regex(/^\+[1-9]\d{6,14}$/).nullable(),
+      z
+        .string()
+        .regex(/^\+[1-9]\d{6,14}$/)
+        .nullable(),
     ),
     email_contact: z.preprocess(emptyToNull, z.string().email("Email inválido.").nullable()),
     photo_url: z.preprocess(emptyToNull, z.string().url("URL inválida.").nullable()),
@@ -201,15 +191,8 @@ export const updatePlayerSchema = z
   });
 
 export const updateProfileSchema = z.object({
-  full_name: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres.")
-    .max(100, "Máximo 100 caracteres."),
-  photo_url: z.preprocess(
-    nullIfEmpty,
-    z.string().url("URL inválida.").nullable(),
-  ),
+  full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
+  photo_url: z.preprocess(nullIfEmpty, z.string().url("URL inválida.").nullable()),
   birth_year: z.preprocess(
     nullIfEmpty,
     z.preprocess(
@@ -226,26 +209,18 @@ export const updateProfileSchema = z.object({
     nullIfEmpty,
     z.preprocess(
       (v) => (v == null ? null : Number(v)),
-      z
-        .number()
-        .int("Dorsal entero.")
-        .min(0, "Mínimo 0.")
-        .max(99, "Máximo 99.")
-        .nullable(),
+      z.number().int("Dorsal entero.").min(0, "Mínimo 0.").max(99, "Máximo 99.").nullable(),
     ),
   ),
   phone_e164: z.preprocess(
     nullIfEmpty,
-    z.string().regex(/^\+[1-9]\d{6,14}$/, "Formato E.164: +34612345678").nullable(),
+    z
+      .string()
+      .regex(/^\+[1-9]\d{6,14}$/, "Formato E.164: +34612345678")
+      .nullable(),
   ),
-  email_contact: z.preprocess(
-    nullIfEmpty,
-    z.string().email("Email inválido.").nullable(),
-  ),
-  notes: z.preprocess(
-    nullIfEmpty,
-    z.string().max(1000, "Máximo 1000 caracteres.").nullable(),
-  ),
+  email_contact: z.preprocess(nullIfEmpty, z.string().email("Email inválido.").nullable()),
+  notes: z.preprocess(nullIfEmpty, z.string().max(1000, "Máximo 1000 caracteres.").nullable()),
 });
 
 export const linkSchema = z.object({
@@ -266,21 +241,31 @@ export const roleAssignmentSchema = z.object({
 });
 
 export const createNewsPostSchema = z.object({
-  title: z.string().trim().min(3, "El título es demasiado corto.").max(120, "Máximo 120 caracteres."),
-  body_md: z.string().trim().min(1, "El cuerpo no puede estar vacío.").max(8000, "Máximo 8000 caracteres."),
+  title: z
+    .string()
+    .trim()
+    .min(3, "El título es demasiado corto.")
+    .max(120, "Máximo 120 caracteres."),
+  body_md: z
+    .string()
+    .trim()
+    .min(1, "El cuerpo no puede estar vacío.")
+    .max(8000, "Máximo 8000 caracteres."),
   image_url: z.string().url("URL de imagen inválida.").max(500).nullable().optional(),
   audience: z.enum(["club", "team"]).default("club"),
   audience_team_id: z.string().uuid().nullable().optional(),
   pinned: z.boolean().default(false),
   expires_at: z.string().datetime({ offset: true }).nullable().optional(),
-}).refine(
-  (v) => v.audience !== "team" || !!v.audience_team_id,
-  { message: "Si la audiencia es un equipo, indica audience_team_id.", path: ["audience_team_id"] },
-);
-
-export const updateNewsPostSchema = createNewsPostSchema.extend({
-  post_id: z.string().uuid("Post inválido."),
 });
+
+export const updateNewsPostSchema = createNewsPostSchema
+  .extend({
+    post_id: z.string().uuid("Post inválido."),
+  })
+  .refine((v) => v.audience !== "team" || !!v.audience_team_id, {
+    message: "Si la audiencia es un equipo, indica audience_team_id.",
+    path: ["audience_team_id"],
+  });
 
 export const deleteNewsPostSchema = z.object({
   post_id: z.string().uuid("Post inválido."),
@@ -296,12 +281,7 @@ export const reactNewsSchema = z.object({
   reaction: z.enum(["like", "fire", "thanks"]),
 });
 
-export const RELATION_VALUES_XLSX = [
-  "mother",
-  "father",
-  "legal_guardian",
-  "other",
-] as const;
+export const RELATION_VALUES_XLSX = ["mother", "father", "legal_guardian", "other"] as const;
 
 export const xlsxRowSchema = z.object({
   nombre_completo: z.string().trim().min(1, "nombre_completo es obligatorio"),
@@ -339,15 +319,12 @@ export const xlsxRowSchema = z.object({
     (v) => (v == null || v === "" ? undefined : String(v).trim()),
     z.string().trim().optional(),
   ),
-  relacion: z.preprocess(
-    (v) => {
-      if (v == null || v === "") return "legal_guardian";
-      const lower = String(v).toLowerCase().trim();
-      if ((RELATION_VALUES_XLSX as readonly string[]).includes(lower)) return lower;
-      return "legal_guardian";
-    },
-    z.enum(RELATION_VALUES_XLSX),
-  ),
+  relacion: z.preprocess((v) => {
+    if (v == null || v === "") return "legal_guardian";
+    const lower = String(v).toLowerCase().trim();
+    if ((RELATION_VALUES_XLSX as readonly string[]).includes(lower)) return lower;
+    return "legal_guardian";
+  }, z.enum(RELATION_VALUES_XLSX)),
 });
 
 export const makeRosterSchema = z.object({
@@ -418,16 +395,14 @@ export const updateTrainingBlockSchema = z
     kind: trainingKindSchema.optional(),
   })
   .refine(
-    (data) =>
-      data.start_date == null || data.end_date == null || data.end_date >= data.start_date,
+    (data) => data.start_date == null || data.end_date == null || data.end_date >= data.start_date,
     {
       message: "La fecha de fin debe ser igual o posterior a la fecha de inicio.",
       path: ["end_date"],
     },
   )
   .refine(
-    (data) =>
-      data.start_time == null || data.end_time == null || data.end_time > data.start_time,
+    (data) => data.start_time == null || data.end_time == null || data.end_time > data.start_time,
     {
       message: "La hora de fin debe ser posterior a la hora de inicio.",
       path: ["end_time"],
@@ -463,11 +438,7 @@ export const callupStatusSchema = z.enum([
 export const createMatchSchema = z.object({
   season_id: z.string().uuid("Temporada inválida."),
   team_id: z.string().uuid("Equipo inválido."),
-  opponent: z
-    .string()
-    .trim()
-    .min(2, "Mínimo 2 caracteres.")
-    .max(100, "Máximo 100 caracteres."),
+  opponent: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
   competition_type: competitionTypeSchema.optional(),
   is_home: z.boolean().optional(),
   location: z.preprocess(
@@ -654,8 +625,16 @@ export const bulkUnvalidateMatchStatsSchema = z.object({
 
 export const upsertShopProductSchema = z.object({
   title: z.string().trim().min(3, "El t�tulo es demasiado corto.").max(80, "M�ximo 80 caracteres."),
-  description: z.string().trim().min(1, "La descripci�n no puede estar vac�a.").max(2000, "M�ximo 2000 caracteres."),
-  category: z.string().trim().min(1, "La categor�a es obligatoria.").max(40, "M�ximo 40 caracteres."),
+  description: z
+    .string()
+    .trim()
+    .min(1, "La descripci�n no puede estar vac�a.")
+    .max(2000, "M�ximo 2000 caracteres."),
+  category: z
+    .string()
+    .trim()
+    .min(1, "La categor�a es obligatoria.")
+    .max(40, "M�ximo 40 caracteres."),
   price_eur: z.number().min(0.01, "El precio debe ser mayor que 0.").max(1000, "M�ximo 1000�."),
   image_url: z.string().url("URL inv�lida.").max(500).nullable().optional(),
   sizes: z.array(z.string().trim().min(1).max(20)).max(20).optional(),
@@ -696,4 +675,54 @@ export const updateShopOrderStatusSchema = z.object({
   order_id: z.string().uuid("Pedido inv�lido."),
   status: z.enum(["pending_admin", "ordered", "received", "delivered", "cancelled"]),
   admin_notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
+});
+
+export const treasuryConceptKindSchema = z.enum([
+  "fee",
+  "material",
+  "tournament",
+  "adjustment",
+  "discount",
+]);
+
+export const treasuryPeriodicitySchema = z.enum(["monthly", "seasonal", "one_off"]);
+export const treasuryAppliesToSchema = z.enum(["all_players", "all_members", "specific_profile"]);
+
+export const upsertTreasuryConceptSchema = z.object({
+  concept_id: z.string().uuid("Concepto invalido.").optional(),
+  code: z.string().trim().min(2, "Codigo demasiado corto.").max(40, "Maximo 40 caracteres."),
+  label: z.string().trim().min(2, "Nombre demasiado corto.").max(100, "Maximo 100 caracteres."),
+  kind: treasuryConceptKindSchema,
+  periodicity: treasuryPeriodicitySchema,
+  default_amount_eur: z.number().min(-5000).max(5000).nullable().optional(),
+  applies_to: treasuryAppliesToSchema,
+  active: z.boolean().default(true),
+});
+
+export const assignTreasuryConceptSchema = z.object({
+  profile_id: z.string().uuid("Perfil invalido."),
+  concept_id: z.string().uuid("Concepto invalido."),
+  amount_eur: z.number().min(-5000).max(5000).nullable().optional(),
+  starts_on: isoDate.nullable().optional(),
+  ends_on: isoDate.nullable().optional(),
+  active: z.boolean().default(true),
+});
+
+export const buildTreasuryClosureSchema = z
+  .object({
+    season_id: z.string().uuid("Temporada invalida."),
+    period_start: isoDate,
+    period_end: isoDate,
+    sent_to_email: z.string().email("Email invalido.").nullable().optional(),
+  })
+  .refine((data) => data.period_start <= data.period_end, {
+    message: "La fecha de fin debe ser igual o posterior al inicio.",
+    path: ["period_end"],
+  });
+
+export const markTreasuryLinePaidSchema = z.object({
+  line_id: z.string().uuid("Linea invalida."),
+  paid: z.boolean(),
+  paid_at: isoDate.nullable().optional(),
+  payment_method: z.enum(["bank_transfer", "bizum", "cash", "other"]).nullable().optional(),
 });

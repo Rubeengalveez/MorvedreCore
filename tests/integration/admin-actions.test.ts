@@ -252,9 +252,7 @@ describe("updateTeamSchema", () => {
   });
 
   it("accepts null for nullable fields", () => {
-    expect(
-      updateTeamSchema.safeParse({ home_pool: null, notes: null }).success,
-    ).toBe(true);
+    expect(updateTeamSchema.safeParse({ home_pool: null, notes: null }).success).toBe(true);
   });
 });
 
@@ -377,9 +375,9 @@ describe("createPlayerSchema", () => {
   });
 
   it("rejects an invalid email_contact", () => {
-    expect(createPlayerSchema.safeParse({ ...validPlayer, email_contact: "no-email" }).success).toBe(
-      false,
-    );
+    expect(
+      createPlayerSchema.safeParse({ ...validPlayer, email_contact: "no-email" }).success,
+    ).toBe(false);
   });
 
   it("converts empty notes to null via preprocess", () => {
@@ -486,27 +484,23 @@ describe("updateProfileSchema", () => {
   });
 
   it("rejects birth_year outside the [1900, 2100] range", () => {
-    expect(
-      updateProfileSchema.safeParse({ ...basePayload, birth_year: "1899" }).success,
-    ).toBe(false);
-    expect(
-      updateProfileSchema.safeParse({ ...basePayload, birth_year: "2101" }).success,
-    ).toBe(false);
+    expect(updateProfileSchema.safeParse({ ...basePayload, birth_year: "1899" }).success).toBe(
+      false,
+    );
+    expect(updateProfileSchema.safeParse({ ...basePayload, birth_year: "2101" }).success).toBe(
+      false,
+    );
   });
 
   it("rejects cap_number out of range", () => {
-    expect(
-      updateProfileSchema.safeParse({ ...basePayload, cap_number: "-1" }).success,
-    ).toBe(false);
-    expect(
-      updateProfileSchema.safeParse({ ...basePayload, cap_number: "100" }).success,
-    ).toBe(false);
+    expect(updateProfileSchema.safeParse({ ...basePayload, cap_number: "-1" }).success).toBe(false);
+    expect(updateProfileSchema.safeParse({ ...basePayload, cap_number: "100" }).success).toBe(
+      false,
+    );
   });
 
   it("rejects a too-short full_name", () => {
-    expect(
-      updateProfileSchema.safeParse({ full_name: "A" }).success,
-    ).toBe(false);
+    expect(updateProfileSchema.safeParse({ full_name: "A" }).success).toBe(false);
   });
 
   it("accepts a valid E.164 phone", () => {
@@ -694,15 +688,11 @@ describe("recomputeRankingSchema", () => {
   });
 
   it("rejects non-UUID season_id", () => {
-    expect(
-      recomputeRankingSchema.safeParse({ ...valid, season_id: "x" }).success,
-    ).toBe(false);
+    expect(recomputeRankingSchema.safeParse({ ...valid, season_id: "x" }).success).toBe(false);
   });
 
   it("rejects non-UUID player_id", () => {
-    expect(
-      recomputeRankingSchema.safeParse({ ...valid, player_id: "x" }).success,
-    ).toBe(false);
+    expect(recomputeRankingSchema.safeParse({ ...valid, player_id: "x" }).success).toBe(false);
   });
 });
 
@@ -717,9 +707,7 @@ describe("unvalidateMatchStatsSchema", () => {
   });
 
   it("rejects a too-short reason", () => {
-    expect(
-      unvalidateMatchStatsSchema.safeParse({ ...valid, reason: "x" }).success,
-    ).toBe(false);
+    expect(unvalidateMatchStatsSchema.safeParse({ ...valid, reason: "x" }).success).toBe(false);
   });
 
   it("rejects a too-long reason", () => {
@@ -740,9 +728,9 @@ describe("unvalidateMatchStatsSchema", () => {
   });
 
   it("rejects a non-UUID match_id", () => {
-    expect(
-      unvalidateMatchStatsSchema.safeParse({ ...valid, match_id: "nope" }).success,
-    ).toBe(false);
+    expect(unvalidateMatchStatsSchema.safeParse({ ...valid, match_id: "nope" }).success).toBe(
+      false,
+    );
   });
 });
 
@@ -757,16 +745,19 @@ describe("bulkUnvalidateMatchStatsSchema", () => {
   });
 
   it("rejects an empty match_ids array", () => {
-    expect(
-      bulkUnvalidateMatchStatsSchema.safeParse({ ...valid, match_ids: [] }).success,
-    ).toBe(false);
+    expect(bulkUnvalidateMatchStatsSchema.safeParse({ ...valid, match_ids: [] }).success).toBe(
+      false,
+    );
   });
 
   it("rejects more than 50 match_ids", () => {
-    const ids = Array.from({ length: 51 }, (_, i) => `550e8400-e29b-41d4-a716-4466554400${String(i).padStart(2, "0")}`);
-    expect(
-      bulkUnvalidateMatchStatsSchema.safeParse({ ...valid, match_ids: ids }).success,
-    ).toBe(false);
+    const ids = Array.from(
+      { length: 51 },
+      (_, i) => `550e8400-e29b-41d4-a716-4466554400${String(i).padStart(2, "0")}`,
+    );
+    expect(bulkUnvalidateMatchStatsSchema.safeParse({ ...valid, match_ids: ids }).success).toBe(
+      false,
+    );
   });
 
   it("rejects when any match_id is not a UUID", () => {

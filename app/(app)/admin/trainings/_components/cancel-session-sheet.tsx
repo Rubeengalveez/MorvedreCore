@@ -46,11 +46,7 @@ export interface CancelSessionSheetProps {
   onDone?: () => void;
 }
 
-export function CancelSessionSheet({
-  sessionId,
-  trigger,
-  onDone,
-}: CancelSessionSheetProps) {
+export function CancelSessionSheet({ sessionId, trigger, onDone }: CancelSessionSheetProps) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 

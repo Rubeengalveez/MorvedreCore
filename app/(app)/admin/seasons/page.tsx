@@ -44,27 +44,21 @@ export default async function SeasonsPage() {
     <div className="relative">
       <LanePattern className="absolute inset-0" />
       <div className="relative z-[1] mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4">
-        <header className="flex items-end justify-between gap-3">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex items-start gap-3">
-            <PictogramBadge
-              pictogram={Calendario}
-              color="var(--pool-teal)"
-              size="lg"
-            />
+            <PictogramBadge pictogram={Calendario} color="var(--pool-teal)" size="lg" />
             <div className="flex flex-col gap-0.5">
               <Eyebrow>Estructura del club</Eyebrow>
-              <h1 className="font-display text-2xl font-extrabold tracking-tight text-pool-deep">
+              <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
                 Temporadas
               </h1>
-              <p className="text-sm text-ink-600">
-                Crea y archiva las temporadas del club.
-              </p>
+              <p className="text-ink-600 text-sm">Crea y archiva las temporadas del club.</p>
             </div>
           </div>
           <SeasonFormSheet
             mode={{ kind: "create" }}
             trigger={
-              <Button size="md" className="shrink-0">
+              <Button size="md" className="w-full shrink-0 sm:w-auto">
                 <Plus className="h-5 w-5" aria-hidden="true" />
                 <span className="hidden sm:inline">Nueva</span>
                 <span className="sr-only sm:hidden">Nueva temporada</span>

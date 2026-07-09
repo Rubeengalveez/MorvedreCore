@@ -2,8 +2,8 @@
 
 import { cn } from "@/lib/utils/cn";
 import type { CalendarData } from "@/server/queries/calendar";
-import { todayIso, weekdayShort } from "@/lib/domain/calendar";
-import { matchColor, trainingColor } from "@/lib/domain/event-colors";
+import { todayIso, weekdayLong } from "@/lib/domain/calendar";
+import { TrainingRow, MatchRow } from "./event-sheet";
 
 export interface WeekViewProps {
   startIso: string;
@@ -14,100 +14,9 @@ export interface WeekViewProps {
   availabilityByDay?: Map<string, boolean>;
   userAttendanceBySession?: Map<string, boolean>;
   showAttendance?: boolean;
-}
-
-interface EventBlock {
-  id: string;
-  kind: "training" | "match";
-  iso: string;
-  startHour: number;
-  endHour: number;
-  color: string;
-  title: string;
-  subtitle: string;
-  cancelled: boolean;
-}
-
-const HOUR_START = 8;
-const HOUR_END = 22;
-const HOURS: number[] = Array.from(
-  { length: HOUR_END - HOUR_START + 1 },
-  (_, i) => HOUR_START + i,
-);
-const HOUR_HEIGHT = 36;
-
-function hourLabel(h: number): string {
-  return `${String(h).padStart(2, "0")}:00`;
-}
-
-function timeToHour(iso: string): number {
-  const d = new Date(iso);
-  return d.getHours() + d.getMinutes() / 60;
-}
-
-function buildDayEvents(
-  iso: string,
-  eventsByDay: CalendarData,
-  availabilityByDay: Map<string, boolean>,
-): EventBlock[] {
-  const day = eventsByDay.get(iso);
-  const unavailable = availabilityByDay.get(iso) === false;
-  const blocks: EventBlock[] = [];
-  for (const t of day?.trainings ?? []) {
-    const start = timeToHour(t.scheduled_at);
-    const end = start + (t.duration_minutes / 60);
-    blocks.push({
-      id: t.id,
-      kind: "training",
-      iso,
-      startHour: start,
-      endHour: end,
-      color: trainingColor({
-        cancelled: t.cancelled,
-        isPast: new Date(t.scheduled_at) < new Date(),
-        unavailable: false,
-      }),
-      title: `Entreno ${t.team_label}`,
-      subtitle: t.location ?? "",
-      cancelled: t.cancelled,
-    });
-  }
-  for (const m of day?.matches ?? []) {
-    const start = timeToHour(m.scheduled_at);
-    const end = start + 2;
-    blocks.push({
-      id: m.id,
-      kind: "match",
-      iso,
-      startHour: start,
-      endHour: end,
-      color: matchColor({
-        competitionType: m.competition_type,
-        status: m.status,
-        isPast: new Date(m.scheduled_at) < new Date(),
-        unavailable: false,
-      }),
-      title: m.is_home
-        ? `${m.team_label} vs ${m.opponent}`
-        : `${m.opponent} vs ${m.team_label}`,
-      subtitle: m.pool_name ?? m.location ?? "",
-      cancelled: m.status === "cancelled" || m.status === "postponed",
-    });
-  }
-  if (unavailable) {
-    blocks.push({
-      id: `${iso}-unavailable`,
-      kind: "training",
-      iso,
-      startHour: HOUR_START,
-      endHour: HOUR_END,
-      color: "var(--ink-300)",
-      title: "No disponible",
-      subtitle: "Marcado por ti",
-      cancelled: false,
-    });
-  }
-  return blocks;
+  isCoach: boolean;
+  isAdmin: boolean;
+  activeProfileId: string;
 }
 
 function getDayLabels(startIso: string): { iso: string; date: Date }[] {
@@ -127,157 +36,81 @@ function getDayLabels(startIso: string): { iso: string; date: Date }[] {
 export function WeekView({
   startIso,
   eventsByDay,
-  onDayClick,
-  onEventClick,
-  selectedIso,
   availabilityByDay = new Map(),
+  isCoach,
+  isAdmin,
+  activeProfileId,
 }: WeekViewProps) {
   const days = getDayLabels(startIso);
   const todayIsoValue = todayIso();
 
-  const TOTAL_HEIGHT = HOURS.length * HOUR_HEIGHT;
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="grid grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-0.5">
-        <div />
-        {days.map((d) => {
+    <div className="flex w-full flex-col gap-1">
+      {/* Weekly Visual Timeline Stacking */}
+      <div className="flex flex-col select-none">
+        {days.map((d, index) => {
           const isToday = d.iso === todayIsoValue;
+          const dayData = eventsByDay.get(d.iso);
+          const hasEvents = dayData && (dayData.trainings.length > 0 || dayData.matches.length > 0);
+          const unavailable = availabilityByDay.get(d.iso) === false;
+
           return (
-            <button
-              key={`header-${d.iso}`}
-              type="button"
-              onClick={() => onDayClick?.(d.iso)}
-              className={cn(
-                "flex flex-col items-center gap-0 rounded py-1 text-center transition-colors hover:bg-pool-foam",
-                isToday ? "bg-pool-foam" : "",
-              )}
-              aria-label={d.iso}
-            >
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-ink-600">
-                {weekdayShort(d.date.getDay() === 0 ? 7 : d.date.getDay())}
-              </span>
-              <span
-                className={cn(
-                  "font-mono text-sm font-bold",
-                  isToday ? "text-pool-deep" : "text-ink-900",
+            <div key={`week-day-${d.iso}`} className="group flex items-stretch gap-1">
+              {/* Left Column: Spacious Date Badge with connecting line indicator */}
+              <div className="relative flex w-16 shrink-0 flex-col items-center py-3">
+                {/* Connecting line between days, like a timeline */}
+                {index < 6 && (
+                  <div className="bg-ink-200/60 pointer-events-none absolute top-14 bottom-0 z-0 w-0.5" />
                 )}
-              >
-                {d.date.getDate()}
-              </span>
-            </button>
-          );
-        })}
-      </div>
 
-      <div
-        className="grid max-h-[60vh] grid-cols-[40px_repeat(7,minmax(0,1fr))] gap-0.5 overflow-y-auto rounded border border-ink-300 bg-paper"
-      >
-        <div className="relative select-none" style={{ height: `${TOTAL_HEIGHT}px` }}>
-          {HOURS.map((h, i) => (
-            <div
-              key={`hour-${h}`}
-              aria-hidden="true"
-              className="absolute right-1 text-right text-[9px] font-medium text-ink-500"
-              style={{
-                top: `${i * HOUR_HEIGHT + 2}px`,
-                height: `${HOUR_HEIGHT}px`,
-              }}
-            >
-              {hourLabel(h)}
-            </div>
-          ))}
-        </div>
+                <span className="text-ink-600 mb-1 text-[10px] font-extrabold tracking-wider uppercase">
+                  {weekdayLong(d.date.getDay() === 0 ? 7 : d.date.getDay()).slice(0, 3)}
+                </span>
 
-        {/* Columnas diarias con eventos absolutos */}
-        {days.map((d) => {
-          const dayEvents = buildDayEvents(
-            d.iso,
-            eventsByDay,
-            availabilityByDay,
-          );
-          const isSelected = selectedIso === d.iso;
+                <span
+                  className={cn(
+                    "z-10 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-extrabold shadow-sm transition-transform duration-200 group-hover:scale-105",
+                    isToday
+                      ? "bg-pool-blue text-paper ring-pool-blue/30 scale-105 animate-[pulse_2s_infinite] font-extrabold ring-2"
+                      : "bg-paper-card border-ink-300 text-ink-900 border",
+                  )}
+                >
+                  {d.date.getDate()}
+                </span>
 
-          return (
-            <div
-              key={`col-${d.iso}`}
-              onClick={() => onDayClick?.(d.iso)}
-              className={cn(
-                "relative border-l border-ink-300/40 bg-paper transition-colors cursor-pointer",
-                isSelected ? "bg-pool-foam/20" : "",
-              )}
-                style={{ height: `${TOTAL_HEIGHT}px`, minHeight: `${TOTAL_HEIGHT}px` }}
-                role="button"
-                tabIndex={0}
-            >
-              {/* Líneas de cuadrícula de fondo */}
-              {HOURS.map((h, i) => (
-                <div
-                  key={`grid-${d.iso}-${h}`}
-                  className="absolute inset-x-0 border-t border-ink-300/30 pointer-events-none"
-                  style={{
-                    top: `${i * HOUR_HEIGHT}px`,
-                    height: `${HOUR_HEIGHT}px`,
-                  }}
-                />
-              ))}
+                {unavailable && (
+                  <span className="text-goggle-red mt-1 shrink-0 text-[8px] font-extrabold uppercase">
+                    No Disp.
+                  </span>
+                )}
+              </div>
 
-              {/* Renderizado de eventos en esta columna */}
-              {dayEvents.map((block) => {
-                const topPx = (block.startHour - HOUR_START) * HOUR_HEIGHT;
-                const heightPx = (block.endHour - block.startHour) * HOUR_HEIGHT;
-
-                const startH = Math.floor(block.startHour);
-                const startM = Math.round((block.startHour - startH) * 60);
-                const endH = Math.floor(block.endHour);
-                const endM = Math.round((block.endHour - endH) * 60);
-
-                const timeStr = `${String(startH).padStart(2, "0")}:${String(startM).padStart(2, "0")}–${String(endH).padStart(2, "0")}:${String(endM).padStart(2, "0")}`;
-
-                const isUnavailableCell = block.id.endsWith("-unavailable");
-
-                return (
-                  <button
-                    key={`event-${block.id}`}
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (onEventClick && !isUnavailableCell) {
-                        onEventClick(block.kind, block.id);
-                      } else {
-                        onDayClick?.(d.iso);
-                      }
-                    }}
-                    style={{
-                      position: "absolute",
-                      top: `${topPx + 1}px`,
-                      height: `${heightPx - 2}px`,
-                      left: "1px",
-                      right: "1px",
-                      backgroundColor: block.color,
-                    }}
-                    className={cn(
-                      "flex flex-col justify-start rounded-sm px-1 py-0.5 text-left text-paper transition-transform active:scale-[0.98] overflow-hidden select-none border border-black/5",
-                      block.cancelled && "opacity-60",
-                      isUnavailableCell ? "cursor-default" : "cursor-pointer",
-                    )}
-                    title={`${block.title} (${timeStr})`}
-                  >
-                    <span className="line-clamp-2 text-[9px] font-bold leading-tight">
-                      {block.cancelled ? (
-                        <span className="line-through">{block.title}</span>
-                      ) : (
-                        block.title
-                      )}
-                    </span>
-                    {heightPx >= 24 ? (
-                      <span className="mt-0.5 block font-mono text-[8px] font-semibold opacity-90 leading-none">
-                        {timeStr}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
+              {/* Right Column: Day Events Stack */}
+              <div className="border-ink-200/50 flex-1 border-b py-3 pl-2 last:border-b-0">
+                {!hasEvents ? (
+                  /* Elegant borderless rest state */
+                  <div className="bg-pool-ice/30 border-ink-200/30 text-ink-500 font-display flex items-center gap-2.5 rounded-xl border px-4 py-3.5 text-xs font-semibold select-none">
+                    <span className="bg-ink-400 h-1.5 w-1.5 rounded-full opacity-60" />
+                    <span>Sin actividades · Descanso</span>
+                  </div>
+                ) : (
+                  /* Day events detailed list */
+                  <div className="flex flex-col gap-3">
+                    {dayData.trainings.map((t) => (
+                      <TrainingRow key={t.id} training={t} isCoach={isCoach || isAdmin} />
+                    ))}
+                    {dayData.matches.map((m) => (
+                      <MatchRow
+                        key={m.id}
+                        match={m}
+                        isCoach={isCoach || isAdmin}
+                        activeProfileId={activeProfileId}
+                        onChanged={() => {}}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           );
         })}

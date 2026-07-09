@@ -18,20 +18,24 @@ export async function getStreaksForPlayer(
   const supabase = await createClient();
   const { data } = await supabase
     .from("streaks")
-    .select("streak_type, subject_type, subject_id, current_value, best_value, best_at, last_event_at")
+    .select(
+      "streak_type, subject_type, subject_id, current_value, best_value, best_at, last_event_at",
+    )
     .eq("season_id", seasonId)
     .eq("subject_type", "player")
     .eq("subject_id", playerId)
     .order("current_value", { ascending: false });
-  return ((data ?? []) as Array<{
-    streak_type: string;
-    subject_type: string;
-    subject_id: string;
-    current_value: number;
-    best_value: number;
-    best_at: string | null;
-    last_event_at: string | null;
-  }>).map((r) => ({
+  return (
+    (data ?? []) as Array<{
+      streak_type: string;
+      subject_type: string;
+      subject_id: string;
+      current_value: number;
+      best_value: number;
+      best_at: string | null;
+      last_event_at: string | null;
+    }>
+  ).map((r) => ({
     type: r.streak_type as StreakType,
     subject_type: "player",
     subject_id: r.subject_id,
@@ -50,7 +54,9 @@ export async function getStreakForTeam(
   const supabase = await createClient();
   const { data } = await supabase
     .from("streaks")
-    .select("streak_type, subject_type, subject_id, current_value, best_value, best_at, last_event_at")
+    .select(
+      "streak_type, subject_type, subject_id, current_value, best_value, best_at, last_event_at",
+    )
     .eq("season_id", seasonId)
     .eq("subject_type", "team")
     .eq("subject_id", teamId)

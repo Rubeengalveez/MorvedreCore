@@ -10,8 +10,8 @@ export type CategoryCode =
 export type TeamGender = "male" | "female" | "mixed";
 
 export const CATEGORY_LABELS: Record<CategoryCode, string> = {
-  benjamin: "Benjamín",
-  alevin: "Alevín",
+  benjamin: "Benjamin",
+  alevin: "Alevin",
   infantil: "Infantil",
   cadete: "Cadete",
   juvenil: "Juvenil",
@@ -65,10 +65,7 @@ export function inferCategory(birthYear: number, currentYear: number): CategoryC
   return "absoluto";
 }
 
-export function safeInferCategory(
-  birthYear: number,
-  currentYear: number,
-): CategoryCode | null {
+export function safeInferCategory(birthYear: number, currentYear: number): CategoryCode | null {
   const age = ageIndex(birthYear, currentYear);
   if (age < 0) return null;
   if (age > MAX_AGE_THRESHOLD) return null;

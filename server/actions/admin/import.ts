@@ -74,8 +74,7 @@ async function parseFile(formData: FormData): Promise<ParsedFileResult> {
     const r = raw[i]!;
     const rowNumber = i + 2;
     const fullNameRaw = r["nombre_completo"];
-    const fullNameStr =
-      typeof fullNameRaw === "string" ? fullNameRaw.trim() : null;
+    const fullNameStr = typeof fullNameRaw === "string" ? fullNameRaw.trim() : null;
 
     const parsed = xlsxRowSchema(currentYear).safeParse(r);
     if (!parsed.success) {
@@ -217,16 +216,14 @@ export async function commitImport(formData: FormData): Promise<ImportResult> {
       if (r.team_label) {
         const teamId = await getTeamId(r.team_label);
         if (teamId) {
-          const { error: rosterError } = await supabase
-            .from("team_rosters")
-            .upsert(
-              {
-                team_id: teamId,
-                player_id: playerId,
-                squad_number: r.squad_number ?? null,
-              },
-              { onConflict: "team_id,player_id" },
-            );
+          const { error: rosterError } = await supabase.from("team_rosters").upsert(
+            {
+              team_id: teamId,
+              player_id: playerId,
+              squad_number: r.squad_number ?? null,
+            },
+            { onConflict: "team_id,player_id" },
+          );
           if (rosterError && rosterError.code !== "23505") {
             result.errors.push({
               rowNumber: r.rowNumber,
@@ -240,16 +237,14 @@ export async function commitImport(formData: FormData): Promise<ImportResult> {
       if (r.parent_email) {
         const parentId = await getOrCreateParentId(r.parent_email, r.parent_name);
         if (parentId) {
-          const { error: linkError } = await supabase
-            .from("parent_child_links")
-            .upsert(
-              {
-                parent_profile_id: parentId,
-                child_profile_id: playerId,
-                relation: r.relation,
-              },
-              { onConflict: "parent_profile_id,child_profile_id" },
-            );
+          const { error: linkError } = await supabase.from("parent_child_links").upsert(
+            {
+              parent_profile_id: parentId,
+              child_profile_id: playerId,
+              relation: r.relation,
+            },
+            { onConflict: "parent_profile_id,child_profile_id" },
+          );
           if (linkError && linkError.code !== "23505") {
             result.errors.push({
               rowNumber: r.rowNumber,

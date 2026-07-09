@@ -3,18 +3,30 @@ import { redirect } from "next/navigation";
 
 import { Equipo, Silbato } from "@/components/brand/pictograms";
 import { LanePattern } from "@/components/ui/lane-pattern";
+import { PageHeader, PageShell, SectionHeader } from "@/components/ui/page-shell";
 import { TeamListCard } from "@/components/team/team-list-card";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getAllTeamsInSeason, getTeamsForProfileInSeason } from "@/server/queries/teams";
+import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Equipos — Morvedre Core",
+  title: "Equipos - Morvedre Core",
   description: "Todos los equipos del club esta temporada.",
 };
+
+const CATEGORY_ORDER: CategoryCode[] = [
+  "escuela",
+  "benjamin",
+  "alevin",
+  "infantil",
+  "cadete",
+  "juvenil",
+  "absoluto",
+];
 
 export default async function TeamPage() {
   const ctx = await getActiveProfileContext();
@@ -25,15 +37,15 @@ export default async function TeamPage() {
 
   if (!season) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-6">
-        <LanePattern className="rounded-md border border-ink-300 bg-paper p-6">
+      <PageShell>
+        <LanePattern className="border-ink-300 bg-paper rounded-md border p-6">
           <div className="relative z-[1] flex flex-col items-center gap-3 text-center">
             <Silbato className="h-12 w-12" accent="var(--pool-teal)" />
-            <h1 className="font-display text-2xl font-extrabold text-pool-deep">Equipos</h1>
-            <p className="text-sm text-ink-600">La temporada activa aún no está configurada.</p>
+            <h1 className="font-display text-pool-deep text-2xl font-extrabold">Equipos</h1>
+            <p className="text-ink-600 text-sm">La temporada activa aun no esta configurada.</p>
           </div>
         </LanePattern>
-      </div>
+      </PageShell>
     );
   }
 
@@ -43,52 +55,77 @@ export default async function TeamPage() {
   ]);
 
   const myTeamIds = new Set(myTeams.map((t) => t.id));
-  const myPrimary = allTeams.find((t) => myTeamIds.has(t.id)) ?? null;
-  const otherTeams = allTeams.filter((t) => !myTeamIds.has(t.id));
+  const myCategories = new Set(myTeams.map((t) => t.category_code as CategoryCode));
+  const myPrimaryCategory =
+    CATEGORY_ORDER.find((code) => myCategories.has(code)) ??
+    (myTeams[0]?.category_code as CategoryCode | undefined);
   const firstName = activeProfile.full_name.split(" ")[0] ?? activeProfile.full_name;
+  const visibleCategories = CATEGORY_ORDER.map((code) => ({
+    code,
+    label: CATEGORY_LABELS[code] ?? code,
+    teams: allTeams.filter((team) => team.category_code === code),
+    isMine: myCategories.has(code),
+  })).filter((category) => category.teams.length > 0);
+  const orderedCategories = [
+    ...visibleCategories.filter((category) => category.code === myPrimaryCategory),
+    ...visibleCategories.filter((category) => category.code !== myPrimaryCategory),
+  ];
 
   return (
-    <div className="flex w-full flex-col">
-      <LanePattern as="div" className="bg-paper">
-        <div className="relative z-[1] mx-auto w-full max-w-2xl px-4 pt-4 pb-3">
-          <div className="flex items-center gap-2">
-            <Equipo className="h-6 w-6" accent="var(--pool-deep)" />
-            <h1 className="font-display text-[28px] font-extrabold leading-[1.1] tracking-tight text-pool-deep sm:text-[32px]">
-              Equipos
-            </h1>
-          </div>
-          <p className="mt-1 text-sm leading-relaxed text-ink-600">
-            {myPrimary
-              ? `Hola, ${firstName}. Tu equipo está arriba. El resto de la familia, debajo.`
-              : `Hola, ${firstName}. Estos son los ${allTeams.length} equipos del club esta temporada.`}
-          </p>
-        </div>
-      </LanePattern>
+    <div className="relative">
+      <LanePattern as="div" className="absolute inset-0 opacity-70" />
+      <PageShell className="gap-3">
+        <PageHeader
+          eyebrow="Plantilla"
+          title="Equipos"
+          description={
+            myPrimaryCategory
+              ? `Hola, ${firstName}. Tu categoria esta arriba; el resto del club queda debajo.`
+              : `Hola, ${firstName}. Estos son los ${allTeams.length} equipos del club esta temporada.`
+          }
+          icon={<Equipo className="h-9 w-9 shrink-0" accent="var(--pool-deep)" />}
+          teamColor={myTeams[0]?.color ?? "var(--pool-deep)"}
+        />
 
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
         {allTeams.length === 0 ? (
-          <div className="rounded-md border-2 border-dashed border-ink-300 bg-paper p-6 text-center">
+          <div className="border-ink-300 bg-paper rounded-md border-2 border-dashed p-6 text-center">
             <Silbato className="mx-auto h-10 w-10" accent="var(--pool-teal)" />
-            <p className="mt-3 text-sm text-ink-600">
-              Todavía no hay equipos configurados en la temporada activa.
+            <p className="text-ink-600 mt-3 text-sm">
+              Todavia no hay equipos configurados en la temporada activa.
             </p>
           </div>
         ) : (
           <>
-            {myPrimary ? (
-              <TeamListCard team={myPrimary} isMyTeam />
-            ) : null}
-
-            {otherTeams.length > 0 ? (
-              <div className="grid grid-cols-2 gap-3">
-                {otherTeams.map((team) => (
-                  <TeamListCard key={team.id} team={team} />
-                ))}
-              </div>
-            ) : null}
+            <div className="flex flex-col gap-3">
+              {orderedCategories.map((category) => (
+                <section
+                  key={category.code}
+                  className={
+                    category.isMine
+                      ? "border-pool-blue/25 bg-pool-foam/55 shadow-elev-1 rounded-md border p-2.5"
+                      : "flex flex-col gap-2"
+                  }
+                  aria-label={category.label}
+                >
+                  <SectionHeader
+                    title={category.isMine ? `Tu categoria: ${category.label}` : category.label}
+                    action={
+                      <span className="text-ink-600 text-sm font-extrabold">
+                        {category.teams.length}
+                      </span>
+                    }
+                  />
+                  <div className="grid grid-cols-1 gap-2 min-[430px]:grid-cols-2">
+                    {category.teams.map((team) => (
+                      <TeamListCard key={team.id} team={team} isMyTeam={myTeamIds.has(team.id)} />
+                    ))}
+                  </div>
+                </section>
+              ))}
+            </div>
           </>
         )}
-      </div>
+      </PageShell>
     </div>
   );
 }

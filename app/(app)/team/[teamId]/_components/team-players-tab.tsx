@@ -50,12 +50,7 @@ export interface TeamPlayersTabProps {
   snapshots: PlayerSnapshot[];
 }
 
-export function TeamPlayersTab({
-  roster,
-  teamColor,
-  staff,
-  snapshots,
-}: TeamPlayersTabProps) {
+export function TeamPlayersTab({ roster, teamColor, staff, snapshots }: TeamPlayersTabProps) {
   const [selectedPlayer, setSelectedPlayer] = useState<RosterPlayer | null>(null);
   const currentYear = new Date().getFullYear();
 
@@ -66,7 +61,7 @@ export function TeamPlayersTab({
   return (
     <>
       {staff.length > 0 ? <TeamStaffList staff={staff} teamColor={teamColor} /> : null}
-      
+
       {roster.length === 0 ? (
         <EmptyTeamState
           title="Aún no hay plantilla"
@@ -79,7 +74,7 @@ export function TeamPlayersTab({
             <h2 className="font-display text-pool-deep text-lg font-extrabold">Plantilla</h2>
             <span className="text-ink-600 font-mono text-sm font-semibold">{roster.length}</span>
           </div>
-          
+
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {roster.map((player) => {
               const age = player.birth_year != null ? currentYear - player.birth_year : null;
@@ -88,7 +83,7 @@ export function TeamPlayersTab({
                   <button
                     type="button"
                     onClick={() => setSelectedPlayer(player)}
-                    className="w-full text-left border border-ink-300 bg-paper hover:border-pool-blue hover:shadow-elev-2 active:scale-[0.99] transition-all flex items-center gap-3 rounded-md p-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue"
+                    className="border-ink-300 bg-paper hover:border-pool-blue hover:shadow-elev-2 focus-visible:ring-pool-blue flex w-full items-center gap-3 rounded-md border p-3 text-left transition-all focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99]"
                   >
                     <Avatar src={player.photo_url} name={player.full_name} size={56} />
                     <div className="flex min-w-0 flex-1 flex-col">
@@ -113,7 +108,12 @@ export function TeamPlayersTab({
       )}
 
       {/* Sheet Ficha de Jugador */}
-      <Sheet open={selectedPlayer !== null} onOpenChange={(open) => { if (!open) setSelectedPlayer(null); }}>
+      <Sheet
+        open={selectedPlayer !== null}
+        onOpenChange={(open) => {
+          if (!open) setSelectedPlayer(null);
+        }}
+      >
         <SheetContent size="md" className="gap-0">
           {selectedPlayer ? (
             <>
@@ -126,35 +126,39 @@ export function TeamPlayersTab({
                   />
                   <div className="flex flex-col">
                     <SheetTitle>{selectedPlayer.full_name}</SheetTitle>
-                    <SheetDescription>
-                      Ficha Oficial de Jugador
-                    </SheetDescription>
+                    <SheetDescription>Ficha Oficial de Jugador</SheetDescription>
                   </div>
                 </div>
               </SheetHeader>
               <SheetBody>
                 <div className="flex flex-col gap-5">
                   {/* Datos Básicos */}
-                  <div className="grid grid-cols-2 gap-3 rounded-md border border-ink-300 bg-paper-card p-4">
+                  <div className="border-ink-300 bg-paper-card grid grid-cols-2 gap-3 rounded-md border p-4">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">Dorsal</span>
-                      <p className="mt-1 flex items-center gap-2 font-display text-base font-extrabold text-pool-deep">
-                        <CapTile number={selectedPlayer.squad_number ?? selectedPlayer.cap_number ?? 0} teamColor={teamColor} size="sm" />
+                      <span className="text-eyebrow text-ink-600">Dorsal</span>
+                      <p className="font-display text-pool-deep mt-1 flex items-center gap-2 text-base font-extrabold">
+                        <CapTile
+                          number={selectedPlayer.squad_number ?? selectedPlayer.cap_number ?? 0}
+                          teamColor={teamColor}
+                          size="sm"
+                        />
                         {selectedPlayer.squad_number ?? selectedPlayer.cap_number ?? "Sin asignar"}
                       </p>
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-ink-600">Año de Nacimiento</span>
-                      <p className="mt-1 font-display text-base font-extrabold text-pool-deep">
-                        {selectedPlayer.birth_year ?? "—"} 
-                        {selectedPlayer.birth_year ? ` (${currentYear - selectedPlayer.birth_year} años)` : ""}
+                      <span className="text-eyebrow text-ink-600">Año de Nacimiento</span>
+                      <p className="font-display text-pool-deep mt-1 text-base font-extrabold">
+                        {selectedPlayer.birth_year ?? "—"}
+                        {selectedPlayer.birth_year
+                          ? ` (${currentYear - selectedPlayer.birth_year} años)`
+                          : ""}
                       </p>
                     </div>
                   </div>
 
                   {/* Estadísticas de Temporada */}
                   <div className="flex flex-col gap-2">
-                    <h3 className="font-display text-sm font-extrabold uppercase tracking-wider text-ink-600">
+                    <h3 className="font-display text-ink-600 text-sm font-extrabold tracking-wider uppercase">
                       Rendimiento esta Temporada
                     </h3>
                     {selectedStats ? (
@@ -170,7 +174,7 @@ export function TeamPlayersTab({
                           label="Goles"
                           value={selectedStats.goals}
                           subValue="Goles anotados"
-                          valueColor="text-[#FF6B35]"
+                          valueColor="text-action"
                         />
                         <StatBox
                           icon={Shield}
@@ -201,7 +205,7 @@ export function TeamPlayersTab({
                         />
                       </div>
                     ) : (
-                      <div className="rounded border border-ink-300 bg-paper-card p-4 text-center text-xs italic text-ink-500">
+                      <div className="border-ink-300 bg-paper-card text-ink-500 rounded border p-4 text-center text-xs italic">
                         Aún no se han registrado estadísticas esta temporada.
                       </div>
                     )}
@@ -241,15 +245,15 @@ function StatBox({
   valueColor?: string;
 }) {
   return (
-    <div className="flex flex-col rounded border border-ink-300 bg-paper p-3 shadow-sm">
-      <div className="flex items-center gap-1.5 text-ink-600">
+    <div className="border-ink-300 bg-paper flex flex-col rounded border p-3 shadow-sm">
+      <div className="text-ink-600 flex items-center gap-1.5">
         <Icon className="h-4 w-4" />
-        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+        <span className="text-eyebrow">{label}</span>
       </div>
-      <p className={cn("mt-1.5 font-display text-xl font-extrabold leading-none", valueColor)}>
+      <p className={cn("font-display mt-1.5 text-xl leading-none font-extrabold", valueColor)}>
         {value}
       </p>
-      <p className="mt-1 text-[10px] leading-tight text-ink-600">{subValue}</p>
+      <p className="text-ink-600 mt-1 text-[10px] leading-tight">{subValue}</p>
     </div>
   );
 }

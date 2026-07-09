@@ -38,29 +38,29 @@ async function ensureExpiredPinned(): Promise<void> {
   }
 }
 
-function safeRead<T>(data: T | null, fallback: T): T {
-  return data ?? fallback;
-}
-
 export async function getNewsFeed(input: {
   myProfileId: string;
   page?: number;
   pageSize?: number;
 }): Promise<NewsFeedResult> {
-  void safeRead;
-  await ensureExpiredPinned().then(() => null, () => null);
+  await ensureExpiredPinned();
   const supabase = await createClient();
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 10;
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const [{ data: posts }, { data: teamsData }] = await Promise.all([
+  const [{ count: total }, { data: posts }, { data: teamsData }] = await Promise.all([
+    supabase
+      .from("news_posts")
+      .select("id", { count: "exact", head: true })
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`),
     supabase
       .from("news_posts")
       .select(
         "id, author_id, title, body_md, image_url, audience, audience_team_id, pinned, published_at, expires_at",
       )
+      .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
       .order("pinned", { ascending: false })
       .order("published_at", { ascending: false })
       .range(from, to),
@@ -83,26 +83,18 @@ export async function getNewsFeed(input: {
     published_at: string;
     expires_at: string | null;
   }>;
-  const visible = list.filter(
-    (p) => !isExpired(p.expires_at),
-  );
+  const visible = list.filter((p) => !isExpired(p.expires_at));
 
   if (visible.length === 0) {
-    return { pinned: [], recent: [], total: 0 };
+    return { pinned: [], recent: [], total: total ?? 0 };
   }
 
   const authorIds = Array.from(new Set(visible.map((p) => p.author_id)));
   const postIds = visible.map((p) => p.id);
 
   const [{ data: authors }, { data: reactionsRaw }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, photo_url")
-      .in("id", authorIds),
-    supabase
-      .from("news_reactions")
-      .select("post_id, profile_id, reaction")
-      .in("post_id", postIds),
+    supabase.from("profiles").select("id, full_name, photo_url").in("id", authorIds),
+    supabase.from("news_reactions").select("post_id, profile_id, reaction").in("post_id", postIds),
   ]);
 
   const authorMap = new Map(
@@ -112,7 +104,11 @@ export async function getNewsFeed(input: {
   );
 
   const reactionsByPost = new Map<string, Array<{ profile_id: string; reaction: string }>>();
-  for (const r of (reactionsRaw ?? []) as Array<{ post_id: string; profile_id: string; reaction: string }>) {
+  for (const r of (reactionsRaw ?? []) as Array<{
+    post_id: string;
+    profile_id: string;
+    reaction: string;
+  }>) {
     if (!isValidReaction(r.reaction)) continue;
     const arr = reactionsByPost.get(r.post_id) ?? [];
     arr.push({ profile_id: r.profile_id, reaction: r.reaction });
@@ -147,7 +143,7 @@ export async function getNewsFeed(input: {
   return {
     pinned: full.filter((p) => p.pinned),
     recent: full.filter((p) => !p.pinned),
-    total: full.length,
+    total: total ?? 0,
   };
 }
 
@@ -184,9 +180,9 @@ export async function getNewsPost(
     .select("post_id, profile_id, reaction")
     .eq("post_id", postId);
 
-  const reactions = ((reactionsRaw ?? []) as Array<{ profile_id: string; reaction: string }>).filter(
-    (r) => isValidReaction(r.reaction),
-  );
+  const reactions = (
+    (reactionsRaw ?? []) as Array<{ profile_id: string; reaction: string }>
+  ).filter((r) => isValidReaction(r.reaction));
 
   return {
     id: (post as { id: string }).id,
@@ -203,9 +199,7 @@ export async function getNewsPost(
     published_at: (post as { published_at: string }).published_at,
     expires_at: (post as { expires_at: string | null }).expires_at,
     reactions: tallyReactions(reactions, myProfileId),
-    my_reactions: reactions
-      .filter((r) => r.profile_id === myProfileId)
-      .map((r) => r.reaction),
+    my_reactions: reactions.filter((r) => r.profile_id === myProfileId).map((r) => r.reaction),
     total_reactions: reactions.length,
   };
 }
@@ -220,18 +214,20 @@ export async function getNewsForAdmin(): Promise<NewsPost[]> {
     .order("published_at", { ascending: false })
     .limit(200);
 
-  const list: NewsPost[] = ((data ?? []) as Array<{
-    id: string;
-    author_id: string;
-    title: string;
-    body_md: string;
-    image_url: string | null;
-    audience: string;
-    audience_team_id: string | null;
-    pinned: boolean;
-    published_at: string;
-    expires_at: string | null;
-  }>).map((p) => ({
+  const list: NewsPost[] = (
+    (data ?? []) as Array<{
+      id: string;
+      author_id: string;
+      title: string;
+      body_md: string;
+      image_url: string | null;
+      audience: string;
+      audience_team_id: string | null;
+      pinned: boolean;
+      published_at: string;
+      expires_at: string | null;
+    }>
+  ).map((p) => ({
     id: p.id,
     author_id: p.author_id,
     author_name: "—",
@@ -266,5 +262,3 @@ export async function getNewsForAdmin(): Promise<NewsPost[]> {
   }
   return list;
 }
-
-void safeRead;

@@ -8,12 +8,7 @@ export interface LanePatternProps {
   as?: keyof React.JSX.IntrinsicElements;
 }
 
-export function LanePattern({
-  children,
-  className,
-  strong = false,
-  as = "div",
-}: LanePatternProps) {
+export function LanePattern({ children, className, strong = false, as = "div" }: LanePatternProps) {
   const Comp = as as React.ElementType;
   return (
     <Comp className={cn("relative isolate overflow-hidden", className)}>

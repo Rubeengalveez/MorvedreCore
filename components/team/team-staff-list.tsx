@@ -18,36 +18,26 @@ export function TeamStaffList({ staff, teamColor }: TeamStaffListProps) {
   return (
     <section className="flex flex-col gap-3">
       <div className="flex items-center gap-2 px-1">
-        <Silbato
-          className="h-5 w-5"
-          accent={teamColor}
-        />
-        <h2 className="font-display text-lg font-bold text-brand-deep">
-          Cuerpo técnico
-        </h2>
+        <Silbato className="h-5 w-5" accent={teamColor} />
+        <h2 className="font-display text-brand-deep text-lg font-bold">Cuerpo técnico</h2>
       </div>
       {staff.length === 0 ? (
-        <div className="rounded-md border border-dashed border-ink-300 bg-paper p-5 text-center text-sm leading-relaxed text-ink-600">
-          Aún no hay cuerpo técnico asignado. Cuando el admin lo asigne,
-          aparecerá aquí.
+        <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-5 text-center text-sm leading-relaxed">
+          Aún no hay cuerpo técnico asignado. Cuando el admin lo asigne, aparecerá aquí.
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
           {staff.map((member) => (
             <li
               key={`${member.profile_id}-${member.role}`}
-              className="flex items-center gap-3 rounded-md border border-ink-300 bg-paper p-3"
+              className="border-ink-300 bg-paper flex items-center gap-3 rounded-md border p-3"
             >
-              <Avatar
-                src={member.photo_url}
-                name={member.full_name}
-                size={48}
-              />
+              <Avatar src={member.photo_url} name={member.full_name} size={48} />
               <div className="flex flex-1 flex-col">
-                <span className="font-display text-base font-bold leading-tight text-brand-deep">
+                <span className="font-display text-brand-deep text-base leading-tight font-bold">
                   {member.full_name}
                 </span>
-                <span className="text-sm text-ink-600">
+                <span className="text-ink-600 text-sm">
                   {ROLE_LABELS[member.role] ?? member.role}
                 </span>
               </div>

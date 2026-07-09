@@ -32,10 +32,10 @@ export default async function ProfileEditPage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
       <header className="flex flex-col gap-1">
-        <h1 className="font-display text-2xl font-extrabold tracking-tight text-brand-deep">
+        <h1 className="font-display text-brand-deep text-2xl font-extrabold tracking-tight">
           Editar perfil
         </h1>
-        <p className="text-sm text-ink-600">
+        <p className="text-ink-600 text-sm">
           Mantén tus datos al día. Los demás solo verán lo que tú decidas.
         </p>
       </header>

@@ -5,16 +5,11 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 
-import {
-  TrainingBlockCard,
-  type TrainingBlockCardProps,
-} from "./training-block-card";
-import {
-  TrainingBlockFormSheet,
-} from "./training-block-form-sheet";
+import { TrainingBlockCard, type TrainingBlockCardProps } from "./training-block-card";
+import { TrainingBlockFormSheet } from "./training-block-form-sheet";
 import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
 import type { AttendancePlayer } from "./attendance-sheet";
-import { Silbato } from "@/components/brand/pictograms";
+import { MdSports } from "react-icons/md";
 
 type TeamOption = Team & { season_label: string };
 
@@ -26,10 +21,7 @@ export interface TrainingsListProps {
   blocks: TrainingBlockRow[];
   sessionsByBlock: Record<string, TrainingSessionRow[]>;
   rosterByTeam: Record<string, AttendancePlayer[]>;
-  attendanceBySession: Record<
-    string,
-    Record<string, { present: boolean; reason: string | null }>
-  >;
+  attendanceBySession: Record<string, Record<string, { present: boolean; reason: string | null }>>;
 }
 
 export function TrainingsList({
@@ -58,26 +50,16 @@ export function TrainingsList({
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
-        <label
-          htmlFor="team-filter"
-          className="text-sm font-semibold text-ink-600"
-        >
+        <label htmlFor="team-filter" className="text-ink-600 text-sm font-semibold">
           Filtrar por equipo
         </label>
-        <Select
-          id="team-filter"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
+        <Select id="team-filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
           <option value="">Todos los equipos</option>
           {seasons.map((s) => {
             const seasonTeams = teams.filter((t) => t.season_id === s.id);
             if (seasonTeams.length === 0) return null;
             return (
-              <optgroup
-                key={s.id}
-                label={`${s.label}${s.is_current ? " (actual)" : ""}`}
-              >
+              <optgroup key={s.id} label={`${s.label}${s.is_current ? " (actual)" : ""}`}>
                 {seasonTeams.map((t) => (
                   <option key={t.id} value={t.id}>
                     {t.label}
@@ -90,19 +72,13 @@ export function TrainingsList({
       </div>
 
       {filteredBlocks.length === 0 ? (
-        <div className="flex flex-col items-center gap-4 rounded-md border border-dashed border-ink-300 bg-paper p-8 text-center">
-          <Silbato
-            aria-hidden="true"
-            className="h-12 w-12 text-brand-blue"
-            style={{ color: "var(--brand-blue)" }}
-          />
+        <div className="border-ink-300 bg-paper flex flex-col items-center gap-4 rounded-md border border-dashed p-8 text-center">
+          <MdSports aria-hidden="true" className="text-brand-blue h-12 w-12" />
           <div className="flex flex-col gap-1">
-            <p className="text-base font-semibold text-brand-deep">
-              {filter
-                ? "No hay bloques para este equipo."
-                : "La piscina está tranquila."}
+            <p className="text-brand-deep text-base font-semibold">
+              {filter ? "No hay bloques para este equipo." : "La piscina está tranquila."}
             </p>
-            <p className="text-sm text-ink-600">
+            <p className="text-ink-600 text-sm">
               {filter
                 ? "Crea un bloque de entrenamientos con el botón de arriba."
                 : "Crea el primer bloque de entrenamientos para tu equipo."}

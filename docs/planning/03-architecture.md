@@ -366,28 +366,33 @@ audit_log
 Estas funciones se escriben en `lib/domain/*` y se prueban con Vitest.
 
 ### `categories.ts`
+
 - `inferCategory(birthYear, currentYear): CategoryCode`
 - Mapeo: diferencia → categoría. Tabla cerrada, configurable vía `categories_config` si se decide.
 
 ### `callups.ts`
-- `canCallUpTo(playerCategory, teamCategory): boolean`  — la matriz de ascensos
-- `applyBRule(player, targetTeam): boolean`             — ¿es del B y vamos a A? bloqueado
+
+- `canCallUpTo(playerCategory, teamCategory): boolean` — la matriz de ascensos
+- `applyBRule(player, targetTeam): boolean` — ¿es del B y vamos a A? bloqueado
 - `suggestCallup(teamId, matchId, max=13): CallupSuggestion[]` — filtra disponibles, ordena por cap, sugiere cap_number
-- `findConflicts(playerId, scheduledAt): Conflict[]`     — cruza con `match_availability` y `match_callups`
+- `findConflicts(playerId, scheduledAt): Conflict[]` — cruza con `match_availability` y `match_callups`
 
 ### `rankings.ts`
-- `pichichi(seasonId, scope): Ranking[]`                — goles / partidos
-- `discipline(seasonId, scope): Ranking[]`              — menor es mejor
-- `commitment(seasonId, scope): Ranking[]`              — % asistencia
-- `historicalLegends(stat): Ranking[]`                 — suma todas las temporadas
+
+- `pichichi(seasonId, scope): Ranking[]` — goles / partidos
+- `discipline(seasonId, scope): Ranking[]` — menor es mejor
+- `commitment(seasonId, scope): Ranking[]` — % asistencia
+- `historicalLegends(stat): Ranking[]` — suma todas las temporadas
 
 ### `treasury.ts`
+
 - `buildPeriodClosure(seasonId, periodStart, periodEnd): ClosureDraft`
 - Aplica: cuota mensual × jugadores activos + conceptos del periodo + descuentos por hermano
 - `exportClosureToExcel(closureId): Buffer`
 
 ### `season.ts`
-- `archiveSeason(seasonId): void`  — llamado por "Iniciar nueva temporada"
+
+- `archiveSeason(seasonId): void` — llamado por "Iniciar nueva temporada"
 - Recorre stats, los mueve a `historical_player_stats`
 - Resetea contadores actuales
 - Recalcula categorías de todos los jugadores
@@ -395,6 +400,7 @@ Estas funciones se escriben en `lib/domain/*` y se prueban con Vitest.
 ## 4. Seguridad: RLS, sí o sí
 
 Política base (todas las tablas):
+
 - **Admin**: ve y edita todo.
 - **Directiva**: lee todo, edita solo tesorería y tienda.
 - **Coach**: lee y edita solo en sus `scope_team_id`.

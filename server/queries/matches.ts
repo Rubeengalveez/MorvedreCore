@@ -56,9 +56,10 @@ export async function getMatchById(matchId: string): Promise<MatchDetail | null>
     throw new Error("No pudimos cargar el partido.");
   }
   if (!data) return null;
-  const team = extractJoined(
-    (data as { teams: unknown }).teams,
-  ) as { label?: string; color?: string } | null;
+  const team = extractJoined((data as { teams: unknown }).teams) as {
+    label?: string;
+    color?: string;
+  } | null;
   return {
     id: (data as { id: string }).id,
     season_id: (data as { season_id: string }).season_id,
@@ -122,9 +123,7 @@ export async function getMatchCallups(matchId: string): Promise<CallupDetail[]> 
   return out;
 }
 
-async function getCapNumbersForMatch(
-  matchId: string,
-): Promise<Map<string, number | null>> {
+async function getCapNumbersForMatch(matchId: string): Promise<Map<string, number | null>> {
   const supabase = await createClient();
   const { data } = await supabase
     .from("match_callups")
@@ -154,16 +153,11 @@ function toScorer(
   };
 }
 
-export async function getMatchTopScorers(
-  matchId: string,
-  limit = 3,
-): Promise<MatchScorer[]> {
+export async function getMatchTopScorers(matchId: string, limit = 3): Promise<MatchScorer[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("match_stats")
-    .select(
-      "player_id, goals, mvp, profiles!match_stats_player_id_fkey(full_name)",
-    )
+    .select("player_id, goals, mvp, profiles!match_stats_player_id_fkey(full_name)")
     .eq("match_id", matchId)
     .order("goals", { ascending: false })
     .limit(limit);
@@ -172,21 +166,21 @@ export async function getMatchTopScorers(
     throw new Error("No pudimos cargar los goleadores.");
   }
   const capMap = await getCapNumbersForMatch(matchId);
-  return ((data ?? []) as Array<{
-    player_id: string;
-    goals: number;
-    mvp: boolean;
-    profiles: unknown;
-  }>).map((row) => toScorer(row, capMap));
+  return (
+    (data ?? []) as Array<{
+      player_id: string;
+      goals: number;
+      mvp: boolean;
+      profiles: unknown;
+    }>
+  ).map((row) => toScorer(row, capMap));
 }
 
 export async function getMatchMvp(matchId: string): Promise<MatchScorer | null> {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("match_stats")
-    .select(
-      "player_id, goals, mvp, profiles!match_stats_player_id_fkey(full_name)",
-    )
+    .select("player_id, goals, mvp, profiles!match_stats_player_id_fkey(full_name)")
     .eq("match_id", matchId)
     .eq("mvp", true)
     .limit(1)
@@ -206,10 +200,7 @@ export async function getMatchMvp(matchId: string): Promise<MatchScorer | null> 
   return toScorer(row, capMap);
 }
 
-export async function isProfileCoachOfMatch(
-  matchId: string,
-  profileId: string,
-): Promise<boolean> {
+export async function isProfileCoachOfMatch(matchId: string, profileId: string): Promise<boolean> {
   const supabase = await createClient();
   const { data: match, error: matchError } = await supabase
     .from("matches")

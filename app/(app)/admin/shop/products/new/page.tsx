@@ -39,16 +39,14 @@ export default async function NewShopProductPage() {
       <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
         <Link
           href={"/admin/shop" as Route}
-          className="inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
         >
           <ArrowLeft className="h-3 w-3" />
           Kanban
         </Link>
         <header>
           <Eyebrow>Nuevo producto</Eyebrow>
-          <h1 className="font-display text-2xl font-extrabold text-pool-deep">
-            Crear producto
-          </h1>
+          <h1 className="font-display text-pool-deep text-2xl font-extrabold">Crear producto</h1>
         </header>
         <ShopEditorForm mode="create" />
       </div>

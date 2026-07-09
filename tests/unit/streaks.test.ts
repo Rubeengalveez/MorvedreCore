@@ -139,7 +139,13 @@ describe("winsConsecEvents", () => {
     const evs = winsConsecEvents([
       { id: "m1", scheduled_at: at(3), status: "played", final_score_us: 10, final_score_them: 5 },
       { id: "m2", scheduled_at: at(2), status: "played", final_score_us: 8, final_score_them: 9 },
-      { id: "m3", scheduled_at: at(1), status: "scheduled", final_score_us: null, final_score_them: null },
+      {
+        id: "m3",
+        scheduled_at: at(1),
+        status: "scheduled",
+        final_score_us: null,
+        final_score_them: null,
+      },
       { id: "m4", scheduled_at: at(0), status: "played", final_score_us: 12, final_score_them: 11 },
     ]);
     expect(evs).toHaveLength(3);

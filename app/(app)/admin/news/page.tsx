@@ -58,22 +58,20 @@ export default async function AdminNewsPage() {
           <div className="flex items-center gap-2">
             <PictogramBadge pictogram={Megaphone} color="var(--pool-deep)" size="md" />
             <div>
-              <h1 className="font-display text-2xl font-extrabold text-pool-deep">
-                Noticias
-              </h1>
-              <p className="text-xs text-ink-600">Crea y gestiona el tablón del club.</p>
+              <h1 className="font-display text-pool-deep text-2xl font-extrabold">Noticias</h1>
+              <p className="text-ink-600 text-xs">Crea y gestiona el tablón del club.</p>
             </div>
           </div>
           <Link
             href={"/admin/news/new" as Route}
-            className="inline-flex h-10 items-center gap-1.5 rounded-md bg-pool-deep px-3 text-sm font-bold text-paper hover:bg-ink-900"
+            className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-bold"
           >
             <Plus className="h-4 w-4" /> Nueva
           </Link>
         </header>
 
         {posts.length === 0 ? (
-          <div className="rounded-md border border-dashed border-ink-300 bg-paper-card p-6 text-center text-sm text-ink-600">
+          <div className="border-ink-300 bg-paper-card text-ink-600 rounded-md border border-dashed p-6 text-center text-sm">
             No has publicado nada todavía.
           </div>
         ) : (
@@ -82,20 +80,18 @@ export default async function AdminNewsPage() {
               <li
                 key={p.id}
                 className={cn(
-                  "flex items-center gap-2 rounded-md border bg-paper-card p-2.5 shadow-elev-1",
+                  "bg-paper-card shadow-elev-1 flex items-center gap-2 rounded-md border p-2.5",
                   p.pinned ? "border-ball-gold" : "border-ink-300",
                 )}
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
                     {p.pinned ? (
-                      <Pin className="h-3 w-3 shrink-0 text-ball-gold" aria-hidden="true" />
+                      <Pin className="text-ball-gold h-3 w-3 shrink-0" aria-hidden="true" />
                     ) : null}
-                    <p className="line-clamp-1 text-sm font-extrabold text-pool-deep">
-                      {p.title}
-                    </p>
+                    <p className="text-pool-deep line-clamp-1 text-sm font-extrabold">{p.title}</p>
                   </div>
-                  <p className="text-[10px] text-ink-600">
+                  <p className="text-ink-600 text-[10px]">
                     <Clock className="mr-0.5 inline h-2.5 w-2.5" aria-hidden="true" />
                     {relativeTime(p.published_at)}
                     {p.audience === "team" && p.audience_team_id ? (
@@ -104,7 +100,9 @@ export default async function AdminNewsPage() {
                       <span className="ml-1">· club</span>
                     )}
                     {p.expires_at ? (
-                      <span className="ml-1 text-ink-500">· caduca {relativeTime(p.expires_at)}</span>
+                      <span className="text-ink-500 ml-1">
+                        · caduca {relativeTime(p.expires_at)}
+                      </span>
                     ) : null}
                   </p>
                 </div>
@@ -115,7 +113,7 @@ export default async function AdminNewsPage() {
                     type="submit"
                     data-pin-toggle={p.id}
                     className={cn(
-                      "inline-flex h-9 items-center gap-1 rounded-md border px-2.5 text-xs font-bold transition-colors",
+                      "touch-target inline-flex h-10 items-center gap-1 rounded-md border px-3 text-xs font-bold transition-colors",
                       p.pinned
                         ? "border-ball-gold bg-ball-gold/15 text-pool-deep hover:bg-ball-gold/25"
                         : "border-ink-300 bg-paper text-ink-700 hover:bg-pool-foam",
@@ -127,7 +125,7 @@ export default async function AdminNewsPage() {
                 </form>
                 <Link
                   href={`/admin/news/${p.id}` as Route}
-                  className="inline-flex h-9 items-center gap-1 rounded-md border border-ink-300 bg-paper px-2.5 text-xs font-bold text-pool-deep hover:bg-pool-foam"
+                  className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam touch-target inline-flex h-10 items-center gap-1 rounded-md border px-3 text-xs font-bold"
                 >
                   Editar
                   <ChevronRight className="h-3.5 w-3.5" />
@@ -137,7 +135,7 @@ export default async function AdminNewsPage() {
                   <button
                     type="submit"
                     data-delete-news={p.id}
-                    className="inline-flex h-9 items-center rounded-md border border-ink-300 bg-paper px-2.5 text-xs font-bold text-goggle-red hover:bg-goggle-red/5"
+                    className="border-ink-300 bg-paper text-goggle-red hover:bg-goggle-red/5 touch-target inline-flex h-10 items-center rounded-md border px-3 text-xs font-bold"
                   >
                     Eliminar
                   </button>

@@ -29,11 +29,7 @@ async function isAdmin(profileId: string): Promise<boolean> {
   return !!data;
 }
 
-export default async function EditShopProductPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
+export default async function EditShopProductPage({ params }: { params: Promise<{ id: string }> }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
   if (!(await isAdmin(ctx.activeProfile.id))) redirect("/dashboard");
@@ -47,16 +43,14 @@ export default async function EditShopProductPage({
       <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
         <Link
           href={"/admin/shop" as Route}
-          className="inline-flex items-center gap-1 text-xs font-bold text-pool-blue hover:underline"
+          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
         >
           <ArrowLeft className="h-3 w-3" />
           Kanban
         </Link>
         <header>
           <Eyebrow>Editar producto</Eyebrow>
-          <h1 className="font-display text-2xl font-extrabold text-pool-deep">
-            {product.title}
-          </h1>
+          <h1 className="font-display text-pool-deep text-2xl font-extrabold">{product.title}</h1>
         </header>
         <ShopEditorForm
           mode="edit"
@@ -68,6 +62,12 @@ export default async function EditShopProductPage({
             price_eur: product.price_cents / 100,
             currency: product.currency,
             image_url: product.image_url,
+            images: product.images.map((image) => ({
+              id: image.id,
+              url: image.url,
+              is_cover: image.is_cover,
+              sort_order: image.sort_order,
+            })),
             sizes: product.sizes,
             available: product.available,
             stock: product.stock,

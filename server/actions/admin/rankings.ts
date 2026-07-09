@@ -9,7 +9,14 @@ import {
   recomputeRankingSchema,
   unvalidateMatchStatsSchema,
 } from "@/lib/domain/admin-schemas";
-import { computePlayerStats, type CallupLite, type MatchLite, type MatchStatLite, type TrainingAttendanceLite, type TrainingSessionLite } from "@/lib/domain/stats";
+import {
+  computePlayerStats,
+  type CallupLite,
+  type MatchLite,
+  type MatchStatLite,
+  type TrainingAttendanceLite,
+  type TrainingSessionLite,
+} from "@/lib/domain/stats";
 import { type CategoryCode } from "@/lib/domain/categories";
 import { safeInferCategory } from "@/lib/domain/categories";
 
@@ -51,9 +58,7 @@ async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<type
     { data: attendance, error: attendanceError },
     { data: rosters, error: rostersError },
   ] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, photo_url, cap_number, birth_year"),
+    supabase.from("profiles").select("id, full_name, photo_url, cap_number, birth_year"),
     supabase
       .from("teams")
       .select("id, label, category_code, color, season_id")
@@ -68,15 +73,21 @@ async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<type
       .eq("matches.season_id", seasonId),
     supabase
       .from("match_stats")
-      .select("match_id, player_id, goals, exclusions, mvp, matches!match_stats_match_id_fkey(season_id)")
+      .select(
+        "match_id, player_id, goals, exclusions, mvp, matches!match_stats_match_id_fkey(season_id)",
+      )
       .eq("matches.season_id", seasonId),
     supabase
       .from("training_sessions")
-      .select("id, team_id, cancelled, scheduled_at, teams!training_sessions_team_id_fkey(season_id)")
+      .select(
+        "id, team_id, cancelled, scheduled_at, teams!training_sessions_team_id_fkey(season_id)",
+      )
       .eq("teams.season_id", seasonId),
     supabase
       .from("training_attendance")
-      .select("session_id, player_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id))"),
+      .select(
+        "session_id, player_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id))",
+      ),
     supabase
       .from("team_rosters")
       .select("player_id, team_id, teams!team_rosters_team_id_fkey(season_id)")
@@ -194,10 +205,7 @@ function buildSnapshotsForPlayer(
   ];
 }
 
-export async function recomputePlayerRanking(
-  playerId: string,
-  seasonId: string,
-): Promise<void> {
+export async function recomputePlayerRanking(playerId: string, seasonId: string): Promise<void> {
   const parsed = recomputeRankingSchema.safeParse({ season_id: seasonId, player_id: playerId });
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
@@ -229,10 +237,7 @@ export async function recomputeSeasonRanking(seasonId: string): Promise<void> {
   revalidatePath(`/team`);
 }
 
-export async function unvalidateMatchStats(
-  matchId: string,
-  reason: string,
-): Promise<void> {
+export async function unvalidateMatchStats(matchId: string, reason: string): Promise<void> {
   const parsed = unvalidateMatchStatsSchema.safeParse({
     match_id: matchId,
     reason,
@@ -301,9 +306,10 @@ export async function recomputeSnapshotForPlayer(
 
   const seasonTeams = teams;
   const playerRosterEntries = rosters.filter((r) => r.player_id === playerId);
-  const primaryTeamEntry = playerRosterEntries
-    .map((r) => seasonTeams.find((t) => t.id === r.team_id))
-    .find((t): t is TeamRow => Boolean(t)) ?? null;
+  const primaryTeamEntry =
+    playerRosterEntries
+      .map((r) => seasonTeams.find((t) => t.id === r.team_id))
+      .find((t): t is TeamRow => Boolean(t)) ?? null;
   const primaryTeam = primaryTeamEntry
     ? {
         id: primaryTeamEntry.id,
@@ -363,35 +369,30 @@ export async function recomputeSnapshotForPlayer(
     .eq("season_id", seasonId);
 
   if (snapshots.length > 0) {
-    const { error: upsertError } = await admin
-      .from("ranking_snapshots")
-      .upsert(
-        snapshots.map((s) => ({
-          season_id: s.season_id,
-          scope: s.scope,
-          scope_key: s.scope_key,
-          player_id: s.player_id,
-          matches_played: s.matches_played,
-          matches_called: s.matches_called,
-          goals: s.goals,
-          exclusions: s.exclusions,
-          mvp_count: s.mvp_count,
-          trainings_attended: s.trainings_attended,
-          trainings_total: s.trainings_total,
-          attendance_pct: s.attendance_pct,
-          attendance_streak: s.attendance_streak,
-          updated_at: new Date().toISOString(),
-        })),
-        { onConflict: "season_id,scope,scope_key,player_id" },
-      );
+    const { error: upsertError } = await admin.from("ranking_snapshots").upsert(
+      snapshots.map((s) => ({
+        season_id: s.season_id,
+        scope: s.scope,
+        scope_key: s.scope_key,
+        player_id: s.player_id,
+        matches_played: s.matches_played,
+        matches_called: s.matches_called,
+        goals: s.goals,
+        exclusions: s.exclusions,
+        mvp_count: s.mvp_count,
+        trainings_attended: s.trainings_attended,
+        trainings_total: s.trainings_total,
+        attendance_pct: s.attendance_pct,
+        attendance_streak: s.attendance_streak,
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: "season_id,scope,scope_key,player_id" },
+    );
     throwIfError(upsertError, "No pudimos actualizar los rankings.");
   }
 }
 
-export async function bulkUnvalidateMatchStats(
-  matchIds: string[],
-  reason: string,
-): Promise<void> {
+export async function bulkUnvalidateMatchStats(matchIds: string[], reason: string): Promise<void> {
   const parsed = bulkUnvalidateMatchStatsSchema.safeParse({
     match_ids: matchIds,
     reason,

@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, ClipboardList, Loader2, Trash2 } from "lucide-react";
+import { MdCheckCircle, MdAssignment, MdAutorenew, MdCancel } from "react-icons/md";
 import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -15,11 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { uncancelTrainingSession } from "@/server/actions/admin";
 
-import {
-  AttendanceSheet,
-  getSessionLabel,
-  type AttendancePlayer,
-} from "./attendance-sheet";
+import { AttendanceSheet, getSessionLabel, type AttendancePlayer } from "./attendance-sheet";
 export type { AttendancePlayer } from "./attendance-sheet";
 import { CancelSessionSheet } from "./cancel-session-sheet";
 import {
@@ -45,10 +41,7 @@ export interface TrainingSessionsListProps {
   blockLabel: string;
   sessions: TrainingSessionRow[];
   roster: AttendancePlayer[];
-  attendanceBySession: Record<
-    string,
-    Record<string, { present: boolean; reason: string | null }>
-  >;
+  attendanceBySession: Record<string, Record<string, { present: boolean; reason: string | null }>>;
 }
 
 export function TrainingSessionsList({
@@ -57,13 +50,11 @@ export function TrainingSessionsList({
   roster,
   attendanceBySession,
 }: TrainingSessionsListProps) {
-  const sorted = [...sessions].sort((a, b) =>
-    a.scheduled_at.localeCompare(b.scheduled_at),
-  );
+  const sorted = [...sessions].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
 
   if (sorted.length === 0) {
     return (
-      <p className="text-sm italic text-ink-600">
+      <p className="text-ink-600 text-sm italic">
         No hay sesiones generadas todavía para este bloque.
       </p>
     );
@@ -77,7 +68,7 @@ export function TrainingSessionsList({
           <li
             key={s.id}
             className={cn(
-              "flex items-center gap-3 rounded-md border bg-paper p-3",
+              "bg-paper flex items-center gap-3 rounded-md border p-3",
               s.cancelled
                 ? "border-danger/30 bg-danger/5"
                 : past
@@ -85,25 +76,21 @@ export function TrainingSessionsList({
                   : "border-brand-aqua/40 bg-brand-foam/30",
             )}
           >
-            <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded bg-paper text-brand-deep">
-              <span className="font-mono text-[10px] uppercase leading-none text-ink-600">
-                {formatWeekdayLetter(
-                  ((new Date(s.scheduled_at).getDay() + 6) % 7) + 1,
-                )}
+            <div className="bg-paper text-brand-deep flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded">
+              <span className="text-ink-600 font-mono text-[10px] leading-none uppercase">
+                {formatWeekdayLetter(((new Date(s.scheduled_at).getDay() + 6) % 7) + 1)}
               </span>
-              <span className="font-display text-base font-extrabold leading-none">
+              <span className="font-display text-base leading-none font-extrabold">
                 {new Date(s.scheduled_at).getDate()}
               </span>
             </div>
             <div className="flex flex-1 flex-col">
-              <span className="font-display text-sm font-bold text-brand-deep">
-                {blockLabel}
-              </span>
-              <span className="font-mono text-xs text-ink-600">
+              <span className="font-display text-brand-deep text-sm font-bold">{blockLabel}</span>
+              <span className="text-ink-600 font-mono text-xs">
                 {formatTime(s.scheduled_at)}
                 {s.location ? ` · ${s.location}` : ""}
               </span>
-              <span className="text-[11px] text-ink-600">
+              <span className="text-ink-600 text-[11px]">
                 {s.cancelled
                   ? `Cancelada: ${s.cancellation_reason ?? "sin motivo"}`
                   : formatRelativeFromNow(s.scheduled_at)}
@@ -132,9 +119,7 @@ export function TrainingSessionsList({
 
 function applyAttendance(
   roster: AttendancePlayer[],
-  attendance:
-    | Record<string, { present: boolean; reason: string | null }>
-    | undefined,
+  attendance: Record<string, { present: boolean; reason: string | null }> | undefined,
 ): AttendancePlayer[] {
   if (!attendance) return roster;
   return roster.map((p) => {
@@ -150,15 +135,19 @@ function UncancelButton({ sessionId }: { sessionId: string }) {
     <Button
       variant="ghost"
       size="sm"
-      className="h-10 w-10 min-w-10 p-0 text-success hover:bg-success/10"
+      className="text-success hover:bg-success/10 h-10 w-10 min-w-10 p-0"
       aria-label="Reactivar sesión"
       disabled={pending}
-      onClick={() => startTransition(async () => { await uncancelTrainingSession(sessionId); })}
+      onClick={() =>
+        startTransition(async () => {
+          await uncancelTrainingSession(sessionId);
+        })
+      }
     >
       {pending ? (
-        <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+        <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
       ) : (
-        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+        <MdCheckCircle className="h-4 w-4" aria-hidden="true" />
       )}
     </Button>
   );
@@ -189,7 +178,7 @@ function SessionActions({
             className="h-10 px-3"
             aria-label="Pasar lista"
           >
-            <ClipboardList className="h-4 w-4" aria-hidden="true" />
+            <MdAssignment className="h-4 w-4" aria-hidden="true" />
             Lista
           </Button>
         </SheetTrigger>
@@ -197,8 +186,7 @@ function SessionActions({
           <SheetHeader>
             <SheetTitle>Pasar lista</SheetTitle>
             <SheetDescription>
-              {formatShortDate(scheduledAt)} · {formatTime(scheduledAt)} ·{" "}
-              {blockLabel}
+              {formatShortDate(scheduledAt)} · {formatTime(scheduledAt)} · {blockLabel}
             </SheetDescription>
           </SheetHeader>
           <SheetBody>
@@ -223,10 +211,10 @@ function SessionActions({
             <Button
               variant="ghost"
               size="sm"
-              className="h-10 w-10 min-w-10 p-0 text-danger hover:bg-danger/10"
+              className="text-danger hover:bg-danger/10 h-10 w-10 min-w-10 p-0"
               aria-label="Cancelar sesión"
             >
-              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              <MdCancel className="h-4 w-4" aria-hidden="true" />
             </Button>
           </SheetTrigger>
           <SheetContent size="md">

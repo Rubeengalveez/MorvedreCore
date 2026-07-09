@@ -34,7 +34,7 @@ export function Avatar({ src, name, size = 40, className, style, teamColor }: Av
         width={size}
         height={size}
         className={cn(
-          "inline-block shrink-0 rounded-full border border-ink-300 object-cover",
+          "border-ink-300 inline-block shrink-0 rounded-full border object-cover",
           className,
         )}
         style={{ ...baseStyle, ...style }}
@@ -46,7 +46,7 @@ export function Avatar({ src, name, size = 40, className, style, teamColor }: Av
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-display font-extrabold leading-none text-paper",
+        "font-display text-paper inline-flex shrink-0 items-center justify-center rounded-full leading-none font-extrabold",
         className,
       )}
       style={{

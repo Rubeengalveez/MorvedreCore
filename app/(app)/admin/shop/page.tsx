@@ -5,10 +5,10 @@ import { Plus, Boxes, ShoppingCart, Bell, Truck, PackageCheck } from "lucide-rea
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { createClient } from "@/lib/supabase/server";
-import { getShopOrdersForKanban, getShopProducts } from "@/server/queries/shop";
+import { getShopOrdersForKanban } from "@/server/queries/shop";
 import { SHOP_KANBAN_COLUMNS } from "@/lib/domain/shop";
 import type { ShopOrderStatus } from "@/lib/domain/shop";
-import type { ShopOrder, ShopProduct } from "@/server/queries/shop";
+import type { ShopOrder } from "@/server/queries/shop";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { CapTile } from "@/components/ui/cap-tile";
@@ -55,14 +55,7 @@ export default async function AdminShopPage() {
     "received",
     "delivered",
   ];
-  const [orders, products] = await Promise.all([
-    getShopOrdersForKanban(kanbanStatuses),
-    getShopProducts(),
-  ]);
-
-  const productById = new Map<string, ShopProduct>(
-    products.map((p) => [p.id, p]),
-  );
+  const orders = await getShopOrdersForKanban(kanbanStatuses);
 
   const ordersByStatus = new Map<ShopOrderStatus, ShopOrder[]>();
   for (const s of kanbanStatuses) ordersByStatus.set(s, []);
@@ -80,14 +73,14 @@ export default async function AdminShopPage() {
             <CapTile number={9} teamColor="var(--pool-deep)" size="sm" />
             <div>
               <Eyebrow>Gestión tienda</Eyebrow>
-              <h1 className="font-display text-2xl font-extrabold text-pool-deep">
+              <h1 className="font-display text-pool-deep text-2xl font-extrabold">
                 Kanban de pedidos
               </h1>
             </div>
           </div>
           <Link
             href={"/admin/shop/products/new" as Route}
-            className="inline-flex h-10 items-center gap-1.5 rounded-md bg-pool-deep px-3 text-sm font-bold text-paper hover:bg-ink-900"
+            className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-bold"
           >
             <Plus className="h-4 w-4" /> Producto
           </Link>
@@ -100,27 +93,27 @@ export default async function AdminShopPage() {
             return (
               <section
                 key={col.id}
-                className="flex w-72 shrink-0 flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-2"
+                className="border-ink-300 bg-paper-card flex w-72 shrink-0 flex-col gap-2 rounded-md border p-2"
                 data-kanban-column={col.id}
               >
                 <header className="flex items-center justify-between gap-2 px-1 py-1">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider text-pool-deep">
+                  <span className="text-pool-deep inline-flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
                     <Icon className="h-3.5 w-3.5" />
                     {col.emoji} {col.title}
                   </span>
-                  <span className="rounded-full bg-ink-200 px-2 text-[10px] font-bold text-ink-700">
+                  <span className="bg-ink-200 text-ink-700 rounded-full px-2 text-[10px] font-bold">
                     {list.length}
                   </span>
                 </header>
                 <ul className="flex flex-col gap-1.5">
                   {list.length === 0 ? (
-                    <li className="rounded border border-dashed border-ink-300 bg-paper-sunk/30 p-3 text-center text-[10px] text-ink-500">
+                    <li className="border-ink-300 bg-paper-sunk/30 text-ink-500 rounded border border-dashed p-3 text-center text-[10px]">
                       Vacío
                     </li>
                   ) : (
                     list.map((o) => (
                       <li key={o.id}>
-                        <AdminKanbanCard order={o} productById={productById} />
+                        <AdminKanbanCard order={o} />
                       </li>
                     ))
                   )}

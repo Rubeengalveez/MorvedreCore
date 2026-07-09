@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 export interface CartItem {
   productId: string;
@@ -29,7 +29,7 @@ function readFromStorage(): CartItem[] {
         productId: (x as { productId: string }).productId,
         size:
           typeof (x as { size: unknown }).size === "string"
-            ? ((x as { size: string }).size || null)
+            ? (x as { size: string }).size || null
             : null,
         quantity: Math.max(1, Math.floor((x as { quantity: number }).quantity)),
       }));
@@ -48,7 +48,15 @@ function writeToStorage(items: CartItem[]): void {
 }
 
 export function useShopCart() {
-  const [items, setItems] = useState<CartItem[]>(() => readFromStorage());
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      setItems(readFromStorage());
+      setHydrated(true);
+    });
+  }, []);
 
   const persist = useCallback((next: CartItem[]) => {
     setItems(next);
@@ -62,7 +70,9 @@ export function useShopCart() {
       );
       let next: CartItem[];
       if (idx >= 0) {
-        next = items.map((x, i) => (i === idx ? { ...x, quantity: x.quantity + item.quantity } : x));
+        next = items.map((x, i) =>
+          i === idx ? { ...x, quantity: x.quantity + item.quantity } : x,
+        );
       } else {
         next = [...items, item];
       }
@@ -74,9 +84,7 @@ export function useShopCart() {
   const removeItem = useCallback(
     (productId: string, size: string | null) => {
       persist(
-        items.filter(
-          (x) => !(x.productId === productId && (x.size ?? null) === (size ?? null)),
-        ),
+        items.filter((x) => !(x.productId === productId && (x.size ?? null) === (size ?? null))),
       );
     },
     [items, persist],
@@ -102,7 +110,7 @@ export function useShopCart() {
 
   return {
     items,
-    hydrated: true,
+    hydrated,
     addItem,
     removeItem,
     setQuantity,

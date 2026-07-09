@@ -71,19 +71,27 @@ async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promis
   const [matchesRes, statsRes, sessionsRes, attendanceRes, rostersRes] = await Promise.all([
     supabase
       .from("matches")
-      .select("id, season_id, team_id, status, scheduled_at, final_score_us, final_score_them, mvp_player_id")
+      .select(
+        "id, season_id, team_id, status, scheduled_at, final_score_us, final_score_them, mvp_player_id",
+      )
       .eq("season_id", seasonId),
     supabase
       .from("match_stats")
-      .select("match_id, player_id, goals, exclusions, mvp, matches!match_stats_match_id_fkey(season_id)")
+      .select(
+        "match_id, player_id, goals, exclusions, mvp, matches!match_stats_match_id_fkey(season_id)",
+      )
       .eq("matches.season_id", seasonId),
     supabase
       .from("training_sessions")
-      .select("id, team_id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id)")
+      .select(
+        "id, team_id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id)",
+      )
       .eq("teams.season_id", seasonId),
     supabase
       .from("training_attendance")
-      .select("session_id, player_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id))"),
+      .select(
+        "session_id, player_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id))",
+      ),
     supabase
       .from("team_rosters")
       .select("player_id, team_id, left_at, teams!team_rosters_team_id_fkey(season_id)"),
@@ -130,32 +138,35 @@ async function upsertStreak(
   record: StreakRecord,
 ): Promise<void> {
   const admin = createAdminClient();
-  const { error } = await admin
-    .from("streaks")
-    .upsert(
-      {
-        season_id: seasonId,
-        subject_type: subjectType,
-        subject_id: subjectId,
-        streak_type: streakType,
-        current_value: record.current_value,
-        best_value: record.best_value,
-        best_at: record.best_at,
-        last_event_at: record.last_event_at,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "season_id,subject_type,subject_id,streak_type" },
-    );
+  const { error } = await admin.from("streaks").upsert(
+    {
+      season_id: seasonId,
+      subject_type: subjectType,
+      subject_id: subjectId,
+      streak_type: streakType,
+      current_value: record.current_value,
+      best_value: record.best_value,
+      best_at: record.best_at,
+      last_event_at: record.last_event_at,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "season_id,subject_type,subject_id,streak_type" },
+  );
   if (error) {
     throw new Error(`No pudimos guardar la racha: ${error.message}`);
   }
 }
 
-export async function recomputeStreaksForMatch(matchId: string, client?: SupabaseClient): Promise<void> {
+export async function recomputeStreaksForMatch(
+  matchId: string,
+  client?: SupabaseClient,
+): Promise<void> {
   const supabase = client || (await createClient());
   const { data: match } = await supabase
     .from("matches")
-    .select("id, season_id, team_id, status, scheduled_at, final_score_us, final_score_them, mvp_player_id")
+    .select(
+      "id, season_id, team_id, status, scheduled_at, final_score_us, final_score_them, mvp_player_id",
+    )
     .eq("id", matchId)
     .maybeSingle();
   if (!match) return;
@@ -221,27 +232,74 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
       .filter((s) => s.player_id === pid)
       .map((s) => {
         const m = data.matches.find((mm) => mm.id === s.match_id);
-        return { match_id: s.match_id, scheduled_at: m?.scheduled_at ?? "", goals: s.goals, exclusions: s.exclusions };
+        return {
+          match_id: s.match_id,
+          scheduled_at: m?.scheduled_at ?? "",
+          goals: s.goals,
+          exclusions: s.exclusions,
+        };
       })
       .filter((s) => s.scheduled_at);
 
     const playerMatches = data.matches.filter(
-      (mm) => statsForMatch.some((s) => s.match_id === mm.id && s.player_id === pid) || data.matchStats.some((s) => s.match_id === mm.id && s.player_id === pid),
+      (mm) =>
+        statsForMatch.some((s) => s.match_id === mm.id && s.player_id === pid) ||
+        data.matchStats.some((s) => s.match_id === mm.id && s.player_id === pid),
     );
-    const mvpMatches = playerMatches.map((mm) => ({ id: mm.id, scheduled_at: mm.scheduled_at, mvp_player_id: mm.mvp_player_id }));
+    const mvpMatches = playerMatches.map((mm) => ({
+      id: mm.id,
+      scheduled_at: mm.scheduled_at,
+      mvp_player_id: mm.mvp_player_id,
+    }));
 
-    await upsertStreakFromEvents(seasonId, "player", pid, "goals_consec", goalsConsecEvents(playerStats), nowIso, admin);
-    await upsertStreakFromEvents(seasonId, "player", pid, "excl_consec", exclConsecEvents(playerStats), nowIso, admin);
-    await upsertStreakFromEvents(seasonId, "player", pid, "mvp_consec", mvpConsecEvents(mvpMatches, pid), nowIso, admin);
+    await upsertStreakFromEvents(
+      seasonId,
+      "player",
+      pid,
+      "goals_consec",
+      goalsConsecEvents(playerStats),
+      nowIso,
+      admin,
+    );
+    await upsertStreakFromEvents(
+      seasonId,
+      "player",
+      pid,
+      "excl_consec",
+      exclConsecEvents(playerStats),
+      nowIso,
+      admin,
+    );
+    await upsertStreakFromEvents(
+      seasonId,
+      "player",
+      pid,
+      "mvp_consec",
+      mvpConsecEvents(mvpMatches, pid),
+      nowIso,
+      admin,
+    );
   }
 
   // 2) train_consec para todos los jugadores del roster del equipo del partido
   const teamId = match.team_id;
-  const teamPlayerIds = Array.from(new Set(data.rosters.filter((r) => r.team_id === teamId && r.left_at == null).map((r) => r.player_id)));
+  const teamPlayerIds = Array.from(
+    new Set(
+      data.rosters.filter((r) => r.team_id === teamId && r.left_at == null).map((r) => r.player_id),
+    ),
+  );
   const teamSessions = data.sessions.filter((s) => s.team_id === teamId);
   for (const pid of teamPlayerIds) {
     const playerAtt = data.attendance.filter((a) => a.player_id === pid);
-    await upsertStreakFromEvents(seasonId, "player", pid, "train_consec", trainConsecEvents(teamSessions, playerAtt), nowIso, admin);
+    await upsertStreakFromEvents(
+      seasonId,
+      "player",
+      pid,
+      "train_consec",
+      trainConsecEvents(teamSessions, playerAtt),
+      nowIso,
+      admin,
+    );
   }
 
   // 3) wins_consec para el equipo del partido

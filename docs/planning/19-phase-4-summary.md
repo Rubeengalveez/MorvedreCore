@@ -70,9 +70,9 @@ build:       29 rutas, 0 errores
 
 ### Tests nuevos (Fase 4)
 
-| Suite | Tests | Cubre |
-|---|---|---|
-| `tests/unit/news.test.ts` | 27 | parseTitle, parseBody, parseExpiresAt, isExpired, isValidReaction, isValidAudience, isAudienceTeam, tallyReactions, summarizeBody, relativeTime |
+| Suite                     | Tests | Cubre                                                                                                                                           |
+| ------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/unit/news.test.ts` | 27    | parseTitle, parseBody, parseExpiresAt, isExpired, isValidReaction, isValidAudience, isAudienceTeam, tallyReactions, summarizeBody, relativeTime |
 
 **Total: +27 tests en Fase 4. Total proyecto: 419 tests (22 skip sin env Supabase).**
 

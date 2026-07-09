@@ -6,8 +6,8 @@ import type { Database } from "@/types/database";
 
 const HAS_ENV = Boolean(
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY &&
+  process.env.SUPABASE_SERVICE_ROLE_KEY,
 );
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -50,9 +50,15 @@ async function deleteTestData(client: SupabaseClient<Database>): Promise<void> {
     .delete()
     .eq("team_id", testTeamId ?? "");
 
-  await client.from("team_staff").delete().eq("team_id", testTeamId ?? "");
+  await client
+    .from("team_staff")
+    .delete()
+    .eq("team_id", testTeamId ?? "");
 
-  await client.from("teams").delete().eq("id", testTeamId ?? "");
+  await client
+    .from("teams")
+    .delete()
+    .eq("id", testTeamId ?? "");
 
   await client
     .from("parent_child_links")
@@ -144,27 +150,21 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
     testChildProfileId = child?.id ?? null;
 
     if (testTeamId && testPlayerId) {
-      await admin
-        .from("team_rosters")
-        .insert({ team_id: testTeamId, player_id: testPlayerId });
+      await admin.from("team_rosters").insert({ team_id: testTeamId, player_id: testPlayerId });
     }
     if (testTeamId && testStaffProfileId) {
-      await admin
-        .from("team_staff")
-        .insert({
-          team_id: testTeamId,
-          profile_id: testStaffProfileId,
-          role: "head_coach",
-        });
+      await admin.from("team_staff").insert({
+        team_id: testTeamId,
+        profile_id: testStaffProfileId,
+        role: "head_coach",
+      });
     }
     if (testParentProfileId && testChildProfileId) {
-      await admin
-        .from("parent_child_links")
-        .insert({
-          parent_profile_id: testParentProfileId,
-          child_profile_id: testChildProfileId,
-          relation: "mother",
-        });
+      await admin.from("parent_child_links").insert({
+        parent_profile_id: testParentProfileId,
+        child_profile_id: testChildProfileId,
+        relation: "mother",
+      });
     }
   });
 

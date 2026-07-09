@@ -69,15 +69,7 @@ function eachDateInRange(start: Date, end: Date): Date[] {
 
 function combineDateAndTime(date: Date, time: string): Date {
   const t = parseTime(time);
-  return new Date(
-    date.getFullYear(),
-    date.getMonth(),
-    date.getDate(),
-    t.hours,
-    t.minutes,
-    0,
-    0,
-  );
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), t.hours, t.minutes, 0, 0);
 }
 
 export function weekdayMatches(weekday: number, date: Date | string): boolean {
@@ -148,11 +140,7 @@ export function nextSessionDate(block: TrainingBlock, after: Date): Date | null 
   if (end.getTime() < start.getTime()) return null;
   const weekdaySet = new Set(block.weekdays);
   const dates = eachDateInRange(start, end);
-  const afterTime = new Date(
-    after.getFullYear(),
-    after.getMonth(),
-    after.getDate(),
-  ).getTime();
+  const afterTime = new Date(after.getFullYear(), after.getMonth(), after.getDate()).getTime();
   for (const d of dates) {
     if (d.getTime() <= afterTime) continue;
     if (weekdaySet.has(isoWeekday(d))) return d;

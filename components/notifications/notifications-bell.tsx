@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, Check, Loader2 } from "lucide-react";
+import { MdNotifications, MdCheck, MdAutorenew } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -17,10 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 import { timeAgo } from "@/lib/domain/calendar";
-import {
-  markAllNotificationsRead,
-  markNotificationRead,
-} from "@/server/actions/admin";
+import { markAllNotificationsRead, markNotificationRead } from "@/server/actions/admin";
 import type { NotificationItem } from "@/server/queries/notifications";
 
 export interface NotificationsBellProps {
@@ -99,13 +96,13 @@ export function NotificationsBell({
         <button
           type="button"
           aria-label="Notificaciones"
-          className="relative flex h-12 w-12 items-center justify-center rounded-full text-ink-600 transition-colors hover:bg-brand-foam active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+          className="relative flex h-11 w-11 items-center justify-center rounded-md border border-current/12 bg-current/8 text-current transition-colors hover:bg-current/14 focus-visible:ring-2 focus-visible:ring-current/70 focus-visible:outline-none active:scale-[0.97]"
         >
-          <Bell className="h-5 w-5" aria-hidden="true" />
+          <MdNotifications className="h-6 w-6" aria-hidden="true" />
           {unread > 0 ? (
             <span
               aria-hidden="true"
-              className="absolute right-1 top-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-action px-1 text-[10px] font-bold text-paper"
+              className="bg-action text-paper absolute top-1 right-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-bold"
             >
               {unread > 9 ? "9+" : unread}
             </span>
@@ -117,13 +114,11 @@ export function NotificationsBell({
           <div>
             <SheetTitle>Notificaciones</SheetTitle>
             <SheetDescription>
-              {unread > 0
-                ? `${unread} sin leer`
-                : "Estás al día con todo."}
+              {unread > 0 ? `${unread} sin leer` : "Estás al día con todo."}
             </SheetDescription>
           </div>
         </SheetHeader>
-        <div className="flex gap-2 border-b border-ink-300 px-5">
+        <div className="border-ink-300 flex gap-2 border-b px-5">
           <TabButton
             label="No leídas"
             active={tab === "unread"}
@@ -139,7 +134,7 @@ export function NotificationsBell({
         </div>
         <SheetBody>
           {filtered.length === 0 ? (
-            <p className="text-sm text-ink-600">
+            <p className="text-ink-600 text-sm">
               {tab === "unread"
                 ? "No tienes notificaciones sin leer."
                 : "Aún no tienes notificaciones."}
@@ -148,10 +143,7 @@ export function NotificationsBell({
             <ul className="flex flex-col gap-2 pb-[env(safe-area-inset-bottom)]">
               {filtered.map((n) => (
                 <li key={n.id}>
-                  <NotificationRow
-                    notification={n}
-                    onClick={() => handleClickItem(n)}
-                  />
+                  <NotificationRow notification={n} onClick={() => handleClickItem(n)} />
                 </li>
               ))}
             </ul>
@@ -179,9 +171,9 @@ export function NotificationsBell({
             disabled={pending || unread === 0}
           >
             {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Check className="h-4 w-4" aria-hidden="true" />
+              <MdCheck className="h-4 w-4" aria-hidden="true" />
             )}
             Marcar todas como leídas
           </Button>
@@ -207,7 +199,7 @@ function TabButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative inline-flex h-12 items-center gap-2 px-1 font-display text-sm font-semibold transition-colors focus-visible:outline-none",
+        "font-display relative inline-flex h-12 items-center gap-2 px-1 text-sm font-semibold transition-colors focus-visible:outline-none",
         active ? "text-brand-blue" : "text-ink-600 hover:text-brand-deep",
       )}
     >
@@ -223,7 +215,7 @@ function TabButton({
       {active ? (
         <span
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-[3px] rounded-full bg-brand-blue"
+          className="bg-brand-blue absolute inset-x-0 bottom-0 h-[3px] rounded-full"
         />
       ) : null}
     </button>
@@ -243,10 +235,8 @@ function NotificationRow({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors hover:bg-brand-foam focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
-        isUnread
-          ? "border-brand-aqua/40 bg-brand-foam"
-          : "border-ink-300 bg-paper",
+        "hover:bg-brand-foam focus-visible:ring-brand-blue focus-visible:ring-offset-paper flex w-full items-start gap-3 rounded-md border p-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+        isUnread ? "border-brand-aqua/40 bg-brand-foam" : "border-ink-300 bg-paper",
       )}
     >
       <span
@@ -258,19 +248,17 @@ function NotificationRow({
       />
       <div className="flex flex-1 flex-col gap-0.5">
         <div className="flex items-center justify-between gap-2">
-          <span className="font-display text-sm font-bold text-brand-deep">
+          <span className="font-display text-brand-deep text-sm font-bold">
             {notification.title}
           </span>
-          <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wider text-ink-600">
+          <span className="text-ink-600 shrink-0 text-[10px] font-semibold tracking-wider uppercase">
             {KIND_LABELS[notification.kind] ?? notification.kind}
           </span>
         </div>
         {notification.body ? (
-          <p className="line-clamp-2 text-xs text-ink-600">{notification.body}</p>
+          <p className="text-ink-600 line-clamp-2 text-xs">{notification.body}</p>
         ) : null}
-        <span className="text-[10px] text-ink-600">
-          {timeAgo(notification.created_at)}
-        </span>
+        <span className="text-ink-600 text-[10px]">{timeAgo(notification.created_at)}</span>
       </div>
     </button>
   );

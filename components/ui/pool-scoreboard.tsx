@@ -57,12 +57,20 @@ export function PoolScoreboard({
       data-pool-scoreboard
       data-mode={mode}
       className={cn(
-        "relative overflow-hidden rounded-md border border-ink-300 bg-paper-card text-ink-900 shadow-elev-2",
+        "border-ink-300 bg-paper-card text-ink-900 shadow-elev-2 relative overflow-hidden rounded-md border",
         className,
       )}
     >
-      <div aria-hidden="true" className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: homeTeam.color }} />
-      <div aria-hidden="true" className="absolute inset-y-0 right-0 w-1.5" style={{ backgroundColor: awayTeam.color }} />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 left-0 w-1.5"
+        style={{ backgroundColor: homeTeam.color }}
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 right-0 w-1.5"
+        style={{ backgroundColor: awayTeam.color }}
+      />
 
       <div
         aria-hidden="true"
@@ -98,13 +106,13 @@ export function PoolScoreboard({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-t border-ink-300 bg-pool-foam/40 px-3 py-2">
+      <div className="border-ink-300 bg-pool-foam/40 flex flex-wrap items-center gap-2 border-t px-3 py-2">
         <span className="text-eyebrow text-ink-600">{competitionLabel}</span>
         {location ? (
-          <span className="text-[11px] font-medium text-ink-600">· {location}</span>
+          <span className="text-ink-600 text-[11px] font-medium">· {location}</span>
         ) : null}
         {mvp ? (
-          <span className="ml-auto text-[11px] font-semibold text-pool-deep">
+          <span className="text-pool-deep ml-auto text-[11px] font-semibold">
             MVP: {mvp.name}
             {mvp.cap != null ? ` #${mvp.cap}` : ""}
           </span>
@@ -137,16 +145,15 @@ function TeamSide({
         side === "home" ? "items-start text-left" : "items-end text-right",
       )}
     >
-      <span
-        className="text-eyebrow"
-        style={{ color }}
-      >
+      <span className="text-eyebrow" style={{ color }}>
         {shortLabel(label)} {isHome ? "(L)" : "(V)"}
       </span>
       {showScore ? (
-        <span className="font-mono text-4xl font-extrabold leading-none tabular-nums text-pool-deep sm:text-[56px]">{score ?? 0}</span>
+        <span className="text-pool-deep font-mono text-4xl leading-none font-extrabold tabular-nums sm:text-[56px]">
+          {score ?? 0}
+        </span>
       ) : (
-        <span className="font-display text-base font-extrabold leading-tight text-pool-deep line-clamp-2">
+        <span className="font-display text-pool-deep line-clamp-2 text-base leading-tight font-extrabold">
           {shortLabel(label)}
         </span>
       )}
@@ -169,16 +176,16 @@ function Center({
 }) {
   return (
     <div
-      className="flex min-w-[80px] flex-col items-center justify-center gap-0.5 border-x border-ink-200 px-2 py-3"
+      className="border-ink-200 flex min-w-[80px] flex-col items-center justify-center gap-0.5 border-x px-2 py-3"
       aria-live="polite"
     >
       {mode === "preview" && showTime ? (
         <>
           <span className="text-eyebrow text-ink-500">vs</span>
-          <span className="font-mono text-2xl font-extrabold leading-none tabular-nums text-pool-deep sm:text-[40px]">
+          <span className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums sm:text-[40px]">
             {formatTime(scheduledAt)}
           </span>
-          <span className="text-[9px] font-semibold uppercase tracking-wide text-ink-500">
+          <span className="text-ink-500 text-[10px] font-semibold tracking-wide uppercase">
             {formatDateShort(scheduledAt)}
           </span>
         </>
@@ -187,11 +194,11 @@ function Center({
         <>
           <span
             data-live-badge
-            className="live-badge-pulse inline-flex h-5 items-center rounded-sm bg-goggle-red px-1.5 text-[10px] font-extrabold uppercase tracking-eyebrow text-paper"
+            className="live-badge-pulse bg-goggle-red tracking-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-1.5 text-[10px] font-extrabold uppercase"
           >
             En vivo
           </span>
-          <span className="font-mono text-2xl font-extrabold leading-none tabular-nums text-pool-deep sm:text-[40px]">
+          <span className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums sm:text-[40px]">
             {clock ?? "00:00"}
           </span>
           <span className="text-eyebrow text-ink-600">{period ?? 1}º P</span>

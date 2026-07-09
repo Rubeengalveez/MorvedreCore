@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  canRosterPlayer,
-  defaultTeamColor,
-  defaultTeamGender,
-} from "@/lib/domain/teams";
+import { canRosterPlayer, defaultTeamColor, defaultTeamGender } from "@/lib/domain/teams";
 import {
   CATEGORY_COLORS,
   CATEGORY_DEFAULT_GENDER,
@@ -89,7 +85,13 @@ describe("canRosterPlayer", () => {
   });
 
   it("allows any player in an escuela team", () => {
-    for (const birth of [BENJAMIN_BIRTH, ALEVIN_BIRTH, CADETE_BIRTH, JUVENIL_BIRTH, ABSOLUTO_BIRTH]) {
+    for (const birth of [
+      BENJAMIN_BIRTH,
+      ALEVIN_BIRTH,
+      CADETE_BIRTH,
+      JUVENIL_BIRTH,
+      ABSOLUTO_BIRTH,
+    ]) {
       expect(canRosterPlayer(birth, "escuela", CURRENT_YEAR)).toBe(true);
     }
   });

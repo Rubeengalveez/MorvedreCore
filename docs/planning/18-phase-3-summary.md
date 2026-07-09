@@ -78,11 +78,11 @@ build:       28 rutas, 0 errores
 
 ### Tests nuevos (Fase 3)
 
-| Suite | Tests | Cubre |
-|---|---|---|
-| `rankings.test.ts` | 34 | computeRanking (sort/empates/top 3/scope/min_trainings), findMyPosition, computeAttendanceStreak, computeOpponentHistory, opponentVerdict |
-| `admin-actions.test.ts` (extendido) | 94 (+12) | recomputeRankingSchema, unvalidateMatchStatsSchema, bulkUnvalidateMatchStatsSchema |
-| `stats.test.ts` (extendido) | 9 | attendance_streak calculado en orden cronológico inverso |
+| Suite                               | Tests    | Cubre                                                                                                                                     |
+| ----------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `rankings.test.ts`                  | 34       | computeRanking (sort/empates/top 3/scope/min_trainings), findMyPosition, computeAttendanceStreak, computeOpponentHistory, opponentVerdict |
+| `admin-actions.test.ts` (extendido) | 94 (+12) | recomputeRankingSchema, unvalidateMatchStatsSchema, bulkUnvalidateMatchStatsSchema                                                        |
+| `stats.test.ts` (extendido)         | 9        | attendance_streak calculado en orden cronológico inverso                                                                                  |
 
 **Total: +46 tests en Fase 3. Total proyecto: 381 tests (22 skip sin env Supabase).**
 

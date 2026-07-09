@@ -118,11 +118,7 @@ describe("Select", () => {
 
 describe("Alert", () => {
   it("renders with title and children", () => {
-    render(
-      <Alert title="Heads up">
-        Something important happened.
-      </Alert>,
-    );
+    render(<Alert title="Heads up">Something important happened.</Alert>);
     expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByText("Heads up")).toBeInTheDocument();
     expect(screen.getByText("Something important happened.")).toBeInTheDocument();

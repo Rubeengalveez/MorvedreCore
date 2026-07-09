@@ -11,7 +11,7 @@ export interface TeamHeroProps {
 export function TeamHero({ team, seasonLabel, homePool }: TeamHeroProps) {
   return (
     <header
-      className="overflow-hidden rounded-md border border-ink-200 bg-paper-card"
+      className="border-ink-200 bg-paper-card overflow-hidden rounded-md border"
       style={{ borderTopWidth: "3px", borderTopColor: team.color }}
     >
       <div className="flex flex-col gap-3 p-4">
@@ -19,25 +19,25 @@ export function TeamHero({ team, seasonLabel, homePool }: TeamHeroProps) {
           <CategoryBadge code={team.category_code} tone="solid" />
           <GenderBadge gender={team.gender} />
           {team.team_type === "school" ? (
-            <span className="text-eyebrow inline-flex items-center rounded-sm border border-ink-200 px-1.5 py-0.5 text-ink-600">
+            <span className="text-eyebrow border-ink-200 text-ink-600 inline-flex items-center rounded-sm border px-1.5 py-0.5">
               Escuela
             </span>
           ) : null}
         </div>
-        <h1 className="font-display text-2xl font-extrabold leading-tight tracking-tight text-pool-deep sm:text-3xl">
+        <h1 className="font-display text-pool-deep text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
           {team.label}
         </h1>
-        {(seasonLabel || homePool) ? (
-          <dl className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-ink-500">
+        {seasonLabel || homePool ? (
+          <dl className="text-ink-500 flex flex-wrap gap-x-4 gap-y-0.5 text-xs">
             {seasonLabel ? (
               <div className="flex items-center gap-1">
-                <dt className="font-semibold text-ink-700">Temporada:</dt>
+                <dt className="text-ink-700 font-semibold">Temporada:</dt>
                 <dd className="font-mono">{seasonLabel}</dd>
               </div>
             ) : null}
             {homePool ? (
               <div className="flex items-center gap-1">
-                <dt className="font-semibold text-ink-700">Piscina:</dt>
+                <dt className="text-ink-700 font-semibold">Piscina:</dt>
                 <dd>{homePool}</dd>
               </div>
             ) : null}

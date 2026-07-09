@@ -1,9 +1,10 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 
 export type Season = Tables<"seasons", "Row">;
 
-export async function getCurrentSeason(): Promise<Season | null> {
+export const getCurrentSeason = cache(async (): Promise<Season | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("seasons")
@@ -16,4 +17,4 @@ export async function getCurrentSeason(): Promise<Season | null> {
   }
 
   return data;
-}
+});

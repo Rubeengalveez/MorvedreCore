@@ -38,10 +38,7 @@ export function Logo({
   const textSize = Math.max(14, Math.round(px * 0.3));
 
   return (
-    <span
-      className={cn("inline-flex items-center", className)}
-      style={{ gap: `${gap}px` }}
-    >
+    <span className={cn("inline-flex items-center", className)} style={{ gap: `${gap}px` }}>
       <Image
         src={src}
         alt="Escudo Waterpolo Morvedre"
@@ -52,7 +49,7 @@ export function Logo({
       />
       {showText ? (
         <span
-          className="font-display font-extrabold uppercase tracking-wider text-brand-deep"
+          className="font-display text-brand-deep font-extrabold tracking-wider uppercase"
           style={{ fontSize: `${textSize}px` }}
         >
           Morvedre

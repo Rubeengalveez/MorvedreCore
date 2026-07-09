@@ -11,7 +11,10 @@ export interface CapTileProps {
   "aria-label"?: string;
 }
 
-const sizeMap: Record<CapTileSize, { w: number; h: number; font: number; stripe: number; radius: string }> = {
+const sizeMap: Record<
+  CapTileSize,
+  { w: number; h: number; font: number; stripe: number; radius: string }
+> = {
   sm: { w: 32, h: 32, font: 16, stripe: 3, radius: "var(--r-xs)" },
   md: { w: 48, h: 48, font: 24, stripe: 4, radius: "var(--r-sm)" },
   lg: { w: 64, h: 64, font: 36, stripe: 5, radius: "var(--r-sm)" },
@@ -35,7 +38,7 @@ export function CapTile({
       data-team-cap
       data-cap-size={size}
       className={cn(
-        "relative inline-flex shrink-0 items-center justify-center overflow-hidden font-mono text-paper shadow-elev-2",
+        "text-paper shadow-elev-2 relative inline-flex shrink-0 items-center justify-center overflow-hidden font-mono",
         isMe && "cap-tile-ring",
         className,
       )}

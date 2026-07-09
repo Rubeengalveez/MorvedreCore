@@ -13,7 +13,10 @@ export interface StreakBadgeProps {
   title?: string;
 }
 
-const sizeMap: Record<StreakBadgeSize, { wrap: string; value: string; label: string; icon: string }> = {
+const sizeMap: Record<
+  StreakBadgeSize,
+  { wrap: string; value: string; label: string; icon: string }
+> = {
   sm: { wrap: "h-7 px-2.5", value: "text-sm", label: "text-[10px]", icon: "h-3.5 w-3.5" },
   md: { wrap: "h-9 px-3", value: "text-base", label: "text-[11px]", icon: "h-4 w-4" },
 };
@@ -34,21 +37,18 @@ export function StreakBadge({
       data-streak-badge
       title={title ?? (safeBest != null ? `Mejor: ${safeBest}` : undefined)}
       className={cn(
-        "inline-flex shrink-0 items-center gap-1 rounded-full border border-action/30 bg-action/10 font-extrabold uppercase tracking-eyebrow",
+        "border-action/30 bg-action/10 tracking-eyebrow inline-flex shrink-0 items-center gap-1 rounded-full border font-extrabold uppercase",
         s.wrap,
         className,
       )}
     >
-      <Flame
-        aria-hidden="true"
-        className={cn("shrink-0 fill-action text-action", s.icon)}
-      />
-      <span className={cn("font-mono text-action leading-none tabular-nums", s.value)}>
+      <Flame aria-hidden="true" className={cn("fill-action text-action shrink-0", s.icon)} />
+      <span className={cn("text-action font-mono leading-none tabular-nums", s.value)}>
         {value}
       </span>
       <span className={cn("text-ink-600 leading-none", s.label)}>{label}</span>
       {safeBest != null ? (
-        <span className="text-[9px] font-medium leading-none text-ink-400">/{safeBest}</span>
+        <span className="text-ink-400 text-[10px] leading-none font-medium">/{safeBest}</span>
       ) : null}
     </span>
   );

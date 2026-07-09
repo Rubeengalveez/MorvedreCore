@@ -1,11 +1,6 @@
 import { z } from "zod";
 
-export const RELATION_VALUES = [
-  "mother",
-  "father",
-  "legal_guardian",
-  "other",
-] as const;
+export const RELATION_VALUES = ["mother", "father", "legal_guardian", "other"] as const;
 
 export function emptyToUndefined(v: unknown): unknown {
   if (v === null || v === undefined) return undefined;
@@ -15,10 +10,7 @@ export function emptyToUndefined(v: unknown): unknown {
 
 export function makeRowSchema(currentYear: number) {
   return z.object({
-    nombre_completo: z
-      .string()
-      .trim()
-      .min(1, "nombre_completo es obligatorio"),
+    nombre_completo: z.string().trim().min(1, "nombre_completo es obligatorio"),
     ano_nacimiento: z.coerce
       .number()
       .int("ano_nacimiento debe ser un entero")
@@ -35,11 +27,7 @@ export function makeRowSchema(currentYear: number) {
     ),
     email_tutor: z.preprocess(
       emptyToUndefined,
-      z
-        .string()
-        .trim()
-        .email("email_tutor no es un email válido")
-        .optional(),
+      z.string().trim().email("email_tutor no es un email válido").optional(),
     ),
     nombre_tutor: z.preprocess(emptyToUndefined, z.string().trim().optional()),
     telefono_tutor: z.preprocess(emptyToUndefined, z.string().trim().optional()),

@@ -44,10 +44,7 @@ function SubmitButton() {
 }
 
 export function ChangePasswordForm() {
-  const [state, formAction] = useActionState<UpdatePasswordState, FormData>(
-    updatePassword,
-    null,
-  );
+  const [state, formAction] = useActionState<UpdatePasswordState, FormData>(updatePassword, null);
   const [, startTransition] = useTransition();
 
   const form = useForm<ChangePasswordValues>({

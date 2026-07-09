@@ -82,19 +82,14 @@ type TeamFormValues = z.infer<typeof teamFormSchema>;
 
 type ActionState = { ok?: true; error?: string } | null;
 
-async function submitAction(
-  _prev: ActionState,
-  formData: FormData,
-): Promise<ActionState> {
+async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
     await createTeam({
       season_id: String(formData.get("season_id") ?? ""),
       category_code: String(formData.get("category_code") ?? "") as CategoryCode,
       label: String(formData.get("label") ?? ""),
       gender: String(formData.get("gender") ?? "") as TeamGender,
-      team_type: String(formData.get("team_type") ?? "competitive") as
-        | "competitive"
-        | "school",
+      team_type: String(formData.get("team_type") ?? "competitive") as "competitive" | "school",
       color: String(formData.get("color") ?? ""),
       home_pool: String(formData.get("home_pool") ?? "") || undefined,
       notes: String(formData.get("notes") ?? "") || undefined,
@@ -123,10 +118,7 @@ export interface TeamFormSheetProps {
 
 export function TeamFormSheet({ seasons, defaultSeasonId, trigger }: TeamFormSheetProps) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(
-    submitAction,
-    null,
-  );
+  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
 
   const form = useForm<TeamFormValues>({
@@ -193,8 +185,8 @@ export function TeamFormSheet({ seasons, defaultSeasonId, trigger }: TeamFormShe
         <SheetHeader>
           <SheetTitle>Nuevo equipo</SheetTitle>
           <SheetDescription>
-            Crea un equipo para la temporada seleccionada. El color se hereda de la
-            categoría, pero puedes ajustarlo.
+            Crea un equipo para la temporada seleccionada. El color se hereda de la categoría, pero
+            puedes ajustarlo.
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
@@ -355,7 +347,7 @@ export function TeamFormSheet({ seasons, defaultSeasonId, trigger }: TeamFormShe
                             onBlur={field.onBlur}
                             name={field.name}
                             ref={field.ref}
-                            className="h-12 w-12 shrink-0 cursor-pointer rounded border border-ink-300 bg-paper p-1"
+                            className="border-ink-300 bg-paper h-12 w-12 shrink-0 cursor-pointer rounded border p-1"
                           />
                           <Input
                             value={field.value}
