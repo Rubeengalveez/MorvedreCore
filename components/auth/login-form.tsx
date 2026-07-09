@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { MdVisibility, MdVisibilityOff } from "react-icons/md";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import type { Route } from "next";
 
 import { Alert } from "@/components/ui/alert";
@@ -14,8 +14,10 @@ const GoogleIcon = () => (
   <svg
     className="h-5 w-5 shrink-0"
     viewBox="0 0 24 24"
-    width="24"
-    height="24"
+    width="20"
+    height="20"
+    aria-hidden="true"
+    focusable="false"
     xmlns="http://www.w3.org/2000/svg"
   >
     <path
@@ -44,39 +46,34 @@ export interface LoginFormProps {
 
 export function LoginForm({ next, error }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const googleRedirectUrl = `/api/auth/google?next=${encodeURIComponent(next || "/dashboard")}`;
+  const safeNext = next ?? "/dashboard";
+  const googleRedirectUrl = `/api/auth/google?next=${encodeURIComponent(safeNext)}`;
 
   return (
     <form
-      action={signIn}
-      onSubmit={() => setIsSubmitting(true)}
-      className="flex w-full flex-col gap-2.5 [@media(max-height:640px)]:gap-2"
+      action={(formData) => {
+        startTransition(async () => {
+          try {
+            await signIn(formData);
+          } catch {
+            // El redirect de Supabase o un error de credenciales caen aquí.
+            // Si hay error, useTransition termina y el server action puede
+            // haber redirigido a /login?error=invalid_credentials.
+          }
+        });
+      }}
       noValidate
+      className="flex w-full flex-col gap-4"
     >
-      {error === "invalid_credentials" ? (
-        <Alert
-          variant="danger"
-          title="No pudimos entrar"
-          className="flex flex-col gap-1.5 p-3 text-left text-xs"
-        >
-          <p>Email o contraseña incorrectos.</p>
-        </Alert>
-      ) : null}
-
-      {error === "pending_request" ? (
-        <Alert
-          variant="info"
-          title="Solicitud pendiente"
-          className="flex flex-col gap-1.5 p-3 text-left text-xs"
-        >
-          <p>Tu solicitud ya está enviada. El club tiene que aprobarla antes de que puedas entrar.</p>
-        </Alert>
-      ) : null}
+      {error ? <LoginErrorAlert error={error} /> : null}
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" className="text-ink-700 text-xs font-bold">
+        <label
+          htmlFor="email"
+          className="text-ink-700 text-sm font-semibold leading-none"
+        >
           Email
         </label>
         <Input
@@ -85,24 +82,27 @@ export function LoginForm({ next, error }: LoginFormProps) {
           type="email"
           autoComplete="email"
           inputMode="email"
+          spellCheck={false}
           placeholder="tu@email.com"
           defaultValue=""
           required
-          autoFocus
-          className="bg-paper-card h-11 min-h-11 rounded-lg [@media(max-height:640px)]:h-10 [@media(max-height:640px)]:min-h-10"
+          className="h-12 min-h-12 rounded-[var(--r-sm)]"
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between gap-3">
-          <label htmlFor="password" className="text-ink-700 text-xs font-bold">
+        <div className="flex items-baseline justify-between gap-3">
+          <label
+            htmlFor="password"
+            className="text-ink-700 text-sm font-semibold leading-none"
+          >
             Contraseña
           </label>
           <Link
             href={"/reset-password" as Route}
             className="text-pool-blue text-xs font-bold hover:underline focus-visible:underline focus-visible:outline-none"
           >
-            Recuperar
+            ¿La olvidaste?
           </Link>
         </div>
         <div className="relative">
@@ -111,85 +111,122 @@ export function LoginForm({ next, error }: LoginFormProps) {
             name="password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
+            spellCheck={false}
             placeholder="••••••••"
             defaultValue=""
             required
-            className="bg-paper-card h-11 min-h-11 rounded-lg pr-12 [@media(max-height:640px)]:h-10 [@media(max-height:640px)]:min-h-10"
+            className="h-12 min-h-12 rounded-[var(--r-sm)] pr-12"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
-            className="text-ink-600 hover:bg-pool-foam hover:text-pool-deep touch-target absolute top-1/2 right-1.5 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-md focus-visible:outline-none"
-            tabIndex={-1}
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-pressed={showPassword}
+            className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper absolute top-1/2 right-1.5 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {showPassword ? (
-              <MdVisibilityOff className="h-5 w-5" />
+              <EyeOff className="h-5 w-5" aria-hidden="true" />
             ) : (
-              <MdVisibility className="h-5 w-5" />
+              <Eye className="h-5 w-5" aria-hidden="true" />
             )}
           </button>
         </div>
       </div>
 
-      <input type="hidden" name="next" value={next ?? "/dashboard"} />
+      <input type="hidden" name="next" value={safeNext} />
 
-      <div className="flex flex-col gap-2 pt-0.5 [@media(max-height:640px)]:gap-1.5">
-        <Button type="submit" size="sm" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Entrando..." : "Entrar"}
+      <div className="flex flex-col gap-3 pt-1">
+        <Button
+          type="submit"
+          size="lg"
+          className="w-full"
+          disabled={isPending}
+        >
+          {isPending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              <span>Entrando…</span>
+            </>
+          ) : (
+            <span>Entrar</span>
+          )}
         </Button>
 
-        <div className="relative flex items-center justify-center py-1 [@media(max-height:640px)]:py-0.5">
-          <span className="bg-ink-300 absolute inset-x-0 h-px" />
-          <span className="bg-paper text-eyebrow text-ink-600 relative px-3">O accede con</span>
+        <div className="flex items-center gap-3 py-1" aria-hidden="true">
+          <span className="bg-ink-200 h-px flex-1" />
+          <span className="text-eyebrow text-ink-600">O continúa con</span>
+          <span className="bg-ink-200 h-px flex-1" />
         </div>
 
         <Button
           asChild
           variant="secondary"
-          size="sm"
-          className="text-ink-800 flex w-full items-center justify-center gap-3 rounded-lg font-semibold"
+          size="lg"
+          className="w-full"
         >
-          <a href={googleRedirectUrl}>
+          <a href={googleRedirectUrl} rel="noopener">
             <GoogleIcon />
-            Google
+            <span>Google</span>
           </a>
         </Button>
       </div>
 
-      <div className="flex flex-col gap-1.5 text-center [@media(max-height:640px)]:gap-1">
-        <span className="text-ink-600 text-xs">¿Eres nuevo en el club?</span>
-        <p className="text-eyebrow text-ink-500 mx-auto max-w-[16rem] text-balance min-[370px]:max-w-none min-[370px]:text-sm [@media(max-height:640px)]:text-[11px]">
-          Intenta entrar con tu email y te guiaremos para solicitar acceso.
-        </p>
-      </div>
+      <p className="text-ink-600 mt-2 text-center text-sm leading-relaxed">
+        ¿Eres nuevo en el club?{" "}
+        <span className="text-ink-700 block font-semibold sm:inline">
+          Pide acceso y te avisaremos cuando el club te dé el visto bueno.
+        </span>
+      </p>
     </form>
   );
 }
 
-export interface LoginCardProps {
-  next?: string;
-  error?: "invalid_credentials" | "pending_request";
-}
+function LoginErrorAlert({
+  error,
+}: {
+  error: "invalid_credentials" | "pending_request";
+}) {
+  if (error === "invalid_credentials") {
+    return (
+      <Alert
+        variant="danger"
+        title="No pudimos entrar"
+        role="alert"
+        className="flex flex-col gap-1.5 p-3 text-left text-sm leading-relaxed"
+      >
+        <p>El email o la contraseña no coinciden. Revisa que estén bien escritos.</p>
+        <p className="text-ink-700 text-xs">
+          ¿No te acuerdas?{" "}
+          <Link
+            href={"/reset-password" as Route}
+            className="text-pool-blue font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            Recupérala en un minuto
+          </Link>
+          .
+        </p>
+      </Alert>
+    );
+  }
 
-export function LoginCard({ next, error }: LoginCardProps) {
   return (
-    <div className="flex w-full flex-col gap-2.5 [@media(max-height:640px)]:gap-2">
-      <div className="border-ink-300 flex items-end justify-between gap-3 border-b pb-2.5 [@media(max-height:640px)]:pb-2">
-        <div>
-          <p className="text-eyebrow text-pool-teal font-mono">Acceso</p>
-          <h2 className="font-display text-pool-deep mt-0.5 text-xl leading-none font-extrabold [@media(max-height:640px)]:text-lg">
-            Entra al club
-          </h2>
-        </div>
-        <div className="bg-pool-deep text-paper rounded-md px-2.5 py-1.5 text-right [@media(max-height:640px)]:py-1">
-          <p className="text-eyebrow text-ball-gold font-mono leading-none">CORE</p>
-          <p className="text-eyebrow text-paper/80 mt-0.5 leading-none">24/25</p>
-        </div>
-      </div>
-      <div className="w-full">
-        <LoginForm next={next} error={error} />
-      </div>
-    </div>
+    <Alert
+      variant="info"
+      title="Tu solicitud está en revisión"
+      role="status"
+      className="flex flex-col gap-1.5 p-3 text-left text-sm leading-relaxed"
+    >
+      <p>Ya hemos recibido tu solicitud de acceso. El club la revisa y te avisa cuando esté aprobada.</p>
+      <p className="text-ink-700 text-xs">
+        Si llevas varios días esperando, escribe a{" "}
+        <a
+          href="mailto:galvillo9@gmail.com"
+          className="text-pool-blue font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+        >
+          galvillo9@gmail.com
+        </a>
+        .
+      </p>
+    </Alert>
   );
 }

@@ -1,14 +1,13 @@
 import Image from "next/image";
 import type { Metadata } from "next";
-import type { Route } from "next";
 
-import { LoginCard } from "@/components/auth/login-form";
+import { LoginForm } from "@/components/auth/login-form";
 import { AuthErrorBanner, type AuthErrorCode } from "@/components/auth/auth-error-banner";
 import { LanePattern } from "@/components/ui/lane-pattern";
 
 export const metadata: Metadata = {
-  title: "Entrar - Morvedre Core",
-  description: "La app de tu equipo del alma.",
+  title: "Entrar — Morvedre Core",
+  description: "Accede a la app del Club Waterpolo Morvedre.",
 };
 
 const VALID_ERRORS: ReadonlySet<string> = new Set([
@@ -23,12 +22,16 @@ const VALID_ERRORS: ReadonlySet<string> = new Set([
   "oauth",
 ]);
 
-const VALID_FORM_ERRORS: ReadonlySet<string> = new Set(["invalid_credentials", "pending_request"]);
+const VALID_FORM_ERRORS: ReadonlySet<string> = new Set([
+  "invalid_credentials",
+  "pending_request",
+]);
 
 function parseError(raw: string | string[] | undefined): AuthErrorCode {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value) return undefined;
   if (VALID_ERRORS.has(value)) return value as AuthErrorCode;
+  if (VALID_FORM_ERRORS.has(value)) return value as AuthErrorCode;
   return undefined;
 }
 
@@ -37,7 +40,9 @@ function parseFormError(
 ): "invalid_credentials" | "pending_request" | undefined {
   const value = Array.isArray(raw) ? raw[0] : raw;
   if (!value) return undefined;
-  if (VALID_FORM_ERRORS.has(value)) return value as "invalid_credentials" | "pending_request";
+  if (VALID_FORM_ERRORS.has(value)) {
+    return value as "invalid_credentials" | "pending_request";
+  }
   return undefined;
 }
 
@@ -56,56 +61,79 @@ export default async function LoginPage({
   const errorCode = parseError(params.error);
   const formError = parseFormError(params.error);
 
+  const showFormError = formError && !errorCode;
+
   return (
-    <main
-      id="main-content"
-      lang="es"
-      className="bg-pool-deep text-paper relative flex h-svh flex-col overflow-hidden"
-    >
-      <LanePattern as="div" className="absolute inset-0 opacity-25" />
-      <div className="absolute inset-x-0 top-0 h-[38svh] bg-[linear-gradient(180deg,rgba(13,148,136,0.34),rgba(6,26,58,0))]" />
+    <div className="bg-paper min-h-svh">
+      <a
+        href="#login-main"
+        className="bg-pool-deep text-paper focus-visible:ring-pool-blue focus-visible:ring-offset-paper sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-elev-3 focus:outline-none"
+      >
+        Saltar al formulario
+      </a>
 
-      <div className="relative z-[1] mx-auto flex h-full w-full max-w-md flex-col md:max-w-5xl md:flex-row md:items-stretch">
-        <section className="flex h-[clamp(112px,24svh,178px)] shrink-0 flex-col justify-between px-5 pt-[max(env(safe-area-inset-top),12px)] pb-3 md:h-auto md:min-h-dvh md:w-[45%] md:px-8 md:py-8 [@media(max-height:640px)]:justify-start">
-          <div className="flex items-center justify-between gap-3">
-            <Image
-              src="/brand/icon-192.png"
-              alt="Escudo Waterpolo Morvedre"
-              width={72}
-              height={72}
-              priority
-              className="bg-pool-deep shadow-elev-3 h-[clamp(46px,10svh,72px)] w-[clamp(46px,10svh,72px)] shrink-0 rounded-lg border border-white/14 object-cover"
-            />
-            <div className="shadow-elev-2 rounded-md border border-white/16 bg-white/8 px-2.5 py-1.5 text-right backdrop-blur-md">
-              <p className="text-eyebrow text-ball-gold font-mono">Waterpolo</p>
-              <p className="font-display text-xs leading-none font-extrabold">Morvedre</p>
-            </div>
-          </div>
+      <header className="bg-pool-deep relative isolate overflow-hidden text-white">
+        <LanePattern as="div" className="absolute inset-0 opacity-20" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,140,142,0.18),transparent_55%)]"
+        />
 
-          <div className="[@media(max-height:640px)]:hidden">
-            <p className="text-eyebrow text-paper/58 font-mono">Gestion privada del club</p>
-            <h1 className="font-display mt-0.5 max-w-[12ch] text-[clamp(1.25rem,5.7svw,2.1rem)] leading-[0.98] font-extrabold">
+        <div className="relative mx-auto flex max-w-md items-center gap-3 px-5 pt-[max(env(safe-area-inset-top),16px)] pb-5 sm:max-w-lg sm:px-6 md:max-w-2xl">
+          <Image
+            src="/brand/icon-192.png"
+            alt=""
+            width={48}
+            height={48}
+            priority
+            className="border-white/14 bg-pool-deep shadow-elev-2 h-12 w-12 shrink-0 rounded-[var(--r-sm)] border object-cover"
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="text-eyebrow text-ball-gold">Waterpolo Morvedre</span>
+            <span className="font-display text-base leading-tight font-extrabold tracking-tight">
               Morvedre Core
-            </h1>
+            </span>
           </div>
-        </section>
+          <span className="text-eyebrow text-white/55 hidden sm:inline">Temporada 24/25</span>
+        </div>
+      </header>
 
-        <section className="bg-paper text-ink-900 md:border-ink-300 min-h-0 flex-1 rounded-t-[16px] border-t border-white/15 px-4 pt-3 pb-[max(env(safe-area-inset-bottom),12px)] shadow-[0_-18px_50px_rgba(0,0,0,0.18)] md:my-8 md:mr-8 md:flex md:items-center md:rounded-xl md:border md:px-6 md:py-6 [@media(max-height:640px)]:pt-2">
-          <div className="mx-auto flex h-full min-h-0 w-full max-w-sm flex-col justify-center gap-2.5 md:h-auto [@media(max-height:640px)]:justify-start">
-            {errorCode ? <AuthErrorBanner code={errorCode} provider="google" /> : null}
-            <LoginCard next={next} error={formError} />
-            <p className="text-eyebrow text-ink-600 text-center leading-snug min-[370px]:text-[11px] [@media(max-height:640px)]:hidden">
-              ¿Problemas para entrar?{" "}
-              <a
-                href={"mailto:galvillo9@gmail.com" as Route}
-                className="text-pool-blue font-bold hover:underline"
-              >
-                Escríbeme
-              </a>
-            </p>
-          </div>
-        </section>
-      </div>
-    </main>
+      <main
+        id="login-main"
+        lang="es"
+        className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pt-6 pb-[max(env(safe-area-inset-bottom),24px)] sm:max-w-lg sm:px-6 md:max-w-2xl"
+        aria-labelledby="login-title"
+      >
+        <div className="flex flex-col gap-1.5">
+          <span className="text-eyebrow text-pool-teal">Acceso al club</span>
+          <h1
+            id="login-title"
+            className="font-display text-pool-deep text-2xl leading-tight font-extrabold tracking-tight sm:text-[28px]"
+          >
+            Entra al club
+          </h1>
+          <p className="text-ink-600 text-sm leading-relaxed sm:text-base">
+            Usa el email y la contraseña que te dio el club. Si entras con tu cuenta, el primer día te guiamos para que la pongas a tu gusto.
+          </p>
+        </div>
+
+        {errorCode ? <AuthErrorBanner code={errorCode} provider="google" /> : null}
+
+        <div className="border-ink-300 bg-paper-card shadow-elev-2 rounded-[var(--r-md)] border p-5 sm:p-6">
+          <LoginForm next={next} error={showFormError ? formError : undefined} />
+        </div>
+
+        <p className="text-ink-600 text-center text-xs leading-relaxed">
+          ¿Problemas para entrar?{" "}
+          <a
+            href="mailto:galvillo9@gmail.com"
+            className="text-pool-blue font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+          >
+            Escríbeme
+          </a>
+          {" "}y lo arreglamos.
+        </p>
+      </main>
+    </div>
   );
 }
