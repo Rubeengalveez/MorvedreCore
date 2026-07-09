@@ -54,9 +54,7 @@ export async function TopBar({ activeProfile }: TopBarProps) {
           prefetch={false}
           className="focus-visible:ring-paper/80 flex min-w-0 items-center gap-2 rounded-md py-1 pr-2 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none"
         >
-          <span className="bg-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
-            <Logo size="sm" />
-          </span>
+          <Logo size={36} className="shrink-0" />
           <span className="hidden min-w-0 sm:block">
             <span className="font-display text-paper block text-sm leading-none font-extrabold tracking-wide uppercase">
               Morvedre

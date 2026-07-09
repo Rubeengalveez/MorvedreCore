@@ -1,12 +1,11 @@
-import Image from "next/image";
 import type { Metadata } from "next";
-
+import { Logo } from "@/components/brand/logo";
 import { LoginForm } from "@/components/auth/login-form";
 import { AuthErrorBanner, type AuthErrorCode } from "@/components/auth/auth-error-banner";
 import { LanePattern } from "@/components/ui/lane-pattern";
 
 export const metadata: Metadata = {
-  title: "Entrar — Morvedre Core",
+  title: "Acceso — Morvedre Core",
   description: "Accede a la app del Club Waterpolo Morvedre.",
 };
 
@@ -64,75 +63,62 @@ export default async function LoginPage({
   const showFormError = formError && !errorCode;
 
   return (
-    <div className="bg-paper min-h-svh">
+    <div className="bg-pool-deep relative isolate min-h-svh overflow-hidden text-white">
       <a
         href="#login-main"
-        className="bg-pool-deep text-paper focus-visible:ring-pool-blue focus-visible:ring-offset-paper sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-elev-3 focus:outline-none"
+        className="focus-visible:ring-paper sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-semibold focus:text-pool-deep focus:shadow-elev-3 focus:outline-none"
       >
         Saltar al formulario
       </a>
 
-      <header className="bg-pool-deep relative isolate overflow-hidden text-white">
-        <LanePattern as="div" className="absolute inset-0 opacity-20" />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[linear-gradient(180deg,rgba(14,140,142,0.18),transparent_55%)]"
-        />
+      <LanePattern as="div" className="absolute inset-0 opacity-30" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-[linear-gradient(180deg,rgba(6,32,72,0)_0%,rgba(6,32,72,0.6)_100%)]"
+      />
 
-        <div className="relative mx-auto flex max-w-md items-center gap-3 px-5 pt-[max(env(safe-area-inset-top),16px)] pb-5 sm:max-w-lg sm:px-6 md:max-w-2xl">
-          <Image
-            src="/brand/icon-192.png"
-            alt=""
-            width={48}
-            height={48}
-            priority
-            className="border-white/14 bg-pool-deep shadow-elev-2 h-12 w-12 shrink-0 rounded-[var(--r-sm)] border object-cover"
-          />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="text-eyebrow text-ball-gold">Waterpolo Morvedre</span>
-            <span className="font-display text-base leading-tight font-extrabold tracking-tight">
-              Morvedre Core
-            </span>
-          </div>
-          <span className="text-eyebrow text-white/55 hidden sm:inline">Temporada 24/25</span>
+      <div
+        aria-hidden="true"
+        className="absolute top-0 left-0 h-full w-2 bg-pool-teal/40"
+      />
+
+      <header className="relative flex items-center gap-3 px-5 pt-[max(env(safe-area-inset-top),14px)] pb-4 sm:px-6">
+        <Logo size={56} className="shadow-elev-3 rounded-[var(--r-sm)]" />
+        <div className="flex min-w-0 flex-1 flex-col leading-none">
+          <span className="text-eyebrow text-ball-gold">Waterpolo Morvedre</span>
+          <span className="font-display text-lg font-extrabold tracking-tight">
+            Morvedre Core
+          </span>
         </div>
+        <span className="text-eyebrow text-white/55 hidden sm:inline">24/25</span>
       </header>
 
       <main
         id="login-main"
         lang="es"
-        className="mx-auto flex w-full max-w-md flex-col gap-6 px-5 pt-6 pb-[max(env(safe-area-inset-bottom),24px)] sm:max-w-lg sm:px-6 md:max-w-2xl"
+        className="relative mx-auto flex w-full max-w-md flex-col gap-5 px-5 pt-2 pb-[max(env(safe-area-inset-bottom),20px)] sm:max-w-lg sm:px-6"
         aria-labelledby="login-title"
       >
-        <div className="flex flex-col gap-1.5">
-          <span className="text-eyebrow text-pool-teal">Acceso al club</span>
+        <div className="flex flex-col gap-1 pt-2">
+          <span className="text-eyebrow text-pool-teal">Acceso</span>
           <h1
             id="login-title"
-            className="font-display text-pool-deep text-2xl leading-tight font-extrabold tracking-tight sm:text-[28px]"
+            className="font-display text-[34px] leading-[0.95] font-extrabold tracking-tight sm:text-[40px]"
           >
-            Entra al club
+            Morvedre Core
           </h1>
-          <p className="text-ink-600 text-sm leading-relaxed sm:text-base">
-            Usa el email y la contraseña que te dio el club. Si entras con tu cuenta, el primer día te guiamos para que la pongas a tu gusto.
-          </p>
         </div>
 
-        {errorCode ? <AuthErrorBanner code={errorCode} provider="google" /> : null}
-
-        <div className="border-ink-300 bg-paper-card shadow-elev-2 rounded-[var(--r-md)] border p-5 sm:p-6">
-          <LoginForm next={next} error={showFormError ? formError : undefined} />
+        <div className="border-white/12 bg-white/5 rounded-[var(--r-md)] border p-1 backdrop-blur-sm">
+          <div className="bg-paper rounded-[var(--r-sm)] p-5 text-ink-900 sm:p-6">
+            {errorCode ? <AuthErrorBanner code={errorCode} provider="google" /> : null}
+            <LoginForm next={next} error={showFormError ? formError : undefined} />
+          </div>
         </div>
 
-        <p className="text-ink-600 text-center text-xs leading-relaxed">
-          ¿Problemas para entrar?{" "}
-          <a
-            href="mailto:galvillo9@gmail.com"
-            className="text-pool-blue font-bold hover:underline focus-visible:underline focus-visible:outline-none"
-          >
-            Escríbeme
-          </a>
-          {" "}y lo arreglamos.
-        </p>
+        <div className="flex items-center justify-center gap-2 pt-1">
+          <span className="text-eyebrow text-white/40">Morvedre · Puerto de Sagunto</span>
+        </div>
       </main>
     </div>
   );

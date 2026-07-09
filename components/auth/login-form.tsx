@@ -5,17 +5,16 @@ import Link from "next/link";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import type { Route } from "next";
 
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { signIn } from "@/server/actions/auth";
 
 const GoogleIcon = () => (
   <svg
-    className="h-5 w-5 shrink-0"
+    className="h-4 w-4 shrink-0"
     viewBox="0 0 24 24"
-    width="20"
-    height="20"
+    width="16"
+    height="16"
     aria-hidden="true"
     focusable="false"
     xmlns="http://www.w3.org/2000/svg"
@@ -65,14 +64,30 @@ export function LoginForm({ next, error }: LoginFormProps) {
         });
       }}
       noValidate
-      className="flex w-full flex-col gap-4"
+      className="flex w-full flex-col gap-3.5"
     >
-      {error ? <LoginErrorAlert error={error} /> : null}
+      {error === "invalid_credentials" ? (
+        <div
+          role="alert"
+          className="border-danger/30 bg-danger/10 text-danger rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold"
+        >
+          Email o contraseña incorrectos.
+        </div>
+      ) : null}
+
+      {error === "pending_request" ? (
+        <div
+          role="status"
+          className="border-pool-teal/30 bg-pool-teal/10 text-pool-deep rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold"
+        >
+          Tu solicitud está pendiente de aprobación.
+        </div>
+      ) : null}
 
       <div className="flex flex-col gap-1.5">
         <label
           htmlFor="email"
-          className="text-ink-700 text-sm font-semibold leading-none"
+          className="text-ink-700 text-xs font-bold uppercase tracking-eyebrow"
         >
           Email
         </label>
@@ -86,25 +101,17 @@ export function LoginForm({ next, error }: LoginFormProps) {
           placeholder="tu@email.com"
           defaultValue=""
           required
-          className="h-12 min-h-12 rounded-[var(--r-sm)]"
+          className="h-11 min-h-11 rounded-[var(--r-sm)]"
         />
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <div className="flex items-baseline justify-between gap-3">
-          <label
-            htmlFor="password"
-            className="text-ink-700 text-sm font-semibold leading-none"
-          >
-            Contraseña
-          </label>
-          <Link
-            href={"/reset-password" as Route}
-            className="text-pool-blue text-xs font-bold hover:underline focus-visible:underline focus-visible:outline-none"
-          >
-            ¿La olvidaste?
-          </Link>
-        </div>
+        <label
+          htmlFor="password"
+          className="text-ink-700 text-xs font-bold uppercase tracking-eyebrow"
+        >
+          Contraseña
+        </label>
         <div className="relative">
           <Input
             id="password"
@@ -115,19 +122,19 @@ export function LoginForm({ next, error }: LoginFormProps) {
             placeholder="••••••••"
             defaultValue=""
             required
-            className="h-12 min-h-12 rounded-[var(--r-sm)] pr-12"
+            className="h-11 min-h-11 rounded-[var(--r-sm)] pr-12"
           />
           <button
             type="button"
             onClick={() => setShowPassword((v) => !v)}
             aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
             aria-pressed={showPassword}
-            className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-1 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-1 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             {showPassword ? (
-              <EyeOff className="h-5 w-5" aria-hidden="true" />
+              <EyeOff className="h-4 w-4" aria-hidden="true" />
             ) : (
-              <Eye className="h-5 w-5" aria-hidden="true" />
+              <Eye className="h-4 w-4" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -135,11 +142,17 @@ export function LoginForm({ next, error }: LoginFormProps) {
 
       <input type="hidden" name="next" value={safeNext} />
 
-      <div className="flex flex-col gap-3 pt-1">
+      <div className="flex items-center justify-between gap-3 pt-1">
+        <Link
+          href={"/reset-password" as Route}
+          className="text-ink-600 hover:text-pool-blue text-xs font-bold tracking-eyebrow uppercase focus-visible:underline focus-visible:outline-none"
+        >
+          ¿Olvidaste?
+        </Link>
         <Button
           type="submit"
-          size="lg"
-          className="w-full"
+          size="md"
+          className="h-11 min-h-11 px-6"
           disabled={isPending}
         >
           {isPending ? (
@@ -151,82 +164,18 @@ export function LoginForm({ next, error }: LoginFormProps) {
             <span>Entrar</span>
           )}
         </Button>
-
-        <div className="flex items-center gap-3 py-1" aria-hidden="true">
-          <span className="bg-ink-200 h-px flex-1" />
-          <span className="text-eyebrow text-ink-600">O continúa con</span>
-          <span className="bg-ink-200 h-px flex-1" />
-        </div>
-
-        <Button
-          asChild
-          variant="secondary"
-          size="lg"
-          className="w-full"
-        >
-          <a href={googleRedirectUrl} rel="noopener">
-            <GoogleIcon />
-            <span>Google</span>
-          </a>
-        </Button>
       </div>
 
-      <p className="text-ink-600 mt-2 text-center text-sm leading-relaxed">
-        ¿Eres nuevo en el club?{" "}
-        <span className="text-ink-700 block font-semibold sm:inline">
-          Pide acceso y te avisaremos cuando el club te dé el visto bueno.
-        </span>
-      </p>
-    </form>
-  );
-}
-
-function LoginErrorAlert({
-  error,
-}: {
-  error: "invalid_credentials" | "pending_request";
-}) {
-  if (error === "invalid_credentials") {
-    return (
-      <Alert
-        variant="danger"
-        title="No pudimos entrar"
-        role="alert"
-        className="flex flex-col gap-1.5 p-3 text-left text-sm leading-relaxed"
-      >
-        <p>El email o la contraseña no coinciden. Revisa que estén bien escritos.</p>
-        <p className="text-ink-700 text-xs">
-          ¿No te acuerdas?{" "}
-          <Link
-            href={"/reset-password" as Route}
-            className="text-pool-blue font-bold hover:underline focus-visible:underline focus-visible:outline-none"
-          >
-            Recupérala en un minuto
-          </Link>
-          .
-        </p>
-      </Alert>
-    );
-  }
-
-  return (
-    <Alert
-      variant="info"
-      title="Tu solicitud está en revisión"
-      role="status"
-      className="flex flex-col gap-1.5 p-3 text-left text-sm leading-relaxed"
-    >
-      <p>Ya hemos recibido tu solicitud de acceso. El club la revisa y te avisa cuando esté aprobada.</p>
-      <p className="text-ink-700 text-xs">
-        Si llevas varios días esperando, escribe a{" "}
+      <div className="mt-2 flex items-center gap-3 border-t border-ink-200 pt-3">
         <a
-          href="mailto:galvillo9@gmail.com"
-          className="text-pool-blue font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+          href={googleRedirectUrl}
+          rel="noopener"
+          className="text-ink-700 hover:text-pool-deep focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex items-center gap-2 rounded-[var(--r-sm)] text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-          galvillo9@gmail.com
+          <GoogleIcon />
+          <span>Entrar con Google</span>
         </a>
-        .
-      </p>
-    </Alert>
+      </div>
+    </form>
   );
 }
