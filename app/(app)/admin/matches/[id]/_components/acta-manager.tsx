@@ -241,7 +241,7 @@ function StatRow({ entry, disabled }: { entry: ActaEntry; disabled: boolean }) {
           <div className="flex items-center gap-1.5">
             <label
               htmlFor={`goals-${entry.callup.player_id}`}
-              className="text-ink-600 text-[11px] font-bold uppercase"
+              className="text-ink-600 text-xs font-bold uppercase"
             >
               Goles
             </label>
@@ -260,7 +260,7 @@ function StatRow({ entry, disabled }: { entry: ActaEntry; disabled: boolean }) {
           <div className="flex items-center gap-1.5">
             <label
               htmlFor={`excl-${entry.callup.player_id}`}
-              className="text-ink-600 text-[11px] font-bold uppercase"
+              className="text-ink-600 text-xs font-bold uppercase"
             >
               Excl.
             </label>

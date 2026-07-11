@@ -55,9 +55,12 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
   if (ownData) {
     own = ownData;
   } else if (ownError) {
-    const isMissingCol = ownError.message.includes("calendar_token") || ownError.message.includes("does not exist");
+    const isMissingCol =
+      ownError.message.includes("calendar_token") || ownError.message.includes("does not exist");
     if (isMissingCol) {
-      console.warn("⚠️ ALERTA: La columna calendar_token no existe en profiles. Ejecuta 'pnpm supabase db push'.");
+      console.warn(
+        "⚠️ ALERTA: La columna calendar_token no existe en profiles. Ejecuta 'pnpm supabase db push'.",
+      );
       const { data: fallbackOwn } = await supabase
         .from("profiles")
         .select(PROFILE_SELECT_FALLBACK)
@@ -88,14 +91,17 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
       .maybeSingle();
 
     let child = extractJoined(link?.profiles);
-    if (linkError && (linkError.message.includes("calendar_token") || linkError.message.includes("does not exist"))) {
+    if (
+      linkError &&
+      (linkError.message.includes("calendar_token") || linkError.message.includes("does not exist"))
+    ) {
       const { data: fallbackLink } = await supabase
         .from("parent_child_links")
         .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT_FALLBACK})`)
         .eq("parent_profile_id", own.id)
         .eq("child_profile_id", activeId)
         .maybeSingle();
-      
+
       const rawChild = extractJoined(fallbackLink?.profiles);
       if (rawChild) {
         child = {
@@ -116,17 +122,20 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
     .eq("parent_profile_id", own.id);
 
   let finalRows = linkRows as ParentChildProfileRow[] | null;
-  if (rowsError && (rowsError.message.includes("calendar_token") || rowsError.message.includes("does not exist"))) {
+  if (
+    rowsError &&
+    (rowsError.message.includes("calendar_token") || rowsError.message.includes("does not exist"))
+  ) {
     const { data: fallbackRows } = await supabase
       .from("parent_child_links")
       .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT_FALLBACK})`)
       .eq("parent_profile_id", own.id);
-    
+
     if (fallbackRows) {
       finalRows = fallbackRows.map((row) => {
         const rawChild = extractJoined(row.profiles);
         return {
-          profiles: rawChild ? { ...rawChild, calendar_token: "" } : null
+          profiles: rawChild ? { ...rawChild, calendar_token: "" } : null,
         };
       });
     }

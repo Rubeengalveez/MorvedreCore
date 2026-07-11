@@ -1,27 +1,29 @@
 "use client";
 
-import { useShopCart } from "@/hooks/use-shop-cart";
-import { ShoppingCart } from "lucide-react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { Route } from "next";
+import { ShoppingBag } from "lucide-react";
+
+import { useShopCart } from "@/hooks/use-shop-cart";
 
 export function CartButton() {
   const cart = useShopCart();
-  const router = useRouter();
+  const count = cart.hydrated ? cart.items.length : 0;
+
   return (
-    <button
-      type="button"
-      onClick={() => router.push("/shop/cart" as Route)}
+    <Link
+      href={"/shop/cart" as Route}
       data-cart-button
-      className="border-ink-300 bg-paper-card text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue touch-target relative inline-flex h-11 w-11 items-center justify-center rounded border transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      aria-label="Carrito"
+      className="border-ink-300 bg-paper-card text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue relative inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-lg border px-4 text-sm font-extrabold shadow-sm transition-[border-color,background-color,transform] hover:bg-pool-foam focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
+      aria-label={count > 0 ? `Carrito, ${count} artículos` : "Carrito"}
     >
-      <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-      {cart.hydrated && cart.items.length > 0 ? (
-        <span className="bg-goggle-red text-paper absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-extrabold">
-          {cart.items.reduce((acc, i) => acc + i.quantity, 0)}
+      <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+      <span>Carrito</span>
+      {count > 0 ? (
+        <span className="bg-ball-gold text-pool-deep inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-xs font-extrabold tabular-nums">
+          {count}
         </span>
       ) : null}
-    </button>
+    </Link>
   );
 }

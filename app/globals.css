@@ -61,8 +61,8 @@
   --radius-full: var(--r-pill);
 
   /* Layout tokens: safe-area aware */
-  --top-bar-height: calc(64px + env(safe-area-inset-top));
-  --bottom-nav-height: calc(66px + env(safe-area-inset-bottom));
+  --top-bar-height: calc(68px + env(safe-area-inset-top));
+  --bottom-nav-height: calc(80px + env(safe-area-inset-bottom));
 
   /* Scale core font size tokens */
   --text-xs: 0.75rem;

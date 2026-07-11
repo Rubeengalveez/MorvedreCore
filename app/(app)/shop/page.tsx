@@ -1,14 +1,10 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import type { ReactNode } from "react";
-import { Box, Search, Tag } from "lucide-react";
+import { Box, PackageOpen, Search, ShoppingBag } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProducts, getShopCategories } from "@/server/queries/shop";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { CapTile } from "@/components/ui/cap-tile";
-import { Tienda } from "@/components/brand/pictograms";
 import { PageShell } from "@/components/ui/page-shell";
 import { formatCents } from "@/lib/domain/shop";
 import { CartButton } from "./_components/cart-button";
@@ -17,8 +13,8 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Tienda - Morvedre Core",
-  description: "Catalogo de productos del club.",
+  title: "Tienda — Morvedre Core",
+  description: "Equipación y material oficial del Waterpolo Morvedre.",
 };
 
 interface ShopSearchParams {
@@ -45,149 +41,165 @@ export default async function ShopPage({
   ]);
 
   return (
-    <div className="relative w-full max-w-full overflow-x-hidden">
-      <LanePattern as="div" className="absolute inset-0 opacity-70" />
-      <PageShell className="gap-3">
-        <header className="bg-pool-deep text-paper shadow-elev-3 relative overflow-hidden rounded-md p-3.5">
-          <div className="absolute inset-x-0 top-0 h-1 bg-[linear-gradient(90deg,var(--pool-blue),var(--ball-gold),var(--action))]" />
-          <div className="relative flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-paper/62 text-xs font-extrabold tracking-[0.08em] uppercase">
-                Tienda del club
-              </p>
-              <h1 className="font-display text-paper mt-1 text-[1.75rem] leading-none font-extrabold">
-                Tienda Morvedre
-              </h1>
-              <p className="text-paper/72 mt-2 text-sm leading-snug font-semibold">
-                Material, ropa y pedidos del club
-              </p>
-            </div>
-            <div className="flex shrink-0 flex-col items-end gap-2">
-              <div className="bg-paper/10 ring-paper/15 flex h-12 w-12 items-center justify-center rounded-md ring-1">
-                <Tienda className="h-7 w-7" accent="var(--ball-gold)" />
-              </div>
-              <CartButton />
-            </div>
-          </div>
-        </header>
+    <PageShell width="md" className="gap-5 pb-8">
+      <header className="border-ink-300 border-b pb-5">
+        <p className="text-pool-blue text-xs font-extrabold tracking-[0.14em] uppercase">
+          Vestuario del club
+        </p>
+        <h1 className="font-display text-pool-deep mt-1 text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl">
+          Tienda Morvedre
+        </h1>
+        <p className="text-ink-600 mt-2 max-w-lg text-base leading-relaxed">
+          Elige el producto, configura sus opciones y envía una solicitud cuando lo tengas claro.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <CartButton />
+          <Link
+            href={"/shop/orders" as Route}
+            className="border-ink-300 bg-paper-card text-pool-deep hover:border-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-2 rounded-lg border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <PackageOpen className="h-5 w-5" aria-hidden="true" />
+            Mis pedidos
+          </Link>
+        </div>
+      </header>
 
-        <form action="/shop" className="relative">
-          <Search className="text-ink-500 pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          <input
-            name="q"
-            defaultValue={search ?? ""}
-            placeholder="Buscar en la tienda"
-            className="border-ink-300 bg-paper-card text-pool-deep shadow-elev-1 placeholder:text-ink-500 focus:border-pool-blue focus:ring-pool-blue/20 h-11 w-full rounded-md border pr-3 pl-9 text-base font-semibold outline-none focus:ring-2"
-          />
-          {category ? <input type="hidden" name="category" value={category} /> : null}
-        </form>
+      <form
+        action="/shop"
+        className="border-ink-200 bg-paper-card shadow-elev-1 relative rounded-2xl border"
+      >
+        <label htmlFor="shop-search" className="sr-only">
+          Buscar productos
+        </label>
+        <Search
+          className="text-ink-500 pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2"
+          aria-hidden="true"
+        />
+        <input
+          id="shop-search"
+          name="q"
+          type="search"
+          autoComplete="off"
+          defaultValue={search ?? ""}
+          placeholder="Buscar camisetas, gorros…"
+          className="text-pool-deep placeholder:text-ink-400 focus-visible:ring-pool-blue h-14 w-full rounded-2xl bg-transparent pr-4 pl-12 text-base font-semibold outline-none focus-visible:ring-2"
+        />
+        {category ? <input type="hidden" name="category" value={category} /> : null}
+      </form>
 
-        {categories.length > 0 ? (
-          <div className="no-scrollbar -mx-1 flex w-full max-w-full gap-2 overflow-x-auto px-1 pb-1">
-            <CategoryLink href="/shop" active={!category} label="Todas" />
-            {categories.map((c) => (
+      {categories.length > 0 ? (
+        <nav
+          aria-label="Categorías de producto"
+          className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
+        >
+          <div className="flex w-max gap-2">
+            <CategoryLink href="/shop" active={!category} label="Todo" />
+            {categories.map((item) => (
               <CategoryLink
-                key={c}
-                href={`/shop?category=${encodeURIComponent(c)}`}
-                active={category === c}
-                label={c}
-                icon={<Tag className="h-4 w-4" aria-hidden="true" />}
+                key={item}
+                href={`/shop?category=${encodeURIComponent(item)}`}
+                active={category === item}
+                label={item}
               />
             ))}
           </div>
-        ) : null}
+        </nav>
+      ) : null}
+
+      <section aria-labelledby="shop-products-heading">
+        <div className="mb-3 flex items-end justify-between gap-3 px-1">
+          <div>
+            <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+              Colección del club
+            </p>
+            <h2
+              id="shop-products-heading"
+              className="font-display text-pool-deep text-2xl font-extrabold"
+            >
+              Productos
+            </h2>
+          </div>
+          <span className="text-ink-500 text-sm font-semibold tabular-nums">{products.length}</span>
+        </div>
 
         {products.length === 0 ? (
-          <div className="border-ink-300 bg-paper-card rounded-md border border-dashed p-6 text-center">
-            <Box className="text-ink-300 mx-auto h-8 w-8" aria-hidden="true" />
-            <p className="text-ink-600 mt-2 text-sm">
-              No hay productos disponibles{category ? ` en ${category}` : ""}.
+          <div className="border-ink-200 bg-paper-card flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed px-6 text-center">
+            <Box className="text-ink-400 h-8 w-8" aria-hidden="true" />
+            <p className="text-pool-deep mt-3 text-base font-extrabold">
+              No hay productos disponibles
             </p>
+            <p className="text-ink-500 mt-1 text-sm">Prueba con otra categoría o búsqueda.</p>
           </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-2.5 min-[430px]:gap-3">
-            {products.map((p) => (
-              <li key={p.id}>
-                <ProductCard product={p} />
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4">
+            {products.map((product) => (
+              <li key={product.id} className="min-w-0">
+                <ProductCard product={product} />
               </li>
             ))}
           </ul>
         )}
-      </PageShell>
-    </div>
+      </section>
+    </PageShell>
   );
 }
 
 function ProductCard({ product }: { product: ShopProduct }) {
+  const variantText = product.sizes.length > 1 ? `${product.sizes.length} tallas` : "Talla única";
   return (
     <Link
       href={`/shop/${product.id}` as Route}
-      className="group border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue hover:shadow-elev-3 flex h-full min-h-[226px] flex-col overflow-hidden rounded-md border transition-all"
+      className="border-ink-300 bg-paper-card shadow-elev-1 group focus-visible:ring-pool-blue block h-full touch-manipulation overflow-hidden rounded-xl border transition-[border-color,box-shadow,transform] hover:border-pool-blue/50 hover:shadow-elev-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
     >
-      <div className="bg-pool-foam relative aspect-square w-full overflow-hidden">
+      <div className="bg-paper-sunk relative aspect-[4/5] overflow-hidden">
         {product.image_url ? (
-          <>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={product.image_url}
-              alt={product.title}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-              loading="lazy"
-            />
-            <div className="from-pool-deep/42 absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t to-transparent" />
-          </>
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.image_url}
+            alt={product.title}
+            width={600}
+            height={750}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none"
+          />
         ) : (
-          <div className="flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,var(--pool-foam),var(--paper))]">
-            <CapTile number={1} teamColor="var(--pool-deep)" size="md" />
+          <div className="bg-pool-foam text-pool-deep flex h-full items-center justify-center">
+            <ShoppingBag className="h-10 w-10" aria-hidden="true" />
           </div>
         )}
-        <span className="bg-paper/92 text-pool-deep shadow-elev-1 absolute top-2 left-2 max-w-[calc(100%-1rem)] truncate rounded-sm px-2 py-1 text-[0.66rem] font-extrabold tracking-[0.06em] uppercase">
+        <span className="bg-paper/95 text-pool-deep absolute top-2 left-2 max-w-[calc(100%-1rem)] truncate rounded-md px-2 py-1 text-xs font-extrabold tracking-wide uppercase shadow-sm">
           {product.category}
         </span>
       </div>
-
-      <div className="flex flex-1 flex-col gap-1 p-2.5">
-        <p className="text-pool-deep line-clamp-2 min-h-[2.25rem] text-[0.92rem] leading-tight font-extrabold">
+      <div className="flex min-h-32 flex-col p-3">
+        <h3 className="text-pool-deep line-clamp-2 text-base leading-snug font-extrabold">
           {product.title}
-        </p>
-        <p className="text-ink-600 line-clamp-2 text-[0.76rem] leading-snug font-medium">
-          {product.description}
-        </p>
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1.5">
-          <span className="text-pool-deep font-mono text-[1.02rem] leading-none font-extrabold">
+        </h3>
+        <p className="text-ink-500 mt-1 text-xs font-semibold">{variantText}</p>
+        <div className="border-ink-200 mt-auto flex items-end justify-between gap-2 border-t pt-3">
+          <span className="text-pool-deep font-mono text-xl font-extrabold tabular-nums">
             {formatCents(product.price_cents, product.currency)}
           </span>
-          <span className="bg-pool-foam text-pool-blue rounded-sm px-1.5 py-1 text-[0.62rem] font-extrabold tracking-[0.06em] uppercase">
-            Club
-          </span>
+          {product.personalization_enabled ? (
+            <span className="text-pool-blue text-xs font-extrabold">Personalizable</span>
+          ) : null}
         </div>
       </div>
     </Link>
   );
 }
 
-function CategoryLink({
-  href,
-  active,
-  label,
-  icon,
-}: {
-  href: string;
-  active: boolean;
-  label: string;
-  icon?: ReactNode;
-}) {
+function CategoryLink({ href, active, label }: { href: string; active: boolean; label: string }) {
   return (
     <Link
       href={href as Route}
+      aria-current={active ? "page" : undefined}
       className={
-        "touch-target inline-flex h-11 shrink-0 items-center gap-1.5 rounded-md border px-3.5 text-sm font-extrabold transition-colors " +
-        (active
-          ? "border-pool-deep bg-pool-deep text-paper shadow-sm"
-          : "border-ink-300 bg-paper-card text-pool-deep hover:bg-pool-foam")
+        active
+          ? "bg-pool-deep text-paper focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center rounded-full px-4 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+          : "border-ink-200 bg-paper-card text-ink-700 hover:border-pool-blue/40 hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center rounded-full border px-4 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
       }
     >
-      {icon}
       {label}
     </Link>
   );

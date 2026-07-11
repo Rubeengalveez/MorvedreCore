@@ -155,7 +155,7 @@ export function PwaInstallPrompt() {
         <button
           type="button"
           onClick={() => dismiss("dismissed")}
-          className="text-ink-600 hover:bg-pool-foam focus-visible:ring-pool-blue touch-target flex h-9 w-9 items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          className="text-ink-600 hover:bg-pool-foam focus-visible:ring-pool-blue touch-target flex min-h-12 min-w-12 touch-manipulation items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
           aria-label="Cerrar aviso de instalación"
         >
           <MdClose className="h-5 w-5" />

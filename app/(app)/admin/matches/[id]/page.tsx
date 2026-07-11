@@ -2,8 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Route } from "next";
 import { MdArrowBack, MdAutoAwesome } from "react-icons/md";
+import { CarFront } from "lucide-react";
 
+import { AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import {
   Sheet,
   SheetBody,
@@ -16,7 +19,6 @@ import {
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
-import { formatLongDate, formatTime } from "@/lib/utils/format";
 import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
 
 import { ActaManager, type ActaEntry } from "./_components/acta-manager";
@@ -239,14 +241,12 @@ export default async function MatchDetailPage({
       };
     });
 
-  const scheduledDate = new Date(match.scheduled_at);
-
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-4">
+    <AdminPageShell>
       <div className="text-ink-600 flex items-center gap-2 text-sm">
         <Link
           href={"/admin/matches" as Route}
-          className="text-pool-blue inline-flex items-center gap-1 font-semibold hover:underline focus-visible:underline"
+          className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 items-center gap-2 rounded-lg font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           <MdArrowBack className="h-5 w-5" aria-hidden="true" />
           Partidos
@@ -270,8 +270,8 @@ export default async function MatchDetailPage({
             label: match.is_home ? match.opponent : (match.team?.label ?? "Morvedre"),
             color: match.is_home ? "#64748B" : (match.team?.color ?? "var(--pool-blue)"),
           }}
-          homeScore={match.final_score_us}
-          awayScore={match.final_score_them}
+          homeScore={match.is_home ? match.final_score_us : match.final_score_them}
+          awayScore={match.is_home ? match.final_score_them : match.final_score_us}
           scheduledAt={match.scheduled_at}
           competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
           isHome={match.is_home}
@@ -279,7 +279,7 @@ export default async function MatchDetailPage({
         />
         <span
           className={cn(
-            "absolute top-3 right-3 inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
+            "absolute top-3 right-3 inline-flex min-h-7 items-center rounded-full px-2.5 text-xs font-extrabold",
             STATUS_BADGE[match.status] ?? "border-ink-300 text-ink-600 border",
           )}
         >
@@ -384,24 +384,27 @@ export default async function MatchDetailPage({
           <>
             <h2 className="font-display text-pool-deep text-lg font-bold">Logística</h2>
             {match.logistics_enabled ? (
-              <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-                <p className="text-pool-deep text-base font-semibold">Próximamente.</p>
-                <p className="text-ink-600 mt-1 text-sm">
-                  La gestión de coches y viajes se activa en una fase posterior (Fase 7).
+              <div className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4">
+                <p className="text-pool-deep text-base font-extrabold">Desplazamiento activo</p>
+                <p className="text-ink-600 mt-1 text-sm leading-relaxed">
+                  Gestiona coches, plazas, salida y compensación desde la pantalla del viaje.
                 </p>
+                <Button asChild size="md" className="mt-4 w-full">
+                  <Link href={`/matches/${match.id}/travel` as Route}>
+                    <CarFront className="h-5 w-5" aria-hidden="true" /> Gestionar desplazamiento
+                  </Link>
+                </Button>
               </div>
             ) : (
-              <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-                <p className="text-pool-deep text-base font-semibold">Logística desactivada.</p>
-                <p className="text-ink-600 mt-1 text-sm">
-                  Activa el interruptor de logística en la pestaña &ldquo;Detalles&rdquo; para
-                  empezar a planificar el viaje.
-                </p>
-              </div>
+              <EmptyState
+                icon={<CarFront className="h-6 w-6" aria-hidden="true" />}
+                title="Logística desactivada"
+                description="Activa la logística en Detalles para empezar a organizar el viaje."
+              />
             )}
           </>
         ) : null}
       </section>
-    </div>
+    </AdminPageShell>
   );
 }

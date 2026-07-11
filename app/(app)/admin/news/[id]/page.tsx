@@ -3,12 +3,11 @@ import Link from "next/link";
 import type { Route } from "next";
 import { ArrowLeft, Megaphone } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { createClient } from "@/lib/supabase/server";
 import { getNewsPost } from "@/server/queries/news";
 import { deleteNewsPost, togglePinNews, updateNewsPost } from "@/server/actions/admin/news";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { NewsEditor, type TeamOption } from "@/components/news/news-editor";
 
 export const dynamic = "force-dynamic";
@@ -80,40 +79,34 @@ export default async function EditAdminNewsPage({ params }: { params: Promise<{ 
   }
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
-        <Link
-          href={"/admin/news" as Route}
-          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Noticias
-        </Link>
-        <header className="flex items-center gap-2">
-          <PictogramBadge pictogram={Megaphone} color="var(--pool-deep)" size="md" />
-          <div>
-            <h1 className="font-display text-pool-deep text-2xl font-extrabold">Editar noticia</h1>
-            <p className="text-ink-600 text-xs">Modifica el contenido del tablón.</p>
-          </div>
-        </header>
-        <NewsEditor
-          mode="edit"
-          teams={teamOptions}
-          initial={{
-            title: post.title,
-            body_md: post.body_md,
-            image_url: post.image_url,
-            audience: post.audience,
-            audience_team_id: post.audience_team_id,
-            pinned: post.pinned,
-            expires_at: post.expires_at,
-          }}
-          onSubmit={handleSubmit}
-          onPinToggle={handlePin}
-          onDelete={handleDelete}
-        />
-      </div>
-    </div>
+    <AdminPageShell>
+      <Link
+        href={"/admin/news" as Route}
+        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Todas las noticias
+      </Link>
+      <AdminPageHeader
+        title="Editar noticia"
+        description="Actualiza el contenido, la audiencia o la fecha de caducidad."
+        icon={<Megaphone className="h-6 w-6" aria-hidden="true" />}
+      />
+      <NewsEditor
+        mode="edit"
+        teams={teamOptions}
+        initial={{
+          title: post.title,
+          body_md: post.body_md,
+          image_url: post.image_url,
+          audience: post.audience,
+          audience_team_id: post.audience_team_id,
+          pinned: post.pinned,
+          expires_at: post.expires_at,
+        }}
+        onSubmit={handleSubmit}
+        onPinToggle={handlePin}
+        onDelete={handleDelete}
+      />
+    </AdminPageShell>
   );
 }

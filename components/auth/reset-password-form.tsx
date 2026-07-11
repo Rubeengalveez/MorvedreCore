@@ -32,7 +32,7 @@ function SubmitButton() {
   return (
     <Button type="submit" size="lg" className="w-full" disabled={pending}>
       {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
-      {pending ? "Enviando..." : "Enviar enlace"}
+      {pending ? "Enviando…" : "Enviar enlace"}
     </Button>
   );
 }
@@ -86,7 +86,7 @@ export function ResetPasswordForm() {
                   type="email"
                   autoComplete="email"
                   inputMode="email"
-                  placeholder="tu@email.com"
+                  placeholder="tu@email.com…"
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}

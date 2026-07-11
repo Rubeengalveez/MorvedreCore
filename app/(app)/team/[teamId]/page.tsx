@@ -1,22 +1,14 @@
-import type { Metadata } from "next";
+import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import type { Route } from "next";
-import { Flame, Trophy } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronRight, MapPin, UserRoundCog } from "lucide-react";
 
-import { createClient } from "@/lib/supabase/server";
-import { Avatar } from "@/components/ui/avatar";
-import { Eyebrow } from "@/components/ui/eyebrow";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
-import { Tabs } from "@/components/ui/tabs";
+import { PageShell } from "@/components/ui/page-shell";
 import { TeamHero } from "@/components/team/team-hero";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
-import { getStreakForTeam, type ActiveStreakRow } from "@/server/queries/streaks";
 import { getTeamById, getTeamMatches, getTeamRoster, getTeamStaff } from "@/server/queries/teams";
-import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { cn } from "@/lib/utils/cn";
 
 import { TeamPlayersTab } from "./_components/team-players-tab";
 
@@ -24,10 +16,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 type TeamTabId = "principal" | "jugadores" | "partidos";
+type TeamMatch = Awaited<ReturnType<typeof getTeamMatches>>[number];
 
 const TEAM_TABS: Array<{ id: TeamTabId; label: string }> = [
-  { id: "principal", label: "Principal" },
-  { id: "jugadores", label: "Jugadores" },
+  { id: "principal", label: "Resumen" },
+  { id: "jugadores", label: "Plantilla" },
   { id: "partidos", label: "Partidos" },
 ];
 
@@ -43,58 +36,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { teamId } = await params;
   const team = await getTeamById(teamId);
-  if (!team) {
-    return { title: "Equipo — Morvedre Core" };
-  }
+  if (!team) return { title: "Equipo — Morvedre Core" };
   return {
     title: `${team.label} — Morvedre Core`,
-    description: `Plantilla, cuerpo técnico y partidos de ${team.label}.`,
+    description: `Plantilla y partidos de ${team.label}.`,
   };
-}
-
-function competitionLabel(type: string | null | undefined): string {
-  if (type === "tournament") return "Torneo";
-  if (type === "friendly") return "Amistoso";
-  if (type === "cup") return "Copa";
-  return "Liga";
-}
-
-interface TeamMatchLite {
-  id: string;
-  opponent: string;
-  scheduled_at: string;
-  status: string;
-  competition_type: string | null;
-  is_home: boolean;
-  location: string | null;
-  pool_name: string | null;
-  final_score_us: number | null;
-  final_score_them: number | null;
-}
-
-interface TeamLeader {
-  full_name: string;
-  photo_url: string | null;
-  primary_value: number;
-}
-
-function relativeDay(iso: string, now: Date): string {
-  const then = new Date(iso);
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  then.setHours(0, 0, 0, 0);
-  const diff = Math.round((then.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff === 0) return "Hoy";
-  if (diff === 1) return "Mañana";
-  if (diff === -1) return "Ayer";
-  if (diff > 1 && diff < 7) return `En ${diff} días`;
-  if (diff < -1 && diff > -7) return `Hace ${Math.abs(diff)} días`;
-  return new Date(iso).toLocaleDateString("es-ES", { day: "numeric", month: "short" });
-}
-
-function timeOf(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 }
 
 export default async function TeamDetailPage({
@@ -108,416 +54,170 @@ export default async function TeamDetailPage({
   if (!ctx) redirect("/login");
 
   const { teamId } = await params;
-  const sp = await searchParams;
-  const activeTab = parseTab(sp.tab);
-
+  const { tab } = await searchParams;
+  const activeTab = parseTab(tab);
   const team = await getTeamById(teamId);
   if (!team) notFound();
 
-  const season = await getCurrentSeason();
-  const inSeason = season ? team.season_id === season.id : false;
-  const seasonId = inSeason ? (season?.id ?? null) : null;
-
-  const supabase = await createClient();
-
-  const [roster, staff, teamMatches, teamWinStreak, teamSnapshotsRes] = await Promise.all([
+  const [season, roster, staff, matches] = await Promise.all([
+    getCurrentSeason(),
     getTeamRoster(team.id),
     getTeamStaff(team.id),
-    getTeamMatches(team.id, 20),
-    seasonId ? getStreakForTeam(seasonId, team.id, "wins_consec") : Promise.resolve(null),
-    seasonId
-      ? supabase
-          .from("ranking_snapshots")
-          .select(
-            "player_id, matches_played, matches_called, goals, exclusions, mvp_count, trainings_attended, trainings_total, attendance_pct, attendance_streak",
-          )
-          .eq("season_id", seasonId)
-          .eq("scope", "team")
-          .eq("scope_key", team.id)
-      : Promise.resolve({ data: [] }),
+    getTeamMatches(team.id, 30),
   ]);
 
-  const snapshots = (teamSnapshotsRes.data ?? []).map((row) => ({
-    player_id: row.player_id,
-    matches_played: row.matches_played,
-    matches_called: row.matches_called,
-    goals: row.goals,
-    exclusions: row.exclusions,
-    mvp_count: row.mvp_count,
-    trainings_attended: row.trainings_attended,
-    trainings_total: row.trainings_total,
-    attendance_pct: Number(row.attendance_pct ?? 0),
-    attendance_streak: row.attendance_streak,
-  }));
-
-  const teamLeaders: {
-    goals: TeamLeader | null;
-    mvp: TeamLeader | null;
-    exclusions: TeamLeader | null;
-    attendance: TeamLeader | null;
-  } = {
-    goals: null,
-    mvp: null,
-    exclusions: null,
-    attendance: null,
-  };
-
-  if (snapshots.length > 0) {
-    const sortedGoals = [...snapshots].sort((a, b) => b.goals - a.goals);
-    const topGoal = sortedGoals[0];
-    if (topGoal && topGoal.goals > 0) {
-      const p = roster.find((r) => r.player_id === topGoal.player_id);
-      if (p) {
-        teamLeaders.goals = {
-          full_name: p.full_name,
-          photo_url: p.photo_url,
-          primary_value: topGoal.goals,
-        };
-      }
-    }
-
-    const sortedMvp = [...snapshots].sort((a, b) => b.mvp_count - a.mvp_count);
-    const topMvp = sortedMvp[0];
-    if (topMvp && topMvp.mvp_count > 0) {
-      const p = roster.find((r) => r.player_id === topMvp.player_id);
-      if (p) {
-        teamLeaders.mvp = {
-          full_name: p.full_name,
-          photo_url: p.photo_url,
-          primary_value: topMvp.mvp_count,
-        };
-      }
-    }
-
-    const sortedExcl = [...snapshots].sort((a, b) => b.exclusions - a.exclusions);
-    const topExcl = sortedExcl[0];
-    if (topExcl && topExcl.exclusions > 0) {
-      const p = roster.find((r) => r.player_id === topExcl.player_id);
-      if (p) {
-        teamLeaders.exclusions = {
-          full_name: p.full_name,
-          photo_url: p.photo_url,
-          primary_value: topExcl.exclusions,
-        };
-      }
-    }
-
-    const sortedAtt = [...snapshots]
-      .filter((s) => s.trainings_total >= 3)
-      .sort((a, b) => b.attendance_pct - a.attendance_pct);
-    const topAtt = sortedAtt[0];
-    if (topAtt && topAtt.attendance_pct > 0) {
-      const p = roster.find((r) => r.player_id === topAtt.player_id);
-      if (p) {
-        teamLeaders.attendance = {
-          full_name: p.full_name,
-          photo_url: p.photo_url,
-          primary_value: Math.round(topAtt.attendance_pct),
-        };
-      }
-    }
-  }
-
-  const now = new Date();
-  const upcomingMatches = teamMatches
-    .filter((m) => new Date(m.scheduled_at).getTime() >= now.getTime() - 1000 * 60 * 60 * 6)
-    .filter(
-      (m) => m.status === "scheduled" || m.status === "in_progress" || m.status === "postponed",
-    )
+  const upcoming = matches
+    .filter((match) => match.status !== "played")
     .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-
-  const playedMatches = teamMatches
-    .filter((m) => m.status === "played")
+  const played = matches
+    .filter((match) => match.status === "played")
     .sort((a, b) => b.scheduled_at.localeCompare(a.scheduled_at));
-
-  const lastMatch = playedMatches[0] ?? null;
-  const nextMatch = upcomingMatches[0] ?? null;
-
-  const coachName = staff.find((s) => s.role === "head_coach")?.full_name ?? "Sin asignar";
+  const nextMatch = upcoming[0] ?? null;
+  const lastMatch = played[0] ?? null;
   const basePath = `/team/${team.id}` as Route;
 
   return (
-    <div className="flex w-full flex-col">
-      <LanePattern as="div" className="bg-paper" strong>
-        <div className="mx-auto w-full max-w-2xl px-4 pt-4 pb-3">
-          <TeamHero
-            team={team}
-            seasonLabel={inSeason ? (season?.label ?? null) : null}
-            homePool={team.home_pool}
-          />
-        </div>
-      </LanePattern>
+    <PageShell width="md" className="gap-5 pb-8">
+      <Link
+        href="/team"
+        className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit touch-manipulation items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Todos los equipos
+      </Link>
 
-      <div className="bg-paper sticky top-[var(--top-bar-height)] z-20 -mx-0">
-        <div className="mx-auto max-w-2xl">
-          <Tabs tabs={TEAM_TABS} active={activeTab} basePath={basePath} />
-        </div>
-      </div>
+      <TeamHero
+        team={team}
+        seasonLabel={season?.label ?? null}
+        homePool={team.home_pool}
+        playerCount={roster.length}
+        staffCount={staff.length}
+      />
 
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+      <TeamSectionNav active={activeTab} basePath={basePath} />
+
+      <div>
         {activeTab === "principal" ? (
-          <TeamPrincipal
-            team={team}
-            playerCount={roster.length}
-            coachName={coachName}
-            lastMatch={lastMatch}
+          <TeamOverview
+            teamLabel={team.label}
+            teamColor={team.color}
+            staff={staff}
             nextMatch={nextMatch}
-            categoryLeaders={teamLeaders}
-            teamWinStreak={teamWinStreak}
+            lastMatch={lastMatch}
           />
         ) : null}
 
         {activeTab === "jugadores" ? (
-          <TeamPlayersTab
-            roster={roster}
-            teamColor={team.color}
-            staff={staff}
-            snapshots={snapshots}
-          />
+          <TeamPlayersTab teamId={team.id} roster={roster} teamColor={team.color} staff={staff} />
         ) : null}
 
         {activeTab === "partidos" ? (
-          <TeamMatchesTab teamLabel={team.label} teamColor={team.color} matches={teamMatches} />
+          <TeamMatchesTab
+            teamLabel={team.label}
+            teamColor={team.color}
+            upcoming={upcoming}
+            played={played}
+          />
         ) : null}
       </div>
-    </div>
+    </PageShell>
   );
 }
 
-function TeamPrincipal({
-  team,
-  playerCount,
-  coachName,
-  lastMatch,
-  nextMatch,
-  categoryLeaders,
-  teamWinStreak,
-}: {
-  team: Awaited<ReturnType<typeof getTeamById>>;
-  playerCount: number;
-  coachName: string;
-  lastMatch: TeamMatchLite | null;
-  nextMatch: TeamMatchLite | null;
-  categoryLeaders: {
-    goals: TeamLeader | null;
-    exclusions: TeamLeader | null;
-    mvp: TeamLeader | null;
-    attendance: TeamLeader | null;
-  };
-  teamWinStreak: ActiveStreakRow | null;
-}) {
-  if (!team) return null;
-  const categoryLabel = CATEGORY_LABELS[team.category_code as CategoryCode] ?? team.category_code;
-  const now = new Date();
-
-  const compactSummary = [
-    { label: "Categoría", value: categoryLabel, capitalize: true },
-    { label: "Plantilla", value: String(playerCount), capitalize: false },
-    { label: "Entrenador", value: coachName.split(" ")[0] ?? coachName, capitalize: true },
-  ];
-
+function TeamSectionNav({ active, basePath }: { active: TeamTabId; basePath: Route }) {
   return (
-    <div className="flex flex-col gap-4">
-      {/* Resumen compacto: 1 fila horizontal */}
-      <section
-        aria-label="Resumen del equipo"
-        className="divide-ink-200 border-ink-200 bg-paper-card grid grid-cols-3 divide-x overflow-hidden rounded-md border"
-      >
-        {compactSummary.map((item) => (
-          <div
-            key={item.label}
-            className="flex min-w-0 flex-col gap-0.5 px-2 py-2.5 text-center sm:px-3 sm:py-3"
-          >
-            <span className="text-eyebrow text-ink-500">{item.label}</span>
-            <p
-              className={`font-display text-pool-deep truncate text-sm font-extrabold ${
-                item.capitalize ? "capitalize" : ""
-              }`}
-            >
-              {item.value}
-            </p>
-          </div>
-        ))}
-      </section>
-
-      {/* Último resultado / Próximo partido en grid 2 columnas */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <section className="flex flex-col gap-2">
-          <Eyebrow as="h3">Último resultado</Eyebrow>
-          {lastMatch ? (
-            <div className="flex flex-col gap-1.5">
-              <Link
-                href={`/matches/${lastMatch.id}` as Route}
-                className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-              >
-                <PoolScoreboard
-                  mode="final"
-                  homeTeam={{ label: team.label, color: team.color }}
-                  awayTeam={{ label: lastMatch.opponent, color: "var(--goggle-red)" }}
-                  homeScore={lastMatch.final_score_us}
-                  awayScore={lastMatch.final_score_them}
-                  scheduledAt={lastMatch.scheduled_at}
-                  competitionLabel={competitionLabel(lastMatch.competition_type)}
-                  isHome={lastMatch.is_home}
-                  location={lastMatch.location ?? lastMatch.pool_name ?? null}
-                />
-              </Link>
-              {lastMatch.final_score_us != null && lastMatch.final_score_them != null ? (
-                <div className="border-ink-300 bg-paper-card tracking-eyebrow shadow-elev-1 flex items-center gap-1.5 self-start rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase">
-                  {lastMatch.final_score_us > lastMatch.final_score_them ? (
-                    <span className="text-success">Victoria</span>
-                  ) : lastMatch.final_score_us === lastMatch.final_score_them ? (
-                    <span className="text-ink-600">Empate</span>
-                  ) : (
-                    <span className="text-goggle-red">Derrota</span>
-                  )}
-                  <span className="text-ink-600">· {relativeDay(lastMatch.scheduled_at, now)}</span>
-                </div>
-              ) : null}
-            </div>
-          ) : (
-            <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-xs">
-              No hay partidos jugados.
-            </div>
-          )}
-        </section>
-
-        <section className="flex flex-col gap-2">
-          <Eyebrow as="h3">Próximo partido</Eyebrow>
-          {nextMatch ? (
-            <Link
-              href={`/matches/${nextMatch.id}` as Route}
-              className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-            >
-              <PoolScoreboard
-                mode="preview"
-                homeTeam={{ label: team.label, color: team.color }}
-                awayTeam={{ label: nextMatch.opponent, color: "var(--goggle-red)" }}
-                scheduledAt={nextMatch.scheduled_at}
-                competitionLabel={competitionLabel(nextMatch.competition_type)}
-                isHome={nextMatch.is_home}
-                location={nextMatch.location ?? nextMatch.pool_name ?? null}
-              />
-            </Link>
-          ) : (
-            <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-xs">
-              No hay partidos programados.
-            </div>
-          )}
-        </section>
-      </div>
-
-      {/* Top del equipo (3 cards: Pichichi / MVP / Asistencia) */}
-      <section className="flex flex-col gap-3" aria-labelledby="team-leaders-heading">
-        <div className="flex items-center gap-2">
-          <PictogramBadge pictogram={Trophy} color="var(--ball-gold)" size="sm" />
-          <h2
-            id="team-leaders-heading"
-            className="font-display text-pool-deep text-base font-extrabold"
-          >
-            Top del equipo
-          </h2>
-        </div>
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <LeaderStatCard
-            title="Pichichi"
-            player={categoryLeaders.goals}
-            metricLabel="goles"
-            accent="var(--ball-gold)"
-          />
-          <LeaderStatCard
-            title="MVP"
-            player={categoryLeaders.mvp}
-            metricLabel="MVPs"
-            accent="var(--pool-blue)"
-          />
-          <LeaderStatCard
-            title="Asistencia"
-            player={categoryLeaders.attendance}
-            metricLabel="%"
-            accent="var(--pool-teal)"
-            suffix=""
-            showSuffix
-          />
-        </div>
-      </section>
-
-      {/* Racha del equipo */}
-      {teamWinStreak && teamWinStreak.current_value > 0 ? (
-        <div
-          data-team-streak
-          className="border-action/30 bg-action/5 shadow-elev-1 flex flex-wrap items-center gap-2 rounded-md border p-3"
-        >
-          <Flame
-            className="fill-action text-action h-4 w-4 shrink-0 animate-pulse"
-            aria-hidden="true"
-          />
-          <span className="text-action text-[10px] font-extrabold tracking-wider uppercase">
-            Racha
-          </span>
-          <span className="text-pool-deep font-mono text-base font-extrabold tabular-nums">
-            {teamWinStreak.current_value} victorias seguidas
-          </span>
-          {teamWinStreak.best_value > teamWinStreak.current_value ? (
-            <span className="text-ink-500 text-[10px]">(récord: {teamWinStreak.best_value})</span>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function LeaderStatCard({
-  title,
-  player,
-  metricLabel,
-  suffix = "",
-  accent,
-  showSuffix = false,
-}: {
-  title: string;
-  player: TeamLeader | null;
-  metricLabel: string;
-  suffix?: string;
-  accent: string;
-  showSuffix?: boolean;
-}) {
-  return (
-    <div
-      data-leader-card={title}
-      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-2.5 sm:p-3"
+    <nav
+      aria-label="Secciones del equipo"
+      className="border-ink-200 bg-paper-card grid grid-cols-3 gap-1 rounded-2xl border p-1.5 shadow-sm"
     >
-      <div className="flex items-center gap-1.5">
-        <span
-          aria-hidden="true"
-          className="inline-block h-2 w-2 shrink-0 rounded-full"
-          style={{ backgroundColor: accent }}
-        />
-        <span className="text-ink-600 text-[10px] font-extrabold tracking-wider uppercase">
-          {title}
-        </span>
-      </div>
-      {player ? (
-        <>
-          <div className="flex min-w-0 items-center gap-2">
-            <Avatar name={player.full_name} src={player.photo_url} size={32} />
-            <p className="font-display text-pool-deep truncate text-xs leading-tight font-extrabold">
-              {player.full_name.split(" ")[0]}
-            </p>
+      {TEAM_TABS.map((tab) => {
+        const isActive = tab.id === active;
+        const href = tab.id === "principal" ? basePath : (`${basePath}?tab=${tab.id}` as Route);
+        return (
+          <Link
+            key={tab.id}
+            href={href}
+            aria-current={isActive ? "page" : undefined}
+            className={cn(
+              "focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center justify-center rounded-xl px-2 text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+              isActive
+                ? "bg-pool-deep text-paper"
+                : "text-ink-500 hover:bg-pool-foam hover:text-pool-deep",
+            )}
+          >
+            {tab.label}
+          </Link>
+        );
+      })}
+    </nav>
+  );
+}
+
+function TeamOverview({
+  teamLabel,
+  teamColor,
+  staff,
+  nextMatch,
+  lastMatch,
+}: {
+  teamLabel: string;
+  teamColor: string;
+  staff: Awaited<ReturnType<typeof getTeamStaff>>;
+  nextMatch: TeamMatch | null;
+  lastMatch: TeamMatch | null;
+}) {
+  const leadStaff = staff.find((member) => member.role === "head_coach") ?? staff[0] ?? null;
+
+  return (
+    <div className="flex flex-col gap-7">
+      <section aria-labelledby="team-agenda-heading">
+        <SectionHeading eyebrow="Agenda" title="Lo próximo" id="team-agenda-heading" />
+        <div className="mt-3">
+          {nextMatch ? (
+            <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={[nextMatch]} />
+          ) : (
+            <EmptyPanel icon={CalendarDays} text="No hay partidos programados." />
+          )}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-7 md:grid-cols-2">
+        <section aria-labelledby="team-last-result-heading">
+          <SectionHeading
+            eyebrow="Competición"
+            title="Último resultado"
+            id="team-last-result-heading"
+          />
+          <div className="mt-3">
+            {lastMatch ? (
+              <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={[lastMatch]} />
+            ) : (
+              <EmptyPanel icon={CalendarDays} text="Todavía no hay resultados." />
+            )}
           </div>
-          <p className="text-pool-deep flex items-baseline gap-1 font-mono text-2xl leading-none font-extrabold tabular-nums">
-            <span>{player.primary_value}</span>
-            {showSuffix ? <span className="text-base">{suffix}</span> : null}
-            {!showSuffix ? (
-              <span className="tracking-eyebrow text-ink-500 text-[10px] font-bold uppercase">
-                {metricLabel}
-              </span>
-            ) : null}
-          </p>
-        </>
-      ) : (
-        <p className="text-ink-500 text-[11px] italic">Sin datos</p>
-      )}
+        </section>
+
+        <section aria-labelledby="team-lead-heading">
+          <SectionHeading
+            eyebrow="Referencia"
+            title="Responsable del equipo"
+            id="team-lead-heading"
+          />
+          <div className="border-ink-200 bg-paper-card mt-3 flex min-h-[112px] items-center gap-4 rounded-2xl border px-4 py-4 shadow-sm">
+            <span className="bg-pool-foam text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
+              <UserRoundCog className="h-6 w-6" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="font-display text-pool-deep truncate text-base font-extrabold">
+                {leadStaff?.full_name ?? "Sin asignar"}
+              </p>
+              <p className="text-ink-500 mt-1 text-sm">
+                {leadStaff ? staffRoleLabel(leadStaff.role) : "El cuerpo técnico aparecerá aquí."}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
@@ -525,109 +225,276 @@ function LeaderStatCard({
 function TeamMatchesTab({
   teamLabel,
   teamColor,
+  upcoming,
+  played,
+}: {
+  teamLabel: string;
+  teamColor: string;
+  upcoming: TeamMatch[];
+  played: TeamMatch[];
+}) {
+  return (
+    <div className="flex flex-col gap-8">
+      <section aria-labelledby="upcoming-matches-heading">
+        <SectionHeading
+          eyebrow="Agenda"
+          title="Próximos partidos"
+          id="upcoming-matches-heading"
+          count={upcoming.length}
+        />
+        <div className="mt-3">
+          {upcoming.length > 0 ? (
+            <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={upcoming} />
+          ) : (
+            <EmptyPanel icon={CalendarDays} text="No hay partidos programados." />
+          )}
+        </div>
+      </section>
+
+      <section aria-labelledby="played-matches-heading">
+        <SectionHeading
+          eyebrow="Historial"
+          title="Resultados"
+          id="played-matches-heading"
+          count={played.length}
+        />
+        <div className="mt-3">
+          {played.length > 0 ? (
+            <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={played} />
+          ) : (
+            <EmptyPanel icon={CalendarDays} text="Todavía no hay resultados." />
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MatchLedger({
+  teamLabel,
+  teamColor,
   matches,
 }: {
   teamLabel: string;
   teamColor: string;
-  matches: Awaited<ReturnType<typeof getTeamMatches>>;
+  matches: TeamMatch[];
 }) {
-  const now = new Date();
-  const upcoming = matches
-    .filter((m) => new Date(m.scheduled_at).getTime() >= now.getTime() - 1000 * 60 * 60 * 6)
-    .filter(
-      (m) => m.status === "scheduled" || m.status === "in_progress" || m.status === "postponed",
-    )
-    .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-  const played = matches
-    .filter((m) => m.status === "played")
-    .sort((a, b) => b.scheduled_at.localeCompare(a.scheduled_at));
-
   return (
-    <>
-      <section aria-labelledby="upcoming-matches-heading" className="flex flex-col gap-2">
-        <Eyebrow as="h2" id="upcoming-matches-heading">
-          Próximos partidos
-        </Eyebrow>
-        {upcoming.length === 0 ? (
-          <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-sm">
-            No hay partidos próximos.
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {upcoming.map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/matches/${m.id}` as Route}
-                  className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                >
-                  <PoolScoreboard
-                    mode="preview"
-                    homeTeam={{ label: teamLabel, color: teamColor }}
-                    awayTeam={{ label: m.opponent, color: "var(--goggle-red)" }}
-                    scheduledAt={m.scheduled_at}
-                    competitionLabel={competitionLabel(m.competition_type)}
-                    isHome={m.is_home}
-                    location={m.location ?? m.pool_name ?? null}
-                  />
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <section aria-labelledby="played-matches-heading" className="flex flex-col gap-2">
-        <Eyebrow as="h2" id="played-matches-heading">
-          Últimos resultados
-        </Eyebrow>
-        {played.length === 0 ? (
-          <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-center text-sm">
-            Aún no se ha jugado ningún partido.
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {played.map((m) => {
-              const result = resultTag(m.final_score_us, m.final_score_them);
-              return (
-                <li key={m.id} className="flex flex-col gap-1.5">
-                  <Link
-                    href={`/matches/${m.id}` as Route}
-                    className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper block rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                  >
-                    <PoolScoreboard
-                      mode="final"
-                      homeTeam={{ label: teamLabel, color: teamColor }}
-                      awayTeam={{ label: m.opponent, color: "var(--goggle-red)" }}
-                      homeScore={m.final_score_us}
-                      awayScore={m.final_score_them}
-                      scheduledAt={m.scheduled_at}
-                      competitionLabel={competitionLabel(m.competition_type)}
-                      isHome={m.is_home}
-                      location={m.location ?? m.pool_name ?? null}
-                    />
-                  </Link>
-                  <div className="border-ink-300 bg-paper-card tracking-eyebrow shadow-elev-1 flex items-center gap-1.5 self-start rounded-sm border px-2 py-0.5 text-[10px] font-bold uppercase">
-                    {result ? <span style={{ color: result.color }}>{result.label}</span> : null}
-                    <span className="text-ink-600">
-                      · {relativeDay(m.scheduled_at, now)} {timeOf(m.scheduled_at)}
-                    </span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-    </>
+    <ul className="flex flex-col gap-3">
+      {matches.map((match) => (
+        <li key={match.id}>
+          <MatchLedgerRow match={match} teamLabel={teamLabel} teamColor={teamColor} />
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function resultTag(
-  us: number | null,
-  them: number | null,
-): { label: string; color: string } | null {
+function MatchLedgerRow({
+  match,
+  teamLabel,
+  teamColor,
+}: {
+  match: TeamMatch;
+  teamLabel: string;
+  teamColor: string;
+}) {
+  const isPlayed = match.status === "played";
+  const localTeam = match.is_home ? teamLabel : match.opponent;
+  const visitorTeam = match.is_home ? match.opponent : teamLabel;
+  const localScore = match.is_home ? match.final_score_us : match.final_score_them;
+  const visitorScore = match.is_home ? match.final_score_them : match.final_score_us;
+  const outcome = matchOutcome(match.final_score_us, match.final_score_them);
+  const date = new Date(match.scheduled_at);
+  const dateLabel = new Intl.DateTimeFormat("es-ES", {
+    weekday: "short",
+    day: "numeric",
+    month: "long",
+  }).format(date);
+  const displayDate = `${dateLabel.charAt(0).toUpperCase()}${dateLabel.slice(1)}`;
+  const time = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(
+    date,
+  );
+  const location = match.location ?? match.pool_name;
+
+  return (
+    <Link
+      href={`/matches/${match.id}` as Route}
+      className="group border-ink-200 bg-paper-card hover:border-pool-blue/35 hover:shadow-elev-2 focus-visible:ring-pool-blue block touch-manipulation overflow-hidden rounded-2xl border shadow-sm transition-[border-color,box-shadow,transform] duration-200 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.995] motion-reduce:transition-none"
+    >
+      <div className="border-ink-200 bg-paper-sunk flex min-h-16 items-center justify-between gap-3 border-b px-4 py-3">
+        <div className="min-w-0">
+          <p className="text-pool-deep truncate text-sm font-extrabold">{displayDate}</p>
+          <p className="text-ink-500 mt-0.5 text-xs font-bold tracking-wide uppercase">
+            {competitionLabel(match.competition_type)}
+          </p>
+        </div>
+        {isPlayed && outcome ? (
+          <OutcomeLabel outcome={outcome} />
+        ) : (
+          <span className="bg-pool-deep text-paper shrink-0 rounded-xl px-3 py-2 font-mono text-base font-extrabold tabular-nums">
+            {time}
+          </span>
+        )}
+      </div>
+
+      <div className="grid min-h-36 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-5 sm:gap-5 sm:px-5">
+        <MatchTeam
+          label={localTeam}
+          venue="Local"
+          score={localScore}
+          showScore={isPlayed}
+          isOwn={match.is_home}
+          align="left"
+          color={teamColor}
+        />
+        <div className="text-ink-300 flex min-w-9 items-center justify-center font-mono text-xl font-extrabold">
+          {isPlayed ? ":" : "vs"}
+        </div>
+        <MatchTeam
+          label={visitorTeam}
+          venue="Visitante"
+          score={visitorScore}
+          showScore={isPlayed}
+          isOwn={!match.is_home}
+          align="right"
+          color={teamColor}
+        />
+      </div>
+
+      <div className="border-ink-200 text-ink-500 flex min-h-12 min-w-0 items-center gap-2 border-t px-4 py-3 text-sm">
+        <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+        <span className="truncate">
+          {location ?? (match.is_home ? "Partido en casa" : "Partido como visitante")}
+        </span>
+        <ChevronRight
+          className="group-hover:text-pool-blue ml-auto h-5 w-5 shrink-0 transition-colors"
+          aria-hidden="true"
+        />
+      </div>
+    </Link>
+  );
+}
+
+function MatchTeam({
+  label,
+  venue,
+  score,
+  showScore,
+  isOwn,
+  align,
+  color,
+}: {
+  label: string;
+  venue: "Local" | "Visitante";
+  score: number | null;
+  showScore: boolean;
+  isOwn: boolean;
+  align: "left" | "right";
+  color: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex min-w-0 flex-col",
+        align === "right" ? "items-end text-right" : "items-start text-left",
+      )}
+    >
+      <span className="text-ink-500 text-xs font-extrabold tracking-wide uppercase">{venue}</span>
+      <p
+        className={cn(
+          "mt-1 line-clamp-2 min-h-10 text-base leading-tight",
+          isOwn ? "text-pool-deep font-extrabold" : "text-ink-700 font-bold",
+        )}
+      >
+        {isOwn ? (
+          <span
+            aria-hidden="true"
+            className="mr-1.5 inline-block h-2 w-2 rounded-full"
+            style={{ backgroundColor: color }}
+          />
+        ) : null}
+        {label}
+      </p>
+      {showScore ? (
+        <span className="text-pool-deep mt-3 font-mono text-4xl leading-none font-extrabold tabular-nums sm:text-5xl">
+          {score ?? "–"}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function OutcomeLabel({ outcome }: { outcome: "win" | "draw" | "loss" }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2 py-1 text-xs font-extrabold tracking-wide uppercase",
+        outcome === "win" && "bg-success/12 text-success",
+        outcome === "draw" && "bg-ink-100 text-ink-600",
+        outcome === "loss" && "bg-goggle-red/10 text-goggle-red",
+      )}
+    >
+      {outcome === "win" ? "Victoria" : outcome === "loss" ? "Derrota" : "Empate"}
+    </span>
+  );
+}
+
+function SectionHeading({
+  eyebrow,
+  title,
+  id,
+  count,
+}: {
+  eyebrow: string;
+  title: string;
+  id: string;
+  count?: number;
+}) {
+  return (
+    <div className="flex items-end justify-between gap-3 px-1">
+      <div>
+        <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+          {eyebrow}
+        </p>
+        <h2 id={id} className="font-display text-pool-deep text-xl font-extrabold">
+          {title}
+        </h2>
+      </div>
+      {count != null ? (
+        <span className="text-ink-500 text-sm font-semibold tabular-nums">{count}</span>
+      ) : null}
+    </div>
+  );
+}
+
+function EmptyPanel({ icon: Icon, text }: { icon: typeof CalendarDays; text: string }) {
+  return (
+    <div className="border-ink-200 bg-paper-card text-ink-500 flex min-h-28 flex-col items-center justify-center rounded-2xl border border-dashed px-5 text-center text-sm">
+      <Icon className="mb-2 h-5 w-5" aria-hidden="true" />
+      {text}
+    </div>
+  );
+}
+
+function competitionLabel(type: string | null | undefined): string {
+  if (type === "tournament") return "Torneo";
+  if (type === "friendly") return "Amistoso";
+  if (type === "cup") return "Copa";
+  return "Liga";
+}
+
+function matchOutcome(us: number | null, them: number | null): "win" | "draw" | "loss" | null {
   if (us == null || them == null) return null;
-  if (us > them) return { label: "Victoria", color: "var(--success)" };
-  if (us === them) return { label: "Empate", color: "var(--ink-600)" };
-  return { label: "Derrota", color: "var(--goggle-red)" };
+  if (us > them) return "win";
+  if (us < them) return "loss";
+  return "draw";
+}
+
+function staffRoleLabel(role: string): string {
+  if (role === "head_coach") return "Entrenador principal";
+  if (role === "assistant_coach") return "Entrenador asistente";
+  if (role === "delegate") return "Delegado";
+  if (role === "physical_trainer") return "Preparador físico";
+  return role;
 }

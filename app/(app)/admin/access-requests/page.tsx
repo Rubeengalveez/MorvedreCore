@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { Route } from "next";
+import { UserCheck } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { createClient } from "@/lib/supabase/server";
 import { AccessRequestsManager } from "@/app/(app)/admin/access-requests/_components/access-requests-manager";
 import { getAccessRequests } from "@/server/actions/auth";
@@ -58,8 +60,13 @@ export default async function AccessRequestsPage() {
   const tempPassword = tempPasswordRow?.value ?? "Morvedre2026!";
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-6">
+    <AdminPageShell width="lg">
+      <AdminPageHeader
+        title="Solicitudes de acceso"
+        description="Revisa quién pide acceso y asigna el perfil correcto antes de aprobarlo."
+        icon={<UserCheck className="h-6 w-6" aria-hidden="true" />}
+      />
       <AccessRequestsManager initialRequests={requests} initialTempPassword={tempPassword} />
-    </div>
+    </AdminPageShell>
   );
 }

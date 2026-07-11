@@ -22,7 +22,7 @@ export function ConceptForm() {
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3"
       onSubmit={(e) => {
         e.preventDefault();
         const current = e.currentTarget;
@@ -71,7 +71,7 @@ export function ConceptForm() {
         </Select>
         <Input name="default_amount_eur" type="number" step="0.01" placeholder="60" required />
       </div>
-      {error ? <p className="text-xs font-bold text-goggle-red">{error}</p> : null}
+      {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
       <Button type="submit" variant="primary" disabled={pending}>
         Crear
       </Button>
@@ -91,7 +91,7 @@ export function AssignmentForm({
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-md border border-ink-300 bg-paper-card p-3 shadow-elev-1"
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3"
       onSubmit={(e) => {
         e.preventDefault();
         const current = e.currentTarget;
@@ -137,7 +137,7 @@ export function AssignmentForm({
         <Input name="starts_on" type="date" />
         <Input name="ends_on" type="date" />
       </div>
-      {error ? <p className="text-xs font-bold text-goggle-red">{error}</p> : null}
+      {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
       <Button type="submit" variant="secondary" disabled={pending}>
         Asignar
       </Button>
@@ -155,7 +155,7 @@ export function ClosureForm({ seasonId }: { seasonId: string | null }) {
 
   return (
     <form
-      className="flex flex-col gap-2 rounded-md border border-pool-blue/25 bg-pool-foam/55 p-3 shadow-elev-1"
+      className="border-pool-blue/25 bg-pool-foam/55 shadow-elev-1 flex flex-col gap-2 rounded-md border p-3"
       onSubmit={(e) => {
         e.preventDefault();
         if (!seasonId) {
@@ -185,7 +185,7 @@ export function ClosureForm({ seasonId }: { seasonId: string | null }) {
         <Input name="period_end" type="date" defaultValue={end} required />
       </div>
       <Input name="sent_to_email" type="email" placeholder="Email tesoreria" />
-      {error ? <p className="text-xs font-bold text-goggle-red">{error}</p> : null}
+      {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
       <Button type="submit" variant="primary" disabled={pending || !seasonId}>
         Generar cierre
       </Button>
@@ -250,8 +250,8 @@ export function SendClosureEmailButton({
       >
         {pending ? "Enviando..." : "Enviar a tesoreria"}
       </Button>
-      {message ? <p className="text-xs font-bold text-success">{message}</p> : null}
-      {error ? <p className="text-xs font-bold text-goggle-red">{error}</p> : null}
+      {message ? <p className="text-success text-xs font-bold">{message}</p> : null}
+      {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
     </div>
   );
 }
@@ -259,25 +259,23 @@ export function SendClosureEmailButton({
 export function LinesPreview({ lines }: { lines: TreasuryLine[] }) {
   if (lines.length === 0) {
     return (
-      <p className="rounded-md border border-dashed border-ink-300 bg-paper p-4 text-sm font-semibold text-ink-600">
+      <p className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-4 text-sm font-semibold">
         Genera un cierre para ver las lineas de cobro.
       </p>
     );
   }
 
   return (
-    <ul className="flex flex-col divide-y divide-ink-200 rounded-md border border-ink-300 bg-paper-card p-2 shadow-elev-1">
+    <ul className="divide-ink-200 border-ink-300 bg-paper-card shadow-elev-1 flex flex-col divide-y rounded-md border p-2">
       {lines.slice(0, 12).map((line) => (
         <li key={line.id} className="flex min-h-14 items-center gap-2 py-2">
           <div className="min-w-0 flex-1">
-            <p className="line-clamp-1 text-sm font-extrabold text-pool-deep">
+            <p className="text-pool-deep line-clamp-1 text-sm font-extrabold">
               {line.profile_name}
             </p>
-            <p className="line-clamp-1 text-xs font-semibold text-ink-600">
-              {line.description}
-            </p>
+            <p className="text-ink-600 line-clamp-1 text-xs font-semibold">{line.description}</p>
           </div>
-          <span className="font-mono text-sm font-extrabold text-pool-deep">
+          <span className="text-pool-deep font-mono text-sm font-extrabold">
             {formatTreasuryCents(line.amount_cents)}
           </span>
           <PaidButton lineId={line.id} paid={line.paid} />
@@ -291,14 +289,14 @@ function Select(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
       {...props}
-      className="h-12 min-w-0 rounded border border-ink-300 bg-paper px-3 text-sm font-semibold text-pool-deep"
+      className="border-ink-300 bg-paper text-pool-deep h-12 min-w-0 rounded border px-3 text-sm font-semibold"
     />
   );
 }
 
 function FormTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
   return (
-    <div className="flex items-center gap-2 text-sm font-extrabold text-pool-deep">
+    <div className="text-pool-deep flex items-center gap-2 text-sm font-extrabold">
       {icon}
       {title}
     </div>

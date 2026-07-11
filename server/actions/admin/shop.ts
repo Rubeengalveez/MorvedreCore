@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { sendEmail } from "@/lib/email/resend";
 import { insertNotificationsWithPush } from "./notification-dispatch";
 import { requireAdmin, requireSessionProfile } from "./_helpers";
 import {
@@ -100,6 +101,9 @@ export async function createShopProduct(input: {
   available?: boolean;
   stock?: number | null;
   max_per_order?: number;
+  personalization_enabled?: boolean;
+  personalization_label?: string;
+  personalization_max_length?: number;
   imageFile?: File | null;
   imageFiles?: File[] | null;
   coverImageIndex?: number;
@@ -126,6 +130,9 @@ export async function createShopProduct(input: {
       available: product.value!.available,
       stock: product.value!.stock,
       max_per_order: product.value!.max_per_order,
+      personalization_enabled: product.value!.personalization_enabled,
+      personalization_label: product.value!.personalization_label,
+      personalization_max_length: product.value!.personalization_max_length,
       created_by: me.id,
     })
     .select("id")
@@ -166,6 +173,9 @@ export async function updateShopProduct(input: {
   available?: boolean;
   stock?: number | null;
   max_per_order?: number;
+  personalization_enabled?: boolean;
+  personalization_label?: string;
+  personalization_max_length?: number;
   imageFile?: File | null;
   imageFiles?: File[] | null;
   coverImageIndex?: number;
@@ -205,6 +215,9 @@ export async function updateShopProduct(input: {
       available: product.value!.available,
       stock: product.value!.stock,
       max_per_order: product.value!.max_per_order,
+      personalization_enabled: product.value!.personalization_enabled,
+      personalization_label: product.value!.personalization_label,
+      personalization_max_length: product.value!.personalization_max_length,
     })
     .eq("id", input.product_id);
 
@@ -264,7 +277,12 @@ export async function updateShopOrderStatus(input: {
 }
 
 export async function createShopOrder(input: {
-  items: Array<{ product_id: string; size: string | null; quantity: number }>;
+  items: Array<{
+    product_id: string;
+    size: string | null;
+    personalization: string | null;
+    quantity: number;
+  }>;
   notes?: string | null;
 }): Promise<{ id: string }> {
   const me = await requireSessionProfile();
@@ -276,7 +294,9 @@ export async function createShopOrder(input: {
   const productIds = Array.from(new Set(parsed.data.items.map((i) => i.product_id)));
   const { data: products, error: pErr } = await supabase
     .from("shop_products")
-    .select("id, price_cents, available, max_per_order, title")
+    .select(
+      "id, price_cents, available, max_per_order, title, sizes, personalization_enabled, personalization_max_length",
+    )
     .in("id", productIds);
   if (pErr) throw new Error("No pudimos cargar los productos: " + pErr.message);
   if (!products || products.length !== productIds.length) {
@@ -287,6 +307,7 @@ export async function createShopOrder(input: {
     parsed.data.items.map((i) => ({
       product_id: i.product_id,
       size: i.size ?? null,
+      personalization: i.personalization ?? null,
       quantity: i.quantity,
     })),
     products,
@@ -311,6 +332,7 @@ export async function createShopOrder(input: {
     order_id: order.id,
     product_id: line.product_id,
     size: line.size,
+    personalization: line.personalization,
     quantity: line.quantity,
     unit_price_cents: line.unit_price_cents,
     subtotal_cents: line.subtotal_cents,
@@ -322,12 +344,58 @@ export async function createShopOrder(input: {
   }
 
   await notifyParentsOfOrder(order.id, me.id, products);
+  await notifyShopManagerOfOrder(order.id, me.id, cart.lines!, products);
 
   revalidatePath("/shop");
   revalidatePath("/shop/orders");
   revalidatePath(`/shop/orders/${order.id}`);
   revalidatePath("/dashboard");
   return { id: order.id };
+}
+
+async function notifyShopManagerOfOrder(
+  orderId: string,
+  requesterId: string,
+  lines: Array<{
+    product_id: string;
+    size: string | null;
+    personalization: string | null;
+    quantity: number;
+  }>,
+  products: Array<{ id: string; title: string }>,
+): Promise<void> {
+  const managerEmail =
+    process.env.SHOP_MANAGER_EMAIL ?? process.env.ADMIN_EMAIL ?? "galvillo9@gmail.com";
+  const admin = createAdminClient();
+  const { data: requester } = await admin
+    .from("profiles")
+    .select("full_name")
+    .eq("id", requesterId)
+    .maybeSingle();
+  const productById = new Map(products.map((product) => [product.id, product.title]));
+  const detail = lines
+    .map((line) => {
+      const options = [
+        line.size ? `talla ${line.size}` : null,
+        line.personalization ? `personalización: ${line.personalization}` : null,
+      ].filter(Boolean);
+      return `- ${productById.get(line.product_id) ?? "Producto"}${options.length > 0 ? ` (${options.join(", ")})` : ""}`;
+    })
+    .join("\n");
+
+  await sendEmail({
+    to: managerEmail,
+    subject: `Nueva solicitud de tienda · ${requester?.full_name ?? "Socio/a"}`,
+    text: `Nueva solicitud de material en Morvedre Core.
+
+Solicitante: ${requester?.full_name ?? requesterId}
+Pedido: ${orderId}
+
+${detail}
+
+Puedes gestionarlo desde /admin/shop.
+`,
+  });
 }
 
 export async function decideShopOrder(input: {

@@ -21,10 +21,7 @@ const VALID_ERRORS: ReadonlySet<string> = new Set([
   "oauth",
 ]);
 
-const VALID_FORM_ERRORS: ReadonlySet<string> = new Set([
-  "invalid_credentials",
-  "pending_request",
-]);
+const VALID_FORM_ERRORS: ReadonlySet<string> = new Set(["invalid_credentials", "pending_request"]);
 
 function parseError(raw: string | string[] | undefined): AuthErrorCode {
   const value = Array.isArray(raw) ? raw[0] : raw;
@@ -60,17 +57,17 @@ export default async function LoginPage({
   const formError = parseFormError(params.error);
 
   return (
-    <div className="relative isolate flex min-h-svh flex-col items-center justify-start overflow-y-auto overflow-x-hidden bg-paper px-4 pb-4 pt-6 sm:px-6 sm:pb-6 sm:pt-12">
+    <div className="bg-paper relative isolate flex min-h-svh flex-col items-center justify-start overflow-x-hidden overflow-y-auto px-4 pt-6 pb-4 sm:px-6 sm:pt-12 sm:pb-6">
       <a
         href="#login-form"
-        className="sr-only rounded-md bg-pool-deep px-3 py-2 text-sm font-semibold text-white shadow-elev-3 focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
+        className="bg-pool-deep shadow-elev-3 focus-visible:ring-pool-blue focus-visible:ring-offset-paper sr-only rounded-md px-3 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         Saltar al formulario
       </a>
 
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-[54svh] rounded-b-[2rem] bg-[linear-gradient(180deg,#062048_0%,#1657a8_100%)] shadow-elev-2 sm:h-[62svh] sm:rounded-b-[2.5rem]"
+        className="shadow-elev-2 pointer-events-none absolute inset-x-0 top-0 h-[54svh] rounded-b-[2rem] bg-[linear-gradient(180deg,#062048_0%,#1657a8_100%)] sm:h-[62svh] sm:rounded-b-[2.5rem]"
       />
 
       <div className="relative z-10 flex w-full max-w-[400px] flex-col items-center gap-4 sm:gap-8">
@@ -88,20 +85,22 @@ export default async function LoginPage({
             <h1 className="font-display text-[32px] leading-none font-extrabold tracking-tight text-white drop-shadow-md min-[390px]:text-[36px] sm:text-[44px]">
               Morvedre Core
             </h1>
-            <span className="text-eyebrow text-[11px] tracking-wide text-white/75 min-[390px]:text-sm">Waterpolo Morvedre &middot; Temporada 24/25</span>
+            <span className="text-eyebrow text-xs tracking-wide text-white/75 min-[390px]:text-sm">
+              App oficial del Waterpolo Morvedre
+            </span>
           </div>
         </div>
 
-        <div className="w-full rounded-[var(--r-xl)] bg-paper-card p-5 shadow-elev-2 sm:p-8">
+        <div className="bg-paper-card shadow-elev-2 w-full rounded-[var(--r-xl)] p-5 sm:p-8">
           {errorCode ? <AuthErrorBanner code={errorCode} provider="google" /> : null}
           <LoginForm next={next} error={formError} />
         </div>
 
-        <p className="text-center text-xs text-ink-500">
+        <p className="text-ink-500 text-center text-xs">
           &iquest;Problemas para entrar?{" "}
           <a
             href="mailto:galvillo9@gmail.com"
-            className="font-semibold text-pool-blue hover:underline focus-visible:underline focus-visible:outline-none"
+            className="text-pool-blue font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
           >
             Escr&iacute;beme
           </a>

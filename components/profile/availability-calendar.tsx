@@ -192,7 +192,7 @@ export function AvailabilityCalendar({
 
       <div
         aria-hidden="true"
-        className="text-eyebrow text-ink-600 grid grid-cols-7 gap-1 px-1 text-center sm:text-[11px]"
+        className="text-eyebrow text-ink-600 grid grid-cols-7 gap-1 px-1 text-center sm:text-xs"
       >
         {[1, 2, 3, 4, 5, 6, 7].map((d) => (
           <span key={d}>{weekdayShort(d)}</span>
@@ -563,7 +563,7 @@ function AvailabilitySheetForm({
                 maxLength={MAX_REASON_LENGTH}
                 autoComplete="off"
               />
-              <p className="text-ink-600 flex items-center justify-between text-[11px]">
+              <p className="text-ink-600 flex items-center justify-between text-xs">
                 <span>Tu entrenador verá este motivo al preparar la convocatoria.</span>
                 <span
                   className={cn("font-mono tabular-nums", reasonTooLong ? "text-goggle-red" : "")}

@@ -26,6 +26,7 @@ const withSerwist = withSerwistInit({
   swDest: "public/sw.js",
   swUrl: "/sw.js",
   register: false,
+  disable: process.env.NODE_ENV !== "production",
   globPublicPatterns: [],
 });
 

@@ -56,6 +56,9 @@ export interface ParsedProduct {
     available: boolean;
     stock: number | null;
     max_per_order: number;
+    personalization_enabled: boolean;
+    personalization_label: string;
+    personalization_max_length: number;
   };
 }
 
@@ -105,6 +108,21 @@ export function parseProduct(input: unknown): ParsedProduct {
   if (maxPerOrder < 1 || maxPerOrder > MAX_QUANTITY) {
     return { ok: false, error: "Cantidad máxima por pedido entre 1 y " + MAX_QUANTITY + "." };
   }
+  const personalizationEnabled = v.personalization_enabled === true;
+  const personalizationLabel =
+    typeof v.personalization_label === "string" && v.personalization_label.trim().length > 0
+      ? v.personalization_label.trim()
+      : "Nombre";
+  if (personalizationLabel.length > 40) {
+    return { ok: false, error: "La etiqueta de personalización es demasiado larga." };
+  }
+  const personalizationMaxLength =
+    typeof v.personalization_max_length === "number"
+      ? Math.floor(v.personalization_max_length)
+      : 30;
+  if (personalizationMaxLength < 1 || personalizationMaxLength > 60) {
+    return { ok: false, error: "La personalización debe permitir entre 1 y 60 caracteres." };
+  }
   return {
     ok: true,
     value: {
@@ -118,6 +136,9 @@ export function parseProduct(input: unknown): ParsedProduct {
       available,
       stock,
       max_per_order: maxPerOrder,
+      personalization_enabled: personalizationEnabled,
+      personalization_label: personalizationLabel,
+      personalization_max_length: personalizationMaxLength,
     },
   };
 }
@@ -125,7 +146,12 @@ export function parseProduct(input: unknown): ParsedProduct {
 export interface ParsedCartItem {
   ok: boolean;
   error?: string;
-  value?: { product_id: string; size: string | null; quantity: number };
+  value?: {
+    product_id: string;
+    size: string | null;
+    personalization: string | null;
+    quantity: number;
+  };
 }
 
 export function parseCartItem(input: unknown): ParsedCartItem {
@@ -139,16 +165,24 @@ export function parseCartItem(input: unknown): ParsedCartItem {
   }
   const size = typeof v.size === "string" && v.size.length > 0 ? v.size.trim() : null;
   if (size && size.length > 20) return { ok: false, error: "Talla inválida." };
+  const personalization =
+    typeof v.personalization === "string" && v.personalization.trim().length > 0
+      ? v.personalization.trim()
+      : null;
+  if (personalization && personalization.length > 60) {
+    return { ok: false, error: "La personalización es demasiado larga." };
+  }
   const quantity = typeof v.quantity === "number" ? Math.floor(v.quantity) : Number.NaN;
   if (!Number.isFinite(quantity) || quantity < MIN_QUANTITY || quantity > MAX_QUANTITY) {
     return { ok: false, error: "Cantidad entre " + MIN_QUANTITY + " y " + MAX_QUANTITY + "." };
   }
-  return { ok: true, value: { product_id: productId, size, quantity } };
+  return { ok: true, value: { product_id: productId, size, personalization, quantity } };
 }
 
 export interface CartLine {
   product_id: string;
   size: string | null;
+  personalization: string | null;
   quantity: number;
   unit_price_cents: number;
   subtotal_cents: number;
@@ -163,8 +197,22 @@ export interface CartSummary {
 }
 
 export function summarizeCart(
-  items: Array<{ product_id: string; size: string | null; quantity: number }>,
-  products: Array<{ id: string; price_cents: number; available: boolean; max_per_order: number }>,
+  items: Array<{
+    product_id: string;
+    size: string | null;
+    personalization?: string | null;
+    quantity: number;
+  }>,
+  products: Array<{
+    id: string;
+    title?: string;
+    price_cents: number;
+    available: boolean;
+    max_per_order: number;
+    sizes?: string[];
+    personalization_enabled?: boolean;
+    personalization_max_length?: number;
+  }>,
 ): CartSummary {
   if (items.length === 0) {
     return { ok: false, error: "El carrito está vacío." };
@@ -179,10 +227,31 @@ export function summarizeCart(
     if (item.quantity > product.max_per_order) {
       return { ok: false, error: "Cantidad máxima superada para un producto." };
     }
+    const size = item.size?.trim() || null;
+    if (product.sizes && product.sizes.length > 0 && (!size || !product.sizes.includes(size))) {
+      return { ok: false, error: `Selecciona una talla válida para ${product.title ?? "el producto"}.` };
+    }
+    const personalization = item.personalization?.trim() || null;
+    if (product.personalization_enabled && !personalization) {
+      return {
+        ok: false,
+        error: `Escribe la personalización para ${product.title ?? "el producto"}.`,
+      };
+    }
+    if (
+      personalization &&
+      personalization.length > (product.personalization_max_length ?? 60)
+    ) {
+      return {
+        ok: false,
+        error: `La personalización de ${product.title ?? "el producto"} es demasiado larga.`,
+      };
+    }
     const subtotal = product.price_cents * item.quantity;
     lines.push({
       product_id: item.product_id,
-      size: item.size,
+      size,
+      personalization: product.personalization_enabled ? personalization : null,
       quantity: item.quantity,
       unit_price_cents: product.price_cents,
       subtotal_cents: subtotal,

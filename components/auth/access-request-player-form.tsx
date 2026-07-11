@@ -65,8 +65,9 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
         <div>
           <h3 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h3>
           <p className="text-ink-600 mt-1 text-sm">
-            Tu cuenta est&aacute; pendiente de activaci&oacute;n. El administrador del club revisar&aacute; tus datos y te
-            pasar&aacute; una contrase&ntilde;a provisional para que entres y la cambies.
+            Tu cuenta est&aacute; pendiente de activaci&oacute;n. El administrador del club
+            revisar&aacute; tus datos y te pasar&aacute; una contrase&ntilde;a provisional para que
+            entres y la cambies.
           </p>
         </div>
       </div>
@@ -90,7 +91,7 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
           type="email"
           value={email}
           disabled
-          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-ink-100 px-4 text-ink-600"
+          className="bg-ink-100 text-ink-600 h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
       </div>
 
@@ -107,7 +108,7 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
           minLength={2}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
+          className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
       </div>
 
@@ -124,7 +125,7 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
             min={1900}
             max={2100}
             required
-            className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
+            className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
           />
         </div>
 
@@ -137,7 +138,7 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
             name="gender"
             required
             defaultValue=""
-            className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
+            className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
           >
             <option value="" disabled>
               Selecciona...

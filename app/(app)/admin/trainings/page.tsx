@@ -1,9 +1,12 @@
 import { MdAdd } from "react-icons/md";
 import Link from "next/link";
 import type { Route } from "next";
+import { Dumbbell } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
 
@@ -266,72 +269,71 @@ export default async function TrainingsPage() {
 
   if (seasons.length === 0) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-          Entrenamientos
-        </h1>
-        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
-          <p className="text-pool-deep text-base font-semibold">Primero crea una temporada.</p>
-          <p className="text-ink-600 mt-1 text-sm">
-            Los bloques de entrenamientos pertenecen a un equipo de una temporada.
-          </p>
-          <div className="mt-4 flex justify-center">
+      <AdminPageShell>
+        <AdminPageHeader
+          title="Entrenamientos"
+          description="Bloques, sesiones y listas de asistencia."
+          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+        />
+        <EmptyState
+          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+          title="Primero crea una temporada"
+          description="Los bloques de entrenamiento pertenecen a un equipo de una temporada activa."
+          action={
             <Button asChild size="md">
               <Link href={"/admin/seasons" as Route}>Ir a Temporadas</Link>
             </Button>
-          </div>
-        </div>
-      </div>
+          }
+        />
+      </AdminPageShell>
     );
   }
 
   if (teams.length === 0) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-          Entrenamientos
-        </h1>
-        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
-          <p className="text-pool-deep text-base font-semibold">Primero crea un equipo.</p>
-          <p className="text-ink-600 mt-1 text-sm">
-            Los bloques de entrenamientos se asignan a un equipo.
-          </p>
-          <div className="mt-4 flex justify-center">
+      <AdminPageShell>
+        <AdminPageHeader
+          title="Entrenamientos"
+          description="Bloques, sesiones y listas de asistencia."
+          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+        />
+        <EmptyState
+          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+          title="Primero crea un equipo"
+          description="Cada bloque de entrenamiento debe estar asignado a un equipo."
+          action={
             <Button asChild size="md">
               <Link href={"/admin/teams" as Route}>Ir a Equipos</Link>
             </Button>
-          </div>
-        </div>
-      </div>
+          }
+        />
+      </AdminPageShell>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-            Entrenamientos
-          </h1>
-          <p className="text-ink-600 text-sm">
-            Bloques de entrenamiento, sesiones y lista de asistencia.
-          </p>
-        </div>
-        {blocks.length > 0 ? (
-          <TrainingBlockFormSheet
-            seasons={seasons}
-            teams={teams}
-            defaultTeamId={defaultTeamId}
-            defaultSeasonId={currentSeasonId}
-            trigger={
-              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-                <MdAdd className="h-6 w-6" aria-hidden="true" />
-                <span>Nuevo bloque</span>
-              </Button>
-            }
-          />
-        ) : null}
-      </header>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Entrenamientos"
+        description="Bloques, sesiones y listas de asistencia."
+        icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+        action={
+          blocks.length > 0 ? (
+            <TrainingBlockFormSheet
+              seasons={seasons}
+              teams={teams}
+              defaultTeamId={defaultTeamId}
+              defaultSeasonId={currentSeasonId}
+              trigger={
+                <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                  <MdAdd className="h-6 w-6" aria-hidden="true" />
+                  <span>Nuevo bloque</span>
+                </Button>
+              }
+            />
+          ) : undefined
+        }
+      />
 
       {error ? (
         <Alert variant="danger" title="No pudimos cargar los entrenamientos">
@@ -349,6 +351,6 @@ export default async function TrainingsPage() {
         rosterByTeam={rosterByTeam}
         attendanceBySession={attendanceBySession}
       />
-    </div>
+    </AdminPageShell>
   );
 }

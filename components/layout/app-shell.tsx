@@ -14,11 +14,7 @@ export function AppShell({ ownProfile, activeProfile, linkedProfiles, children }
         activeProfile={activeProfile}
         linkedProfiles={linkedProfiles}
       />
-      <main
-        id="main-content"
-        className="flex-1"
-        style={{ paddingBottom: "calc(var(--bottom-nav-height) + 10px)" }}
-      >
+      <main id="main-content" className="flex-1 pb-[calc(var(--bottom-nav-height)+0.5rem)]">
         {children}
       </main>
       <BottomNav />

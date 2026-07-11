@@ -9,7 +9,9 @@ import { getCalendarData, type CalendarData } from "@/server/queries/calendar";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
 import { addDaysIso, currentYearMonth, todayIso } from "@/lib/domain/calendar";
-import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { AppPageHero } from "@/components/ui/app-page-hero";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageShell } from "@/components/ui/page-shell";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -112,23 +114,21 @@ export default async function CalendarPage() {
   }
 
   return (
-    <PageShell width="lg" className="gap-2 py-2 sm:py-3">
-      <PageHeader
-        eyebrow="Calendario"
+    <PageShell width="lg" className="gap-4 pb-8">
+      <AppPageHero
+        eyebrow="Tu agenda deportiva"
         title="Tu mes"
-        icon={<Silbato className="h-8 w-8 shrink-0" accent="var(--pool-teal)" />}
-        teamColor={calendarTeams[0]?.color}
-        className="px-3 py-3"
+        description="Entrenamientos, partidos y disponibilidad en una sola vista."
+        icon={<Silbato className="h-7 w-7 shrink-0" accent="currentColor" />}
+        className="py-5 sm:py-6"
       />
 
       {teamIds.length === 0 ? (
-        <div className="border-ink-300 bg-paper flex flex-col items-center gap-3 rounded-md border border-dashed p-8 text-center">
-          <Silbato className="h-12 w-12" accent="var(--pool-teal)" />
-          <p className="text-ink-600 text-sm leading-relaxed">
-            Aun no formas parte de un equipo esta temporada. Cuando tu entrenador te asigne, tus
-            entrenos y partidos apareceran aqui.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Silbato className="h-7 w-7" accent="currentColor" />}
+          title="Tu calendario está vacío"
+          description="Cuando formes parte de un equipo, tus entrenamientos y partidos aparecerán aquí."
+        />
       ) : (
         <CalendarView
           teams={calendarTeams}
@@ -146,7 +146,7 @@ export default async function CalendarPage() {
       {isCoach ? (
         <p className="text-ink-600 flex items-center gap-2 px-1 text-sm font-medium">
           <Equipo className="h-4 w-4" accent="var(--pool-teal)" />
-          Como entrenador, puedes cancelar sesiones desde el detalle del dia.
+          Como entrenador, puedes cancelar sesiones desde el detalle del día.
         </p>
       ) : null}
     </PageShell>

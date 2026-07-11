@@ -1,15 +1,15 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { Megaphone, Pin } from "lucide-react";
+import { Megaphone, Pin, Settings } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getNewsFeed } from "@/server/queries/news";
 import { reactToNews } from "@/server/actions/admin/news";
 import { createClient } from "@/lib/supabase/server";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { Trofeo } from "@/components/brand/pictograms";
+import { AppPageHero } from "@/components/ui/app-page-hero";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageShell } from "@/components/ui/page-shell";
 import { NewsCard, type NewsCardData } from "@/components/news/news-card";
 
 export const dynamic = "force-dynamic";
@@ -61,91 +61,85 @@ export default async function NewsPage({
   }
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Megaphone className="text-pool-deep h-7 w-7" aria-hidden="true" />
-            <div>
-              <h1 className="font-display text-pool-deep text-[28px] leading-tight font-extrabold">
-                Noticias
-              </h1>
-              <p className="text-ink-600 text-xs">Novedades, avisos y tablón del club.</p>
-            </div>
-          </div>
-          {isAdmin ? (
+    <PageShell width="md" className="gap-6 pb-8">
+      <AppPageHero
+        eyebrow="Tablón del club"
+        title="Noticias"
+        description="Avisos, resultados y novedades del Waterpolo Morvedre."
+        icon={<Megaphone className="h-6 w-6" aria-hidden="true" />}
+        action={
+          isAdmin ? (
             <Link
               href={"/admin/news" as Route}
-              className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-sm font-bold"
+              className="focus-visible:ring-paper/80 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 text-sm font-extrabold transition-colors hover:bg-white/18 focus-visible:ring-2 focus-visible:outline-none"
             >
-              <PictogramBadge pictogram={Trofeo} color="var(--pool-deep)" size="sm" />
-              Gestionar
+              <Settings className="h-4 w-4" aria-hidden="true" /> Gestionar noticias
+            </Link>
+          ) : undefined
+        }
+      />
+
+      {feed.pinned.length > 0 ? (
+        <section aria-labelledby="pinned-heading" className="flex flex-col gap-2">
+          <h2
+            id="pinned-heading"
+            className="text-eyebrow text-ink-600 inline-flex items-center gap-1"
+          >
+            <Pin className="h-3 w-3" aria-hidden="true" />
+            Fijadas
+          </h2>
+          <ul className="flex flex-col gap-3">
+            {feed.pinned.map((p) => (
+              <li key={p.id}>
+                <NewsCard post={p as NewsCardData} canReact={true} onReact={react} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section aria-labelledby="recent-heading" className="flex flex-col gap-2">
+        <h2 id="recent-heading" className="text-eyebrow text-ink-600">
+          Recientes
+        </h2>
+        {feed.recent.length === 0 && feed.pinned.length === 0 ? (
+          <EmptyState
+            icon={<Megaphone className="h-6 w-6" aria-hidden="true" />}
+            title="Todavía no hay noticias"
+            description="Los avisos del club aparecerán aquí en cuanto se publiquen."
+          />
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {feed.recent.map((p) => (
+              <li key={p.id}>
+                <NewsCard post={p as NewsCardData} canReact={true} onReact={react} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {feed.total > 0 ? (
+        <nav aria-label="Paginación" className="flex items-center justify-center gap-2 pt-1">
+          {page > 1 ? (
+            <Link
+              href={`/news?page=${page - 1}` as Route}
+              className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            >
+              ← Anterior
             </Link>
           ) : null}
-        </header>
-
-        {feed.pinned.length > 0 ? (
-          <section aria-labelledby="pinned-heading" className="flex flex-col gap-2">
-            <h2
-              id="pinned-heading"
-              className="text-eyebrow text-ink-600 inline-flex items-center gap-1"
+          <span className="text-ink-600 text-sm font-bold">Página {page}</span>
+          {page * 10 < feed.total ? (
+            <Link
+              href={`/news?page=${page + 1}` as Route}
+              className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Pin className="h-3 w-3" aria-hidden="true" />
-              Fijadas
-            </h2>
-            <ul className="flex flex-col gap-3">
-              {feed.pinned.map((p) => (
-                <li key={p.id}>
-                  <NewsCard post={p as NewsCardData} canReact={true} onReact={react} />
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        <section aria-labelledby="recent-heading" className="flex flex-col gap-2">
-          <h2 id="recent-heading" className="text-eyebrow text-ink-600">
-            Recientes
-          </h2>
-          {feed.recent.length === 0 && feed.pinned.length === 0 ? (
-            <div className="border-ink-300 bg-paper-card rounded-md border border-dashed p-6 text-center">
-              <Megaphone className="text-ink-300 mx-auto h-8 w-8" aria-hidden="true" />
-              <p className="text-ink-600 mt-2 text-sm">No hay noticias todavía.</p>
-            </div>
-          ) : (
-            <ul className="flex flex-col gap-3">
-              {feed.recent.map((p) => (
-                <li key={p.id}>
-                  <NewsCard post={p as NewsCardData} canReact={true} onReact={react} />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {feed.total > 0 ? (
-          <nav aria-label="Paginación" className="flex items-center justify-center gap-2 pt-1">
-            {page > 1 ? (
-              <Link
-                href={`/news?page=${page - 1}` as Route}
-                className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam inline-flex h-10 items-center rounded border px-3 text-xs font-bold"
-              >
-                ← Anterior
-              </Link>
-            ) : null}
-            <span className="text-ink-600 text-xs font-bold">Página {page}</span>
-            {page * 10 < feed.total ? (
-              <Link
-                href={`/news?page=${page + 1}` as Route}
-                className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam inline-flex h-10 items-center rounded border px-3 text-xs font-bold"
-              >
-                Siguiente →
-              </Link>
-            ) : null}
-          </nav>
-        ) : null}
-      </div>
-    </div>
+              Siguiente →
+            </Link>
+          ) : null}
+        </nav>
+      ) : null}
+    </PageShell>
   );
 }

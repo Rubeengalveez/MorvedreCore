@@ -1,8 +1,10 @@
 "use client";
 
 import { MdAdd, MdSearch } from "react-icons/md";
+import { BadgeCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
+import { AdminPageHeader } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -35,26 +37,23 @@ export function StaffClient({ rows, teams, people }: StaffClientProps) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-pool-deep text-3xl font-extrabold tracking-tight">
-            Personal
-          </h1>
-          <p className="text-ink-600 text-sm">
-            Asignaciones de entrenadores, delegados y preparadores.
-          </p>
-        </div>
-        <StaffFormSheet
-          teams={teams}
-          people={people}
-          trigger={
-            <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-              <MdAdd className="h-6 w-6" aria-hidden="true" />
-              <span>Nueva asignación</span>
-            </Button>
-          }
-        />
-      </div>
+      <AdminPageHeader
+        title="Personal"
+        description="Asignaciones de entrenadores, delegados y preparadores."
+        icon={<BadgeCheck className="h-6 w-6" aria-hidden="true" />}
+        action={
+          <StaffFormSheet
+            teams={teams}
+            people={people}
+            trigger={
+              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                <MdAdd className="h-6 w-6" aria-hidden="true" />
+                <span>Nueva asignación</span>
+              </Button>
+            }
+          />
+        }
+      />
 
       <div className="relative">
         <MdSearch
@@ -63,7 +62,9 @@ export function StaffClient({ rows, teams, people }: StaffClientProps) {
         />
         <Input
           type="search"
-          placeholder="Buscar por nombre o equipo"
+          name="staff-search"
+          autoComplete="off"
+          placeholder="Buscar por nombre o equipo…"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="pl-9"

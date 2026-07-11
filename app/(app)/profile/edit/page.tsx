@@ -1,6 +1,9 @@
 import { redirect } from "next/navigation";
+import { UserRound } from "lucide-react";
 
 import type { Database } from "@/lib/supabase/types";
+import { AppPageHero } from "@/components/ui/app-page-hero";
+import { PageShell } from "@/components/ui/page-shell";
 import { ProfileForm } from "@/app/(app)/profile/profile-form";
 import { createClient } from "@/lib/supabase/server";
 
@@ -33,9 +36,12 @@ export default async function ProfileEditPage() {
   if (profile) {
     finalProfile = profile;
   } else if (error) {
-    const isMissingCol = error.message.includes("calendar_token") || error.message.includes("does not exist");
+    const isMissingCol =
+      error.message.includes("calendar_token") || error.message.includes("does not exist");
     if (isMissingCol) {
-      console.warn("⚠️ ALERTA: La columna calendar_token no existe en profiles. Ejecuta 'pnpm supabase db push'.");
+      console.warn(
+        "⚠️ ALERTA: La columna calendar_token no existe en profiles. Ejecuta 'pnpm supabase db push'.",
+      );
       const { data: fallbackProfile, error: fallbackError } = await supabase
         .from("profiles")
         .select(
@@ -43,7 +49,7 @@ export default async function ProfileEditPage() {
         )
         .eq("auth_user_id", user.id)
         .maybeSingle();
-      
+
       if (!fallbackError && fallbackProfile) {
         finalProfile = {
           ...fallbackProfile,
@@ -58,17 +64,15 @@ export default async function ProfileEditPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-          Editar perfil
-        </h1>
-        <p className="text-ink-600 text-sm">
-          Mantén tus datos al día. Los demás solo verán lo que tú decidas.
-        </p>
-      </header>
+    <PageShell width="md" className="gap-5 pb-8">
+      <AppPageHero
+        eyebrow="Tu cuenta"
+        title="Editar perfil"
+        description="Mantén tus datos al día. Tu información de contacto sigue siendo privada."
+        icon={<UserRound className="h-6 w-6" aria-hidden="true" />}
+      />
 
       <ProfileForm profile={finalProfile} />
-    </div>
+    </PageShell>
   );
 }

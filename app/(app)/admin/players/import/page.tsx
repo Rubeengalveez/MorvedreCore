@@ -1,3 +1,6 @@
+import { FileSpreadsheet } from "lucide-react";
+
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { ImportPlayersPanel } from "./_components/import-players-panel";
 
 export const dynamic = "force-dynamic";
@@ -9,17 +12,13 @@ export const metadata = {
 
 export default function ImportPlayersPage() {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-1">
-        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-          Importar jugadores
-        </h1>
-        <p className="text-ink-600 text-sm">
-          Sube el Excel con el que venías trabajando. Lo importante es que respete las columnas:
-          nombre, año, dorsal, equipo, tutor.
-        </p>
-      </header>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Importar jugadores"
+        description="Sube tu Excel con las columnas de nombre, año, dorsal, equipo y tutor. Revisarás los datos antes de guardarlos."
+        icon={<FileSpreadsheet className="h-6 w-6" aria-hidden="true" />}
+      />
       <ImportPlayersPanel />
-    </div>
+    </AdminPageShell>
   );
 }

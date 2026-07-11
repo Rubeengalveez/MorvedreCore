@@ -82,9 +82,11 @@ export function EventSheet({
               ))}
             </ul>
           ) : (
-            <p className="text-ink-600 text-sm">
-              Nada en el calendario este día. Aprovéchalo para descansar.
-            </p>
+            <div className="border-ink-300 bg-paper-sunk rounded-2xl border border-dashed p-5 text-center">
+              <p className="text-ink-700 text-sm font-semibold">
+                Nada en el calendario este día. Aprovéchalo para descansar.
+              </p>
+            </div>
           )}
         </SheetBody>
       </SheetContent>
@@ -100,8 +102,7 @@ export function TrainingRow({
   isCoach: boolean;
 }) {
   return (
-    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-lg border p-5 shadow-sm transition-all hover:shadow-elev-2">
-      {/* Decorative vertical color stripe */}
+    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 shadow-sm transition-shadow motion-reduce:transition-none sm:p-5">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
@@ -109,22 +110,20 @@ export function TrainingRow({
       />
 
       <div className="flex flex-col gap-2 pl-1.5">
-        {/* Header Row */}
         <div className="flex items-center justify-between gap-2 select-none">
-          <span className="text-pool-blue text-[10px] font-black tracking-widest uppercase">
+          <span className="text-pool-blue text-xs font-black tracking-wider uppercase">
             {training.team_label}
           </span>
-          <span className="border-pool-blue/15 bg-pool-foam text-pool-deep rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+          <span className="border-pool-blue/15 bg-pool-foam text-pool-deep rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
             Entrenamiento
           </span>
         </div>
 
-        {/* Time and Title Row */}
         <div className="mt-1 flex items-baseline gap-3 select-none">
           <span className="text-pool-deep shrink-0 font-mono text-xl font-black tracking-tight">
             {formatTimeOfDay(training.scheduled_at)}
           </span>
-          <h4 className="text-ink-950 text-sm leading-tight font-extrabold">
+          <h4 className="text-ink-950 text-base leading-tight font-extrabold">
             {training.cancelled ? (
               <span className="text-ink-400 line-through">Sesión de entrenamiento</span>
             ) : (
@@ -133,24 +132,22 @@ export function TrainingRow({
           </h4>
         </div>
 
-        {/* Location & Details */}
         {training.location && (
-          <p className="text-ink-600 mt-1 flex items-center gap-1.5 text-xs font-semibold select-none">
+          <p className="text-ink-600 mt-1 flex items-center gap-1.5 text-sm font-semibold select-none">
             <MapPin className="text-ink-400 h-4 w-4 shrink-0" />
             <span>{training.location}</span>
           </p>
         )}
 
         {training.cancelled ? (
-          <div className="bg-danger/10 border-danger/20 text-danger mt-1 rounded-xl border p-3 text-xs font-bold">
+          <div className="bg-danger/10 border-danger/20 text-danger mt-1 rounded-xl border p-3 text-sm font-bold">
             Cancelado: {training.cancellation_reason || "Sin motivo especificado"}
           </div>
         ) : null}
 
-        {/* Footer */}
-        <div className="border-ink-200/40 text-ink-500 mt-2.5 flex items-center justify-between border-t pt-3 text-[10px] font-extrabold tracking-wider uppercase select-none">
-          <span>Duración: {training.duration_minutes} min</span>
-          {isCoach && <span className="text-pool-teal">Pasar lista en admin</span>}
+        <div className="border-ink-200/40 text-ink-600 mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs font-extrabold tracking-wide uppercase select-none">
+          <span>{training.duration_minutes} min</span>
+          {isCoach && <span className="text-pool-blue">Pasar lista en admin</span>}
         </div>
       </div>
     </article>
@@ -173,8 +170,7 @@ export function MatchRow({
   const href = `/matches/${match.id}` as Route;
 
   return (
-    <article className="border-ink-200/80 bg-paper-card relative flex flex-col gap-3 overflow-hidden rounded-lg border p-5 shadow-sm transition-all hover:shadow-elev-2">
-      {/* Decorative vertical team color stripe */}
+    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 shadow-sm transition-shadow motion-reduce:transition-none sm:p-5">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
@@ -182,42 +178,44 @@ export function MatchRow({
       />
 
       <div className="flex flex-col gap-3 pl-1.5">
-        {/* Header Row */}
         <div className="flex items-center justify-between gap-2 select-none">
-          <span className="text-pool-blue text-[10px] font-black tracking-widest uppercase">
+          <span className="text-pool-blue text-xs font-black tracking-wider uppercase">
             {match.team_label}
           </span>
           <div className="flex items-center gap-1.5">
-            <span className="border-ink-300 bg-paper text-ink-600 rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+            <span className="border-ink-300 bg-paper text-ink-600 rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
               {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
             </span>
             {match.status === "cancelled" ? (
-              <span className="bg-danger/10 border-danger/20 text-danger rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+              <span className="bg-danger/10 border-danger/20 text-danger rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
                 Cancelado
               </span>
             ) : match.status === "played" ? (
-              <span className="bg-success/10 border-success/20 text-success rounded-full border px-2.5 py-0.5 text-[9px] font-black tracking-wider uppercase">
+              <span className="bg-success/10 border-success/20 text-success rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
                 Jugado
               </span>
             ) : null}
           </div>
         </div>
 
-        {/* Visual Scoreboard (High hierarchy, extremely clear for kids & elderly) */}
         <div className="flex items-center justify-between gap-2 py-2 select-none">
-          {/* Team 1: Morvedre */}
           <div className="flex max-w-[40%] flex-1 items-center gap-2">
-            <Gorro className="h-6 w-6 shrink-0" accent={match.team_color} />
-            <span className="text-ink-950 truncate text-xs font-black">Morvedre</span>
+            <Gorro
+              className="h-6 w-6 shrink-0"
+              accent={match.is_home ? match.team_color : "#718096"}
+            />
+            <span className="text-ink-950 truncate text-sm font-black">
+              {match.is_home ? "Morvedre" : match.opponent}
+            </span>
           </div>
 
-          {/* Time or Score Center */}
           <div className="flex min-w-[70px] shrink-0 justify-center">
             {match.status === "played" &&
             match.final_score_us != null &&
             match.final_score_them != null ? (
               <span className="bg-pool-deep text-paper border-pool-deep rounded-lg border px-3 py-1 font-mono text-sm font-black tracking-widest shadow-sm md:text-base">
-                {match.final_score_us}-{match.final_score_them}
+                {match.is_home ? match.final_score_us : match.final_score_them}-
+                {match.is_home ? match.final_score_them : match.final_score_us}
               </span>
             ) : (
               <span className="bg-ink-100 text-pool-deep border-ink-200 rounded-lg border px-2.5 py-1 font-mono text-xs font-black md:text-sm">
@@ -226,27 +224,29 @@ export function MatchRow({
             )}
           </div>
 
-          {/* Team 2: Opponent */}
           <div className="flex max-w-[40%] flex-1 items-center justify-end gap-2 text-right">
-            <span className="text-ink-950 truncate text-xs font-black">{match.opponent}</span>
-            <Gorro className="h-6 w-6 shrink-0" accent="#A0AEC0" />
+            <span className="text-ink-950 truncate text-sm font-black">
+              {match.is_home ? match.opponent : "Morvedre"}
+            </span>
+            <Gorro
+              className="h-6 w-6 shrink-0"
+              accent={match.is_home ? "#718096" : match.team_color}
+            />
           </div>
         </div>
 
-        {/* Location Info */}
         {match.pool_name && (
-          <p className="text-ink-600 flex items-center gap-1.5 text-xs font-semibold select-none">
+          <p className="text-ink-600 flex items-center gap-1.5 text-sm font-semibold select-none">
             <MapPin className="text-ink-400 h-4 w-4 shrink-0" />
             <span className="truncate">{match.pool_name}</span>
           </p>
         )}
         {match.location && match.location !== match.pool_name && (
-          <p className="text-ink-500 truncate pl-5 text-[11px] leading-none font-semibold select-none">
+          <p className="text-ink-500 truncate pl-5 text-xs leading-none font-semibold select-none">
             {match.location}
           </p>
         )}
 
-        {/* RSVP Section (Big, Clean, Touch-Safe Buttons) */}
         {isCalled && match.callup_status && (
           <div className="border-ink-200/40 mt-1.5 border-t pt-3">
             <PremiumRsvpSection
@@ -259,13 +259,12 @@ export function MatchRow({
           </div>
         )}
 
-        {/* Action Button: View Convocatoria */}
         <div className="border-ink-200/40 mt-1 flex flex-col gap-2 border-t pt-3 select-none">
           <Button
             asChild
             size="sm"
             variant="secondary"
-            className="hover:bg-ink-100/50 flex h-10 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl text-xs font-extrabold"
+            className="hover:bg-ink-100/50 flex min-h-12 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl text-sm font-extrabold"
           >
             <Link href={href}>
               <span>Ver convocatoria completa</span>
@@ -277,7 +276,7 @@ export function MatchRow({
               asChild
               size="sm"
               variant="ghost"
-              className="text-ink-600 hover:text-pool-deep h-8 w-full cursor-pointer text-[10px] font-extrabold"
+              className="text-ink-600 hover:text-pool-deep min-h-11 w-full cursor-pointer text-sm font-extrabold"
             >
               <Link href={`/admin/matches/${match.id}` as Route}>
                 Editar convocatoria (Entrenador)
@@ -325,21 +324,20 @@ function PremiumRsvpSection({
 
   return (
     <div className="flex flex-col gap-2 select-none">
-      <span className="text-ink-500 text-[9px] font-black tracking-widest uppercase">
+      <span className="text-ink-600 text-xs font-black tracking-wider uppercase">
         ¿Confirmas tu asistencia?
       </span>
 
       <div className="flex gap-2.5">
-        {/* Green Button: Confirm */}
         <button
           type="button"
           disabled={pending}
           onClick={() => send("confirmed")}
           className={cn(
-            "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border text-xs font-extrabold transition-all active:scale-[0.97]",
+            "focus-visible:ring-pool-blue flex min-h-12 flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border text-sm font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
             isConfirmed
-              ? "text-paper border-emerald-600 bg-emerald-600 shadow-sm"
-              : "bg-paper border-emerald-500/25 text-emerald-700 hover:bg-emerald-50/50",
+              ? "bg-success text-paper border-success shadow-sm"
+              : "bg-paper border-success/25 text-success hover:bg-success/10",
           )}
         >
           {pending ? (
@@ -350,16 +348,15 @@ function PremiumRsvpSection({
           <span>{isConfirmed ? "Asistiré" : "Confirmar"}</span>
         </button>
 
-        {/* Red Button: Decline */}
         <button
           type="button"
           disabled={pending}
           onClick={() => send("declined")}
           className={cn(
-            "flex h-11 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-xl border text-xs font-extrabold transition-all active:scale-[0.97]",
+            "focus-visible:ring-pool-blue flex min-h-12 flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border text-sm font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
             isDeclined
-              ? "text-paper border-red-600 bg-red-600 shadow-sm"
-              : "bg-paper border-red-500/25 text-red-600 hover:bg-red-50/50",
+              ? "bg-danger text-paper border-danger shadow-sm"
+              : "bg-paper border-danger/25 text-danger hover:bg-danger/10",
           )}
         >
           {pending ? (
@@ -371,7 +368,11 @@ function PremiumRsvpSection({
         </button>
       </div>
 
-      {error ? <p className="text-danger mt-0.5 text-[10px] font-semibold">{error}</p> : null}
+      {error ? (
+        <p className="text-danger mt-0.5 text-sm font-semibold" role="alert">
+          {error}
+        </p>
+      ) : null}
       <p className="sr-only">Convocatoria para el jugador {playerId}</p>
     </div>
   );

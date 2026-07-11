@@ -76,7 +76,7 @@ export function CalendarEventChip({
     <span
       className={cn(
         "text-paper inline-flex items-center gap-1 rounded-sm px-1.5 leading-none font-semibold",
-        size === "sm" ? "h-4 text-[10px]" : "h-5 text-[11px]",
+        size === "sm" ? "min-h-5 text-xs" : "min-h-6 text-xs",
         event.cancelled && "line-through opacity-50",
         className,
       )}
@@ -173,7 +173,7 @@ function EventBody({
             >
               {event.title}
             </p>
-            {event.subtitle ? <p className="text-ink-600 text-[11px]">{event.subtitle}</p> : null}
+            {event.subtitle ? <p className="text-ink-600 text-xs">{event.subtitle}</p> : null}
           </div>
         </div>
       </div>
@@ -201,7 +201,7 @@ function EventBody({
           </div>
         </div>
       ) : null}
-      <div className="border-ink-300 text-ink-600 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-[11px]">
+      <div className="border-ink-300 text-ink-600 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-xs">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {timeStr}
@@ -251,7 +251,7 @@ export function CalendarEventCard({
   const isCancelled = !!event.cancelled || event.status === "cancelled";
   const isPostponed = event.status === "postponed";
   const baseClass = cn(
-    "group flex flex-col gap-2 rounded-md border bg-paper-card p-3 transition-colors shadow-elev-1",
+    "group flex flex-col gap-2 rounded-2xl border bg-paper-card p-3 shadow-elev-1 transition-[border-color,box-shadow] motion-reduce:transition-none",
     isPast && !isCancelled && !isPostponed && "border-ink-300 opacity-80",
     isCancelled && "border-danger/30 bg-danger/5",
     isPostponed && "border-ink-300 bg-paper/50",
@@ -302,7 +302,7 @@ export function CalendarEmptyState({
       {cta ? (
         <Link
           href={cta.href as Route}
-          className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-9 items-center gap-1.5 rounded-md px-3 text-xs font-bold transition-colors"
+          className="bg-pool-deep text-paper hover:bg-ink-900 focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-1.5 rounded-xl px-4 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           {cta.label}
         </Link>

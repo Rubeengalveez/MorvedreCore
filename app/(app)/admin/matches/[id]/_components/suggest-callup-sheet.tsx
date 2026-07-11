@@ -192,22 +192,22 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
                     {s.full_name}
                   </span>
                   <div className="text-ink-600 mt-0.5 flex flex-wrap items-center gap-1.5 text-xs">
-                    <span className="border-ink-300 inline-flex h-5 items-center rounded-full border px-1.5 text-[10px] font-semibold">
+                    <span className="border-ink-300 inline-flex min-h-6 items-center rounded-full border px-2 text-xs font-semibold">
                       {CATEGORY_LABELS[s.category_code as CategoryCode] ?? s.category_code}
                     </span>
                     {s.is_ascending ? (
-                      <span className="bg-pool-foam text-pool-deep inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+                      <span className="bg-pool-foam text-pool-deep inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-semibold">
                         <MdNorthEast className="h-3.5 w-3.5" aria-hidden="true" />
                         Asciende
                       </span>
                     ) : null}
                     {s.is_substitute ? (
-                      <span className="bg-ink-300/40 text-ink-600 inline-flex h-5 items-center rounded-full px-1.5 text-[10px] font-semibold">
+                      <span className="bg-ink-300/40 text-ink-600 inline-flex min-h-6 items-center rounded-full px-2 text-xs font-semibold">
                         Suplente
                       </span>
                     ) : null}
                     {s.has_conflict ? (
-                      <span className="bg-danger/15 text-danger inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+                      <span className="bg-danger/15 text-danger inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-semibold">
                         <MdWarning className="h-3.5 w-3.5" aria-hidden="true" />
                         No disponible
                       </span>
@@ -219,7 +219,7 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
                 <div className="flex items-center gap-1.5">
                   <label
                     htmlFor={`dorsal-${s.player_id}`}
-                    className="text-ink-600 text-[11px] font-bold whitespace-nowrap uppercase"
+                    className="text-ink-600 text-xs font-bold whitespace-nowrap uppercase"
                   >
                     Dorsal
                   </label>

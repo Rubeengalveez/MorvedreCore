@@ -53,7 +53,7 @@ export function ProfileSwitcherInline({
         isPending && "opacity-75",
       )}
     >
-      <span className="text-ink-600 text-[10px] leading-none font-extrabold tracking-wider uppercase">
+      <span className="text-ink-600 text-xs leading-none font-extrabold tracking-wider uppercase">
         Perfiles vinculados
       </span>
       <div className="mt-1 flex flex-wrap gap-2.5">
@@ -67,7 +67,7 @@ export function ProfileSwitcherInline({
               onClick={() => handleSelect(profile.id)}
               disabled={isPending}
               className={cn(
-                "focus-visible:ring-pool-blue inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold transition-all focus-visible:ring-2 focus-visible:outline-none",
+                "focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold transition-[background-color,border-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
                 isActive
                   ? "bg-pool-deep text-paper shadow-sm"
                   : "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",

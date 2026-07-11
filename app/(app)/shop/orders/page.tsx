@@ -1,41 +1,18 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft, ShoppingCart, Package } from "lucide-react";
+import { ArrowLeft, ChevronRight, PackageOpen, ReceiptText } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopOrdersForPlayer } from "@/server/queries/shop";
 import { SHOP_ORDER_STATUS_LABELS, formatCents } from "@/lib/domain/shop";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { Eyebrow } from "@/components/ui/eyebrow";
+import { PageShell } from "@/components/ui/page-shell";
 import { formatRelativeIso } from "@/lib/domain/calendar";
+import { cn } from "@/lib/utils/cn";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-export const metadata = {
-  title: "Mis pedidos — Morvedre Core",
-};
-
-const STATUS_COLOR: Record<string, string> = {
-  pending_parent: "var(--warning)",
-  pending_admin: "var(--pool-blue)",
-  rejected: "var(--goggle-red)",
-  ordered: "var(--pool-teal)",
-  received: "var(--pool-blue)",
-  delivered: "var(--success)",
-  cancelled: "var(--ink-500)",
-};
-
-const STATUS_EMOJI: Record<string, string> = {
-  pending_parent: "🟡",
-  pending_admin: "🟢",
-  rejected: "❌",
-  ordered: "📦",
-  received: "📥",
-  delivered: "✅",
-  cancelled: "🚫",
-};
+export const metadata = { title: "Mis pedidos — Morvedre Core" };
 
 export default async function MyOrdersPage() {
   const ctx = await getActiveProfileContext();
@@ -43,70 +20,87 @@ export default async function MyOrdersPage() {
   const orders = await getShopOrdersForPlayer(ctx.activeProfile.id);
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
-        <Link
-          href={"/shop" as Route}
-          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Tienda
-        </Link>
-        <header className="flex items-center gap-2">
-          <ShoppingCart className="text-pool-deep h-6 w-6" aria-hidden="true" />
-          <div>
-            <Eyebrow>Mis pedidos</Eyebrow>
-            <h1 className="font-display text-pool-deep text-2xl font-extrabold">
-              Solicitudes de compra
-            </h1>
-          </div>
-        </header>
+    <PageShell width="md" className="gap-5 pb-8">
+      <Link
+        href={"/shop" as Route}
+        className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Volver a la tienda
+      </Link>
+      <header className="bg-pool-deep text-paper shadow-elev-3 flex items-start justify-between gap-4 rounded-[1.75rem] px-5 py-6 sm:px-7">
+        <div>
+          <p className="text-paper/65 text-xs font-extrabold tracking-[0.14em] uppercase">
+            Seguimiento
+          </p>
+          <h1 className="font-display mt-2 text-3xl font-extrabold tracking-tight">Mis pedidos</h1>
+          <p className="text-paper/75 mt-2 text-base">Consulta el estado de tus solicitudes.</p>
+        </div>
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
+          <ReceiptText className="h-6 w-6" aria-hidden="true" />
+        </span>
+      </header>
 
-        {orders.length === 0 ? (
-          <div className="border-ink-300 bg-paper-card rounded-md border border-dashed p-6 text-center">
-            <Package className="text-ink-300 mx-auto h-8 w-8" aria-hidden="true" />
-            <p className="text-ink-600 mt-2 text-sm">Aún no has hecho ninguna solicitud.</p>
-          </div>
-        ) : (
-          <ul className="flex flex-col gap-2.5">
-            {orders.map((o) => (
-              <li key={o.id}>
-                <Link
-                  href={`/shop/orders/${o.id}` as Route}
-                  className="border-ink-300 bg-paper-card shadow-elev-1 hover:shadow-elev-2 block rounded-md border p-3 transition-shadow"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-eyebrow text-ink-600">
-                      {formatRelative(o.requested_at)}
-                    </span>
-                    <span
-                      className="inline-flex h-5 items-center gap-1 rounded-full px-2 text-[10px] font-extrabold tracking-wider uppercase"
-                      style={{
-                        backgroundColor: STATUS_COLOR[o.status] + "20",
-                        color: STATUS_COLOR[o.status],
-                      }}
-                    >
-                      <span aria-hidden="true">{STATUS_EMOJI[o.status]}</span>
-                      {SHOP_ORDER_STATUS_LABELS[o.status]}
+      {orders.length === 0 ? (
+        <div className="border-ink-200 bg-paper-card flex min-h-64 flex-col items-center justify-center rounded-[1.75rem] border border-dashed px-6 text-center">
+          <PackageOpen className="text-ink-400 h-9 w-9" aria-hidden="true" />
+          <h2 className="font-display text-pool-deep mt-4 text-xl font-extrabold">
+            Todavía no hay pedidos
+          </h2>
+          <p className="text-ink-500 mt-2 text-base">Tus solicitudes aparecerán aquí.</p>
+        </div>
+      ) : (
+        <ul className="border-ink-200 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-2xl border shadow-sm">
+          {orders.map((order) => (
+            <li key={order.id}>
+              <Link
+                href={`/shop/orders/${order.id}` as Route}
+                className="group hover:bg-pool-foam/35 focus-visible:ring-pool-blue flex min-h-28 touch-manipulation items-center gap-4 px-4 py-4 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+              >
+                <span className="bg-pool-foam text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
+                  <ReceiptText className="h-6 w-6" aria-hidden="true" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <StatusBadge status={order.status} />
+                    <span className="text-ink-500 text-xs">
+                      {formatRelativeIso(order.requested_at)}
                     </span>
                   </div>
-                  <p className="text-pool-deep mt-1 font-mono text-xl font-extrabold">
-                    {formatCents(o.total_cents, o.currency)}
+                  <p className="text-pool-deep mt-2 font-mono text-xl font-extrabold tabular-nums">
+                    {formatCents(order.total_cents, order.currency)}
                   </p>
-                  <p className="text-ink-600 text-[11px]">
-                    {o.items.length} producto{o.items.length === 1 ? "" : "s"}
+                  <p className="text-ink-500 mt-0.5 text-sm">
+                    {order.items.length} {order.items.length === 1 ? "producto" : "productos"}
                   </p>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
+                </div>
+                <ChevronRight
+                  className="text-ink-400 group-hover:text-pool-blue h-5 w-5 shrink-0"
+                  aria-hidden="true"
+                />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </PageShell>
   );
 }
 
-function formatRelative(iso: string): string {
-  return formatRelativeIso(iso);
+function StatusBadge({ status }: { status: keyof typeof SHOP_ORDER_STATUS_LABELS }) {
+  return (
+    <span
+      className={cn(
+        "rounded-full px-2.5 py-1 text-[11px] font-extrabold tracking-wide uppercase",
+        status === "delivered" && "bg-success/10 text-success",
+        status === "rejected" || status === "cancelled"
+          ? "bg-goggle-red/10 text-goggle-red"
+          : status !== "delivered"
+            ? "bg-pool-foam text-pool-blue"
+            : "",
+      )}
+    >
+      {SHOP_ORDER_STATUS_LABELS[status]}
+    </span>
+  );
 }

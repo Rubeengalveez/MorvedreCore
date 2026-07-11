@@ -74,7 +74,7 @@ export function Pagination({
                   aria-current={item === page ? "page" : undefined}
                   aria-label={`Página ${item}`}
                   className={cn(
-                    "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex h-10 min-w-10 items-center justify-center rounded-md border px-2 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+                    "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-12 min-w-12 touch-manipulation items-center justify-center rounded-xl border px-2 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
                     item === page
                       ? "border-pool-deep bg-pool-deep text-paper"
                       : "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam",
@@ -108,7 +108,7 @@ function PaginationButton({
   children: React.ReactNode;
 }) {
   const className = cn(
-    "inline-flex h-10 items-center gap-1 rounded-md border px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:ring-offset-2 focus-visible:ring-offset-paper",
+    "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-12 touch-manipulation items-center gap-1 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
     href
       ? "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam"
       : "pointer-events-none border-ink-200 bg-paper-sunk text-ink-400",

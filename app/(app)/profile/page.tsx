@@ -7,7 +7,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { CapTile } from "@/components/ui/cap-tile";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
-import { LanePattern } from "@/components/ui/lane-pattern";
+import { PageShell } from "@/components/ui/page-shell";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { Equipo, Gorro, Porteria, SilbatoActivo, Trofeo } from "@/components/brand/pictograms";
 import { ProfileSwitcherInline } from "@/components/profile/profile-switcher-inline";
@@ -289,220 +289,208 @@ export default async function ProfilePage() {
   const showStatsGrid = playerStats.matches_played > 0 || playerStats.trainings_total > 0;
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0" strong />
-      <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
-        {linkedProfiles.length > 0 ? (
-          <ProfileSwitcherInline
-            ownProfile={ownProfile}
-            activeProfile={activeProfile}
-            linkedProfiles={linkedProfiles}
-          />
-        ) : null}
-
-        {/* Hero compacto: avatar + nombre + badges en una sola línea horizontal */}
-        <header
-          className="border-ink-200 bg-paper-card overflow-hidden rounded-md border"
-          style={{ borderTopWidth: "3px", borderTopColor: teamColor }}
-        >
-          <div className="flex items-center gap-3 p-3">
-            <Avatar
-              name={activeProfile.full_name}
-              src={activeProfile.photo_url}
-              size={56}
-              teamColor={teamColor}
-            />
-            <div className="min-w-0 flex-1">
-              <h1 className="font-display text-pool-deep truncate text-lg leading-tight font-extrabold tracking-tight">
-                {activeProfile.full_name}
-              </h1>
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                {primaryRole ? (
-                  <span className="bg-pool-deep tracking-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-1.5 text-[10px] font-bold uppercase">
-                    {ROLE_LABELS[primaryRole]}
-                  </span>
-                ) : null}
-                {categoryLabel ? (
-                  <span className="border-ink-200 tracking-eyebrow text-ink-700 inline-flex h-5 items-center rounded-sm border px-1.5 text-[10px] font-bold uppercase">
-                    {CATEGORY_LABELS[categoryLabel as CategoryCode]}
-                  </span>
-                ) : null}
-                {activeProfile.cap_number != null ? (
-                  <CapTile number={activeProfile.cap_number} teamColor={teamColor} size="sm" />
-                ) : null}
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* Stats grid 4 columnas */}
-        {showStatsGrid ? (
-          <section
-            aria-label="Estadísticas de la temporada"
-            className="border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-2 gap-1 overflow-hidden rounded-md border sm:grid-cols-4"
-          >
-            {stats.map((s, i) => (
-              <div
-                key={s.label}
-                className={`flex flex-col items-center gap-0.5 px-1 py-3 ${
-                  i < stats.length - 1 ? "border-ink-200 border-r" : ""
-                }`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="inline-block h-1 w-6 rounded-full"
-                  style={{ backgroundColor: s.color }}
-                />
-                <p className="text-pool-deep font-mono text-xl leading-none font-extrabold tabular-nums">
-                  {s.value}
-                </p>
-                <p className="tracking-eyebrow text-ink-600 text-[10px] font-bold uppercase">
-                  {s.label}
-                </p>
-              </div>
-            ))}
-          </section>
-        ) : null}
-
-        {/* Mi posición en rankings (si es player) */}
-        {isPlayer && seasonId ? (
-          <PlayerRankingSummary
-            profileId={activeProfile.id}
-            seasonId={seasonId}
-            birthYear={activeProfile.birth_year}
-          />
-        ) : null}
-
-        {/* Tu equipo (link) */}
-        {primaryTeam ? (
-          <Link
-            href={`/team/${primaryTeam.id}` as Route}
-            className="border-ink-300 bg-paper-card shadow-elev-1 hover:bg-pool-foam flex items-center justify-between rounded-md border p-3 transition-colors"
-          >
-            <div className="flex items-center gap-3">
-              <PictogramBadge pictogram={Equipo} color={primaryTeam.color} size="md" />
-              <div>
-                <Eyebrow>Tu equipo</Eyebrow>
-                <p className="font-display text-pool-deep text-base font-extrabold">
-                  {primaryTeam.label}
-                </p>
-              </div>
-            </div>
-            <ChevronRight className="text-ink-600 h-5 w-5" />
-          </Link>
-        ) : null}
-
-        {/* Mis equipos esta semana (si es coach) */}
-        {isCoach && coachUpcoming.length > 0 ? (
-          <section
-            aria-labelledby="coach-week-heading"
-            className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3"
-          >
-            <div className="flex items-center gap-2">
-              <PictogramBadge pictogram={SilbatoActivo} color="var(--pool-teal)" size="sm" />
-              <h2
-                id="coach-week-heading"
-                className="font-display text-pool-deep text-sm font-extrabold"
-              >
-                Mis equipos esta semana
-              </h2>
-            </div>
-            <ul className="flex flex-col gap-1.5">
-              {coachUpcoming.slice(0, 3).map((m) => (
-                <li key={m.id}>
-                  <Link
-                    href={`/matches/${m.id}` as Route}
-                    className="hover:bg-pool-foam flex items-center gap-2.5 rounded-md border-2 p-2 transition-colors"
-                    style={{
-                      borderColor: m.team_color,
-                      backgroundColor: `color-mix(in oklab, ${m.team_color} 5%, var(--paper))`,
-                    }}
-                  >
-                    <PictogramBadge pictogram={Gorro} color={m.team_color} size="sm" />
-                    <div className="min-w-0 flex-1">
-                      <Eyebrow style={{ color: m.team_color }}>{m.team_label}</Eyebrow>
-                      <p className="font-display text-pool-deep line-clamp-1 text-sm font-extrabold">
-                        vs {m.opponent}
-                      </p>
-                    </div>
-                    <span className="tracking-eyebrow text-ink-600 shrink-0 text-[10px] font-bold uppercase">
-                      {new Date(m.scheduled_at).toLocaleDateString("es-ES", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                      })}
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {/* Disponibilidad (1 sola sección) */}
-        <section
-          aria-labelledby="availability-heading"
-          className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-3"
-        >
-          <div className="mb-3 flex flex-col gap-1">
-            <h2
-              id="availability-heading"
-              className="font-display text-pool-deep text-base font-extrabold"
-            >
-              Disponibilidad
-            </h2>
-            <p className="text-ink-600 text-xs">
-              Toca un día para marcar si no podrás asistir. Tu entrenador lo verá al preparar la
-              convocatoria.
-            </p>
-          </div>
-          <AvailabilityCalendar
-            initialAvailability={availability}
-            todayIso={today}
-            upcomingMatches={upcomingMatches}
-            upcomingSessions={upcomingSessions}
-          />
-        </section>
-
-        <CalendarSyncCard
-          token={activeProfile.calendar_token}
-          baseUrl={process.env.NEXT_PUBLIC_APP_URL || ""}
+    <PageShell width="md" className="gap-5 pb-8">
+      {linkedProfiles.length > 0 ? (
+        <ProfileSwitcherInline
+          ownProfile={ownProfile}
+          activeProfile={activeProfile}
+          linkedProfiles={linkedProfiles}
         />
+      ) : null}
 
-        {/* Botones de cuenta al final */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
-          <Link
-            href={"/profile/edit" as Route}
-            className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-11 items-center justify-center gap-1.5 rounded-md text-sm font-bold transition-colors"
-          >
-            <User className="h-4 w-4" aria-hidden="true" />
-            Editar perfil
-          </Link>
-          <Link
-            href={"/change-password" as Route}
-            className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam inline-flex h-11 items-center justify-center gap-1.5 rounded-md border text-sm font-bold transition-colors"
-          >
-            Contraseña
-          </Link>
-          {isAdmin ? (
-            <Link
-              href={"/admin" as Route}
-              className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam col-span-2 inline-flex h-11 items-center justify-center gap-1.5 rounded-md border text-sm font-bold transition-colors"
-            >
-              <PictogramBadge pictogram={Porteria} color="var(--pool-deep)" size="sm" />
-              Panel de administración
-            </Link>
-          ) : null}
+      <header className="bg-pool-deep text-paper shadow-elev-3 relative overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7">
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 right-0 w-2/5 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08))]"
+        />
+        <div className="relative flex items-center gap-4">
+          <Avatar
+            name={activeProfile.full_name}
+            src={activeProfile.photo_url}
+            size={56}
+            teamColor={teamColor}
+            className="ring-2 ring-white/60"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="text-paper/65 text-xs font-extrabold tracking-[0.14em] uppercase">
+              Tu perfil
+            </p>
+            <h1 className="font-display text-paper mt-1 truncate text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
+              {activeProfile.full_name}
+            </h1>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {primaryRole ? (
+                <span className="text-paper inline-flex min-h-7 items-center rounded-full border border-white/15 bg-white/10 px-2.5 text-xs font-extrabold uppercase">
+                  {ROLE_LABELS[primaryRole]}
+                </span>
+              ) : null}
+              {categoryLabel ? (
+                <span className="text-paper inline-flex min-h-7 items-center rounded-full border border-white/15 bg-white/10 px-2.5 text-xs font-extrabold uppercase">
+                  {CATEGORY_LABELS[categoryLabel as CategoryCode]}
+                </span>
+              ) : null}
+              {activeProfile.cap_number != null ? (
+                <CapTile number={activeProfile.cap_number} teamColor={teamColor} size="sm" />
+              ) : null}
+            </div>
+          </div>
         </div>
+      </header>
 
-        <form action={signOut} className="pt-1">
-          <Button type="submit" variant="secondary" size="md" className="w-full">
-            <LogOut className="mr-2 h-4 w-4" />
-            Cerrar sesión
-          </Button>
-        </form>
+      {showStatsGrid ? (
+        <section
+          aria-label="Estadísticas de la temporada"
+          className="border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-2 overflow-hidden rounded-2xl border sm:grid-cols-4"
+        >
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className={`flex flex-col items-center gap-1 px-2 py-4 ${
+                i < stats.length - 1 ? "border-ink-200 border-r" : ""
+              }`}
+            >
+              <p className="text-pool-deep font-mono text-xl leading-none font-extrabold tabular-nums">
+                {s.value}
+              </p>
+              <p className="text-ink-600 text-xs font-bold uppercase">{s.label}</p>
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {isPlayer && seasonId ? (
+        <PlayerRankingSummary
+          profileId={activeProfile.id}
+          seasonId={seasonId}
+          birthYear={activeProfile.birth_year}
+        />
+      ) : null}
+
+      {primaryTeam ? (
+        <Link
+          href={`/team/${primaryTeam.id}` as Route}
+          className="border-ink-200 bg-paper-card shadow-elev-1 hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-20 touch-manipulation items-center justify-between rounded-2xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <div className="flex items-center gap-3">
+            <PictogramBadge pictogram={Equipo} color={primaryTeam.color} size="md" />
+            <div>
+              <Eyebrow>Tu equipo</Eyebrow>
+              <p className="font-display text-pool-deep text-base font-extrabold">
+                {primaryTeam.label}
+              </p>
+            </div>
+          </div>
+          <ChevronRight className="text-ink-600 h-5 w-5" />
+        </Link>
+      ) : null}
+
+      {isCoach && coachUpcoming.length > 0 ? (
+        <section
+          aria-labelledby="coach-week-heading"
+          className="border-ink-200 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-4"
+        >
+          <div className="flex items-center gap-2">
+            <PictogramBadge pictogram={SilbatoActivo} color="var(--pool-teal)" size="sm" />
+            <h2
+              id="coach-week-heading"
+              className="font-display text-pool-deep text-sm font-extrabold"
+            >
+              Mis equipos esta semana
+            </h2>
+          </div>
+          <ul className="flex flex-col gap-1.5">
+            {coachUpcoming.slice(0, 3).map((m) => (
+              <li key={m.id}>
+                <Link
+                  href={`/matches/${m.id}` as Route}
+                  className="hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-16 items-center gap-2.5 rounded-xl border p-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                  style={{
+                    borderColor: m.team_color,
+                    backgroundColor: `color-mix(in oklab, ${m.team_color} 5%, var(--paper))`,
+                  }}
+                >
+                  <PictogramBadge pictogram={Gorro} color={m.team_color} size="sm" />
+                  <div className="min-w-0 flex-1">
+                    <Eyebrow style={{ color: m.team_color }}>{m.team_label}</Eyebrow>
+                    <p className="font-display text-pool-deep line-clamp-1 text-sm font-extrabold">
+                      vs {m.opponent}
+                    </p>
+                  </div>
+                  <span className="text-ink-600 shrink-0 text-xs font-bold uppercase">
+                    {new Date(m.scheduled_at).toLocaleDateString("es-ES", {
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      <section
+        aria-labelledby="availability-heading"
+        className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4 sm:p-5"
+      >
+        <div className="mb-3 flex flex-col gap-1">
+          <h2
+            id="availability-heading"
+            className="font-display text-pool-deep text-base font-extrabold"
+          >
+            Disponibilidad
+          </h2>
+          <p className="text-ink-600 text-sm leading-relaxed">
+            Toca un día para marcar si no podrás asistir. Tu entrenador lo verá al preparar la
+            convocatoria.
+          </p>
+        </div>
+        <AvailabilityCalendar
+          initialAvailability={availability}
+          todayIso={today}
+          upcomingMatches={upcomingMatches}
+          upcomingSessions={upcomingSessions}
+        />
+      </section>
+
+      <CalendarSyncCard
+        token={activeProfile.calendar_token}
+        baseUrl={process.env.NEXT_PUBLIC_APP_URL || ""}
+      />
+
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <Link
+          href={"/profile/edit" as Route}
+          className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <User className="h-4 w-4" aria-hidden="true" />
+          Editar perfil
+        </Link>
+        <Link
+          href={"/change-password" as Route}
+          className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          Contraseña
+        </Link>
+        {isAdmin ? (
+          <Link
+            href={"/admin" as Route}
+            className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam focus-visible:ring-pool-blue col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <PictogramBadge pictogram={Porteria} color="var(--pool-deep)" size="sm" />
+            Panel de administración
+          </Link>
+        ) : null}
       </div>
-    </div>
+
+      <form action={signOut} className="pt-1">
+        <Button type="submit" variant="secondary" size="md" className="w-full">
+          <LogOut className="mr-2 h-4 w-4" />
+          Cerrar sesión
+        </Button>
+      </form>
+    </PageShell>
   );
 }
 
@@ -606,7 +594,7 @@ function RankingMiniCard({
 }) {
   return (
     <div className="border-ink-300 bg-pool-foam/40 flex flex-col items-center gap-0.5 rounded-md border p-2">
-      <p className="tracking-eyebrow text-ink-600 text-[10px] font-bold uppercase">{label}</p>
+      <p className="tracking-eyebrow text-ink-600 text-xs font-bold uppercase">{label}</p>
       <span
         className="text-paper inline-flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 font-mono text-base leading-none font-extrabold tabular-nums"
         style={{ backgroundColor: accent }}
@@ -617,7 +605,7 @@ function RankingMiniCard({
         {value}
         {suffix}
       </p>
-      <p className="tracking-eyebrow text-ink-500 text-[10px] uppercase">de {totalPlayers}</p>
+      <p className="tracking-eyebrow text-ink-500 text-xs uppercase">de {totalPlayers}</p>
     </div>
   );
 }
@@ -643,11 +631,11 @@ function RankingRelativeCard({
         : `A ${attendanceDelta} del 1º en asist.`;
   return (
     <div className="border-ink-300 bg-pool-foam/40 flex flex-col items-center gap-0.5 rounded-md border p-2">
-      <p className="tracking-eyebrow text-ink-600 text-[10px] font-bold uppercase">Reta al líder</p>
+      <p className="tracking-eyebrow text-ink-600 text-xs font-bold uppercase">Reta al líder</p>
       <p className="font-display text-pool-deep text-center text-xs leading-tight font-extrabold">
         {goalTxt}
       </p>
-      {attTxt ? <p className="text-ink-600 text-center text-[10px] font-medium">{attTxt}</p> : null}
+      {attTxt ? <p className="text-ink-600 text-center text-xs font-medium">{attTxt}</p> : null}
     </div>
   );
 }

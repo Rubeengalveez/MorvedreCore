@@ -13,6 +13,9 @@ export interface ShopProduct {
   available: boolean;
   stock: number | null;
   max_per_order: number;
+  personalization_enabled: boolean;
+  personalization_label: string;
+  personalization_max_length: number;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -35,6 +38,7 @@ export interface ShopOrderItem {
   order_id: string;
   product_id: string;
   size: string | null;
+  personalization: string | null;
   quantity: number;
   unit_price_cents: number;
   subtotal_cents: number;
@@ -68,12 +72,13 @@ export interface ShopOrder {
 }
 
 const PRODUCT_FIELDS =
-  "id, title, description, category, price_cents, currency, image_url, sizes, available, stock, max_per_order, created_by, created_at, updated_at";
+  "id, title, description, category, price_cents, currency, image_url, sizes, available, stock, max_per_order, personalization_enabled, personalization_label, personalization_max_length, created_by, created_at, updated_at";
 
 const ORDER_FIELDS =
   "id, requested_by, approved_by, managed_by, status, total_cents, currency, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";
 
-const ITEM_FIELDS = "id, order_id, product_id, size, quantity, unit_price_cents, subtotal_cents";
+const ITEM_FIELDS =
+  "id, order_id, product_id, size, personalization, quantity, unit_price_cents, subtotal_cents";
 
 export async function getShopProducts(filter?: {
   category?: string;
@@ -326,6 +331,7 @@ async function hydrateOrderItems(
       order_id: string;
       product_id: string;
       size: string | null;
+      personalization: string | null;
       quantity: number;
       unit_price_cents: number;
       subtotal_cents: number;
@@ -337,6 +343,7 @@ async function hydrateOrderItems(
       order_id: i.order_id,
       product_id: i.product_id,
       size: i.size,
+      personalization: i.personalization,
       quantity: i.quantity,
       unit_price_cents: i.unit_price_cents,
       subtotal_cents: i.subtotal_cents,

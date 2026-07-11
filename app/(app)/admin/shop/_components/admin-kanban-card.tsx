@@ -88,7 +88,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
         >
           {order.id.slice(0, 8)}
         </Link>
-        <span className="text-ink-500 text-[10px]">
+        <span className="text-ink-500 text-xs">
           {new Date(order.requested_at).toLocaleDateString("es-ES", {
             day: "numeric",
             month: "short",
@@ -98,7 +98,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
       <p className="text-pool-deep line-clamp-1 text-xs font-extrabold">
         {order.requested_by_name ?? "Jugador"}
       </p>
-      <ul className="text-ink-600 text-[10px]">
+      <ul className="text-ink-600 text-xs">
         {order.items.slice(0, 2).map((i) => (
           <li key={i.id} className="line-clamp-1">
             · {i.quantity} × {i.product_title ?? "?"}
@@ -114,7 +114,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
       {error ? (
         <div
           role="alert"
-          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red rounded border px-1.5 py-0.5 text-[10px]"
+          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red rounded border px-1.5 py-0.5 text-xs"
         >
           {error}
         </div>

@@ -210,7 +210,7 @@ function StreakControls({
               href={`${baseHref}&streak_type=${t.id}`}
               data-streak-type={t.id}
               className={cn(
-                "touch-target inline-flex h-10 shrink-0 items-center rounded-md px-3 text-sm font-extrabold transition-all",
+                "touch-target inline-flex min-h-12 shrink-0 items-center rounded-xl px-3 text-sm font-extrabold transition-[background-color,color,box-shadow] motion-reduce:transition-none",
                 isActive
                   ? "bg-pool-deep text-paper shadow-elev-1"
                   : "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam border",
@@ -227,7 +227,7 @@ function StreakControls({
           href={`${baseHref}&streak_order=current`}
           data-streak-order="current"
           className={cn(
-            "inline-flex h-9 items-center justify-center rounded-sm text-sm font-extrabold transition-all",
+            "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
             activeStreakOrder === "current"
               ? "bg-action text-paper shadow-elev-1"
               : "text-pool-deep",
@@ -239,7 +239,7 @@ function StreakControls({
           href={`${baseHref}&streak_order=best`}
           data-streak-order="best"
           className={cn(
-            "inline-flex h-9 items-center justify-center rounded-sm text-sm font-extrabold transition-all",
+            "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
             activeStreakOrder === "best" ? "bg-action text-paper shadow-elev-1" : "text-pool-deep",
           )}
         >

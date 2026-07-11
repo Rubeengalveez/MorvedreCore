@@ -2,22 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import {
-  ChevronLeft,
-  MapPin,
-  Clock,
-  Trophy,
-  Award,
-  FileText,
-  UserCheck,
-  CarFront,
-} from "lucide-react";
+import { ChevronLeft, Award, FileText, UserCheck, CarFront } from "lucide-react";
 
-import { Balon, Porteria } from "@/components/brand/pictograms";
 import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageShell } from "@/components/ui/page-shell";
 import { formatLongDate } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
@@ -25,7 +17,6 @@ import {
   getMatchMvp,
   isProfileCoachOfMatch,
   type CallupDetail,
-  type MatchDetail,
   type MatchScorer,
 } from "@/server/queries/matches";
 import { createClient } from "@/lib/supabase/server";
@@ -135,12 +126,12 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const isPlayed = match.status === "played";
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl animate-[fadeIn_0.15s_ease-out] flex-col gap-0">
+    <PageShell width="md" className="gap-4 pb-8">
       {/* Back button */}
-      <div className="bg-paper/95 sticky top-[var(--top-bar-height)] z-10 flex items-center px-4 py-2.5 backdrop-blur select-none">
+      <div className="flex items-center select-none">
         <Link
           href={"/calendar" as Route}
-          className="text-pool-blue hover:text-pool-deep inline-flex items-center gap-1 text-sm font-bold transition-colors active:scale-95"
+          className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95"
         >
           <ChevronLeft className="h-5 w-5" />
           <span>Calendario</span>
@@ -148,7 +139,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* ─── HERO SCOREBOARD ─── */}
-      <div className="flex flex-col gap-4 px-4 pt-4 pb-5">
+      <div className="flex flex-col gap-4">
         <PoolScoreboard
           mode={hasScore ? "final" : "preview"}
           homeTeam={{
@@ -165,11 +156,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
           isHome={match.is_home}
           location={match.pool_name}
-          mvp={
-            isPlayed && mvp
-              ? { name: mvp.full_name, cap: mvp.cap_number ?? null }
-              : null
-          }
+          mvp={isPlayed && mvp ? { name: mvp.full_name, cap: mvp.cap_number ?? null } : null}
         />
         <p className="text-ink-600 text-center text-sm font-medium">
           {formatLongDate(match.scheduled_at)}
@@ -177,9 +164,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       </div>
 
       {/* ─── CONTENT ─── */}
-      <div className="flex flex-col gap-5 px-4 pt-2 pb-6">
+      <div className="flex flex-col gap-5">
         {!match.is_home && match.logistics_enabled && !isPlayed ? (
-          <section className="bg-paper-card border-ink-200 flex items-center gap-4 rounded-lg border p-4">
+          <section className="bg-paper-card border-ink-200 shadow-elev-1 flex items-center gap-4 rounded-2xl border p-4">
             <div className="bg-ball-gold text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-md">
               <CarFront className="h-6 w-6" />
             </div>
@@ -194,7 +181,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         ) : null}
         {/* RSVP (only upcoming matches) */}
         {myStatus && (match.status === "scheduled" || match.status === "in_progress") && (
-          <section className="bg-paper-card border-ink-200 flex flex-col gap-3 rounded-lg border p-5 shadow-elev-1">
+          <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-5">
             <h2 className="text-ink-900 flex items-center gap-2 text-sm font-black">
               <UserCheck className="text-pool-blue h-5 w-5" />
               Confirmar asistencia
@@ -210,17 +197,17 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
         {/* MVP (only played matches) */}
         {isPlayed && mvp && (
-          <section className="flex items-center gap-4 rounded-lg border border-amber-200 bg-amber-50 p-5 shadow-elev-1 select-none">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-200">
-              <Award className="h-6 w-6 text-amber-800" />
+          <section className="border-ball-gold/40 bg-ball-gold/10 shadow-elev-1 flex items-center gap-4 rounded-2xl border p-5 select-none">
+            <div className="bg-ball-gold/25 text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+              <Award className="h-6 w-6" aria-hidden="true" />
             </div>
             <div className="flex min-w-0 flex-col">
-              <span className="text-xs font-bold tracking-wider text-amber-700 uppercase">
+              <span className="text-pool-deep text-xs font-bold tracking-wider uppercase">
                 MVP del partido
               </span>
-              <span className="truncate text-lg font-black text-amber-900">{mvp.full_name}</span>
+              <span className="text-pool-deep truncate text-lg font-black">{mvp.full_name}</span>
               {mvp.goals > 0 && (
-                <span className="text-sm font-semibold text-amber-700">
+                <span className="text-ink-700 text-sm font-semibold">
                   {mvp.goals} {mvp.goals === 1 ? "gol" : "goles"}
                 </span>
               )}
@@ -250,9 +237,11 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </div>
 
           {callups.length === 0 ? (
-            <div className="border-ink-200 text-ink-500 rounded-lg border-2 border-dashed p-10 text-center text-base font-medium select-none">
-              Aún no se ha publicado la convocatoria.
-            </div>
+            <EmptyState
+              icon={<UserCheck className="h-6 w-6" aria-hidden="true" />}
+              title="Convocatoria pendiente"
+              description="Cuando el entrenador la publique, aparecerá aquí."
+            />
           ) : (
             <ul className="flex flex-col gap-2">
               {callups.map((c) => {
@@ -264,7 +253,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                 return (
                   <li
                     key={c.player_id}
-                    className="bg-paper-card border-ink-200 flex items-center gap-3 rounded-md border px-4 py-3 select-none"
+                    className="bg-paper-card border-ink-200 flex min-h-16 items-center gap-3 rounded-xl border px-4 py-3 select-none"
                   >
                     {/* Avatar with status dot */}
                     <div className="relative shrink-0">
@@ -326,7 +315,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
         {/* Notes */}
         {match.notes && (
-          <section className="bg-paper-card border-ink-200 flex flex-col gap-3 rounded-lg border p-5 shadow-elev-1">
+          <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-5">
             <h2 className="text-ink-900 flex items-center gap-2 text-sm font-bold">
               <FileText className="text-ink-400 h-4 w-4" />
               Notas
@@ -337,6 +326,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </section>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

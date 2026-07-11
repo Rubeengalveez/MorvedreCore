@@ -134,7 +134,7 @@ export function TrainingBlockCard({
                 {block.location}
               </span>
             ) : null}
-            <span className="border-ink-300 text-ink-600 inline-flex h-6 w-fit items-center rounded-full border px-2 text-[11px] font-semibold">
+            <span className="border-ink-300 text-ink-600 inline-flex h-6 w-fit items-center rounded-full border px-2 text-xs font-semibold">
               {KIND_LABELS[block.kind] ?? block.kind}
             </span>
           </div>

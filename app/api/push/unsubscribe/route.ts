@@ -24,7 +24,10 @@ export async function POST(request: Request) {
     supabase as unknown as {
       from: (table: "push_subscriptions") => {
         update: (value: unknown) => {
-          eq: (column: string, value: string) => {
+          eq: (
+            column: string,
+            value: string,
+          ) => {
             eq: (column: string, value: string) => Promise<{ error: { message: string } | null }>;
           };
         };

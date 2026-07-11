@@ -114,8 +114,9 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
         <div>
           <h3 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h3>
           <p className="text-ink-600 mt-1 text-sm">
-            Tu cuenta est&aacute; pendiente de activaci&oacute;n. El administrador del club revisar&aacute; tus datos y te
-            pasar&aacute; una contrase&ntilde;a provisional para que entres y la cambies.
+            Tu cuenta est&aacute; pendiente de activaci&oacute;n. El administrador del club
+            revisar&aacute; tus datos y te pasar&aacute; una contrase&ntilde;a provisional para que
+            entres y la cambies.
           </p>
         </div>
       </div>
@@ -139,7 +140,7 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
           type="email"
           value={email}
           disabled
-          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-ink-100 px-4 text-ink-600"
+          className="bg-ink-100 text-ink-600 h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
       </div>
 
@@ -156,7 +157,7 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
           minLength={2}
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
+          className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
       </div>
 
@@ -170,7 +171,7 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
           required
           value={relation}
           onChange={(e) => setRelation(e.target.value)}
-          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
+          className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         >
           <option value="" disabled>
             Selecciona...
@@ -193,7 +194,7 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoComplete="off"
-          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
+          className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
         {searching ? (
           <p className="text-ink-600 text-xs">Buscando...</p>
@@ -244,9 +245,9 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
       ) : null}
 
       <p className="text-ink-600 text-xs">
-        Si tu hijo/a no aparece, es porque a&uacute;n no tiene una cuenta activada en el club. Si tiene
-        email propio, solicita primero su cuenta de jugador. Si es menor, cr&eacute;ale una cuenta de
-        correo o usa la de uno de los padres.
+        Si tu hijo/a no aparece, es porque a&uacute;n no tiene una cuenta activada en el club. Si
+        tiene email propio, solicita primero su cuenta de jugador. Si es menor, cr&eacute;ale una
+        cuenta de correo o usa la de uno de los padres.
       </p>
 
       <SubmitButton />

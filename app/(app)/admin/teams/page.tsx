@@ -1,11 +1,11 @@
-import { Plus } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
+import { Plus, UsersRound } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/ui/eyebrow";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { Equipo } from "@/components/brand/pictograms";
+import { EmptyState } from "@/components/ui/empty-state";
 import { CATEGORY_LABELS, type CategoryCode, type TeamGender } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team } from "@/server/actions/admin";
@@ -132,78 +132,59 @@ export default async function TeamsPage() {
 
   if (seasons.length === 0) {
     return (
-      <div className="relative">
-        <LanePattern className="absolute inset-0" />
-        <div className="relative z-[1] mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4">
-          <header className="flex items-start gap-3">
-            <PictogramBadge pictogram={Equipo} color="var(--pool-blue)" size="lg" />
-            <div className="flex flex-col gap-0.5">
-              <Eyebrow>Estructura del club</Eyebrow>
-              <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-                Equipos
-              </h1>
-              <p className="text-ink-600 text-sm">Configura los equipos y asigna plantilla.</p>
-            </div>
-          </header>
-          <div className="border-ink-300 bg-paper-card flex flex-col items-center gap-3 rounded-md border border-dashed p-6 text-center">
-            <PictogramBadge pictogram={Equipo} color="var(--pool-blue)" size="lg" />
-            <p className="font-display text-pool-deep text-base font-extrabold">
-              Primero crea una temporada.
-            </p>
-            <p className="text-ink-600 max-w-sm text-sm">
-              Los equipos pertenecen siempre a una temporada.
-            </p>
-            <div className="mt-2">
-              <Button asChild size="md">
-                <a href="/admin/seasons">Ir a Temporadas</a>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <AdminPageShell>
+        <AdminPageHeader
+          eyebrow="Estructura del club"
+          title="Equipos"
+          description="Configura los equipos y asigna sus plantillas."
+          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+        />
+        <EmptyState
+          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+          title="Primero crea una temporada"
+          description="Los equipos pertenecen siempre a una temporada activa."
+          action={
+            <Button asChild size="md">
+              <Link href={"/admin/seasons" as Route}>Ir a Temporadas</Link>
+            </Button>
+          }
+        />
+      </AdminPageShell>
     );
   }
 
   return (
-    <div className="relative">
-      <LanePattern className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex items-start gap-3">
-            <PictogramBadge pictogram={Equipo} color="var(--pool-blue)" size="lg" />
-            <div className="flex flex-col gap-0.5">
-              <Eyebrow>Estructura del club</Eyebrow>
-              <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-                Equipos
-              </h1>
-              <p className="text-ink-600 text-sm">Configura los equipos y asigna plantilla.</p>
-            </div>
-          </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        eyebrow="Estructura del club"
+        title="Equipos"
+        description="Configura los equipos y asigna sus plantillas."
+        icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+        action={
           <TeamFormSheet
             seasons={seasons}
             defaultSeasonId={currentSeasonId ?? seasons[0]!.id}
             trigger={
               <Button size="md" className="w-full shrink-0 sm:w-auto">
                 <Plus className="h-5 w-5" aria-hidden="true" />
-                <span className="hidden sm:inline">Nuevo</span>
-                <span className="sr-only sm:hidden">Nuevo equipo</span>
+                Nuevo equipo
               </Button>
             }
           />
-        </header>
+        }
+      />
 
-        {error ? (
-          <Alert variant="danger" title="No pudimos cargar los equipos">
-            {error}
-          </Alert>
-        ) : null}
+      {error ? (
+        <Alert variant="danger" title="No pudimos cargar los equipos">
+          {error}
+        </Alert>
+      ) : null}
 
-        <TeamsGrid
-          seasons={seasons}
-          teamsBySeason={teamsBySeason}
-          defaultSeasonId={currentSeasonId ?? seasons[0]!.id}
-        />
-      </div>
-    </div>
+      <TeamsGrid
+        seasons={seasons}
+        teamsBySeason={teamsBySeason}
+        defaultSeasonId={currentSeasonId ?? seasons[0]!.id}
+      />
+    </AdminPageShell>
   );
 }

@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Route } from "next";
+import { ArrowLeft, UsersRound } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, inferCategory, type CategoryCode } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
@@ -137,46 +139,24 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
   const teamCategory = team.category_code as CategoryCode;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-6">
-      <header className="flex flex-col gap-3">
-        <div className="text-ink-600 flex items-center gap-2 text-sm">
-          <Link
-            href={"/admin/teams" as Route}
-            className="text-pool-blue font-semibold hover:underline focus-visible:underline"
-          >
-            ← Equipos
-          </Link>
-        </div>
-        <div
-          className="border-ink-300 bg-paper relative overflow-hidden rounded-md border"
-          style={{
-            borderTopWidth: "4px",
-            borderTopColor: team.color,
-            borderLeftWidth: "4px",
-            borderLeftColor: team.color,
-            backgroundImage: `linear-gradient(180deg, color-mix(in oklab, ${team.color} 10%, var(--paper)) 0%, var(--paper) 80%)`,
-          }}
-        >
-          <div className="flex flex-col gap-2 p-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="font-display text-pool-deep text-3xl leading-tight font-extrabold tracking-tight">
-                {team.label}
-              </h1>
-              <span className="border-ink-300 text-ink-600 rounded-full border px-2 py-0.5 text-xs font-semibold">
-                {CATEGORY_LABELS[teamCategory]}
-              </span>
-              {team.team_type === "school" ? (
-                <span className="border-ink-300 text-ink-600 rounded-full border px-2 py-0.5 text-xs font-semibold">
-                  Escuela
-                </span>
-              ) : null}
-            </div>
-            {team.home_pool ? (
-              <p className="text-ink-600 text-sm">Piscina: {team.home_pool}</p>
-            ) : null}
-          </div>
-        </div>
-      </header>
+    <AdminPageShell>
+      <Link
+        href={"/admin/teams" as Route}
+        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Todos los equipos
+      </Link>
+      <AdminPageHeader
+        eyebrow={CATEGORY_LABELS[teamCategory]}
+        title={team.label}
+        description={
+          team.home_pool
+            ? `Piscina habitual: ${team.home_pool}`
+            : "Plantilla, personal y datos del equipo."
+        }
+        icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+        className="border-t-4"
+      />
 
       <section aria-labelledby="staff-heading" className="flex flex-col gap-3">
         <div className="flex items-center justify-between gap-2">
@@ -220,7 +200,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
             }
           />
         </div>
-        <dl className="border-ink-300 bg-paper rounded-md border p-4 text-sm">
+        <dl className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4 text-sm">
           <DetailRow label="Color">
             <span
               aria-hidden="true"
@@ -243,7 +223,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
           </Link>
         </Button>
       </div>
-    </div>
+    </AdminPageShell>
   );
 }
 

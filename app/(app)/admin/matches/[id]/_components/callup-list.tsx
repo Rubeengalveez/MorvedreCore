@@ -124,18 +124,18 @@ function CallupRowItem({ entry }: { entry: CallupEntry }) {
               {entry.player?.full_name ?? "Jugador sin nombre"}
             </span>
             {categoryLabel ? (
-              <span className="border-ink-300 text-ink-600 inline-flex h-5 items-center rounded-full border px-1.5 text-[10px] font-semibold">
+              <span className="border-ink-300 text-ink-600 inline-flex min-h-6 items-center rounded-full border px-2 text-xs font-semibold">
                 {categoryLabel}
               </span>
             ) : null}
             {entry.sourceTeamLabel ? (
-              <span className="bg-pool-foam text-pool-deep inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+              <span className="bg-pool-foam text-pool-deep inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-semibold">
                 <MdNorthEast className="h-3.5 w-3.5" aria-hidden="true" />
                 {entry.sourceTeamLabel}
               </span>
             ) : null}
             {entry.hasConflict ? (
-              <span className="bg-danger/15 text-danger inline-flex h-5 items-center gap-0.5 rounded-full px-1.5 text-[10px] font-semibold">
+              <span className="bg-danger/15 text-danger inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-semibold">
                 <MdWarning className="h-3.5 w-3.5" aria-hidden="true" />
                 No disponible
               </span>
@@ -143,7 +143,7 @@ function CallupRowItem({ entry }: { entry: CallupEntry }) {
           </div>
           <span
             className={cn(
-              "mt-0.5 inline-flex h-5 w-fit items-center rounded-full px-2 text-[10px] font-semibold",
+              "mt-0.5 inline-flex min-h-6 w-fit items-center rounded-full px-2 text-xs font-semibold",
               STATUS_BADGE[entry.callup.status] ?? "border-ink-300 text-ink-600 border",
             )}
           >

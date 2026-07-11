@@ -60,6 +60,267 @@ export interface DashboardData {
   seasonStats: DashboardSeasonStats | null;
 }
 
+export interface DashboardStaffTeam {
+  id: string;
+  label: string;
+  color: string;
+  staff_role: string;
+}
+
+export interface DashboardAudience {
+  player_team_ids: string[];
+  staff_teams: DashboardStaffTeam[];
+  roles: string[];
+}
+
+export interface DashboardAttendancePlayer {
+  id: string;
+  full_name: string;
+  photo_url: string | null;
+  cap_number: number | null;
+  present: boolean;
+  reason: string | null;
+}
+
+export interface DashboardCoachTask {
+  id: string;
+  team_id: string;
+  team_label: string;
+  team_color: string;
+  scheduled_at: string;
+  end_at: string | null;
+  location: string | null;
+  is_past: boolean;
+  attendance_recorded: boolean;
+  present_count: number;
+  roster_count: number;
+  players: DashboardAttendancePlayer[];
+}
+
+function joinedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+export async function getDashboardAudience(
+  profileId: string,
+  seasonId: string,
+): Promise<DashboardAudience> {
+  const supabase = await createClient();
+  const [rosterRes, staffRes, rolesRes] = await Promise.all([
+    supabase
+      .from("team_rosters")
+      .select("team_id, teams!team_rosters_team_id_fkey(season_id)")
+      .eq("player_id", profileId)
+      .is("left_at", null),
+    supabase
+      .from("team_staff")
+      .select("role, teams!team_staff_team_id_fkey(id, label, color, season_id)")
+      .eq("profile_id", profileId),
+    supabase.from("user_roles").select("role").eq("profile_id", profileId),
+  ]);
+
+  const playerTeamIds: string[] = [];
+  for (const row of rosterRes.data ?? []) {
+    const team = joinedOne(row.teams) as { season_id?: string } | null;
+    if (team?.season_id === seasonId) playerTeamIds.push(row.team_id);
+  }
+
+  const staffTeams: DashboardStaffTeam[] = [];
+  for (const row of staffRes.data ?? []) {
+    const team = joinedOne(row.teams) as {
+      id?: string;
+      label?: string;
+      color?: string;
+      season_id?: string;
+    } | null;
+    if (!team?.id || team.season_id !== seasonId) continue;
+    staffTeams.push({
+      id: team.id,
+      label: team.label ?? "Equipo",
+      color: team.color ?? "#1E5AA8",
+      staff_role: row.role,
+    });
+  }
+
+  return {
+    player_team_ids: Array.from(new Set(playerTeamIds)),
+    staff_teams: staffTeams,
+    roles: Array.from(new Set((rolesRes.data ?? []).map((row) => row.role))),
+  };
+}
+
+export async function getUpcomingDashboardEvents(
+  teamIds: string[],
+  now: Date = new Date(),
+  limit = 8,
+): Promise<DashboardWeekEvent[]> {
+  if (teamIds.length === 0) return [];
+  const supabase = await createClient();
+  const from = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+  const until = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const [trainingsRes, matchesRes] = await Promise.all([
+    supabase
+      .from("training_sessions")
+      .select("id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(label, color)")
+      .in("team_id", teamIds)
+      .eq("cancelled", false)
+      .gte("scheduled_at", from)
+      .lte("scheduled_at", until)
+      .order("scheduled_at", { ascending: true })
+      .limit(limit),
+    supabase
+      .from("matches")
+      .select("id, opponent, scheduled_at, status, teams!matches_team_id_fkey(label, color)")
+      .in("team_id", teamIds)
+      .in("status", ["scheduled", "in_progress"])
+      .gte("scheduled_at", from)
+      .lte("scheduled_at", until)
+      .order("scheduled_at", { ascending: true })
+      .limit(limit),
+  ]);
+
+  const today = new Intl.DateTimeFormat("en-CA").format(now);
+  const tomorrowDate = new Date(now);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  const tomorrow = new Intl.DateTimeFormat("en-CA").format(tomorrowDate);
+  const events: DashboardWeekEvent[] = [];
+
+  for (const row of trainingsRes.data ?? []) {
+    const team = joinedOne(row.teams) as { label?: string; color?: string } | null;
+    const date = new Intl.DateTimeFormat("en-CA").format(new Date(row.scheduled_at));
+    events.push({
+      id: row.id,
+      kind: "training",
+      date,
+      scheduled_at: row.scheduled_at,
+      title: "Entrenamiento",
+      team_label: team?.label ?? "Equipo",
+      team_color: team?.color ?? "#1E5AA8",
+      cancelled: false,
+      status: "scheduled",
+      is_today: date === today,
+      is_tomorrow: date === tomorrow,
+    });
+  }
+
+  for (const row of matchesRes.data ?? []) {
+    const team = joinedOne(row.teams) as { label?: string; color?: string } | null;
+    const date = new Intl.DateTimeFormat("en-CA").format(new Date(row.scheduled_at));
+    events.push({
+      id: row.id,
+      kind: "match",
+      date,
+      scheduled_at: row.scheduled_at,
+      title: `Partido contra ${row.opponent}`,
+      team_label: team?.label ?? "Equipo",
+      team_color: team?.color ?? "#1E5AA8",
+      cancelled: false,
+      status: row.status,
+      is_today: date === today,
+      is_tomorrow: date === tomorrow,
+    });
+  }
+
+  return events.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).slice(0, limit);
+}
+
+export async function getDashboardCoachTask(
+  staffTeams: DashboardStaffTeam[],
+  now: Date = new Date(),
+): Promise<DashboardCoachTask | null> {
+  if (staffTeams.length === 0) return null;
+  const supabase = await createClient();
+  const teamIds = staffTeams.map((team) => team.id);
+  const from = new Date(now.getTime() - 36 * 60 * 60 * 1000).toISOString();
+  const until = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const { data: sessions } = await supabase
+    .from("training_sessions")
+    .select("id, team_id, scheduled_at, end_at, location")
+    .in("team_id", teamIds)
+    .eq("cancelled", false)
+    .gte("scheduled_at", from)
+    .lte("scheduled_at", until)
+    .order("scheduled_at", { ascending: true });
+  if (!sessions?.length) return null;
+
+  const sessionIds = sessions.map((session) => session.id);
+  const { data: attendanceRows } = await supabase
+    .from("training_attendance")
+    .select("session_id, player_id, present, reason")
+    .in("session_id", sessionIds);
+  const attendanceBySession = new Map<string, typeof attendanceRows>();
+  for (const row of attendanceRows ?? []) {
+    const list = attendanceBySession.get(row.session_id) ?? [];
+    list.push(row);
+    attendanceBySession.set(row.session_id, list);
+  }
+
+  const nowTime = now.getTime();
+  const unfinished = sessions
+    .filter(
+      (session) =>
+        new Date(session.scheduled_at).getTime() <= nowTime &&
+        (attendanceBySession.get(session.id)?.length ?? 0) === 0,
+    )
+    .sort((a, b) => b.scheduled_at.localeCompare(a.scheduled_at));
+  const selected =
+    unfinished[0] ??
+    sessions.find((session) => new Date(session.scheduled_at).getTime() >= nowTime) ??
+    sessions.at(-1);
+  if (!selected) return null;
+
+  const [rosterRes, profilesRes] = await Promise.all([
+    supabase
+      .from("team_rosters")
+      .select("player_id, squad_number")
+      .eq("team_id", selected.team_id)
+      .is("left_at", null),
+    supabase.from("profiles").select("id, full_name, photo_url, cap_number"),
+  ]);
+  const roster = rosterRes.data ?? [];
+  const rosterIds = new Set(roster.map((row) => row.player_id));
+  const profiles = new Map(
+    (profilesRes.data ?? [])
+      .filter((profile) => rosterIds.has(profile.id))
+      .map((profile) => [profile.id, profile]),
+  );
+  const savedRows = attendanceBySession.get(selected.id) ?? [];
+  const savedByPlayer = new Map(savedRows.map((row) => [row.player_id, row]));
+  const players: DashboardAttendancePlayer[] = roster
+    .map((row) => {
+      const profile = profiles.get(row.player_id);
+      if (!profile) return null;
+      const saved = savedByPlayer.get(row.player_id);
+      return {
+        id: profile.id,
+        full_name: profile.full_name,
+        photo_url: profile.photo_url,
+        cap_number: row.squad_number ?? profile.cap_number,
+        present: saved?.present ?? true,
+        reason: saved?.reason ?? null,
+      };
+    })
+    .filter((player): player is DashboardAttendancePlayer => player !== null)
+    .sort((a, b) => (a.cap_number ?? 999) - (b.cap_number ?? 999));
+  const staffTeam = staffTeams.find((team) => team.id === selected.team_id);
+
+  return {
+    id: selected.id,
+    team_id: selected.team_id,
+    team_label: staffTeam?.label ?? "Equipo",
+    team_color: staffTeam?.color ?? "#1E5AA8",
+    scheduled_at: selected.scheduled_at,
+    end_at: selected.end_at,
+    location: selected.location,
+    is_past: new Date(selected.scheduled_at).getTime() < nowTime,
+    attendance_recorded: savedRows.length > 0,
+    present_count: savedRows.filter((row) => row.present).length,
+    roster_count: players.length,
+    players,
+  };
+}
+
 function relativeTime(iso: string, now: Date): string {
   const then = new Date(iso);
   const diffMs = then.getTime() - now.getTime();

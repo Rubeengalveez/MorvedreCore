@@ -25,6 +25,9 @@ export interface ShopEditorFormInitial {
   available: boolean;
   stock: number | null;
   max_per_order: number;
+  personalization_enabled: boolean;
+  personalization_label: string;
+  personalization_max_length: number;
 }
 
 export interface ShopEditorFormProps {
@@ -52,7 +55,10 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
     sizes: initial?.sizes ?? [],
     available: initial?.available ?? true,
     stock: initial?.stock ?? null,
-    max_per_order: initial?.max_per_order ?? 10,
+    max_per_order: initial?.max_per_order ?? 1,
+    personalization_enabled: initial?.personalization_enabled ?? false,
+    personalization_label: initial?.personalization_label ?? "Nombre",
+    personalization_max_length: initial?.personalization_max_length ?? 30,
   });
 
   function update<K extends keyof ShopEditorFormInitial>(key: K, value: ShopEditorFormInitial[K]) {
@@ -86,6 +92,9 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             available: form.available,
             stock: form.stock,
             max_per_order: form.max_per_order,
+            personalization_enabled: form.personalization_enabled,
+            personalization_label: form.personalization_label,
+            personalization_max_length: form.personalization_max_length,
             imageFiles,
             coverImageIndex,
           });
@@ -101,6 +110,9 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             available: form.available,
             stock: form.stock,
             max_per_order: form.max_per_order,
+            personalization_enabled: form.personalization_enabled,
+            personalization_label: form.personalization_label,
+            personalization_max_length: form.personalization_max_length,
             imageFiles,
             coverImageIndex,
           });
@@ -191,6 +203,47 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           placeholder="XS, S, M, L, XL"
         />
       </Field>
+      <div className="border-ink-300 bg-paper flex flex-col gap-3 rounded-xl border p-4">
+        <label className="text-pool-deep flex min-h-12 cursor-pointer items-center justify-between gap-4 text-sm font-extrabold">
+          <span>
+            Permitir personalización
+            <span className="text-ink-600 mt-0.5 block text-xs font-medium">
+              El usuario deberá escribirla antes de añadir el producto.
+            </span>
+          </span>
+          <input
+            type="checkbox"
+            checked={form.personalization_enabled}
+            onChange={(event) => update("personalization_enabled", event.target.checked)}
+            className="accent-pool-blue h-5 w-5 shrink-0"
+          />
+        </label>
+        {form.personalization_enabled ? (
+          <div className="grid grid-cols-[minmax(0,1fr)_7rem] gap-3">
+            <Field label="Qué debe escribir">
+              <Input
+                value={form.personalization_label}
+                onChange={(event) => update("personalization_label", event.target.value)}
+                placeholder="Nombre"
+                maxLength={40}
+                required
+              />
+            </Field>
+            <Field label="Máximo">
+              <Input
+                type="number"
+                min={1}
+                max={60}
+                value={form.personalization_max_length}
+                onChange={(event) =>
+                  update("personalization_max_length", Number(event.target.value))
+                }
+                required
+              />
+            </Field>
+          </div>
+        ) : null}
+      </div>
       <Field label="Stock (vacío para ilimitado)">
         <Input
           type="number"
@@ -241,7 +294,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt="" className="h-full w-full object-cover" />
                   {coverImageIndex === index ? (
-                    <span className="bg-action text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-[0.62rem] font-extrabold uppercase">
+                    <span className="bg-action text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-xs font-extrabold uppercase">
                       Portada
                     </span>
                   ) : null}
@@ -261,7 +314,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={image.url} alt="" className="h-full w-full object-cover" />
                     {image.is_cover ? (
-                      <span className="bg-pool-deep text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-center text-[0.62rem] font-extrabold uppercase">
+                      <span className="bg-pool-deep text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-center text-xs font-extrabold uppercase">
                         Portada
                       </span>
                     ) : null}

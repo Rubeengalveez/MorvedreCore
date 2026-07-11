@@ -146,7 +146,7 @@ export function SeasonsTable({ seasons }: SeasonsTableProps) {
                 <p className="font-display text-pool-deep truncate text-base font-extrabold">
                   {s.label}
                 </p>
-                <p className="text-ink-600 font-mono text-[10px]">
+                <p className="text-ink-600 font-mono text-xs">
                   {formatDate(s.start_date)} - {formatDate(s.end_date)}
                 </p>
                 <div className="mt-1 flex flex-wrap gap-1">

@@ -131,7 +131,7 @@ export function AccessRequestsManager({
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="border-ink-300 bg-paper-card rounded-md border p-4 shadow-sm">
+      <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4 sm:p-5">
         <div className="text-pool-deep flex items-center gap-2">
           <MdLock className="h-5 w-5" />
           <h2 className="font-display text-lg font-extrabold">Contraseña temporal</h2>
@@ -139,10 +139,22 @@ export function AccessRequestsManager({
         <p className="text-ink-600 mt-1 text-sm">
           Esta es la contraseña que le pasarás manualmente a cada usuario tras aprobarle.
         </p>
-        <form onSubmit={handleTempPasswordSubmit} className="mt-3 flex max-w-md gap-2">
+        <form
+          onSubmit={handleTempPasswordSubmit}
+          className="mt-4 flex max-w-md flex-col gap-2 sm:flex-row"
+        >
+          <label
+            htmlFor="access-temp-password"
+            className="text-pool-deep text-sm font-extrabold sm:sr-only"
+          >
+            Contraseña temporal
+          </label>
           <Input
+            id="access-temp-password"
             name="tempPassword"
             type="text"
+            autoComplete="off"
+            spellCheck={false}
             defaultValue={initialTempPassword}
             required
             minLength={1}
@@ -153,9 +165,13 @@ export function AccessRequestsManager({
           </Button>
         </form>
         {tempPasswordState?.success ? (
-          <p className="mt-2 text-xs font-semibold text-green-700">Contraseña actualizada.</p>
+          <p className="text-success mt-2 text-sm font-semibold" role="status" aria-live="polite">
+            Contraseña actualizada.
+          </p>
         ) : tempPasswordState?.error ? (
-          <p className="mt-2 text-xs font-semibold text-red-700">{tempPasswordState.error}</p>
+          <p className="text-danger mt-2 text-sm font-semibold" role="alert">
+            {tempPasswordState.error}
+          </p>
         ) : null}
       </section>
 

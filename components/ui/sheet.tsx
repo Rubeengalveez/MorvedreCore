@@ -28,7 +28,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const sheetContentVariants = cva(
-  "fixed inset-x-0 bottom-0 z-50 flex flex-col gap-4 border-t border-ink-300 bg-paper text-ink-900 shadow-elev-4 transition-transform data-[state=closed]:translate-y-full data-[state=open]:translate-y-0",
+  "fixed inset-x-0 bottom-0 z-50 flex overscroll-contain flex-col gap-4 border-t border-ink-300 bg-paper text-ink-900 shadow-elev-4 transition-transform data-[state=closed]:translate-y-full data-[state=open]:translate-y-0 motion-reduce:transition-none",
   {
     variants: {
       size: {

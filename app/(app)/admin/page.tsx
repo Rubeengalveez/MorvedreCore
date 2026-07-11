@@ -10,6 +10,8 @@ import {
   MdFamilyRestroom,
   MdBadge,
   MdEuro,
+  MdNewspaper,
+  MdStorefront,
 } from "react-icons/md";
 
 import { createClient } from "@/lib/supabase/server";
@@ -65,7 +67,6 @@ interface AdminTile {
   label: string;
   description: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  bg: string;
 }
 
 const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
@@ -74,63 +75,66 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     label: "Temporadas",
     description: "Crea y archiva.",
     Icon: MdCalendarMonth,
-    bg: "var(--pool-teal)",
   },
   {
     href: "/admin/teams",
     label: "Equipos",
     description: "Configura plantillas.",
     Icon: MdGroups,
-    bg: "var(--pool-blue)",
   },
   {
     href: "/admin/players",
     label: "Jugadores",
     description: "Altas y ediciones.",
     Icon: MdPerson,
-    bg: "var(--ball-gold)",
   },
   {
     href: "/admin/families",
     label: "Familias",
     description: "Tutores vinculados.",
     Icon: MdFamilyRestroom,
-    bg: "var(--pool-deep)",
   },
   {
     href: "/admin/staff",
     label: "Personal",
     description: "Entrenadores y más.",
     Icon: MdBadge,
-    bg: "var(--ink-700)",
   },
   {
     href: "/admin/trainings",
     label: "Entrenamientos",
     description: "Bloques y asistencia.",
     Icon: MdSports,
-    bg: "var(--action)",
   },
   {
     href: "/admin/matches",
     label: "Partidos",
     description: "Convocatorias y actas.",
     Icon: MdSportsVolleyball,
-    bg: "var(--goggle-red)",
   },
   {
     href: "/admin/treasury",
     label: "Tesoreria",
     description: "Cierres y pagos.",
     Icon: MdEuro,
-    bg: "var(--pool-deep)",
   },
   {
     href: "/admin/players/import",
     label: "Importar",
     description: "Carga desde Excel.",
     Icon: MdUploadFile,
-    bg: "var(--pool-teal)",
+  },
+  {
+    href: "/admin/news",
+    label: "Noticias",
+    description: "Publica avisos del club.",
+    Icon: MdNewspaper,
+  },
+  {
+    href: "/admin/shop",
+    label: "Tienda",
+    description: "Gestiona pedidos y productos.",
+    Icon: MdStorefront,
   },
 ];
 
@@ -154,13 +158,13 @@ export default async function AdminHomePage() {
       <PageShell width="md">
         <header
           data-admin-hero
-          className="surface border-pool-deep bg-pool-deep text-paper shadow-elev-3 flex items-center gap-3 overflow-hidden rounded-lg p-4"
+          className="bg-pool-deep text-paper shadow-elev-3 flex items-center gap-3 overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-7"
         >
           <div
             aria-hidden="true"
-            className="bg-ball-gold flex h-12 w-12 shrink-0 items-center justify-center rounded-md"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10"
           >
-            <MdSports className="text-pool-deep h-7 w-7" />
+            <MdSports className="text-paper h-7 w-7" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
             <Eyebrow tone="inverse" className="text-paper/80">
@@ -169,7 +173,9 @@ export default async function AdminHomePage() {
             <h1 className="font-display text-paper text-2xl leading-tight font-extrabold sm:text-3xl">
               {greeting}
             </h1>
-            <p className="text-paper/80 text-xs sm:text-sm">Eres admin. Aquí mueves el club.</p>
+            <p className="text-paper/75 mt-1 text-sm sm:text-base">
+              Organiza el club desde un único lugar.
+            </p>
           </div>
         </header>
 
@@ -195,20 +201,19 @@ export default async function AdminHomePage() {
                 <li key={m.href} className="h-full">
                   <Link
                     href={m.href as Route}
-                    className="group border-ink-300 bg-paper-card shadow-elev-1 hover:border-pool-blue hover:shadow-elev-2 focus-visible:ring-pool-blue flex h-full items-center gap-3 rounded-lg border p-3 transition-all focus-visible:ring-2 focus-visible:outline-none"
+                    className="group border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue/40 hover:shadow-elev-2 focus-visible:ring-pool-blue flex h-full min-h-[5rem] touch-manipulation items-center gap-3 rounded-2xl border p-4 transition-[border-color,box-shadow,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
                   >
                     <span
                       aria-hidden="true"
-                      className="text-paper inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-md"
-                      style={{ backgroundColor: m.bg }}
+                      className="bg-pool-foam text-pool-blue inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
                     >
                       <Icon className="h-7 w-7" />
                     </span>
                     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="font-display text-pool-deep text-sm leading-tight font-extrabold">
+                      <span className="font-display text-pool-deep text-base leading-tight font-extrabold">
                         {m.label}
                       </span>
-                      <span className="text-ink-600 line-clamp-1 text-[11px] leading-snug">
+                      <span className="text-ink-600 mt-1 line-clamp-2 text-sm leading-snug">
                         {m.description}
                       </span>
                     </span>
@@ -227,7 +232,7 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
   return (
     <div
       data-stat
-      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-1 rounded-lg border p-3"
+      className="border-ink-200 bg-paper-card shadow-elev-1 flex flex-col gap-1 rounded-xl border p-3.5"
       style={{ borderTopWidth: "3px", borderTopColor: color }}
     >
       <span className="text-eyebrow text-ink-600">{label}</span>

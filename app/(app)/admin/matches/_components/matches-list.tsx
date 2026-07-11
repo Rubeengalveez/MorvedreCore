@@ -198,7 +198,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                     <span className="font-mono font-semibold">{formatTime(m.scheduled_at)}</span>
                     <span
                       className={cn(
-                        "ml-auto inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold",
+                        "ml-auto inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold",
                         STATUS_BADGE[m.status] ?? "border-ink-300 text-ink-600 border",
                       )}
                     >
@@ -218,15 +218,15 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                     ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="border-ink-300 text-ink-600 inline-flex h-6 items-center rounded-full border px-2 text-[11px] font-semibold">
+                    <span className="border-ink-300 text-ink-600 inline-flex h-6 items-center rounded-full border px-2 text-xs font-semibold">
                       {COMPETITION_LABELS[m.competition_type] ?? m.competition_type}
                     </span>
                     {m.is_home ? (
-                      <span className="bg-pool-foam text-pool-deep inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
+                      <span className="bg-pool-foam text-pool-deep inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
                         Local
                       </span>
                     ) : (
-                      <span className="bg-ink-300/40 text-ink-600 inline-flex h-6 items-center rounded-full px-2 text-[11px] font-semibold">
+                      <span className="bg-ink-300/40 text-ink-600 inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
                         Visitante
                       </span>
                     )}

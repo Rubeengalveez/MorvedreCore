@@ -1,8 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import type { Route } from "next";
-
-import { Logo } from "@/components/brand/logo";
+import { AuthRequestShell } from "@/components/auth/auth-request-shell";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
 
 export const metadata: Metadata = {
@@ -12,33 +9,11 @@ export const metadata: Metadata = {
 
 export default function ResetPasswordPage() {
   return (
-    <main
-      lang="es"
-      className="bg-paper flex min-h-dvh flex-col items-center justify-center px-6 py-12"
+    <AuthRequestShell
+      title="¿Se te olvidó la contraseña?"
+      subtitle="Te enviaremos un enlace para que puedas definir una nueva."
     >
-      <div className="flex w-full max-w-sm flex-col items-center gap-6">
-        <Logo size={64} withWordmark />
-        <div
-          className="border-ink-300 bg-paper flex w-full flex-col gap-1 rounded-md border p-4 text-center"
-          style={{ borderTopWidth: "4px", borderTopColor: "var(--pool-blue)" }}
-        >
-          <h1 className="font-display text-pool-deep text-2xl font-extrabold">
-            ¿Se te olvidó la contraseña?
-          </h1>
-          <p className="text-ink-600 text-sm">
-            Sin problema. Te mandamos un enlace para que pongas una nueva en dos minutos.
-          </p>
-        </div>
-        <div className="w-full">
-          <ResetPasswordForm />
-        </div>
-        <Link
-          href={"/login" as Route}
-          className="text-pool-blue text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
-        >
-          Volver a iniciar sesión
-        </Link>
-      </div>
-    </main>
+      <ResetPasswordForm />
+    </AuthRequestShell>
   );
 }

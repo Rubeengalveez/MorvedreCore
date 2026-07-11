@@ -5,15 +5,19 @@ import { useState, useCallback, useEffect } from "react";
 export interface CartItem {
   productId: string;
   size: string | null;
+  personalization: string | null;
   quantity: number;
 }
 
-const STORAGE_KEY = "morvedre-shop-cart-v1";
+const STORAGE_KEY = "morvedre-shop-cart:v2";
+const LEGACY_STORAGE_KEY = "morvedre-shop-cart-v1";
 
 function readFromStorage(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw =
+      window.localStorage.getItem(STORAGE_KEY) ??
+      window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -31,7 +35,11 @@ function readFromStorage(): CartItem[] {
           typeof (x as { size: unknown }).size === "string"
             ? (x as { size: string }).size || null
             : null,
-        quantity: Math.max(1, Math.floor((x as { quantity: number }).quantity)),
+        personalization:
+          typeof (x as { personalization?: unknown }).personalization === "string"
+            ? (x as { personalization: string }).personalization.trim() || null
+            : null,
+        quantity: 1,
       }));
   } catch {
     return [];
@@ -42,8 +50,8 @@ function writeToStorage(items: CartItem[]): void {
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   } catch {
-    // ignore
   }
 }
 
@@ -66,15 +74,16 @@ export function useShopCart() {
   const addItem = useCallback(
     (item: CartItem) => {
       const idx = items.findIndex(
-        (x) => x.productId === item.productId && (x.size ?? null) === (item.size ?? null),
+        (x) =>
+          x.productId === item.productId &&
+          (x.size ?? null) === (item.size ?? null) &&
+          (x.personalization ?? null) === (item.personalization ?? null),
       );
       let next: CartItem[];
       if (idx >= 0) {
-        next = items.map((x, i) =>
-          i === idx ? { ...x, quantity: x.quantity + item.quantity } : x,
-        );
+        next = items.map((x, i) => (i === idx ? { ...x, quantity: 1 } : x));
       } else {
-        next = [...items, item];
+        next = [...items, { ...item, quantity: 1 }];
       }
       persist(next);
     },
@@ -82,22 +91,15 @@ export function useShopCart() {
   );
 
   const removeItem = useCallback(
-    (productId: string, size: string | null) => {
+    (productId: string, size: string | null, personalization: string | null) => {
       persist(
-        items.filter((x) => !(x.productId === productId && (x.size ?? null) === (size ?? null))),
-      );
-    },
-    [items, persist],
-  );
-
-  const setQuantity = useCallback(
-    (productId: string, size: string | null, quantity: number) => {
-      const safe = Math.max(1, Math.floor(quantity));
-      persist(
-        items.map((x) =>
-          x.productId === productId && (x.size ?? null) === (size ?? null)
-            ? { ...x, quantity: safe }
-            : x,
+        items.filter(
+          (x) =>
+            !(
+              x.productId === productId &&
+              (x.size ?? null) === (size ?? null) &&
+              (x.personalization ?? null) === (personalization ?? null)
+            ),
         ),
       );
     },
@@ -113,7 +115,6 @@ export function useShopCart() {
     hydrated,
     addItem,
     removeItem,
-    setQuantity,
     clear,
   };
 }

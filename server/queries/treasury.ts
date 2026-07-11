@@ -197,10 +197,7 @@ export async function getTreasuryClosure(id: string): Promise<{
     ? await supabase.from("profiles").select("id, full_name").in("id", profileIds)
     : { data: [] as Array<{ id: string; full_name: string }> };
   const profileMap = new Map(
-    ((profiles ?? []) as Array<{ id: string; full_name: string }>).map((p) => [
-      p.id,
-      p.full_name,
-    ]),
+    ((profiles ?? []) as Array<{ id: string; full_name: string }>).map((p) => [p.id, p.full_name]),
   );
 
   return {
@@ -254,10 +251,7 @@ export async function getFamilyTreasury(profileId: string): Promise<{
     .select("id, full_name")
     .in("id", Array.from(new Set(linesRaw.map((line) => line.profile_id))));
   const profileMap = new Map(
-    ((profiles ?? []) as Array<{ id: string; full_name: string }>).map((p) => [
-      p.id,
-      p.full_name,
-    ]),
+    ((profiles ?? []) as Array<{ id: string; full_name: string }>).map((p) => [p.id, p.full_name]),
   );
   const lines: TreasuryLine[] = linesRaw.map((line) => ({
     ...line,

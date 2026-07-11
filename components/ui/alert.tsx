@@ -6,7 +6,7 @@ import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
 
-const alertVariants = cva("flex w-full items-start gap-3 rounded-md border p-4 text-sm", {
+const alertVariants = cva("flex w-full items-start gap-3 rounded-xl border p-4 text-sm", {
   variants: {
     variant: {
       info: "border-pool-teal/30 bg-pool-teal/10 text-pool-deep",
@@ -39,11 +39,17 @@ const Alert = React.forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant = "info", title, children, ...props }, ref) => {
     const Icon = alertIcon[variant ?? "info"];
     return (
-      <div ref={ref} role="alert" className={cn(alertVariants({ variant }), className)} {...props}>
+      <div
+        ref={ref}
+        role="alert"
+        aria-live={variant === "danger" ? "assertive" : "polite"}
+        className={cn(alertVariants({ variant }), className)}
+        {...props}
+      >
         <Icon className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-        <div className="flex flex-col gap-1">
-          {title ? <p className="leading-tight font-semibold">{title}</p> : null}
-          <div className="text-ink-600 leading-relaxed">{children}</div>
+        <div className="flex min-w-0 flex-col gap-1">
+          {title ? <p className="text-pool-deep leading-tight font-extrabold">{title}</p> : null}
+          <div className="text-ink-700 leading-relaxed text-pretty">{children}</div>
         </div>
       </div>
     );

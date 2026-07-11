@@ -85,7 +85,8 @@ export async function upsertTreasuryConcept(input: {
         }
       ).eq("id", parsed.data.concept_id)
     : await (raw.from("treasury_concepts").insert(payload) as Promise<{ error: Error | null }>);
-  if (result.error) throw new Error("No pudimos guardar el concepto: " + errorMessage(result.error));
+  if (result.error)
+    throw new Error("No pudimos guardar el concepto: " + errorMessage(result.error));
 
   revalidatePath("/admin/treasury");
 }

@@ -21,7 +21,10 @@ export function PushSettings({ publicKey }: { publicKey: string | undefined }) {
 
   useEffect(() => {
     const ok = Boolean(
-      publicKey && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window,
+      publicKey &&
+      "serviceWorker" in navigator &&
+      "PushManager" in window &&
+      "Notification" in window,
     );
     queueMicrotask(() => setSupported(ok));
     if (!ok) return;
@@ -33,7 +36,7 @@ export function PushSettings({ publicKey }: { publicKey: string | undefined }) {
 
   if (!supported) {
     return (
-      <section className="border-ink-300 bg-paper-card rounded-md border p-3 text-sm font-semibold text-ink-600">
+      <section className="border-ink-300 bg-paper-card text-ink-600 rounded-md border p-3 text-sm font-semibold">
         Este navegador no permite push web en este modo. Los avisos seguiran dentro de la app.
       </section>
     );
@@ -102,18 +105,20 @@ export function PushSettings({ publicKey }: { publicKey: string | undefined }) {
   }
 
   return (
-    <section className="border-ink-300 bg-paper-card flex flex-col gap-2 rounded-md border p-3 shadow-elev-1">
+    <section className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-extrabold text-pool-deep">Push en este dispositivo</p>
-          <p className="text-xs font-semibold text-ink-600">
-            {enabled ? "Activo para esta cuenta." : "Recibe avisos aunque no tengas la app abierta."}
+          <p className="text-pool-deep text-sm font-extrabold">Push en este dispositivo</p>
+          <p className="text-ink-600 text-xs font-semibold">
+            {enabled
+              ? "Activo para esta cuenta."
+              : "Recibe avisos aunque no tengas la app abierta."}
           </p>
         </div>
         {enabled ? (
-          <BellRing className="h-5 w-5 shrink-0 text-success" />
+          <BellRing className="text-success h-5 w-5 shrink-0" />
         ) : (
-          <BellOff className="h-5 w-5 shrink-0 text-ink-500" />
+          <BellOff className="text-ink-500 h-5 w-5 shrink-0" />
         )}
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -134,8 +139,8 @@ export function PushSettings({ publicKey }: { publicKey: string | undefined }) {
           Probar
         </button>
       </div>
-      {message ? <p className="text-xs font-bold text-success">{message}</p> : null}
-      {error ? <p className="text-xs font-bold text-goggle-red">{error}</p> : null}
+      {message ? <p className="text-success text-xs font-bold">{message}</p> : null}
+      {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
     </section>
   );
 }

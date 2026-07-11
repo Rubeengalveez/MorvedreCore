@@ -104,7 +104,7 @@ export function PlayersTable({ players }: PlayersTableProps) {
               </div>
               <span
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center rounded-full px-2 text-[10px] font-semibold",
+                  "inline-flex h-7 shrink-0 items-center rounded-full px-2 text-xs font-semibold",
                   p.license_active
                     ? "bg-success/15 text-success"
                     : "border-ink-300 text-ink-600 border",

@@ -14,6 +14,9 @@ import {
   type NotificationItem,
 } from "@/server/queries/notifications";
 
+const utilityActionClass =
+  "touch-manipulation text-paper/90 hover:text-paper focus-visible:ring-paper/80 relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-200 hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none [-webkit-tap-highlight-color:transparent]";
+
 export interface TopBarProps {
   ownProfile: ProfileSummary;
   activeProfile: ProfileSummary;
@@ -44,29 +47,37 @@ export async function TopBar({ activeProfile }: TopBarProps) {
   return (
     <header
       data-top-bar
-      className="bg-[linear-gradient(180deg,#062048_0%,#1657a8_100%)] text-paper sticky top-0 z-30 rounded-b-[1.5rem] shadow-elev-4"
+      className="text-paper shadow-elev-4 sticky top-0 z-30 overflow-hidden rounded-b-[1.75rem] border-b border-white/12 bg-[linear-gradient(135deg,#041a3a_0%,#0a3c7b_54%,#1657a8_100%)]"
     >
-      <div className="mx-auto flex h-[var(--top-bar-height)] w-full max-w-5xl items-center justify-between gap-2 px-3 pt-[env(safe-area-inset-top)] min-[380px]:gap-3 min-[380px]:px-4">
+      <div className="mx-auto flex min-h-[var(--top-bar-height)] w-full max-w-6xl items-center justify-between gap-2 px-3 pt-[env(safe-area-inset-top)] min-[380px]:px-4 sm:px-6">
         <Link
           href={"/dashboard" as Route}
           prefetch={false}
-          className="focus-visible:ring-paper/80 flex min-w-0 shrink items-center gap-2 rounded-lg py-1 pr-1 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:outline-none min-[430px]:gap-3 min-[430px]:pr-2"
+          className="focus-visible:ring-paper/80 group flex min-w-0 items-center gap-2 rounded-xl py-1 pr-1 transition-opacity duration-200 hover:opacity-95 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none min-[430px]:gap-2.5"
         >
-          <Logo size={44} className="shrink-0 min-[430px]:h-[52px] min-[430px]:w-[52px]" />
-          <span className="font-display hidden truncate text-xl leading-none font-extrabold tracking-tight min-[430px]:block">
-            Morvedre Core
+          <Logo
+            size={42}
+            className="shrink-0 transition-transform duration-200 group-hover:-rotate-3 group-active:scale-95 motion-reduce:transition-none min-[430px]:h-11 min-[430px]:w-11"
+          />
+          <span className="font-display hidden min-w-0 flex-col leading-none min-[360px]:flex">
+            <span className="truncate text-[1.05rem] font-extrabold tracking-tight min-[430px]:text-lg">
+              Morvedre
+            </span>
+            <span className="text-paper/75 mt-1 w-fit rounded-full bg-white/12 px-1.5 py-0.5 text-[8px] font-bold tracking-[0.16em] uppercase min-[430px]:text-[9px]">
+              Core
+            </span>
           </span>
         </Link>
 
-        <div className="flex shrink-0 items-center gap-1 rounded-full bg-white/10 p-1 min-[380px]:gap-2 min-[380px]:p-1.5">
+        <div className="flex shrink-0 items-center gap-0.5 rounded-2xl border border-white/12 bg-white/[0.09] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.1)] backdrop-blur-sm min-[380px]:gap-1">
           <Link
             href={"/news" as Route}
             prefetch={false}
             title="Noticias"
             aria-label="Ir a noticias"
-            className="text-paper focus-visible:ring-paper/80 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none min-[380px]:h-12 min-[380px]:w-12"
+            className={utilityActionClass}
           >
-            <Megafone className="h-5 w-5 min-[380px]:h-6 min-[380px]:w-6" />
+            <Megafone className="h-5 w-5" />
           </Link>
 
           {isPrivileged ? (
@@ -75,9 +86,9 @@ export async function TopBar({ activeProfile }: TopBarProps) {
               prefetch={false}
               title="Panel de administracion"
               aria-label="Panel de administracion"
-              className="text-paper focus-visible:ring-paper/80 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none min-[380px]:h-12 min-[380px]:w-12"
+              className={utilityActionClass}
             >
-              <MdSettings className="h-5 w-5 min-[380px]:h-6 min-[380px]:w-6" aria-hidden="true" />
+              <MdSettings className="h-5 w-5" aria-hidden="true" />
             </Link>
           ) : null}
 
@@ -85,6 +96,7 @@ export async function TopBar({ activeProfile }: TopBarProps) {
             initialUnread={unread}
             initialNotifications={items}
             showFullListHref="/notifications"
+            triggerClassName={utilityActionClass}
           />
 
           <Link
@@ -92,14 +104,14 @@ export async function TopBar({ activeProfile }: TopBarProps) {
             prefetch={false}
             title="Mi perfil"
             aria-label="Mi perfil"
-            className="focus-visible:ring-paper/80 shrink-0 rounded-full focus-visible:ring-2 focus-visible:outline-none"
+            className="focus-visible:ring-paper/80 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-[background-color,transform] duration-200 [-webkit-tap-highlight-color:transparent] hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none"
           >
             <Avatar
               src={activeProfile.photo_url}
               name={activeProfile.full_name}
-              size={42}
+              size={36}
               teamColor={teamColor}
-              className="ring-2 ring-white/40"
+              className="ring-2 ring-white/55"
             />
           </Link>
         </div>

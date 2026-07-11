@@ -28,10 +28,14 @@ const updatePasswordSchema = z
       .regex(PASSWORD_REGEX, "La contraseña debe tener al menos una letra y un número."),
     confirmPassword: z.string().min(1, "Confirma la contraseña."),
   })
-  .refine((data: { newPassword: string; confirmPassword: string }) => data.newPassword === data.confirmPassword, {
-    message: "Las contraseñas no coinciden.",
-    path: ["confirmPassword"],
-  });
+  .refine(
+    (data: { newPassword: string; confirmPassword: string }) =>
+      data.newPassword === data.confirmPassword,
+    {
+      message: "Las contraseñas no coinciden.",
+      path: ["confirmPassword"],
+    },
+  );
 
 const submitAccessRequestSchema = z
   .object({

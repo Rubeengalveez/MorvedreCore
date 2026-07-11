@@ -47,7 +47,7 @@ export function RankingRowItem({
           {row.primary_value}
           {metricSuffix}
         </p>
-        <p className="text-ink-500 mt-1 text-[0.68rem] leading-none font-extrabold tracking-[0.08em] uppercase">
+        <p className="text-ink-500 mt-1 text-xs leading-none font-extrabold tracking-[0.08em] uppercase">
           {metricLabel}
         </p>
       </div>

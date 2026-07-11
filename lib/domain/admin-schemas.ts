@@ -641,6 +641,9 @@ export const upsertShopProductSchema = z.object({
   available: z.boolean().default(true),
   stock: z.number().int().min(0).max(1000).nullable().optional(),
   max_per_order: z.number().int().min(1).max(20).default(10),
+  personalization_enabled: z.boolean().default(false),
+  personalization_label: z.string().trim().min(1).max(40).default("Nombre"),
+  personalization_max_length: z.number().int().min(1).max(60).default(30),
 });
 
 export const updateShopProductSchema = upsertShopProductSchema.extend({
@@ -657,6 +660,7 @@ export const createShopOrderSchema = z.object({
       z.object({
         product_id: z.string().uuid("Producto inv�lido."),
         size: z.string().trim().max(20).nullable().optional(),
+        personalization: z.string().trim().min(1).max(60).nullable().optional(),
         quantity: z.number().int().min(1).max(20),
       }),
     )

@@ -24,6 +24,7 @@ export interface NotificationsBellProps {
   initialUnread: number;
   initialNotifications: NotificationItem[];
   showFullListHref?: string;
+  triggerClassName?: string;
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -39,6 +40,7 @@ export function NotificationsBell({
   initialUnread,
   initialNotifications,
   showFullListHref,
+  triggerClassName,
 }: NotificationsBellProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -96,7 +98,10 @@ export function NotificationsBell({
         <button
           type="button"
           aria-label="Notificaciones"
-          className="relative flex h-11 w-11 items-center justify-center rounded-md border border-current/12 bg-current/8 text-current transition-colors hover:bg-current/14 focus-visible:ring-2 focus-visible:ring-current/70 focus-visible:outline-none active:scale-[0.97]"
+          className={cn(
+            "relative flex h-11 w-11 items-center justify-center rounded-md border border-current/12 bg-current/8 text-current transition-[background-color,transform] duration-200 hover:bg-current/14 focus-visible:ring-2 focus-visible:ring-current/70 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+            triggerClassName,
+          )}
         >
           <MdNotifications className="h-6 w-6" aria-hidden="true" />
           {unread > 0 ? (
@@ -251,14 +256,14 @@ function NotificationRow({
           <span className="font-display text-pool-deep text-sm font-bold">
             {notification.title}
           </span>
-          <span className="text-ink-600 shrink-0 text-[10px] font-semibold tracking-wider uppercase">
+          <span className="text-ink-600 shrink-0 text-xs font-semibold tracking-wider uppercase">
             {KIND_LABELS[notification.kind] ?? notification.kind}
           </span>
         </div>
         {notification.body ? (
           <p className="text-ink-600 line-clamp-2 text-xs">{notification.body}</p>
         ) : null}
-        <span className="text-ink-600 text-[10px]">{timeAgo(notification.created_at)}</span>
+        <span className="text-ink-600 text-xs">{timeAgo(notification.created_at)}</span>
       </div>
     </button>
   );

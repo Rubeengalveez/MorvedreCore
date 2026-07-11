@@ -115,14 +115,14 @@ export function MonthView({
               aria-label={`${cell.iso}${hasItems ? `, ${items.length} evento(s)` : ""}${unavailable ? ", no disponible" : ""}${isToday ? ", hoy" : ""}`}
               aria-pressed={isSelected}
               className={cn(
-                "group relative flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-md border p-1 text-center transition-all duration-200",
+                "group relative flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-lg border p-1 text-center transition-[background-color,border-color,color,box-shadow,transform] duration-200 motion-reduce:transition-none",
                 "focus-visible:ring-pool-blue focus-visible:ring-offset-paper focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
                 "touch-target active:scale-95",
                 !cell.inMonth
                   ? "pointer-events-none border-transparent bg-transparent opacity-15"
                   : isSelected
                     ? hasMatch
-                      ? "text-paper scale-[1.03] border-amber-600 bg-amber-600 shadow-md"
+                      ? "bg-ball-gold text-pool-deep border-ball-gold scale-[1.03] shadow-md"
                       : hasTraining
                         ? "border-pool-blue bg-pool-blue text-paper scale-[1.03] shadow-md"
                         : hasCancelled
@@ -131,11 +131,11 @@ export function MonthView({
                     : isToday
                       ? "border-pool-blue/70 bg-pool-foam/30 text-pool-deep border-2 font-extrabold"
                       : hasMatch
-                        ? "border-amber-200/60 bg-amber-50 font-extrabold text-amber-900 hover:bg-amber-100"
+                        ? "border-ball-gold/40 bg-ball-gold/10 text-pool-deep hover:bg-ball-gold/20 font-extrabold"
                         : hasTraining
                           ? "border-pool-blue/15 bg-pool-foam/60 text-pool-deep hover:bg-pool-foam font-semibold"
                           : hasCancelled
-                            ? "border-red-100 bg-red-50 font-semibold text-red-800 hover:bg-red-100/60"
+                            ? "border-goggle-red/25 bg-goggle-red/5 text-goggle-red hover:bg-goggle-red/10 font-semibold"
                             : unavailable
                               ? "border-ink-200/50 bg-ink-100/60 text-ink-400 opacity-65"
                               : "border-ink-200/60 bg-paper text-ink-900 hover:bg-ink-50/70",

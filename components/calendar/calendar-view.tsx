@@ -148,20 +148,20 @@ export function CalendarView({
       : monthLabel(yearMonth);
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-2">
+    <div className="flex flex-col gap-4">
+      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-3">
         <div className="flex items-center justify-between gap-2">
           <button
             type="button"
             onClick={goPrev}
             aria-label="Anterior"
-            className="border-ink-300 bg-paper text-pool-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
+            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
 
           <div className="relative min-w-0 flex-1">
-            <div className="bg-paper-sunk flex h-9 items-center justify-center gap-1.5 rounded-md px-3">
+            <div className="bg-paper-sunk flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-3">
               <span className="font-display text-pool-deep truncate text-base font-extrabold">
                 {navLabel}
               </span>
@@ -179,6 +179,7 @@ export function CalendarView({
               }}
               className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
               title="Seleccionar mes"
+              aria-label="Seleccionar mes"
             >
               {monthOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
@@ -192,17 +193,17 @@ export function CalendarView({
             type="button"
             onClick={goNext}
             aria-label="Siguiente"
-            className="border-ink-300 bg-paper text-pool-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-md border"
+            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="mt-1.5 grid grid-cols-[1fr_auto] gap-2">
+        <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
           <div
             role="tablist"
             aria-label="Modo de vista"
-            className="bg-paper-sunk grid h-9 grid-cols-3 rounded-md p-1"
+            className="bg-paper-sunk grid min-h-12 grid-cols-3 rounded-xl p-1"
           >
             {[
               { id: "month" as const, Icon: Grid3x3, label: "Mes" },
@@ -216,7 +217,7 @@ export function CalendarView({
                 aria-selected={viewMode === id}
                 onClick={() => setViewMode(id)}
                 className={cn(
-                  "inline-flex items-center justify-center gap-1 rounded-sm px-1 text-xs font-extrabold transition-all",
+                  "focus-visible:ring-pool-blue inline-flex min-h-10 touch-manipulation items-center justify-center gap-1 rounded-lg px-1 text-xs font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
                   viewMode === id ? "bg-pool-deep text-paper shadow-elev-1" : "text-ink-600",
                 )}
               >
@@ -229,7 +230,7 @@ export function CalendarView({
             variant="secondary"
             size="sm"
             onClick={goToday}
-            className="h-9 rounded-md px-3 text-sm font-extrabold"
+            className="min-h-12 rounded-xl px-4 text-sm font-extrabold"
           >
             Hoy
           </Button>
@@ -240,7 +241,7 @@ export function CalendarView({
             id="calendar-team-filter"
             value={teamFilter}
             onChange={(e) => setTeamFilter(e.target.value)}
-            className="border-ink-300 bg-paper mt-1.5 h-9 w-full rounded-md border px-3 text-sm font-semibold"
+            className="border-ink-300 bg-paper mt-2 min-h-12 w-full rounded-xl border px-3 text-sm font-semibold"
           >
             <option value="">Todos mis equipos</option>
             {teams.map((t) => (
@@ -252,7 +253,7 @@ export function CalendarView({
         ) : null}
       </div>
 
-      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-2">
+      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-2 sm:p-3">
         {viewMode === "month" ? (
           <MonthView
             year={yearMonth.year}
@@ -295,22 +296,22 @@ export function CalendarView({
             activeProfileId={activeProfileId}
             showAttendance={showAttendance}
             userAttendanceBySession={userAttendanceBySession}
-            emptyMessage="Tu mes en el club. Si hay convocatoria, aparece aqui. Si no, descansas."
+            emptyMessage="Tu mes en el club. Si hay convocatoria, aparece aquí. Si no, descansas."
           />
         )}
       </div>
 
       <div className="text-ink-600 flex flex-wrap items-center gap-3 px-1 text-xs font-bold">
         <span className="inline-flex items-center gap-1">
-          <span className="bg-pool-blue h-2 w-2 rounded-full" />
+          <span aria-hidden="true" className="bg-pool-blue h-2 w-2 rounded-full" />
           Entreno
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="bg-ball-gold h-2 w-2 rounded-full" />
+          <span aria-hidden="true" className="bg-ball-gold h-2 w-2 rounded-full" />
           Partido
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="bg-goggle-red h-2 w-2 rounded-full" />
+          <span aria-hidden="true" className="bg-goggle-red h-2 w-2 rounded-full" />
           Cancelado
         </span>
       </div>

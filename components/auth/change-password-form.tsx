@@ -38,7 +38,7 @@ function SubmitButton() {
   return (
     <Button type="submit" size="lg" className="w-full" disabled={pending}>
       {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
-      {pending ? "Guardando..." : "Guardar contraseña"}
+      {pending ? "Guardando…" : "Guardar contraseña"}
     </Button>
   );
 }
@@ -81,7 +81,7 @@ export function ChangePasswordForm() {
                   id="newPassword"
                   type="password"
                   autoComplete="new-password"
-                  placeholder="Mínimo 10 caracteres"
+                  placeholder="Mínimo 10 caracteres…"
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -105,7 +105,7 @@ export function ChangePasswordForm() {
                   id="confirmPassword"
                   type="password"
                   autoComplete="new-password"
-                  placeholder="Mínimo 10 caracteres"
+                  placeholder="Mínimo 10 caracteres…"
                   value={field.value}
                   onChange={field.onChange}
                   onBlur={field.onBlur}

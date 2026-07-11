@@ -65,120 +65,114 @@ export function LoginForm({ next, error }: LoginFormProps) {
         }}
         className="flex w-full flex-col gap-4"
       >
-      {error === "invalid_credentials" ? (
-        <div
-          role="alert"
-          className="rounded-[var(--r-sm)] border border-danger/30 bg-danger/10 px-3 py-2 text-sm font-semibold text-danger"
-        >
-          Email o contraseña incorrectos.
-        </div>
-      ) : null}
+        {error === "invalid_credentials" ? (
+          <div
+            role="alert"
+            className="border-danger/30 bg-danger/10 text-danger rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold"
+          >
+            Email o contraseña incorrectos.
+          </div>
+        ) : null}
 
-      {error === "pending_request" ? (
-        <div
-          role="status"
-          className="rounded-[var(--r-sm)] border border-pool-teal/30 bg-pool-teal/10 px-3 py-2 text-sm font-semibold text-pool-deep"
-        >
-          Tu solicitud está pendiente de aprobación.
-        </div>
-      ) : null}
+        {error === "pending_request" ? (
+          <div
+            role="status"
+            className="border-pool-teal/30 bg-pool-teal/10 text-pool-deep rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold"
+          >
+            Tu solicitud está pendiente de aprobación.
+          </div>
+        ) : null}
 
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="email"
-          className="text-eyebrow text-ink-700"
-        >
-          Email
-        </label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          inputMode="email"
-          spellCheck={false}
-          placeholder="tu@email.com"
-          defaultValue=""
-          required
-          className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice px-4 focus:border-pool-blue focus:bg-paper"
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="password"
-          className="text-eyebrow text-ink-700"
-        >
-          Contraseña
-        </label>
-        <div className="relative">
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="email" className="text-eyebrow text-ink-700">
+            Email
+          </label>
           <Input
-            id="password"
-            name="password"
-            type={showPassword ? "text" : "password"}
-            autoComplete="current-password"
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            inputMode="email"
             spellCheck={false}
-            placeholder="••••••••"
+            placeholder="tu@email.com"
             defaultValue=""
             required
-            className="h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent bg-pool-ice pr-12 pl-4 focus:border-pool-blue focus:bg-paper"
+            className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
           />
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
-            aria-pressed={showPassword}
-            className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          >
-            {showPassword ? (
-              <EyeOff className="h-5 w-5" aria-hidden="true" />
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="password" className="text-eyebrow text-ink-700">
+            Contraseña
+          </label>
+          <div className="relative">
+            <Input
+              id="password"
+              name="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              spellCheck={false}
+              placeholder="••••••••"
+              defaultValue=""
+              required
+              className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent pr-12 pl-4"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-pressed={showPassword}
+              className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+            >
+              {showPassword ? (
+                <EyeOff className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <Eye className="h-5 w-5" aria-hidden="true" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        <input type="hidden" name="next" value={safeNext} />
+
+        <Link
+          href={"/reset-password" as Route}
+          className="text-pool-blue self-end text-xs font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+        >
+          ¿Olvidaste la contraseña?
+        </Link>
+
+        <div className="flex flex-col gap-3 pt-1">
+          <Button type="submit" size="lg" className="w-full" disabled={isPending}>
+            {isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                <span>Entrando&hellip;</span>
+              </>
             ) : (
-              <Eye className="h-5 w-5" aria-hidden="true" />
+              <span>Entrar</span>
             )}
-          </button>
+          </Button>
+        </div>
+      </form>
+
+      <div className="relative my-2">
+        <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div className="border-ink-200 w-full border-t" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-paper-card text-ink-400 px-2">o</span>
         </div>
       </div>
 
-      <input type="hidden" name="next" value={safeNext} />
-
-      <Link
-        href={"/reset-password" as Route}
-        className="text-pool-blue self-end text-xs font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+      <a
+        href={googleRedirectUrl}
+        rel="noopener"
+        className="focus-visible:ring-pool-blue border-ink-200 bg-paper text-ink-700 hover:bg-ink-50 focus-visible:ring-offset-paper inline-flex w-full items-center justify-center gap-2.5 rounded-[var(--r-sm)] border py-3 text-sm font-semibold shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       >
-        ¿Olvidaste la contraseña?
-      </Link>
-
-      <div className="flex flex-col gap-3 pt-1">
-        <Button type="submit" size="lg" className="w-full" disabled={isPending}>
-          {isPending ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              <span>Entrando&hellip;</span>
-            </>
-          ) : (
-            <span>Entrar</span>
-          )}
-        </Button>
-      </div>
-    </form>
-
-    <div className="relative my-2">
-      <div className="absolute inset-0 flex items-center" aria-hidden="true">
-        <div className="w-full border-t border-ink-200" />
-      </div>
-      <div className="relative flex justify-center text-xs">
-        <span className="bg-paper-card px-2 text-ink-400">o</span>
-      </div>
-    </div>
-
-    <a
-      href={googleRedirectUrl}
-      rel="noopener"
-      className="focus-visible:ring-pool-blue inline-flex w-full items-center justify-center gap-2.5 rounded-[var(--r-sm)] border border-ink-200 bg-paper py-3 text-sm font-semibold text-ink-700 shadow-sm transition-colors hover:bg-ink-50 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper focus-visible:outline-none"
-    >
-      <GoogleIcon />
-      <span>Continuar con Google</span>
-    </a>
+        <GoogleIcon />
+        <span>Continuar con Google</span>
+      </a>
     </>
   );
 }

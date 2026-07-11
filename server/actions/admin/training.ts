@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { insertNotificationsWithPush } from "./notification-dispatch";
 import type { Tables } from "@/types/database";
 import {
@@ -362,7 +361,7 @@ export async function uncancelTrainingSession(sessionId: string): Promise<void> 
 
 export async function markAttendance(input: {
   session_id: string;
-  rows: Array<{ player_id: string; present: boolean; reason?: string | null }>;
+  entries: Array<{ player_id: string; present: boolean; reason?: string | null }>;
 }): Promise<{ updated: number }> {
   const parsed = markAttendanceSchema.safeParse(input);
   if (!parsed.success) {
@@ -403,6 +402,7 @@ export async function markAttendance(input: {
 
   revalidatePath("/admin/trainings");
   revalidatePath(`/admin/trainings/${parsed.data.session_id}`);
+  revalidatePath("/dashboard");
 
   return { updated: upsertRows.length };
 }
@@ -478,6 +478,7 @@ export async function markAllPresent(sessionId: string): Promise<{ updated: numb
 
   revalidatePath("/admin/trainings");
   revalidatePath(`/admin/trainings/${parsedId.data.id}`);
+  revalidatePath("/dashboard");
 
   return { updated: upsertRows.length };
 }

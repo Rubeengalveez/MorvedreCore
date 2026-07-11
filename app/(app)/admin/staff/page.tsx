@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { AdminPageShell } from "@/components/admin/admin-page";
 
 import { StaffClient } from "./_components/staff-client";
 import type { PersonOption, StaffRow, TeamOption } from "./_components/staff-manager";
@@ -86,8 +87,8 @@ export default async function StaffPage() {
   const { rows, teams, people } = await loadData();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
+    <AdminPageShell>
       <StaffClient rows={rows} teams={teams} people={people} />
-    </div>
+    </AdminPageShell>
   );
 }

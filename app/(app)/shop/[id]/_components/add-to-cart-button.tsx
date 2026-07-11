@@ -1,120 +1,162 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingCart } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
+import { Check, ChevronRight, PenLine, ShoppingBag } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { useShopCart } from "@/hooks/use-shop-cart";
 import { cn } from "@/lib/utils/cn";
 
 export interface AddToCartButtonProps {
   productId: string;
   available: boolean;
-  maxPerOrder: number;
   sizes: string[];
+  personalizationEnabled: boolean;
+  personalizationLabel: string;
+  personalizationMaxLength: number;
 }
 
 export function AddToCartButton({
   productId,
   available,
-  maxPerOrder,
   sizes,
+  personalizationEnabled,
+  personalizationLabel,
+  personalizationMaxLength,
 }: AddToCartButtonProps) {
-  const router = useRouter();
   const cart = useShopCart();
-  const [size, setSize] = useState<string | null>(sizes[0] ?? null);
-  const [quantity, setQuantity] = useState(1);
+  const [size, setSize] = useState<string | null>(null);
+  const [personalization, setPersonalization] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
 
   if (!available) return null;
 
   function add() {
+    setError(null);
+    if (sizes.length > 0 && !size) {
+      setError("Elige una talla antes de añadir el producto.");
+      return;
+    }
+    const normalizedPersonalization = personalization.trim();
+    if (personalizationEnabled && !normalizedPersonalization) {
+      setError(`Escribe ${personalizationLabel.toLocaleLowerCase("es-ES")} antes de continuar.`);
+      return;
+    }
     cart.addItem({
       productId,
       size,
-      quantity: Math.max(1, Math.min(quantity, maxPerOrder)),
+      personalization: personalizationEnabled ? normalizedPersonalization : null,
+      quantity: 1,
     });
     setAdded(true);
-    window.setTimeout(() => setAdded(false), 1500);
   }
 
   return (
-    <div className="border-ink-200 bg-paper flex flex-col gap-3 rounded-md border px-3 py-3">
-      {sizes.length > 1 ? (
-        <div>
-          <ControlLabel>Talla</ControlLabel>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {sizes.map((s) => (
+    <section aria-labelledby="product-options-heading" className="flex flex-col gap-5">
+      <div>
+        <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+          Configura tu producto
+        </p>
+        <h2 id="product-options-heading" className="font-display text-pool-deep mt-1 text-xl font-extrabold">
+          Elige antes de añadir
+        </h2>
+      </div>
+
+      {sizes.length > 0 ? (
+        <fieldset>
+          <div className="flex items-center justify-between gap-3">
+            <legend className="text-pool-deep text-base font-extrabold">Talla</legend>
+            <span className="text-ink-500 text-sm">Obligatoria</span>
+          </div>
+          <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {sizes.map((item) => (
               <button
-                key={s}
+                key={item}
                 type="button"
-                onClick={() => setSize(s)}
+                onClick={() => {
+                  setSize(item);
+                  setError(null);
+                }}
+                aria-pressed={size === item}
                 className={cn(
-                  "touch-target h-11 min-w-11 rounded-md border px-3 text-sm font-extrabold",
-                  size === s
+                  "focus-visible:ring-pool-blue min-h-12 touch-manipulation rounded-lg border px-3 text-base font-extrabold transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+                  size === item
                     ? "border-pool-deep bg-pool-deep text-paper"
-                    : "border-ink-300 bg-paper-card text-pool-deep hover:bg-pool-foam",
+                    : "border-ink-300 bg-paper text-pool-deep hover:border-pool-blue",
                 )}
               >
-                {s}
+                {item}
               </button>
             ))}
           </div>
+        </fieldset>
+      ) : (
+        <div className="border-ink-300 flex min-h-12 items-center justify-between border-y py-3 text-sm">
+          <span className="text-ink-600">Talla</span>
+          <span className="text-pool-deep font-extrabold">Única</span>
+        </div>
+      )}
+
+      {personalizationEnabled ? (
+        <div>
+          <div className="flex items-center justify-between gap-3">
+            <label htmlFor="product-personalization" className="text-pool-deep text-base font-extrabold">
+              {personalizationLabel}
+            </label>
+            <span className="text-ink-500 text-sm tabular-nums">
+              {personalization.length}/{personalizationMaxLength}
+            </span>
+          </div>
+          <div className="relative mt-3">
+            <PenLine className="text-ink-400 pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2" aria-hidden="true" />
+            <input
+              id="product-personalization"
+              name="personalization"
+              value={personalization}
+              onChange={(event) => {
+                setPersonalization(event.target.value);
+                setError(null);
+              }}
+              maxLength={personalizationMaxLength}
+              autoComplete="off"
+              placeholder={`Escribe ${personalizationLabel.toLocaleLowerCase("es-ES")}`}
+              className="border-ink-300 bg-paper text-pool-deep placeholder:text-ink-400 focus-visible:ring-pool-blue min-h-13 w-full rounded-lg border pr-4 pl-12 text-base font-semibold outline-none focus-visible:ring-2"
+              required
+            />
+          </div>
+          <p className="text-ink-600 mt-2 text-sm">Se guardará exactamente como lo escribas.</p>
         </div>
       ) : null}
 
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <ControlLabel>Cantidad</ControlLabel>
-          <div className="border-ink-300 bg-paper-card mt-2 inline-flex h-11 items-center overflow-hidden rounded-md border">
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-              className="text-ink-700 touch-target flex h-11 w-11 items-center justify-center"
-              aria-label="Quitar uno"
-            >
-              <Minus className="h-4 w-4" />
-            </button>
-            <span className="text-pool-deep w-11 text-center font-mono text-lg font-extrabold">
-              {quantity}
-            </span>
-            <button
-              type="button"
-              onClick={() => setQuantity((q) => Math.min(maxPerOrder, q + 1))}
-              className="text-ink-700 touch-target flex h-11 w-11 items-center justify-center"
-              aria-label="Anadir uno"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <span className="text-ink-600 pb-2 text-xs font-bold">max {maxPerOrder}</span>
-      </div>
+      {error ? (
+        <p role="alert" className="bg-goggle-red/5 text-goggle-red rounded-lg px-3 py-2.5 text-sm font-semibold">
+          {error}
+        </p>
+      ) : null}
 
-      <div className="grid grid-cols-[1fr_auto] gap-2">
-        <Button type="button" variant="primary" size="lg" onClick={add} className="min-w-0">
-          <ShoppingCart className="h-4 w-4" />
-          {added ? "Anadido" : "Anadir"}
-        </Button>
-        <Button
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_auto]">
+        <button
           type="button"
-          variant="secondary"
-          size="lg"
-          onClick={() => router.push("/shop/cart" as never)}
-          className="px-3"
+          onClick={add}
+          className={cn(
+            "focus-visible:ring-pool-blue inline-flex min-h-13 touch-manipulation items-center justify-center gap-2 rounded-lg px-5 text-base font-extrabold transition-[background-color,color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+            added ? "bg-success text-paper" : "bg-action hover:bg-action-dark text-paper",
+          )}
+          aria-live="polite"
         >
-          Carrito
-        </Button>
+          {added ? <Check className="h-5 w-5" aria-hidden="true" /> : <ShoppingBag className="h-5 w-5" aria-hidden="true" />}
+          {added ? "Añadido" : "Añadir al carrito"}
+        </button>
+        <Link
+          href={"/shop/cart" as Route}
+          className="border-ink-300 text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue bg-paper inline-flex min-h-13 touch-manipulation items-center justify-center gap-2 rounded-lg border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          Ver carrito
+          <ChevronRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
       </div>
-    </div>
-  );
-}
-
-function ControlLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="text-ink-600 text-xs font-extrabold tracking-[0.08em] uppercase">
-      {children}
-    </span>
+    </section>
   );
 }

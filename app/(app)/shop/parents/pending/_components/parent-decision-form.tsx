@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Alert } from "@/components/ui/alert";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { decideShopOrder } from "@/server/actions/admin/shop";
 
 export interface ParentDecisionFormProps {
@@ -31,12 +42,9 @@ export function ParentDecisionForm({ orderId }: ParentDecisionFormProps) {
   return (
     <div className="mt-3">
       {error ? (
-        <div
-          role="alert"
-          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red mb-2 rounded border px-2 py-1 text-[11px] font-bold"
-        >
+        <Alert variant="danger" title="No se ha podido guardar" className="mb-3">
           {error}
-        </div>
+        </Alert>
       ) : null}
       <div className="grid grid-cols-2 gap-2">
         <Button
@@ -49,16 +57,34 @@ export function ParentDecisionForm({ orderId }: ParentDecisionFormProps) {
           <Check className="h-4 w-4" />
           Aprobar
         </Button>
-        <Button
-          type="button"
-          variant="danger"
-          size="md"
-          disabled={pending}
-          onClick={() => decide("reject")}
-        >
-          <X className="h-4 w-4" />
-          Rechazar
-        </Button>
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button type="button" variant="danger" size="md" disabled={pending}>
+              <X className="h-4 w-4" aria-hidden="true" />
+              Rechazar
+            </Button>
+          </SheetTrigger>
+          <SheetContent size="sm">
+            <SheetHeader>
+              <SheetTitle>¿Rechazar este pedido?</SheetTitle>
+              <SheetDescription>
+                La familia verá el pedido como rechazado. Comprueba los datos antes de continuar.
+              </SheetDescription>
+            </SheetHeader>
+            <SheetBody />
+            <SheetFooter>
+              <Button
+                type="button"
+                variant="danger"
+                size="lg"
+                disabled={pending}
+                onClick={() => decide("reject")}
+              >
+                {pending ? "Rechazando…" : "Sí, rechazar pedido"}
+              </Button>
+            </SheetFooter>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );

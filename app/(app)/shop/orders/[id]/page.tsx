@@ -1,14 +1,13 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PackageOpen, ReceiptText } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopOrder } from "@/server/queries/shop";
 import { SHOP_ORDER_STATUS_LABELS, formatCents } from "@/lib/domain/shop";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { Eyebrow } from "@/components/ui/eyebrow";
-import { CapTile } from "@/components/ui/cap-tile";
+import { PageShell } from "@/components/ui/page-shell";
+import { cn } from "@/lib/utils/cn";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -24,125 +23,118 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const order = await getShopOrder(id);
   if (!order) notFound();
-
-  const date = new Date(order.requested_at);
-  const statusColor = (() => {
-    switch (order.status) {
-      case "pending_parent":
-        return "var(--warning)";
-      case "pending_admin":
-        return "var(--pool-blue)";
-      case "rejected":
-      case "cancelled":
-        return "var(--goggle-red)";
-      case "ordered":
-        return "var(--pool-teal)";
-      case "received":
-        return "var(--pool-blue)";
-      case "delivered":
-        return "var(--success)";
-      default:
-        return "var(--ink-500)";
-    }
-  })();
+  const date = new Intl.DateTimeFormat("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date(order.requested_at));
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
-        <Link
-          href={"/shop/orders" as Route}
-          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Mis pedidos
-        </Link>
+    <PageShell width="md" className="gap-5 pb-8">
+      <Link
+        href={"/shop/orders" as Route}
+        className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Mis pedidos
+      </Link>
 
-        <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-4">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <Eyebrow>Pedido {order.id.slice(0, 8)}</Eyebrow>
-              <h1 className="font-display text-pool-deep text-xl font-extrabold">
-                {date.toLocaleDateString("es-ES", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              </h1>
-            </div>
-            <span
-              className="inline-flex h-7 items-center rounded-full px-3 text-[10px] font-extrabold tracking-wider uppercase"
-              style={{ backgroundColor: statusColor + "20", color: statusColor }}
-            >
-              {SHOP_ORDER_STATUS_LABELS[order.status]}
-            </span>
-          </div>
-          <p className="text-pool-deep mt-3 font-mono text-3xl font-extrabold">
-            {formatCents(order.total_cents, order.currency)}
-          </p>
-          <p className="text-ink-600 text-[11px]">
-            {order.items.length} producto{order.items.length === 1 ? "" : "s"}
-          </p>
-          {order.notes ? (
-            <p className="bg-paper-sunk/40 text-ink-700 mt-3 rounded-md p-2 text-xs italic">
-              {order.notes}
+      <header className="border-ink-200 bg-paper-card shadow-elev-2 rounded-[1.75rem] border p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+              Pedido {order.id.slice(0, 8)}
             </p>
-          ) : null}
+            <h1 className="font-display text-pool-deep mt-2 text-2xl font-extrabold capitalize">
+              {date}
+            </h1>
+          </div>
+          <StatusBadge status={order.status} />
         </div>
+        <div className="border-ink-200 mt-5 flex items-end justify-between gap-4 border-t pt-5">
+          <span className="text-ink-600 text-base font-semibold">Total</span>
+          <span className="text-pool-deep font-mono text-3xl font-extrabold tabular-nums">
+            {formatCents(order.total_cents, order.currency)}
+          </span>
+        </div>
+      </header>
 
-        <section aria-labelledby="items-heading" className="flex flex-col gap-2">
-          <h2 id="items-heading" className="text-eyebrow text-ink-600">
+      <section aria-labelledby="order-products-heading">
+        <div className="mb-3 flex items-end justify-between px-1">
+          <h2
+            id="order-products-heading"
+            className="font-display text-pool-deep text-xl font-extrabold"
+          >
             Productos
           </h2>
-          <ul className="flex flex-col gap-1.5">
-            {order.items.map((item) => (
-              <li
-                key={item.id}
-                className="border-ink-300 bg-paper-card flex items-center gap-3 rounded-md border p-2.5"
-              >
-                {item.product_image_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.product_image_url}
-                    alt={item.product_title ?? ""}
-                    className="h-12 w-12 shrink-0 rounded object-cover"
-                  />
-                ) : (
-                  <div className="bg-pool-foam flex h-12 w-12 shrink-0 items-center justify-center rounded">
-                    <CapTile number={1} teamColor="var(--pool-deep)" size="sm" />
-                  </div>
-                )}
-                <div className="min-w-0 flex-1">
-                  <p className="text-pool-deep line-clamp-1 text-sm font-bold">
-                    {item.product_title ?? "Producto"}
-                  </p>
-                  <p className="text-ink-600 text-[10px]">
-                    {item.size ? `Talla ${item.size} · ` : ""}
-                    {item.quantity} × {formatCents(item.unit_price_cents, order.currency)}
-                  </p>
-                </div>
-                <p className="text-pool-deep font-mono text-sm font-extrabold">
-                  {formatCents(item.subtotal_cents, order.currency)}
+          <span className="text-ink-500 text-sm tabular-nums">{order.items.length}</span>
+        </div>
+        <ul className="border-ink-200 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-2xl border shadow-sm">
+          {order.items.map((item) => (
+            <li key={item.id} className="flex min-h-24 items-center gap-3 px-4 py-3">
+              {item.product_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={item.product_image_url}
+                  alt={item.product_title ?? "Producto"}
+                  width={64}
+                  height={80}
+                  className="border-ink-200 h-20 w-16 shrink-0 rounded-xl border object-cover"
+                />
+              ) : (
+                <span className="bg-pool-foam text-pool-deep flex h-20 w-16 shrink-0 items-center justify-center rounded-xl">
+                  <PackageOpen className="h-6 w-6" aria-hidden="true" />
+                </span>
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="font-display text-pool-deep line-clamp-2 text-base font-extrabold">
+                  {item.product_title ?? "Producto"}
                 </p>
-              </li>
-            ))}
-          </ul>
-        </section>
+                <p className="text-ink-500 mt-1 text-sm">
+                  {item.size ? `Talla ${item.size}` : "Talla única"}
+                </p>
+              </div>
+              <p className="text-pool-deep shrink-0 font-mono text-base font-extrabold tabular-nums">
+                {formatCents(item.subtotal_cents, order.currency)}
+              </p>
+            </li>
+          ))}
+        </ul>
+      </section>
 
-        {order.parent_notes ? (
-          <section className="border-pool-blue/30 bg-pool-blue/5 rounded-md border p-3">
-            <Eyebrow>Nota del padre</Eyebrow>
-            <p className="text-pool-deep mt-1 text-sm">{order.parent_notes}</p>
-          </section>
-        ) : null}
+      {order.notes ? <Note title="Personalización e indicaciones" text={order.notes} /> : null}
+      {order.parent_notes ? <Note title="Nota familiar" text={order.parent_notes} /> : null}
+      {order.admin_notes ? <Note title="Nota de la tienda" text={order.admin_notes} /> : null}
+    </PageShell>
+  );
+}
 
-        {order.admin_notes ? (
-          <section className="border-pool-teal/30 bg-pool-teal/5 rounded-md border p-3">
-            <Eyebrow>Nota del admin</Eyebrow>
-            <p className="text-pool-deep mt-1 text-sm">{order.admin_notes}</p>
-          </section>
-        ) : null}
+function StatusBadge({ status }: { status: keyof typeof SHOP_ORDER_STATUS_LABELS }) {
+  return (
+    <span
+      className={cn(
+        "shrink-0 rounded-full px-2.5 py-1.5 text-[11px] font-extrabold tracking-wide uppercase",
+        status === "delivered" && "bg-success/10 text-success",
+        status === "rejected" || status === "cancelled"
+          ? "bg-goggle-red/10 text-goggle-red"
+          : status !== "delivered"
+            ? "bg-pool-foam text-pool-blue"
+            : "",
+      )}
+    >
+      {SHOP_ORDER_STATUS_LABELS[status]}
+    </span>
+  );
+}
+
+function Note({ title, text }: { title: string; text: string }) {
+  return (
+    <section className="border-pool-blue/20 bg-pool-foam rounded-2xl border p-4">
+      <div className="flex items-center gap-2">
+        <ReceiptText className="text-pool-blue h-5 w-5" aria-hidden="true" />
+        <h2 className="font-display text-pool-deep text-base font-extrabold">{title}</h2>
       </div>
-    </div>
+      <p className="text-ink-700 mt-2 text-base leading-relaxed whitespace-pre-line">{text}</p>
+    </section>
   );
 }

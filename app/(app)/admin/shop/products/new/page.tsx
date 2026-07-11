@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, PackagePlus } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { createClient } from "@/lib/supabase/server";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { Eyebrow } from "@/components/ui/eyebrow";
 import { ShopEditorForm } from "../../_components/shop-editor-form";
 
 export const dynamic = "force-dynamic";
@@ -34,22 +33,20 @@ export default async function NewShopProductPage() {
   if (!(await isAdmin(ctx.activeProfile.id))) redirect("/dashboard");
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-2xl flex-col gap-3 px-4 py-4">
-        <Link
-          href={"/admin/shop" as Route}
-          className="text-pool-blue inline-flex items-center gap-1 text-xs font-bold hover:underline"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Kanban
-        </Link>
-        <header>
-          <Eyebrow>Nuevo producto</Eyebrow>
-          <h1 className="font-display text-pool-deep text-2xl font-extrabold">Crear producto</h1>
-        </header>
-        <ShopEditorForm mode="create" />
-      </div>
-    </div>
+    <AdminPageShell>
+      <Link
+        href={"/admin/shop" as Route}
+        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Pedidos
+      </Link>
+      <AdminPageHeader
+        eyebrow="Catálogo de tienda"
+        title="Crear producto"
+        description="Añade imágenes, tallas y opciones de personalización."
+        icon={<PackagePlus className="h-6 w-6" aria-hidden="true" />}
+      />
+      <ShopEditorForm mode="create" />
+    </AdminPageShell>
   );
 }

@@ -29,7 +29,7 @@ export function EmptyState({
       {showRegenerateCta ? (
         <Link
           href={"/admin/matches" as Route}
-          className="border-pool-deep bg-pool-deep text-paper shadow-elev-1 hover:bg-ink-900 inline-flex h-10 items-center justify-center rounded-md border px-4 text-sm font-extrabold transition-colors"
+          className="border-pool-deep bg-pool-deep text-paper shadow-elev-1 hover:bg-ink-900 focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-xl border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
           Ir a partidos
         </Link>

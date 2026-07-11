@@ -1,7 +1,12 @@
 import { MdAdd } from "react-icons/md";
+import Link from "next/link";
+import type { Route } from "next";
+import { CalendarDays } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team } from "@/server/actions/admin";
 
@@ -130,47 +135,47 @@ export default async function MatchesPage() {
 
   if (seasons.length === 0) {
     return (
-      <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-        <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-          Partidos
-        </h1>
-        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-5 text-center">
-          <p className="text-pool-deep text-base font-semibold">Primero crea una temporada.</p>
-          <p className="text-ink-600 mt-1 text-sm">
-            Los partidos pertenecen siempre a una temporada.
-          </p>
-          <div className="mt-4 flex justify-center">
+      <AdminPageShell>
+        <AdminPageHeader
+          title="Partidos"
+          description="Convocatorias, actas y logística de cada partido."
+          icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
+        />
+        <EmptyState
+          icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
+          title="Primero crea una temporada"
+          description="Los partidos pertenecen siempre a una temporada activa."
+          action={
             <Button asChild size="md">
-              <a href="/admin/seasons">Ir a Temporadas</a>
+              <Link href={"/admin/seasons" as Route}>Ir a Temporadas</Link>
             </Button>
-          </div>
-        </div>
-      </div>
+          }
+        />
+      </AdminPageShell>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-            Partidos
-          </h1>
-          <p className="text-ink-600 text-sm">Convocatorias, actas y logística de cada partido.</p>
-        </div>
-        <MatchFormSheet
-          seasons={seasons}
-          teams={teams}
-          defaultTeamId={defaultTeamId}
-          defaultSeasonId={defaultSeasonId}
-          trigger={
-            <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-              <MdAdd className="h-6 w-6" aria-hidden="true" />
-              <span>Nuevo</span>
-            </Button>
-          }
-        />
-      </header>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Partidos"
+        description="Convocatorias, actas y logística de cada partido."
+        icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
+        action={
+          <MatchFormSheet
+            seasons={seasons}
+            teams={teams}
+            defaultTeamId={defaultTeamId}
+            defaultSeasonId={defaultSeasonId}
+            trigger={
+              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                <MdAdd className="h-6 w-6" aria-hidden="true" />
+                <span>Nuevo partido</span>
+              </Button>
+            }
+          />
+        }
+      />
 
       {error ? (
         <Alert variant="danger" title="No pudimos cargar los partidos">
@@ -184,6 +189,6 @@ export default async function MatchesPage() {
         matches={matches}
         defaultTeamId={defaultTeamId}
       />
-    </div>
+    </AdminPageShell>
   );
 }

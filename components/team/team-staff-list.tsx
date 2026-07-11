@@ -1,5 +1,4 @@
 import { Avatar } from "@/components/ui/avatar";
-import { Silbato } from "@/components/brand/pictograms";
 import type { StaffMember } from "@/server/queries/teams";
 
 const ROLE_LABELS: Record<string, string> = {
@@ -16,35 +15,46 @@ export interface TeamStaffListProps {
 
 export function TeamStaffList({ staff, teamColor }: TeamStaffListProps) {
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 px-1">
-        <Silbato className="h-5 w-5" accent={teamColor} />
-        <h2 className="font-display text-pool-deep text-lg font-bold">Cuerpo técnico</h2>
-      </div>
-      {staff.length === 0 ? (
-        <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-5 text-center text-sm leading-relaxed">
-          Aún no hay cuerpo técnico asignado. Cuando el admin lo asigne, aparecerá aquí.
+    <section aria-labelledby="team-staff-heading">
+      <div className="mb-3 flex items-end justify-between gap-3 px-1">
+        <div>
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+            Dirección deportiva
+          </p>
+          <h2
+            id="team-staff-heading"
+            className="font-display text-pool-deep text-xl font-extrabold"
+          >
+            Cuerpo técnico
+          </h2>
         </div>
-      ) : (
-        <ul className="flex flex-col gap-2">
-          {staff.map((member) => (
-            <li
-              key={`${member.profile_id}-${member.role}`}
-              className="border-ink-300 bg-paper flex items-center gap-3 rounded-md border p-3"
-            >
-              <Avatar src={member.photo_url} name={member.full_name} size={48} />
-              <div className="flex flex-1 flex-col">
-                <span className="font-display text-pool-deep text-base leading-tight font-bold">
-                  {member.full_name}
-                </span>
-                <span className="text-ink-600 text-sm">
-                  {ROLE_LABELS[member.role] ?? member.role}
-                </span>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+        <span className="text-ink-500 text-sm font-semibold tabular-nums">{staff.length}</span>
+      </div>
+
+      <ul className="border-ink-200 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-2xl border shadow-sm">
+        {staff.map((member) => (
+          <li
+            key={`${member.profile_id}-${member.role}`}
+            className="flex min-h-[72px] items-center gap-3 px-4 py-3"
+          >
+            <Avatar
+              src={member.photo_url}
+              name={member.full_name}
+              size={46}
+              teamColor={teamColor}
+              className="border-ink-200"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="font-display text-pool-deep truncate text-base font-extrabold">
+                {member.full_name}
+              </p>
+              <p className="text-ink-500 mt-0.5 text-xs">
+                {ROLE_LABELS[member.role] ?? member.role}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

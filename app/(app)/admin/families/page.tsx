@@ -1,5 +1,7 @@
 import { MdAdd } from "react-icons/md";
+import { UsersRound } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 
@@ -71,27 +73,26 @@ export default async function FamiliesPage() {
   const { rows, parents, children } = await loadData();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-            Familias
-          </h1>
-          <p className="text-ink-600 text-sm">Vínculos entre tutores y jugadores.</p>
-        </div>
-        <FamilyFormSheet
-          parents={parents}
-          childrenList={children}
-          trigger={
-            <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-              <MdAdd className="h-6 w-6" aria-hidden="true" />
-              <span>Nuevo</span>
-            </Button>
-          }
-        />
-      </header>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Familias"
+        description="Gestiona los vínculos entre tutores y jugadores."
+        icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+        action={
+          <FamilyFormSheet
+            parents={parents}
+            childrenList={children}
+            trigger={
+              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                <MdAdd className="h-6 w-6" aria-hidden="true" />
+                <span>Nuevo vínculo</span>
+              </Button>
+            }
+          />
+        }
+      />
 
       <FamiliesTable rows={rows} />
-    </div>
+    </AdminPageShell>
   );
 }

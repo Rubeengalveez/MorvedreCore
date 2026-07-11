@@ -91,7 +91,7 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
               <a
                 href={`/admin/teams/${t.id}`}
                 data-team-card={t.id}
-                className="group border-ink-300 bg-paper-card shadow-elev-1 hover:border-pool-blue hover:shadow-elev-3 focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex h-full flex-col overflow-hidden rounded-md border transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                className="group border-ink-300 bg-paper-card shadow-elev-1 hover:border-pool-blue hover:shadow-elev-3 focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex h-full flex-col overflow-hidden rounded-2xl border transition-[border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
               >
                 <div
                   aria-hidden="true"

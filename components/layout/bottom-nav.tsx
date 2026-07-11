@@ -3,14 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
-import {
-  MdHome,
-  MdCalendarMonth,
-  MdEmojiEvents,
-  MdGroups,
-  MdStorefront,
-} from "react-icons/md";
+import { MdHome, MdCalendarMonth, MdEmojiEvents, MdGroups, MdStorefront } from "react-icons/md";
 
 import { cn } from "@/lib/utils/cn";
 
@@ -24,43 +17,14 @@ const items = [
 
 export function BottomNav() {
   const pathname = usePathname();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [pill, setPill] = useState({ left: 0, width: 0 });
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    const activeLink = container.querySelector<HTMLElement>("[data-tab-active='true']");
-    if (!activeLink) return;
-
-    const cRect = container.getBoundingClientRect();
-    const tRect = activeLink.getBoundingClientRect();
-
-    setPill({
-      left: tRect.left - cRect.left + container.scrollLeft,
-      width: tRect.width,
-    });
-  }, [pathname]);
 
   return (
     <nav
       aria-label="Navegacion principal Morvedre Core"
       data-bottom-nav
-      className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--bottom-nav-height)] px-4 pb-[max(env(safe-area-inset-bottom),12px)]"
+      className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--bottom-nav-height)] px-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:px-6"
     >
-      <div
-        ref={containerRef}
-        className="bg-paper shadow-elev-5 relative mx-auto grid h-[60px] max-w-md grid-cols-5 items-stretch overflow-hidden rounded-full border border-ink-200/60 p-1"
-      >
-        <span
-          aria-hidden="true"
-          className="bg-pool-deep absolute top-1 bottom-1 rounded-full shadow-md transition-all duration-300 ease-out"
-          style={{
-            left: `${pill.left}px`,
-            width: `${pill.width}px`,
-          }}
-        />
-
+      <div className="bg-paper/95 shadow-elev-5 relative mx-auto grid h-16 w-full max-w-xl grid-cols-5 items-stretch rounded-[1.45rem] border border-white/90 p-1.5 backdrop-blur-md md:max-w-2xl">
         {items.map((item) => {
           const Icon = item.Icon;
           const href = item.href;
@@ -70,26 +34,42 @@ export function BottomNav() {
               key={href}
               href={href as Route}
               aria-current={isActive ? "page" : undefined}
-              data-tab-active={isActive}
+              aria-label={item.label}
               className={cn(
-                "focus-visible:ring-pool-blue relative z-10 flex h-full w-full flex-col items-center justify-center gap-0.5 rounded-full px-1 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
-                isActive ? "text-paper" : "text-ink-500 hover:text-pool-deep",
+                "focus-visible:ring-pool-blue group relative flex h-full min-w-0 touch-manipulation flex-col items-center justify-center gap-1 rounded-[1rem] px-1 text-[10px] transition-[background-color,color,transform,box-shadow] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset active:scale-[0.96] motion-reduce:transition-none sm:text-[11px]",
+                isActive
+                  ? "bg-pool-deep text-paper shadow-[0_5px_14px_rgba(6,32,72,0.24)]"
+                  : "text-ink-600 hover:bg-pool-foam/80 hover:text-pool-deep",
               )}
             >
               <Icon
                 className={cn(
-                  "h-5 w-5 shrink-0 transition-transform duration-300",
-                  isActive && "scale-110",
+                  "h-5 w-5 shrink-0 transition-transform duration-200 motion-reduce:transition-none sm:h-[22px] sm:w-[22px]",
+                  isActive ? "scale-110" : "group-hover:-translate-y-px",
                 )}
               />
               <span
                 className={cn(
-                  "max-w-full truncate text-[11px] leading-none transition-all duration-300",
+                  "max-w-full truncate leading-none",
                   isActive ? "font-extrabold" : "font-semibold",
                 )}
               >
-                {item.label}
+                {item.label === "Calendario" ? (
+                  <>
+                    <span className="min-[390px]:hidden">Agenda</span>
+                    <span className="hidden min-[390px]:inline">Calendario</span>
+                  </>
+                ) : (
+                  item.label
+                )}
               </span>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "bg-ball-gold absolute bottom-1.5 h-1 w-1 rounded-full transition-opacity duration-200 motion-reduce:transition-none",
+                  isActive ? "opacity-100" : "opacity-0",
+                )}
+              />
             </Link>
           );
         })}

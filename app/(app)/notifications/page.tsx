@@ -14,7 +14,10 @@ import {
 } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
+import { AppPageHero } from "@/components/ui/app-page-hero";
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageShell } from "@/components/ui/page-shell";
 import { PushSettings } from "@/components/push/push-settings";
 import { createClient } from "@/lib/supabase/server";
 import { timeAgo } from "@/lib/domain/calendar";
@@ -33,6 +36,16 @@ export const metadata: Metadata = {
   title: "Notificaciones — Morvedre Core",
   description: "Tus avisos y notificaciones del club.",
 };
+
+const CLOCK_FORMATTER = new Intl.DateTimeFormat("es-ES", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const DAY_FORMATTER = new Intl.DateTimeFormat("es-ES", {
+  weekday: "long",
+  day: "numeric",
+  month: "short",
+});
 
 const KIND_META: Record<
   string,
@@ -144,30 +157,24 @@ export default async function NotificationsPage() {
   const { matchById, photoByProfile } = await loadContextForNotifications(items);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex items-end justify-between gap-3">
-        <div className="flex flex-col gap-1">
-          <h1 className="font-display text-pool-deep text-[28px] leading-[1.1] font-extrabold tracking-tight">
-            Notificaciones
-          </h1>
-          <p className="text-ink-600 text-sm">
-            {unread > 0
-              ? `${unread} sin leer de ${items.length} totales.`
-              : "Estás al día con todo."}
-          </p>
-        </div>
-        <Bell className="text-pool-deep hidden h-7 w-7 sm:block" />
-      </header>
+    <PageShell width="md" className="gap-5 pb-8">
+      <AppPageHero
+        eyebrow="Buzón del club"
+        title="Notificaciones"
+        description={
+          unread > 0 ? `${unread} sin leer de ${items.length} avisos.` : "Estás al día con todo."
+        }
+        icon={<Bell className="h-6 w-6" aria-hidden="true" />}
+      />
 
       <PushSettings publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
 
       {items.length === 0 ? (
-        <div className="border-ink-300 bg-paper flex flex-col items-center gap-3 rounded-md border border-dashed p-8 text-center">
-          <Check className="text-success h-10 w-10" />
-          <p className="text-ink-600 text-sm">
-            Sin novedades. Cuando convoquen a un jugador o cancelen un entreno, aparecerá aquí.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Check className="h-6 w-6" aria-hidden="true" />}
+          title="Estás al día"
+          description="Las convocatorias, cancelaciones y avisos importantes aparecerán aquí."
+        />
       ) : (
         <ul className="flex flex-col gap-2">
           {items.map((n) => (
@@ -186,22 +193,17 @@ export default async function NotificationsPage() {
           <Link href={"/calendar" as Route}>Volver al calendario</Link>
         </Button>
       </div>
-    </div>
+    </PageShell>
   );
 }
 
 function formatClock(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  return CLOCK_FORMATTER.format(new Date(iso));
 }
 
 function formatDayShort(iso: string): string {
   const d = new Date(iso);
-  return d.toLocaleDateString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "short",
-  });
+  return DAY_FORMATTER.format(d);
 }
 
 function NotificationRow({
@@ -225,7 +227,7 @@ function NotificationRow({
   return (
     <li
       className={cn(
-        "flex items-start gap-3 rounded-md border p-4",
+        "shadow-elev-1 flex items-start gap-3 rounded-2xl border p-4",
         isUnread ? meta.tone : "border-ink-300 bg-paper",
       )}
     >
@@ -242,7 +244,7 @@ function NotificationRow({
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="font-display text-pool-deep text-base font-bold">{item.title}</span>
           <span
-            className="text-paper rounded-full px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase"
+            className="text-paper rounded-full px-2.5 py-1 text-xs font-extrabold uppercase"
             style={{ backgroundColor: meta.color }}
           >
             {meta.label}
@@ -258,7 +260,7 @@ function NotificationRow({
               <p className="text-pool-deep line-clamp-1 text-sm font-semibold">
                 vs {match.opponent}
               </p>
-              <p className="text-ink-600 text-[10px]">
+              <p className="text-ink-600 text-sm font-semibold">
                 {formatDayShort(match.scheduled_at)} · {formatClock(match.scheduled_at)}
               </p>
             </div>
@@ -279,7 +281,7 @@ function NotificationRow({
           <p className="text-ink-900 text-sm whitespace-pre-line">{item.body}</p>
         ) : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-ink-600 text-[11px]">{timeAgo(item.created_at)}</span>
+          <span className="text-ink-600 text-sm">{timeAgo(item.created_at)}</span>
           {item.href ? (
             <Link
               href={item.href as Route}

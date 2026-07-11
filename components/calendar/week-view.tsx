@@ -46,7 +46,6 @@ export function WeekView({
 
   return (
     <div className="flex w-full flex-col gap-1">
-      {/* Weekly Visual Timeline Stacking */}
       <div className="flex flex-col select-none">
         {days.map((d, index) => {
           const isToday = d.iso === todayIsoValue;
@@ -56,14 +55,12 @@ export function WeekView({
 
           return (
             <div key={`week-day-${d.iso}`} className="group flex items-stretch gap-1">
-              {/* Left Column: Spacious Date Badge with connecting line indicator */}
               <div className="relative flex w-16 shrink-0 flex-col items-center py-3">
-                {/* Connecting line between days, like a timeline */}
                 {index < 6 && (
                   <div className="bg-ink-200/60 pointer-events-none absolute top-14 bottom-0 z-0 w-0.5" />
                 )}
 
-                <span className="text-ink-600 mb-1 text-[10px] font-extrabold tracking-wider uppercase">
+                <span className="text-ink-600 mb-1 text-xs font-extrabold tracking-wider uppercase">
                   {weekdayLong(d.date.getDay() === 0 ? 7 : d.date.getDay()).slice(0, 3)}
                 </span>
 
@@ -79,22 +76,19 @@ export function WeekView({
                 </span>
 
                 {unavailable && (
-                  <span className="text-goggle-red mt-1 shrink-0 text-[8px] font-extrabold uppercase">
-                    No Disp.
+                  <span className="text-goggle-red mt-1 shrink-0 text-xs font-extrabold uppercase">
+                    No disponible
                   </span>
                 )}
               </div>
 
-              {/* Right Column: Day Events Stack */}
               <div className="border-ink-200/50 flex-1 border-b py-3 pl-2 last:border-b-0">
                 {!hasEvents ? (
-                  /* Elegant borderless rest state */
-                  <div className="bg-pool-ice/30 border-ink-200/30 text-ink-500 font-display flex items-center gap-2.5 rounded-xl border px-4 py-3.5 text-xs font-semibold select-none">
+                  <div className="bg-pool-ice/30 border-ink-200/30 text-ink-500 font-display flex items-center gap-2.5 rounded-xl border px-4 py-3.5 text-sm font-semibold select-none">
                     <span className="bg-ink-400 h-1.5 w-1.5 rounded-full opacity-60" />
                     <span>Sin actividades · Descanso</span>
                   </div>
                 ) : (
-                  /* Day events detailed list */
                   <div className="flex flex-col gap-3">
                     {dayData.trainings.map((t) => (
                       <TrainingRow key={t.id} training={t} isCoach={isCoach || isAdmin} />

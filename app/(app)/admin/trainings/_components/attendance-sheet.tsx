@@ -104,7 +104,7 @@ export function AttendanceSheet({
     });
     startTransition(async () => {
       try {
-        await markAttendance({ session_id: sessionId, rows: payload });
+        await markAttendance({ session_id: sessionId, entries: payload });
         setSuccess(true);
         setTimeout(() => {
           onClose();

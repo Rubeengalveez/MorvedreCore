@@ -1,17 +1,24 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { Plus, Boxes, ShoppingCart, Bell, Truck, PackageCheck, Download } from "lucide-react";
+import {
+  Plus,
+  Boxes,
+  ShoppingCart,
+  Bell,
+  Truck,
+  PackageCheck,
+  Download,
+  ShoppingBasket,
+} from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { createClient } from "@/lib/supabase/server";
 import { getShopOrdersForKanban } from "@/server/queries/shop";
 import { SHOP_KANBAN_COLUMNS } from "@/lib/domain/shop";
 import type { ShopOrderStatus } from "@/lib/domain/shop";
 import type { ShopOrder } from "@/server/queries/shop";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { Eyebrow } from "@/components/ui/eyebrow";
-import { CapTile } from "@/components/ui/cap-tile";
 import { AdminKanbanCard } from "./_components/admin-kanban-card";
 
 export const dynamic = "force-dynamic";
@@ -65,72 +72,66 @@ export default async function AdminShopPage() {
   }
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-4xl flex-col gap-3 px-4 py-4">
-        <header className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <CapTile number={9} teamColor="var(--pool-deep)" size="sm" />
-            <div>
-              <Eyebrow>Gestión tienda</Eyebrow>
-              <h1 className="font-display text-pool-deep text-2xl font-extrabold">
-                Kanban de pedidos
-              </h1>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+    <AdminPageShell width="lg">
+      <AdminPageHeader
+        eyebrow="Gestión de tienda"
+        title="Pedidos del club"
+        description="Prepara, encarga y entrega cada pedido sin perder su estado."
+        icon={<ShoppingBasket className="h-6 w-6" aria-hidden="true" />}
+        action={
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
             <a
               href="/api/shop/orders/export"
-              className="border-ink-300 bg-paper-card text-pool-deep inline-flex h-10 items-center gap-1.5 rounded-md border px-3 text-sm font-bold"
+              className="border-ink-300 bg-paper-card text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Download className="h-4 w-4" /> Excel
+              <Download className="h-5 w-5" aria-hidden="true" /> Excel
             </a>
             <Link
               href={"/admin/shop/products/new" as Route}
-              className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex h-10 items-center gap-1.5 rounded-md px-3 text-sm font-bold"
+              className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
-              <Plus className="h-4 w-4" /> Producto
+              <Plus className="h-5 w-5" aria-hidden="true" /> Producto
             </Link>
           </div>
-        </header>
+        }
+      />
 
-        <div className="flex gap-2 overflow-x-auto pb-3">
-          {SHOP_KANBAN_COLUMNS.map((col) => {
-            const list = ordersByStatus.get(col.id) ?? [];
-            const Icon = STATUS_ICON[col.id];
-            return (
-              <section
-                key={col.id}
-                className="border-ink-300 bg-paper-card flex w-72 shrink-0 flex-col gap-2 rounded-md border p-2"
-                data-kanban-column={col.id}
-              >
-                <header className="flex items-center justify-between gap-2 px-1 py-1">
-                  <span className="text-pool-deep inline-flex items-center gap-1 text-[10px] font-extrabold tracking-wider uppercase">
-                    <Icon className="h-3.5 w-3.5" />
-                    {col.emoji} {col.title}
-                  </span>
-                  <span className="bg-ink-200 text-ink-700 rounded-full px-2 text-[10px] font-bold">
-                    {list.length}
-                  </span>
-                </header>
-                <ul className="flex flex-col gap-1.5">
-                  {list.length === 0 ? (
-                    <li className="border-ink-300 bg-paper-sunk/30 text-ink-500 rounded border border-dashed p-3 text-center text-[10px]">
-                      Vacío
+      <div className="flex flex-col gap-3 pb-3 md:flex-row md:overflow-x-auto">
+        {SHOP_KANBAN_COLUMNS.map((col) => {
+          const list = ordersByStatus.get(col.id) ?? [];
+          const Icon = STATUS_ICON[col.id];
+          return (
+            <section
+              key={col.id}
+              className="border-ink-200 bg-paper-card shadow-elev-1 flex w-full shrink-0 flex-col gap-2 rounded-2xl border p-3 md:w-72"
+              data-kanban-column={col.id}
+            >
+              <header className="flex items-center justify-between gap-2 px-1 py-1">
+                <span className="text-pool-deep inline-flex items-center gap-2 text-sm font-extrabold">
+                  <Icon className="text-pool-blue h-4 w-4" aria-hidden="true" />
+                  {col.title}
+                </span>
+                <span className="bg-pool-foam text-pool-deep rounded-full px-2.5 py-1 text-xs font-extrabold tabular-nums">
+                  {list.length}
+                </span>
+              </header>
+              <ul className="flex flex-col gap-1.5">
+                {list.length === 0 ? (
+                  <li className="border-ink-200 bg-paper-sunk/30 text-ink-500 rounded-xl border border-dashed p-4 text-center text-sm font-semibold">
+                    Sin pedidos
+                  </li>
+                ) : (
+                  list.map((o) => (
+                    <li key={o.id}>
+                      <AdminKanbanCard order={o} />
                     </li>
-                  ) : (
-                    list.map((o) => (
-                      <li key={o.id}>
-                        <AdminKanbanCard order={o} />
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
+                  ))
+                )}
+              </ul>
+            </section>
+          );
+        })}
       </div>
-    </div>
+    </AdminPageShell>
   );
 }

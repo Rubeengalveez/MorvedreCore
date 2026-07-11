@@ -1,422 +1,586 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import type { ReactNode } from "react";
 import {
-  Activity,
-  Banknote,
+  ArrowRight,
   CalendarDays,
   ChevronRight,
+  ClipboardCheck,
   Flame,
-  ShieldAlert,
-  ShoppingBag,
+  Megaphone,
+  ShieldCheck,
   Target,
   Trophy,
-  Users,
+  UsersRound,
 } from "lucide-react";
 
+import { CoachAttendanceCard } from "@/components/dashboard/coach-attendance-card";
+import { PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
+import { formatRelativeUpcoming } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
+import {
+  getDashboardAudience,
+  getDashboardCoachTask,
+  getUpcomingDashboardEvents,
+  type DashboardWeekEvent,
+} from "@/server/queries/dashboard";
 import { getCurrentSeason } from "@/server/queries/seasons";
-import { getDashboardData, type DashboardWeekEvent } from "@/server/queries/dashboard";
-import { getTeamsForProfileInSeason, type TeamSummary } from "@/server/queries/teams";
+import { getNewsFeed, type NewsPostWithReactions } from "@/server/queries/news";
 import { getStreaksForPlayer, type ActiveStreakRow } from "@/server/queries/streaks";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { CapTile } from "@/components/ui/cap-tile";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { Equipo } from "@/components/brand/pictograms";
-import { PageShell, SectionHeader } from "@/components/ui/page-shell";
-import { formatShortRelative } from "@/lib/domain/calendar";
-
-import { DashboardHero, NextEventCard } from "@/components/dashboard/dashboard-blocks";
+import { getTeamsForProfileInSeason } from "@/server/queries/teams";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata = {
-  title: "Inicio - Morvedre Core",
-  description: "Tu resumen del dia en el Waterpolo Morvedre.",
+  title: "Inicio — Morvedre Core",
+  description: "Lo importante de tu día en el Waterpolo Morvedre.",
 };
 
-interface TeamWithNext {
-  id: string;
-  label: string;
-  color: string;
-  category_label: string;
-  next_match: { id: string; opponent: string; scheduled_at: string; is_home: boolean } | null;
-  next_training: { id: string; scheduled_at: string; location: string | null } | null;
-}
-
-interface DashboardTeamRow {
-  id: string;
-  label: string;
-  color: string;
-  category_code: string;
-}
-
-interface DashboardMatchRow {
-  id: string;
-  team_id: string;
-  opponent: string;
-  scheduled_at: string;
-  is_home: boolean | null;
-}
-
-interface DashboardTrainingRow {
-  id: string;
-  team_id: string;
-  scheduled_at: string;
-  location: string | null;
-}
+const dayFormatter = new Intl.DateTimeFormat("es-ES", { day: "2-digit" });
+const monthFormatter = new Intl.DateTimeFormat("es-ES", { month: "short" });
+const weekdayFormatter = new Intl.DateTimeFormat("es-ES", { weekday: "short" });
+const timeFormatter = new Intl.DateTimeFormat("es-ES", {
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const newsDateFormatter = new Intl.DateTimeFormat("es-ES", {
+  day: "numeric",
+  month: "short",
+});
 
 export default async function DashboardPage() {
-  const supabase = await createClient();
   const [ctx, season] = await Promise.all([getActiveProfileContext(), getCurrentSeason()]);
   if (!ctx) redirect("/login");
-  const { activeProfile } = ctx;
-  const seasonId = season?.id ?? null;
 
-  const [calendarTeams, streaks, playerStatsRes] = await Promise.all([
-    seasonId ? getTeamsForProfileInSeason(activeProfile.id, seasonId) : Promise.resolve([]),
-    seasonId
-      ? getStreaksForPlayer(seasonId, activeProfile.id)
+  const { activeProfile, linkedProfiles } = ctx;
+  const now = new Date();
+  const firstName = activeProfile.full_name.split(" ")[0] ?? activeProfile.full_name;
+
+  if (!season) {
+    return (
+      <PageShell width="md" className="pb-8">
+        <HomeHero
+          firstName={firstName}
+          now={now}
+          contextLabel="Club"
+          description="La temporada activa todavía no está configurada."
+        />
+      </PageShell>
+    );
+  }
+
+  const audience = await getDashboardAudience(activeProfile.id, season.id);
+  const isPlayer = audience.player_team_ids.length > 0;
+  const isCoach = audience.staff_teams.length > 0;
+  const isAdmin = audience.roles.includes("admin");
+  const teamIds = Array.from(
+    new Set([...audience.player_team_ids, ...audience.staff_teams.map((team) => team.id)]),
+  );
+  const supabase = await createClient();
+
+  const [events, coachTask, streaks, playerStatsRes, teams, newsFeed] = await Promise.all([
+    getUpcomingDashboardEvents(teamIds, now),
+    isCoach ? getDashboardCoachTask(audience.staff_teams, now) : Promise.resolve(null),
+    isPlayer
+      ? getStreaksForPlayer(season.id, activeProfile.id)
       : Promise.resolve([] as ActiveStreakRow[]),
-    seasonId
+    isPlayer
       ? supabase
           .from("ranking_snapshots")
           .select(
             "goals, exclusions, mvp_count, matches_played, attendance_pct, attendance_streak, trainings_attended, trainings_total",
           )
-          .eq("season_id", seasonId)
+          .eq("season_id", season.id)
           .eq("scope", "season")
           .eq("scope_key", "all")
           .eq("player_id", activeProfile.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    getTeamsForProfileInSeason(activeProfile.id, season.id),
+    getNewsFeed({ myProfileId: activeProfile.id, pageSize: 3 }),
   ]);
-  const typedCalendarTeams = calendarTeams as TeamSummary[];
-  const teamIds = typedCalendarTeams.map((t) => t.id);
-  const hasTeam = teamIds.length > 0;
-  const playerStats = playerStatsRes.data;
 
-  const now = new Date();
-  const nowIso = now.toISOString();
-
-  const dashboardData: Awaited<ReturnType<typeof getDashboardData>> = hasTeam
-    ? await getDashboardData({ teamIds, profileId: activeProfile.id, now })
-    : { weekEvents: [], teamInfo: null, recentActivity: [], seasonStats: null };
-
-  let teamBreakdown: TeamWithNext[] = [];
-  if (seasonId && hasTeam) {
-    const [teamsRes, matchesRes, trainingsRes] = await Promise.all([
-      supabase.from("teams").select("id, label, color, category_code").in("id", teamIds),
-      supabase
-        .from("matches")
-        .select("id, team_id, opponent, scheduled_at, is_home, status")
-        .in("team_id", teamIds)
-        .in("status", ["scheduled", "in_progress"])
-        .gt("scheduled_at", nowIso)
-        .order("scheduled_at", { ascending: true }),
-      supabase
-        .from("training_sessions")
-        .select("id, team_id, scheduled_at, location, cancelled")
-        .in("team_id", teamIds)
-        .eq("cancelled", false)
-        .gt("scheduled_at", nowIso)
-        .order("scheduled_at", { ascending: true }),
-    ]);
-
-    const teamsData = (teamsRes.data ?? []) as DashboardTeamRow[];
-    const matchesData = (matchesRes.data ?? []) as DashboardMatchRow[];
-    const trainingsData = (trainingsRes.data ?? []) as DashboardTrainingRow[];
-
-    teamBreakdown = teamsData.map((t) => {
-      const nextMatch = matchesData.find((m) => m.team_id === t.id);
-      const nextTrain = trainingsData.find((s) => s.team_id === t.id);
-      return {
-        id: t.id,
-        label: t.label,
-        color: t.color,
-        category_label: t.category_code,
-        next_match: nextMatch
-          ? {
-              id: nextMatch.id,
-              opponent: nextMatch.opponent,
-              scheduled_at: nextMatch.scheduled_at,
-              is_home: nextMatch.is_home ?? true,
-            }
-          : null,
-        next_training: nextTrain
-          ? { id: nextTrain.id, scheduled_at: nextTrain.scheduled_at, location: nextTrain.location }
-          : null,
-      };
-    });
-    teamBreakdown.sort((a, b) => {
-      const aTime = a.next_match?.scheduled_at ?? a.next_training?.scheduled_at ?? "";
-      const bTime = b.next_match?.scheduled_at ?? b.next_training?.scheduled_at ?? "";
-      return aTime.localeCompare(bTime);
-    });
-  }
-
-  const upcomingWeekEvents = dashboardData.weekEvents.filter(
-    (e) => !e.cancelled && new Date(e.scheduled_at).getTime() >= now.getTime() - 1000 * 60 * 60 * 6,
-  );
-  const nextEvent: DashboardWeekEvent | null = upcomingWeekEvents[0] ?? null;
-  const teamColor = activeProfile.team_color ?? typedCalendarTeams[0]?.color ?? "var(--pool-blue)";
-  const activeStreaks = (streaks as ActiveStreakRow[]).filter((s) => s.current_value > 0);
+  const activeStreaks = streaks.filter((streak) => streak.current_value > 0).slice(0, 3);
+  const newsItems = [...newsFeed.pinned, ...newsFeed.recent].slice(0, 2);
+  const contextLabel =
+    isPlayer && isCoach
+      ? "Jugador · entrenador"
+      : isCoach
+        ? "Entrenador"
+        : isPlayer
+          ? "Jugador"
+          : isAdmin
+            ? "Gestión del club"
+            : "Club";
+  const description =
+    isPlayer && isCoach
+      ? "Tu agua y tus equipos, ordenados por lo que necesita atención."
+      : isCoach
+        ? "Sesiones, listas y próximos compromisos de tus equipos."
+        : isPlayer
+          ? "Tu próximo turno en el agua y cómo va tu temporada."
+          : linkedProfiles.length > 0
+            ? "La actividad deportiva de tu familia, sin perderte nada."
+            : "Lo importante del club, en un solo lugar.";
 
   return (
-    <div className="relative">
-      <LanePattern as="div" className="absolute inset-0 opacity-70" />
-      <PageShell className="gap-3">
-        <DashboardHero
-          profile={{
-            full_name: activeProfile.full_name,
-            team_color: teamColor,
-          }}
-          hasTeam={hasTeam}
-          capNumber={activeProfile.cap_number}
-        />
+    <PageShell width="md" className="gap-6 pb-8">
+      <HomeHero
+        firstName={firstName}
+        now={now}
+        contextLabel={contextLabel}
+        description={description}
+      />
 
-        {activeStreaks.length > 0 ? (
-          <section
-            data-streak-strip
-            className="border-action/25 bg-action/[7%] no-scrollbar flex items-center gap-2 overflow-x-auto rounded-md border px-3 py-2"
-            aria-label="Rachas activas"
-          >
-            <span className="bg-action text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-md">
-              <Flame className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div className="flex min-w-0 items-center gap-1.5">
-              {activeStreaks.map((streak) => (
-                <span
-                  key={streak.type}
-                  title={`Mejor: ${streak.best_value}`}
-                  className="border-ink-300 bg-paper text-pool-deep shadow-elev-1 inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-md border px-2.5 text-sm font-bold"
-                >
-                  <span className="text-action font-mono text-base font-extrabold">
-                    {streak.current_value}
-                  </span>
-                  <span className="text-ink-700 font-semibold">
-                    {streakShortLabel(streak.type)}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </section>
-        ) : null}
+      {events[0] ? (
+        <NextTurn event={events[0]} now={now} />
+      ) : (
+        <QuietWeek isPlayer={isPlayer} isCoach={isCoach} />
+      )}
 
-        <section aria-labelledby="today-heading" className="flex flex-col gap-2">
-          <SectionHeader title="Tu semana" />
-          <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-md border p-2">
-            {upcomingWeekEvents.length > 0 ? (
-              <ul className="divide-ink-200 flex flex-col divide-y">
-                {upcomingWeekEvents.slice(0, 4).map((event) => (
-                  <li key={`${event.kind}-${event.id}`}>
-                    <Link
-                      href={
-                        event.kind === "match"
-                          ? (`/matches/${event.id}` as Route)
-                          : ("/calendar" as Route)
-                      }
-                      className="flex min-h-[58px] items-center gap-3 py-2"
-                    >
-                      <span
-                        className="h-10 w-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: event.team_color }}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-pool-deep line-clamp-1 text-sm font-extrabold">
-                          {event.title}
-                        </p>
-                        <p className="text-ink-600 mt-0.5 line-clamp-1 text-xs font-bold">
-                          {event.team_label} / {formatShortRelative(event.scheduled_at, now)}
-                        </p>
-                      </div>
-                      <ChevronRight className="text-ink-300 h-4 w-4 shrink-0" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-ink-600 px-2 py-4 text-sm leading-relaxed font-semibold">
-                No tienes eventos proximos esta semana.
-              </p>
-            )}
-          </div>
-        </section>
+      {coachTask ? <CoachAttendanceCard task={coachTask} /> : null}
 
-        <section aria-label="Accesos rapidos" className="grid grid-cols-5 gap-1.5">
-          <QuickAction
-            href="/calendar"
-            icon={<CalendarDays className="h-4 w-4" />}
-            label="Agenda"
-          />
-          <QuickAction href="/rankings" icon={<Trophy className="h-4 w-4" />} label="Ranking" />
-          <QuickAction href="/team" icon={<Users className="h-4 w-4" />} label="Equipo" />
-          <QuickAction href="/shop" icon={<ShoppingBag className="h-4 w-4" />} label="Tienda" />
-          <QuickAction href="/treasury" icon={<Banknote className="h-4 w-4" />} label="Pagos" />
-        </section>
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
+        <div className="flex min-w-0 flex-col gap-6">
+          {events.length > 1 ? <WeekAgenda events={events.slice(1, 6)} /> : null}
 
-        {nextEvent ? (
-          <section aria-labelledby="next-event-heading" className="flex flex-col gap-2">
-            <SectionHeader title="Proximo evento" />
-            <NextEventCard event={nextEvent} now={now} />
-          </section>
-        ) : null}
+          {newsItems.length > 0 ? <ClubNewsPanel posts={newsItems} /> : null}
 
-        {playerStats ? (
-          <section aria-labelledby="your-season-heading" className="flex flex-col gap-2">
-            <SectionHeader
-              title="Tu temporada"
-              action={
-                <Link
-                  href={"/rankings" as Route}
-                  className="border-ink-300 bg-paper-card text-pool-blue shadow-elev-1 inline-flex min-h-9 items-center gap-1 rounded-md border px-2.5 text-sm font-extrabold"
-                >
-                  Ranking
-                  <ChevronRight className="h-4 w-4" />
-                </Link>
-              }
-            />
-            <div className="no-scrollbar -mx-1 flex items-stretch gap-2 overflow-x-auto px-1 pb-1">
-              <StatTile
-                icon={<Target className="h-4 w-4" />}
-                label="Goles"
-                value={playerStats.goals}
-                color="var(--success)"
+          {isPlayer && activeStreaks.length > 0 ? <StreaksPanel streaks={activeStreaks} /> : null}
+
+          {isPlayer && playerStatsRes.data ? <SeasonPanel stats={playerStatsRes.data} /> : null}
+
+          {!isPlayer && !isCoach && linkedProfiles.length > 0 ? (
+            <FamilyPanel profiles={linkedProfiles} />
+          ) : null}
+        </div>
+
+        <aside className="flex min-w-0 flex-col gap-6">
+          {teams.length > 0 ? (
+            <section aria-labelledby="home-teams-heading">
+              <SectionHeading
+                eyebrow="Tu vestuario"
+                title={teams.length === 1 ? "Tu equipo" : "Tus equipos"}
               />
-              <StatTile
-                icon={<Trophy className="h-4 w-4" />}
-                label="MVP"
-                value={playerStats.mvp_count}
-                color="var(--ball-gold)"
-              />
-              <StatTile
-                icon={<ShieldAlert className="h-4 w-4" />}
-                label="Excl."
-                value={playerStats.exclusions}
-                color="var(--goggle-red)"
-              />
-              <StatTile
-                icon={<Activity className="h-4 w-4" />}
-                label="Asist."
-                value={`${playerStats.attendance_pct ?? 0}%`}
-                color="var(--pool-blue)"
-              />
-            </div>
-          </section>
-        ) : null}
-
-        {hasTeam ? (
-          <section aria-label="Tus equipos" className="flex flex-col gap-2">
-            <SectionHeader
-              title="Tus equipos"
-              action={
-                <span className="text-ink-600 text-sm font-extrabold">{teamBreakdown.length}</span>
-              }
-            />
-            <ul className="flex flex-col gap-2">
-              {teamBreakdown.map((t) => (
-                <li key={t.id}>
+              <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border">
+                {teams.map((team) => (
                   <Link
-                    href={`/team/${t.id}` as Route}
-                    className="group border-ink-300 bg-paper-card shadow-elev-1 hover:border-pool-blue hover:shadow-elev-2 flex min-h-[74px] items-center gap-3 rounded-md border p-3 transition-all"
+                    key={team.id}
+                    href={`/team/${team.id}` as Route}
+                    className="border-ink-200 hover:bg-pool-foam/60 focus-visible:bg-pool-foam/60 focus-visible:ring-pool-blue flex min-h-16 touch-manipulation items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
                   >
-                    <PictogramBadge pictogram={Equipo} color={t.color} size="md" />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-pool-deep line-clamp-1 text-base font-extrabold">
-                        {t.label}
-                      </p>
-                      {t.next_match ? (
-                        <p className="text-ink-600 mt-1 line-clamp-1 text-sm font-medium">
-                          <span className="text-pool-deep font-bold">
-                            vs {t.next_match.opponent}
-                          </span>
-                          {" / "}
-                          {formatShortRelative(t.next_match.scheduled_at, now)}
-                        </p>
-                      ) : t.next_training ? (
-                        <p className="text-ink-600 mt-1 line-clamp-1 text-sm font-medium">
-                          <span className="text-pool-blue font-bold">Entreno</span>
-                          {" / "}
-                          {formatShortRelative(t.next_training.scheduled_at, now)}
-                        </p>
-                      ) : (
-                        <p className="text-ink-500 mt-1 text-sm">Sin eventos proximos</p>
-                      )}
-                    </div>
-                    {activeProfile.cap_number != null ? (
-                      <CapTile
-                        number={activeProfile.cap_number}
-                        teamColor={t.color}
-                        size="sm"
-                        aria-label={`Tu dorsal ${activeProfile.cap_number}`}
-                      />
-                    ) : null}
-                    <ChevronRight className="text-ink-300 group-hover:text-pool-deep h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5" />
+                    <span
+                      className="h-10 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: team.color }}
+                      aria-hidden="true"
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="text-pool-deep block truncate text-base font-extrabold">
+                        {team.label}
+                      </span>
+                      <span className="text-ink-500 block text-sm font-semibold">
+                        {audience.staff_teams.some((staffTeam) => staffTeam.id === team.id)
+                          ? "Cuerpo técnico"
+                          : "Plantilla"}
+                      </span>
+                    </span>
+                    <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
                   </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-      </PageShell>
-    </div>
-  );
-}
+                ))}
+              </div>
+            </section>
+          ) : null}
 
-function QuickAction({ href, icon, label }: { href: string; icon: ReactNode; label: string }) {
-  return (
-    <Link
-      href={href as Route}
-      className="border-ink-300 bg-paper-card text-pool-deep shadow-elev-1 flex min-h-[64px] flex-col items-center justify-center gap-1 rounded-md border px-1 text-center text-[0.68rem] font-extrabold"
-    >
-      <span className="bg-pool-foam text-pool-blue flex h-8 w-8 items-center justify-center rounded-md">
-        {icon}
-      </span>
-      {label}
-    </Link>
-  );
-}
-
-function StatTile({
-  icon,
-  label,
-  value,
-  color,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number | string;
-  color: string;
-}) {
-  return (
-    <div className="border-ink-300 bg-paper-card shadow-elev-1 flex min-w-[116px] shrink-0 flex-col gap-1 rounded-md border px-3 py-3">
-      <div className="inline-flex items-center gap-1.5 text-sm font-extrabold" style={{ color }}>
-        {icon}
-        {label}
+          {isAdmin ? <ManagementPanel /> : null}
+        </aside>
       </div>
-      <p className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums">
-        {value}
-      </p>
+    </PageShell>
+  );
+}
+
+function HomeHero({
+  firstName,
+  now,
+  contextLabel,
+  description,
+}: {
+  firstName: string;
+  now: Date;
+  contextLabel: string;
+  description: string;
+}) {
+  const hour = now.getHours();
+  const greeting = hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
+  return (
+    <header className="bg-pool-deep text-paper shadow-elev-3 relative overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-8">
+      <div
+        aria-hidden="true"
+        className="absolute inset-y-0 right-0 w-2/5 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08))]"
+      />
+      <div className="relative">
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-paper/65 pt-1 text-xs font-extrabold tracking-[0.16em] uppercase">
+            {contextLabel}
+          </p>
+          <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl border border-white/15 bg-white/10 sm:h-16 sm:w-16">
+            <span className="font-mono text-2xl leading-none font-extrabold tabular-nums sm:text-3xl">
+              {dayFormatter.format(now)}
+            </span>
+            <span className="text-paper/70 mt-1 text-[10px] font-extrabold tracking-[0.12em] uppercase">
+              {monthFormatter.format(now).replace(".", "")}
+            </span>
+          </div>
+        </div>
+        <h1 className="font-display -mt-3 max-w-lg text-3xl leading-[1.02] font-extrabold tracking-tight text-balance sm:-mt-4 sm:text-4xl">
+          {greeting}, {firstName}
+        </h1>
+        <p className="text-paper/75 mt-3 max-w-lg text-base leading-relaxed text-pretty">
+          {description}
+        </p>
+      </div>
+    </header>
+  );
+}
+
+function NextTurn({ event, now }: { event: DashboardWeekEvent; now: Date }) {
+  const date = new Date(event.scheduled_at);
+  const isMatch = event.kind === "match";
+  const title = isMatch ? event.title.replace(/^Partido contra /, "Contra ") : "Entrenamiento";
+  return (
+    <section
+      aria-labelledby="next-turn-heading"
+      className="border-ink-200 bg-paper-card shadow-elev-2 overflow-hidden rounded-2xl border"
+    >
+      <div className="flex items-stretch">
+        <div className="bg-pool-foam text-pool-deep border-ink-200 flex w-[4.75rem] shrink-0 flex-col items-center justify-center border-r px-2 py-5 sm:w-24">
+          <span className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+            {weekdayFormatter.format(date).replace(".", "")}
+          </span>
+          <span className="mt-1 font-mono text-3xl leading-none font-extrabold tabular-nums">
+            {dayFormatter.format(date)}
+          </span>
+          <span className="text-ink-500 mt-1 text-xs font-bold uppercase">
+            {monthFormatter.format(date).replace(".", "")}
+          </span>
+        </div>
+        <div className="min-w-0 flex-1 px-4 py-5 sm:px-5">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+              Lo siguiente
+            </p>
+            {event.is_today || event.is_tomorrow ? (
+              <span className="bg-pool-deep text-paper rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase">
+                {event.is_today ? "Hoy" : "Mañana"}
+              </span>
+            ) : null}
+          </div>
+          <h2
+            id="next-turn-heading"
+            className="font-display text-pool-deep mt-2 text-2xl leading-tight font-extrabold text-balance sm:text-3xl"
+          >
+            {title}
+          </h2>
+          <p className="text-ink-600 mt-2 text-sm font-semibold">
+            {event.team_label} · {timeFormatter.format(date)} ·{" "}
+            {formatRelativeUpcoming(event.scheduled_at, now)}
+          </p>
+          <Link
+            href={isMatch ? (`/matches/${event.id}` as Route) : ("/calendar" as Route)}
+            className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue mt-4 inline-flex min-h-11 touch-manipulation items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            {isMatch ? "Ver partido" : "Abrir calendario"}
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+      </div>
+      <div className="h-1" style={{ backgroundColor: event.team_color }} aria-hidden="true" />
+    </section>
+  );
+}
+
+function WeekAgenda({ events }: { events: DashboardWeekEvent[] }) {
+  return (
+    <section aria-labelledby="week-agenda-heading">
+      <SectionHeading eyebrow="Agenda personal" title="Después" />
+      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border">
+        {events.map((event) => {
+          const date = new Date(event.scheduled_at);
+          const isMatch = event.kind === "match";
+          return (
+            <Link
+              key={`${event.kind}-${event.id}`}
+              href={isMatch ? (`/matches/${event.id}` as Route) : ("/calendar" as Route)}
+              className="border-ink-200 hover:bg-pool-foam/60 focus-visible:bg-pool-foam/60 focus-visible:ring-pool-blue flex min-h-[4.75rem] touch-manipulation items-center gap-3 border-b px-3 py-3 transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset sm:px-4"
+            >
+              <span className="bg-pool-foam flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl">
+                <span className="text-pool-blue text-[10px] leading-none font-extrabold uppercase">
+                  {weekdayFormatter.format(date).replace(".", "")}
+                </span>
+                <span className="text-pool-deep mt-1 font-mono text-lg leading-none font-extrabold tabular-nums">
+                  {dayFormatter.format(date)}
+                </span>
+              </span>
+              <span
+                className="h-9 w-1 shrink-0 rounded-full"
+                style={{ backgroundColor: event.team_color }}
+                aria-hidden="true"
+              />
+              <span className="min-w-0 flex-1">
+                <span className="text-pool-deep block truncate text-base font-extrabold">
+                  {isMatch ? event.title.replace(/^Partido contra /, "Contra ") : "Entrenamiento"}
+                </span>
+                <span className="text-ink-500 mt-0.5 block truncate text-sm font-semibold">
+                  {event.team_label} · {timeFormatter.format(date)}
+                </span>
+              </span>
+              <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
+            </Link>
+          );
+        })}
+      </div>
+      <Link
+        href={"/calendar" as Route}
+        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        Ver calendario completo <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </Link>
+    </section>
+  );
+}
+
+function StreaksPanel({ streaks }: { streaks: ActiveStreakRow[] }) {
+  return (
+    <section aria-labelledby="streaks-heading">
+      <SectionHeading eyebrow="Solo para ti" title="Rachas en curso" />
+      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 grid overflow-hidden rounded-2xl border sm:grid-cols-3">
+        {streaks.map((streak) => (
+          <div
+            key={streak.type}
+            className="border-ink-200 flex items-center gap-3 border-b px-4 py-4 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
+          >
+            <span className="bg-action/10 text-action flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+              <Flame className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-pool-deep font-mono text-xl leading-none font-extrabold tabular-nums">
+                {streak.current_value}
+              </p>
+              <p className="text-ink-600 mt-1 text-sm font-bold">{streakLabel(streak.type)}</p>
+              <p className="text-ink-400 mt-0.5 text-xs font-semibold">
+                Mejor: {streak.best_value}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ClubNewsPanel({ posts }: { posts: NewsPostWithReactions[] }) {
+  return (
+    <section aria-labelledby="home-news-heading">
+      <SectionHeading eyebrow="Tablón del club" title="Últimas noticias" />
+      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border">
+        {posts.map((post) => (
+          <Link
+            key={post.id}
+            href={`/news/${post.id}` as Route}
+            className="border-ink-200 hover:bg-pool-foam/60 focus-visible:bg-pool-foam/60 focus-visible:ring-pool-blue flex min-h-[4.75rem] touch-manipulation items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+          >
+            <span className="bg-pool-foam text-pool-blue flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+              <Megaphone className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-pool-deep line-clamp-1 block text-base font-extrabold">
+                {post.title}
+              </span>
+              <span className="text-ink-500 mt-0.5 block truncate text-sm font-semibold">
+                {post.audience_team_label ?? "Todo el club"} ·{" "}
+                {newsDateFormatter.format(new Date(post.published_at))}
+              </span>
+            </span>
+            <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
+          </Link>
+        ))}
+      </div>
+      <Link
+        href={"/news" as Route}
+        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        Ver todo el tablón <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </Link>
+    </section>
+  );
+}
+
+function SeasonPanel({
+  stats,
+}: {
+  stats: {
+    goals: number;
+    exclusions: number;
+    mvp_count: number;
+    matches_played: number;
+    attendance_pct: number | null;
+  };
+}) {
+  const items = [
+    { label: "Goles", value: stats.goals, icon: Target },
+    { label: "Partidos", value: stats.matches_played, icon: CalendarDays },
+    { label: "Asistencia", value: `${stats.attendance_pct ?? 0}%`, icon: ShieldCheck },
+    { label: "MVP", value: stats.mvp_count, icon: Trophy },
+  ];
+  return (
+    <section aria-labelledby="season-heading">
+      <SectionHeading eyebrow="Tu rendimiento" title="Esta temporada" />
+      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 grid grid-cols-2 overflow-hidden rounded-2xl border sm:grid-cols-4">
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={item.label}
+              className="border-ink-200 border-r border-b px-4 py-4 even:border-r-0 nth-[n+3]:border-b-0 sm:border-b-0 sm:last:border-r-0 sm:even:border-r"
+            >
+              <Icon className="text-pool-blue h-5 w-5" aria-hidden="true" />
+              <p className="text-pool-deep mt-3 font-mono text-2xl leading-none font-extrabold tabular-nums">
+                {item.value}
+              </p>
+              <p className="text-ink-500 mt-1 text-sm font-bold">{item.label}</p>
+            </div>
+          );
+        })}
+      </div>
+      <Link
+        href={"/rankings" as Route}
+        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue mt-3 inline-flex min-h-11 items-center gap-1.5 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        Ver rankings <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </Link>
+    </section>
+  );
+}
+
+function FamilyPanel({ profiles }: { profiles: Array<{ id: string; full_name: string }> }) {
+  return (
+    <section aria-labelledby="family-heading">
+      <SectionHeading eyebrow="Perfiles vinculados" title="Tu familia" />
+      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 rounded-2xl border p-4">
+        <div className="flex items-start gap-3">
+          <span className="bg-pool-foam text-pool-blue flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+            <UsersRound className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-pool-deep text-base font-extrabold">
+              {profiles.length} {profiles.length === 1 ? "perfil vinculado" : "perfiles vinculados"}
+            </p>
+            <p className="text-ink-600 mt-1 text-sm leading-relaxed">
+              Cambia al perfil de cada jugador para ver su agenda, rachas y equipo.
+            </p>
+          </div>
+        </div>
+        <Link
+          href={"/profile" as Route}
+          className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          Gestionar perfiles <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </Link>
+      </div>
+    </section>
+  );
+}
+
+function ManagementPanel() {
+  const items = [
+    { href: "/admin", label: "Panel de gestión", icon: ShieldCheck },
+    { href: "/admin/trainings", label: "Entrenamientos", icon: ClipboardCheck },
+    { href: "/admin/matches", label: "Partidos", icon: CalendarDays },
+  ];
+  return (
+    <section aria-labelledby="management-heading">
+      <SectionHeading eyebrow="Administración" title="Gestionar" />
+      <nav
+        aria-label="Acciones de administración"
+        className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border"
+      >
+        {items.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href as Route}
+              className="border-ink-200 hover:bg-pool-foam/60 focus-visible:bg-pool-foam/60 focus-visible:ring-pool-blue flex min-h-14 items-center gap-3 border-b px-4 transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+            >
+              <Icon className="text-pool-blue h-5 w-5" aria-hidden="true" />
+              <span className="text-pool-deep min-w-0 flex-1 text-sm font-extrabold">
+                {item.label}
+              </span>
+              <ChevronRight className="text-ink-400 h-5 w-5" aria-hidden="true" />
+            </Link>
+          );
+        })}
+      </nav>
+    </section>
+  );
+}
+
+function QuietWeek({ isPlayer, isCoach }: { isPlayer: boolean; isCoach: boolean }) {
+  return (
+    <section className="border-ink-200 bg-paper-card flex min-h-40 flex-col items-center gap-4 rounded-2xl border border-dashed px-5 py-6 text-center min-[360px]:flex-row min-[360px]:text-left">
+      <span className="bg-pool-foam text-pool-blue flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
+        <CalendarDays className="h-6 w-6" aria-hidden="true" />
+      </span>
+      <div className="min-w-0">
+        <h2 className="font-display text-pool-deep text-xl font-extrabold">
+          La piscina está tranquila
+        </h2>
+        <p className="text-ink-600 mt-1 text-sm leading-relaxed">
+          {isPlayer || isCoach
+            ? "No tienes entrenamientos ni partidos programados en los próximos 30 días."
+            : "Cuando tengas actividad vinculada, aparecerá aquí primero."}
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function SectionHeading({ eyebrow, title }: { eyebrow: string; title: string }) {
+  return (
+    <div>
+      <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">{eyebrow}</p>
+      <h2
+        className="font-display text-pool-deep mt-1 text-2xl leading-tight font-extrabold tracking-tight"
+        id={headingId(title)}
+      >
+        {title}
+      </h2>
     </div>
   );
 }
 
-function streakShortLabel(
-  type: "goals_consec" | "excl_consec" | "train_consec" | "mvp_consec" | "wins_consec",
-): string {
+function headingId(title: string): string {
+  if (title === "Después") return "week-agenda-heading";
+  if (title === "Rachas en curso") return "streaks-heading";
+  if (title === "Esta temporada") return "season-heading";
+  if (title === "Tu familia") return "family-heading";
+  if (title === "Gestionar") return "management-heading";
+  if (title === "Últimas noticias") return "home-news-heading";
+  return "home-teams-heading";
+}
+
+function streakLabel(type: ActiveStreakRow["type"]): string {
   switch (type) {
     case "goals_consec":
-      return "goles";
+      return "partidos marcando";
     case "excl_consec":
-      return "excl.";
+      return "partidos con exclusión";
     case "train_consec":
-      return "entrenos";
+      return "entrenos seguidos";
     case "mvp_consec":
-      return "MVP";
+      return "MVP seguidos";
     case "wins_consec":
-      return "victorias";
+      return "victorias seguidas";
   }
 }

@@ -59,7 +59,7 @@ export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
             onClick={() => navigate(m.id)}
             data-metric-tab={m.id}
             className={cn(
-              "touch-target focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex h-11 shrink-0 items-center gap-2 rounded-md border px-3.5 text-sm font-extrabold transition-all focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+              "touch-target focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-12 shrink-0 items-center gap-2 rounded-xl border px-3.5 text-sm font-extrabold transition-[background-color,border-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
               isActive
                 ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
                 : "border-ink-300 bg-paper-card text-ink-700 hover:border-pool-blue hover:text-pool-deep",

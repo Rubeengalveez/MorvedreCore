@@ -77,7 +77,7 @@ export function TrainingSessionsList({
             )}
           >
             <div className="bg-paper text-pool-deep flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded">
-              <span className="text-ink-600 font-mono text-[10px] leading-none uppercase">
+              <span className="text-ink-600 font-mono text-xs leading-none uppercase">
                 {formatWeekdayLetter(((new Date(s.scheduled_at).getDay() + 6) % 7) + 1)}
               </span>
               <span className="font-display text-base leading-none font-extrabold">
@@ -90,7 +90,7 @@ export function TrainingSessionsList({
                 {formatTime(s.scheduled_at)}
                 {s.location ? ` · ${s.location}` : ""}
               </span>
-              <span className="text-ink-600 text-[11px]">
+              <span className="text-ink-600 text-xs">
                 {s.cancelled
                   ? `Cancelada: ${s.cancellation_reason ?? "sin motivo"}`
                   : formatRelativeFromNow(s.scheduled_at)}

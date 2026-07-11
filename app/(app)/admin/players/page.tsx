@@ -1,7 +1,9 @@
 import { MdAdd, MdUploadFile } from "react-icons/md";
+import { UserRound } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
 import { CATEGORY_LABELS, inferCategory } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
@@ -74,38 +76,37 @@ export default async function PlayersPage() {
   const players = await loadPlayers();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 px-4 py-4">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex flex-col gap-0.5">
-          <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-            Jugadores
-          </h1>
-          <p className="text-ink-600 text-sm">Altas, ediciones y asignación a equipos.</p>
-        </div>
-        <div className="flex w-full shrink-0 gap-2 sm:w-auto">
-          <Button
-            asChild
-            size="md"
-            variant="secondary"
-            className="w-full shrink-0 justify-center sm:w-auto"
-          >
-            <Link href={"/admin/players/import" as Route}>
-              <MdUploadFile className="h-5 w-5" aria-hidden="true" />
-              <span>Importar Excel</span>
-            </Link>
-          </Button>
-          <PlayerFormSheet
-            trigger={
-              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-                <MdAdd className="h-6 w-6" aria-hidden="true" />
-                <span>Nuevo</span>
-              </Button>
-            }
-          />
-        </div>
-      </header>
+    <AdminPageShell>
+      <AdminPageHeader
+        title="Jugadores"
+        description="Altas, ediciones y asignación a equipos."
+        icon={<UserRound className="h-6 w-6" aria-hidden="true" />}
+        action={
+          <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto">
+            <Button
+              asChild
+              size="md"
+              variant="secondary"
+              className="w-full shrink-0 justify-center sm:w-auto"
+            >
+              <Link href={"/admin/players/import" as Route}>
+                <MdUploadFile className="h-5 w-5" aria-hidden="true" />
+                <span>Importar</span>
+              </Link>
+            </Button>
+            <PlayerFormSheet
+              trigger={
+                <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                  <MdAdd className="h-6 w-6" aria-hidden="true" />
+                  <span>Nuevo jugador</span>
+                </Button>
+              }
+            />
+          </div>
+        }
+      />
 
       <PlayersTable players={players} />
-    </div>
+    </AdminPageShell>
   );
 }

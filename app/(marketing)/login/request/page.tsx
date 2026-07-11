@@ -35,13 +35,13 @@ export default async function LoginRequestPage({
       <div className="flex flex-col gap-3">
         <Link
           href={playerHref}
-          className="bg-pool-blue text-paper hover:bg-pool-deep active:bg-pool-deep flex items-center justify-center rounded-[var(--r-sm)] px-4 py-3.5 text-center font-display font-semibold shadow-elev-2 transition-colors"
+          className="bg-pool-blue text-paper hover:bg-pool-deep active:bg-pool-deep font-display shadow-elev-2 flex items-center justify-center rounded-[var(--r-sm)] px-4 py-3.5 text-center font-semibold transition-colors"
         >
           Soy jugador/a
         </Link>
         <Link
           href={parentHref}
-          className="border-pool-deep text-pool-deep hover:bg-pool-foam flex items-center justify-center rounded-[var(--r-sm)] border-2 px-4 py-3.5 text-center font-display font-semibold transition-colors"
+          className="border-pool-deep text-pool-deep hover:bg-pool-foam font-display flex items-center justify-center rounded-[var(--r-sm)] border-2 px-4 py-3.5 text-center font-semibold transition-colors"
         >
           Soy padre/madre/tutor
         </Link>

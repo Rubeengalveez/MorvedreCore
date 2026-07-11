@@ -10,6 +10,8 @@ import {
 } from "@/components/travel/travel-controls";
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
+import { EmptyState } from "@/components/ui/empty-state";
+import { PageShell } from "@/components/ui/page-shell";
 import { formatLongDate, formatTimeOfDay } from "@/lib/domain/calendar";
 import {
   DEFAULT_TRAVEL_MEETING_POINT,
@@ -39,19 +41,19 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
   const suggestedDeparture = new Date(new Date(travel.scheduled_at).getTime() - 90 * 60_000);
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-col gap-5 px-4 py-4 pb-8">
+    <PageShell width="md" className="gap-5 pb-8">
       <Link
         href={`/matches/${id}`}
-        className="text-pool-blue inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold"
+        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-1 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         <ChevronLeft className="h-5 w-5" />
         Partido
       </Link>
 
-      <header className="bg-pool-deep overflow-hidden rounded-lg text-white">
+      <header className="bg-pool-deep shadow-elev-3 overflow-hidden rounded-[1.75rem] text-white">
         <div className="flex items-start gap-4 p-5">
-          <div className="bg-ball-gold text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-md">
-            <CarFront className="h-7 w-7" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10">
+            <CarFront className="h-7 w-7" aria-hidden="true" />
           </div>
           <div className="min-w-0">
             <p className="text-sm font-bold text-white/65">{travel.team_label}</p>
@@ -111,11 +113,11 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
           </div>
 
           {travel.offers.filter((offer) => !offer.cancelled).length === 0 ? (
-            <div className="border-ink-200 bg-paper-card rounded-lg border-2 border-dashed px-5 py-10 text-center">
-              <CarFront className="text-ink-300 mx-auto h-10 w-10" />
-              <p className="text-ink-900 mt-3 font-bold">Todavía no hay coches</p>
-              <p className="text-ink-500 mt-1 text-sm">El primero que se ofrezca aparecerá aquí.</p>
-            </div>
+            <EmptyState
+              icon={<CarFront className="h-6 w-6" aria-hidden="true" />}
+              title="Todavía no hay coches"
+              description="El primer coche que se ofrezca aparecerá aquí."
+            />
           ) : (
             <div className="flex flex-col gap-3">
               {travel.offers
@@ -130,7 +132,7 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
                   return (
                     <article
                       key={offer.id}
-                      className="border-ink-200 bg-paper-card overflow-hidden rounded-lg border"
+                      className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border"
                     >
                       <div className="flex items-center gap-3 p-4">
                         <Avatar src={offer.driver_photo_url} name={offer.driver_name} size={48} />
@@ -144,7 +146,7 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
                         </div>
                         <div className="bg-pool-foam text-pool-deep rounded-md px-3 py-2 text-center">
                           <p className="font-mono text-xl font-black">{seatsLeft}</p>
-                          <p className="text-[11px] font-bold">libres</p>
+                          <p className="text-xs font-bold">libres</p>
                         </div>
                       </div>
 
@@ -192,6 +194,6 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
           )}
         </section>
       ) : null}
-    </main>
+    </PageShell>
   );
 }

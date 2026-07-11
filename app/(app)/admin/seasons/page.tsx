@@ -1,11 +1,8 @@
-import { Plus } from "lucide-react";
+import { CalendarRange, Plus } from "lucide-react";
 
+import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/ui/eyebrow";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { Calendario } from "@/components/brand/pictograms";
 import { createClient } from "@/lib/supabase/server";
 import type { Season } from "@/server/actions/admin";
 
@@ -41,40 +38,32 @@ export default async function SeasonsPage() {
   const result = await loadSeasons();
 
   return (
-    <div className="relative">
-      <LanePattern className="absolute inset-0" />
-      <div className="relative z-[1] mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-4">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex items-start gap-3">
-            <PictogramBadge pictogram={Calendario} color="var(--pool-teal)" size="lg" />
-            <div className="flex flex-col gap-0.5">
-              <Eyebrow>Estructura del club</Eyebrow>
-              <h1 className="font-display text-pool-deep text-2xl font-extrabold tracking-tight">
-                Temporadas
-              </h1>
-              <p className="text-ink-600 text-sm">Crea y archiva las temporadas del club.</p>
-            </div>
-          </div>
+    <AdminPageShell>
+      <AdminPageHeader
+        eyebrow="Estructura del club"
+        title="Temporadas"
+        description="Crea, activa y archiva las temporadas del club."
+        icon={<CalendarRange className="h-6 w-6" aria-hidden="true" />}
+        action={
           <SeasonFormSheet
             mode={{ kind: "create" }}
             trigger={
               <Button size="md" className="w-full shrink-0 sm:w-auto">
                 <Plus className="h-5 w-5" aria-hidden="true" />
-                <span className="hidden sm:inline">Nueva</span>
-                <span className="sr-only sm:hidden">Nueva temporada</span>
+                Nueva temporada
               </Button>
             }
           />
-        </header>
+        }
+      />
 
-        {result.ok ? null : (
-          <Alert variant="danger" title="No pudimos cargar las temporadas">
-            {result.error}
-          </Alert>
-        )}
+      {result.ok ? null : (
+        <Alert variant="danger" title="No pudimos cargar las temporadas">
+          {result.error}
+        </Alert>
+      )}
 
-        <SeasonsTable seasons={result.ok ? result.seasons : []} />
-      </div>
-    </div>
+      <SeasonsTable seasons={result.ok ? result.seasons : []} />
+    </AdminPageShell>
   );
 }

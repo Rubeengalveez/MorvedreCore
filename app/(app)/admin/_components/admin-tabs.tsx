@@ -15,6 +15,8 @@ import {
   MdUploadFile,
   MdLock,
   MdEuro,
+  MdNewspaper,
+  MdStorefront,
 } from "react-icons/md";
 
 import { cn } from "@/lib/utils/cn";
@@ -27,6 +29,8 @@ const TABS = [
   { id: "staff", href: "/admin/staff", label: "Personal", Icon: MdBadge },
   { id: "trainings", href: "/admin/trainings", label: "Entrenos", Icon: MdFitnessCenter },
   { id: "matches", href: "/admin/matches", label: "Partidos", Icon: MdSportsVolleyball },
+  { id: "news", href: "/admin/news", label: "Noticias", Icon: MdNewspaper },
+  { id: "shop", href: "/admin/shop", label: "Tienda", Icon: MdStorefront },
   { id: "treasury", href: "/admin/treasury", label: "Tesoreria", Icon: MdEuro },
   { id: "import", href: "/admin/players/import", label: "Importar", Icon: MdUploadFile },
   { id: "access", href: "/admin/access-requests", label: "Accesos", Icon: MdLock },
@@ -62,15 +66,12 @@ export function AdminTabs() {
     <nav
       aria-label="Secciones de administracion"
       data-admin-tabs
-      className="bg-paper-card sticky top-[var(--top-bar-height)] z-20 border-b border-ink-200 shadow-sm"
+      className="bg-paper-card border-ink-200 sticky top-[var(--top-bar-height)] z-20 border-b shadow-sm"
     >
-      <div
-        ref={containerRef}
-        className="scrollbar-hide relative overflow-x-auto px-4 py-3"
-      >
+      <div ref={containerRef} className="scrollbar-hide relative overflow-x-auto px-4 py-3">
         <span
           aria-hidden="true"
-          className="bg-pool-deep absolute top-3 bottom-3 rounded-full shadow-sm transition-all duration-300 ease-out"
+          className="bg-pool-deep absolute top-3 bottom-3 rounded-full shadow-sm transition-[left,width] duration-300 ease-out motion-reduce:transition-none"
           style={{
             left: `${pill.left}px`,
             width: `${pill.width}px`,
@@ -94,6 +95,7 @@ export function AdminTabs() {
                   )}
                 >
                   <Icon
+                    aria-hidden="true"
                     className={cn(
                       "h-4.5 w-4.5 shrink-0 transition-transform duration-300",
                       active && "scale-110",

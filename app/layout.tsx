@@ -70,26 +70,36 @@ export default function RootLayout({
             __html: `
               if ('serviceWorker' in navigator) {
                 window.addEventListener('load', function() {
-                  const swUrl = ${JSON.stringify(process.env.NODE_ENV === "production" ? "/sw.js" : "/sw-dev.js")};
-                  navigator.serviceWorker.getRegistrations().then(function(regs) {
-                    var dirty = false;
-                    regs.forEach(function(r) {
-                      if (r.scope.includes(window.location.origin) && r.active && r.active.scriptURL !== (window.location.origin + swUrl)) {
-                        r.unregister();
-                        dirty = true;
+                  if (${JSON.stringify(process.env.NODE_ENV !== "production")}) {
+                    navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                      return Promise.all(registrations.map(function(registration) {
+                        return registration.unregister();
+                      })).then(function(results) {
+                        return results.some(Boolean);
+                      });
+                    }).then(function(unregistered) {
+                      return caches.keys().then(function(cacheNames) {
+                        return Promise.all(cacheNames.map(function(cacheName) {
+                          return caches.delete(cacheName);
+                        }));
+                      }).then(function() {
+                        return unregistered;
+                      });
+                    }).then(function(unregistered) {
+                      if (unregistered) {
+                        window.location.reload();
                       }
+                    }).catch(function(error) {
+                      console.warn('[SW] Development cleanup failed:', error);
                     });
-                    if (dirty) {
-                      console.log('[SW] Old service worker unregistered. Reloading...');
-                      window.location.reload();
-                      return;
-                    }
-                    navigator.serviceWorker.register(swUrl).then(function(reg) {
-                      console.log('[SW] Registered:', reg.scope);
-                      reg.update();
-                    }).catch(function(err) {
-                      console.error('[SW] Registration failed:', err);
-                    });
+                    return;
+                  }
+
+                  navigator.serviceWorker.register('/sw.js').then(function(registration) {
+                    console.log('[SW] Registered:', registration.scope);
+                    registration.update();
+                  }).catch(function(error) {
+                    console.error('[SW] Registration failed:', error);
                   });
                 });
               }
@@ -100,7 +110,7 @@ export default function RootLayout({
       <body className="bg-paper text-ink-900 min-h-dvh font-sans antialiased">
         <a
           href="#main-content"
-          className="focus:bg-pool-deep focus:text-paper sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:shadow-elev-4"
+          className="focus:bg-pool-deep focus:text-paper focus:shadow-elev-4 sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:rounded focus:px-4 focus:py-2 focus:text-sm focus:font-semibold"
         >
           Saltar al contenido principal
         </a>

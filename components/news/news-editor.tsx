@@ -128,7 +128,7 @@ export function NewsEditor({
     <form
       onSubmit={handleSubmit}
       data-news-editor
-      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-md border p-4"
+      className="border-ink-200 bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl border p-4 sm:p-5"
     >
       <div className="flex flex-col gap-1">
         <label htmlFor="news-title" className="text-eyebrow text-ink-600">
@@ -136,13 +136,14 @@ export function NewsEditor({
         </label>
         <Input
           id="news-title"
+          name="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="¿Qué pasa en el club?"
+          placeholder="¿Qué pasa en el club?…"
           maxLength={NEWS_LIMITS.MAX_TITLE}
           required
         />
-        <span className="text-ink-500 text-[10px]">
+        <span className="text-ink-500 text-xs">
           {title.length}/{NEWS_LIMITS.MAX_TITLE}
         </span>
       </div>
@@ -154,6 +155,7 @@ export function NewsEditor({
           </label>
           <Select
             id="news-audience"
+            name="audience"
             value={audience}
             onChange={(e) => {
               const v = e.target.value;
@@ -174,6 +176,7 @@ export function NewsEditor({
             </label>
             <Select
               id="news-team"
+              name="audience_team_id"
               value={audienceTeamId ?? ""}
               onChange={(e) => setAudienceTeamId(e.target.value || null)}
               required
@@ -235,15 +238,16 @@ export function NewsEditor({
         ) : (
           <textarea
             id="news-body"
+            name="body_md"
             value={bodyMd}
             onChange={(e) => setBodyMd(e.target.value)}
-            placeholder="**Negrita**, _cursiva_, [enlaces](https://...), listas, etc."
+            placeholder="Escribe el aviso para el club…"
             maxLength={NEWS_LIMITS.MAX_BODY}
-            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-[160px] w-full resize-y rounded border p-3 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
+            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-[180px] w-full resize-y rounded-xl border p-3 font-mono text-sm focus-visible:ring-2 focus-visible:outline-none"
             required
           />
         )}
-        <span className="text-ink-500 text-[10px]">
+        <span className="text-ink-500 text-xs">
           {bodyMd.length}/{NEWS_LIMITS.MAX_BODY}
         </span>
       </div>
@@ -254,6 +258,7 @@ export function NewsEditor({
         </label>
         <input
           id="news-image"
+          name="image"
           type="file"
           accept="image/jpeg,image/png,image/webp"
           onChange={(e) => {
@@ -263,7 +268,7 @@ export function NewsEditor({
           className="border-ink-300 bg-paper text-pool-deep file:bg-pool-deep file:text-paper focus-visible:ring-pool-blue h-12 min-h-12 w-full rounded border px-3 text-sm file:mr-3 file:rounded file:border-0 file:px-3 file:py-1 file:text-xs file:font-bold focus-visible:ring-2 focus-visible:outline-none"
         />
         {imageUrl ? (
-          <p className="text-ink-500 text-[10px]">
+          <p className="text-ink-500 text-xs">
             Imagen actual:{" "}
             <a
               href={imageUrl}

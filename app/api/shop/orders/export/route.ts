@@ -56,18 +56,16 @@ export async function GET() {
       const product = item.product_title ?? "Producto";
       const size = item.size ?? "Sin talla";
       const key = `${item.product_id}:${size}`;
-      const current =
-        grouped.get(key) ??
-        {
-          producto: product,
-          talla: size,
-          categoria: item.product_category ?? "",
-          cantidad: 0,
-          importe: 0,
-          pedidos: new Set<string>(),
-          compradores: new Set<string>(),
-          estados: new Set<string>(),
-        };
+      const current = grouped.get(key) ?? {
+        producto: product,
+        talla: size,
+        categoria: item.product_category ?? "",
+        cantidad: 0,
+        importe: 0,
+        pedidos: new Set<string>(),
+        compradores: new Set<string>(),
+        estados: new Set<string>(),
+      };
       current.cantidad += item.quantity;
       current.importe += item.subtotal_cents / 100;
       current.pedidos.add(order.id);
