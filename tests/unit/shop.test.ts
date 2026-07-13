@@ -1,12 +1,48 @@
 import { describe, expect, it } from "vitest";
 import {
   formatCents,
+  isMissingShopPersonalizationSchema,
   isValidShopOrderStatus,
   parseCartItem,
   parseProduct,
   SHOP_LIMITS,
   summarizeCart,
 } from "@/lib/domain/shop";
+
+describe("isMissingShopPersonalizationSchema", () => {
+  it("recognizes missing product personalization columns", () => {
+    expect(
+      isMissingShopPersonalizationSchema({
+        code: "42703",
+        message: "column shop_products.personalization_enabled does not exist",
+      }),
+    ).toBe(true);
+  });
+
+  it("recognizes the missing order item personalization column", () => {
+    expect(
+      isMissingShopPersonalizationSchema({
+        code: "42703",
+        message: "column shop_order_items.personalization does not exist",
+      }),
+    ).toBe(true);
+  });
+
+  it("recognizes a stale PostgREST schema cache during writes", () => {
+    expect(
+      isMissingShopPersonalizationSchema({
+        code: "PGRST204",
+        message: "Could not find the 'personalization' column in the schema cache",
+      }),
+    ).toBe(true);
+  });
+
+  it("does not hide unrelated database errors", () => {
+    expect(
+      isMissingShopPersonalizationSchema({ code: "42501", message: "permission denied" }),
+    ).toBe(false);
+  });
+});
 
 describe("parseProduct", () => {
   it("acepta un producto valido", () => {
@@ -128,6 +164,52 @@ describe("summarizeCart", () => {
   it("rechaza si excede max_per_order", () => {
     const r = summarizeCart([{ product_id: "a", size: null, quantity: 11 }], products);
     expect(r.ok).toBe(false);
+  });
+  it("exige una talla válida cuando el producto tiene tallas", () => {
+    const sizedProducts = [
+      {
+        id: "a",
+        title: "Bañador",
+        price_cents: 1000,
+        available: true,
+        max_per_order: 1,
+        sizes: ["S", "M"],
+      },
+    ];
+    expect(summarizeCart([{ product_id: "a", size: null, quantity: 1 }], sizedProducts).ok).toBe(
+      false,
+    );
+    expect(summarizeCart([{ product_id: "a", size: "XL", quantity: 1 }], sizedProducts).ok).toBe(
+      false,
+    );
+    expect(summarizeCart([{ product_id: "a", size: "M", quantity: 1 }], sizedProducts).ok).toBe(
+      true,
+    );
+  });
+  it("exige y conserva la personalización del producto", () => {
+    const personalizedProducts = [
+      {
+        id: "a",
+        title: "Sudadera",
+        price_cents: 1000,
+        available: true,
+        max_per_order: 1,
+        personalization_enabled: true,
+        personalization_max_length: 12,
+      },
+    ];
+    expect(
+      summarizeCart(
+        [{ product_id: "a", size: null, personalization: null, quantity: 1 }],
+        personalizedProducts,
+      ).ok,
+    ).toBe(false);
+    const valid = summarizeCart(
+      [{ product_id: "a", size: null, personalization: "RUBÉN", quantity: 1 }],
+      personalizedProducts,
+    );
+    expect(valid.ok).toBe(true);
+    expect(valid.lines?.[0]?.personalization).toBe("RUBÉN");
   });
 });
 

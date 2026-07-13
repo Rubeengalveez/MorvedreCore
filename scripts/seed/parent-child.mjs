@@ -1,4 +1,4 @@
-import { admin, loadBatch, mergeBatch, rand, resetRng, SEED } from "./base.mjs";
+import { admin, loadBatch, mergeBatch, rand, resetRng } from "./base.mjs";
 
 async function main() {
   resetRng();
@@ -16,12 +16,14 @@ async function main() {
   // Recoger todos los jugadores
   const allPlayers = [];
   for (const [label, ids] of Object.entries(playerIdsByTeam)) {
+    if (["Juvenil", "Absoluto"].includes(label)) continue;
     for (const id of ids) allPlayers.push({ id, team: label });
   }
-  console.log(`[parent-child] ${allPlayers.length} jugadores en ${Object.keys(playerIdsByTeam).length} equipos`);
+  console.log(
+    `[parent-child] ${allPlayers.length} jugadores en ${Object.keys(playerIdsByTeam).length} equipos`,
+  );
 
   // Vincular cada jugador menor con 1-2 padres
-  const used = new Set();
   const links = [];
   let padreIdx = 0;
 
@@ -29,8 +31,7 @@ async function main() {
   const shuffledParents = [...parentIds].sort(() => rand() - 0.5);
 
   for (const p of allPlayers) {
-    // 80% jugadores con 1-2 padres, 20% sin padre asignado
-    if (rand() < 0.2) continue;
+    if (rand() < 0.08) continue;
 
     const numParents = rand() < 0.7 ? 1 : 2;
     for (let i = 0; i < numParents; i++) {
@@ -41,7 +42,6 @@ async function main() {
         parent_profile_id: parentId,
         child_profile_id: p.id,
         relation,
-        created_at: new Date().toISOString(),
       });
     }
   }
@@ -55,7 +55,7 @@ async function main() {
       onConflict: "parent_profile_id,child_profile_id",
     });
     if (error) {
-      console.error(`  ! Bloque ${i / 200 + 1}: ${error.message}`);
+      throw error;
     } else {
       console.log(`  - Bloque ${i / 200 + 1}: ${chunk.length} vinculos`);
     }

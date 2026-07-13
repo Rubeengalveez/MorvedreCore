@@ -39,7 +39,7 @@ export function StaffClient({ rows, teams, people }: StaffClientProps) {
     <div className="flex flex-col gap-5">
       <AdminPageHeader
         title="Personal"
-        description="Asignaciones de entrenadores, delegados y preparadores."
+        description="Asignaciones del equipo y permisos para pasar lista."
         icon={<BadgeCheck className="h-6 w-6" aria-hidden="true" />}
         action={
           <StaffFormSheet

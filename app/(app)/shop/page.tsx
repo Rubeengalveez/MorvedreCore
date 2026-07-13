@@ -149,7 +149,7 @@ function ProductCard({ product }: { product: ShopProduct }) {
   return (
     <Link
       href={`/shop/${product.id}` as Route}
-      className="border-ink-300 bg-paper-card shadow-elev-1 group focus-visible:ring-pool-blue block h-full touch-manipulation overflow-hidden rounded-xl border transition-[border-color,box-shadow,transform] hover:border-pool-blue/50 hover:shadow-elev-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
+      className="border-ink-300 bg-paper-card shadow-elev-1 group focus-visible:ring-pool-blue hover:border-pool-blue/50 hover:shadow-elev-2 block h-full touch-manipulation overflow-hidden rounded-xl border transition-[border-color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
     >
       <div className="bg-paper-sunk relative aspect-[4/5] overflow-hidden">
         {product.image_url ? (

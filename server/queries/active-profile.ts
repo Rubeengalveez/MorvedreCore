@@ -2,6 +2,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { ACTIVE_COOKIE, type ProfileSummary } from "./profile-types";
 
 export { ACTIVE_COOKIE };
@@ -34,9 +35,6 @@ type ParentChildProfileRow = {
 const PROFILE_SELECT =
   "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password, calendar_token";
 
-const PROFILE_SELECT_FALLBACK =
-  "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password";
-
 export const getActiveProfileContext = cache(async (): Promise<ActiveProfileContext | null> => {
   const supabase = await createClient();
   const {
@@ -45,36 +43,12 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
 
   if (!user) return null;
 
-  let own: ProfileSummary | null = null;
-  const { data: ownData, error: ownError } = await supabase
+  const admin = createAdminClient();
+  const { data: own } = await admin
     .from("profiles")
     .select(PROFILE_SELECT)
     .eq("auth_user_id", user.id)
     .maybeSingle();
-
-  if (ownData) {
-    own = ownData;
-  } else if (ownError) {
-    const isMissingCol =
-      ownError.message.includes("calendar_token") || ownError.message.includes("does not exist");
-    if (isMissingCol) {
-      console.warn(
-        "⚠️ ALERTA: La columna calendar_token no existe en profiles. Ejecuta 'pnpm supabase db push'.",
-      );
-      const { data: fallbackOwn } = await supabase
-        .from("profiles")
-        .select(PROFILE_SELECT_FALLBACK)
-        .eq("auth_user_id", user.id)
-        .maybeSingle();
-
-      if (fallbackOwn) {
-        own = {
-          ...fallbackOwn,
-          calendar_token: "",
-        };
-      }
-    }
-  }
 
   if (!own) return null;
 
@@ -83,63 +57,26 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
 
   let active: ProfileSummary = own;
   if (activeId && activeId !== own.id) {
-    const { data: link, error: linkError } = await supabase
+    const { data: link } = await admin
       .from("parent_child_links")
       .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`)
       .eq("parent_profile_id", own.id)
       .eq("child_profile_id", activeId)
       .maybeSingle();
 
-    let child = extractJoined(link?.profiles);
-    if (
-      linkError &&
-      (linkError.message.includes("calendar_token") || linkError.message.includes("does not exist"))
-    ) {
-      const { data: fallbackLink } = await supabase
-        .from("parent_child_links")
-        .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT_FALLBACK})`)
-        .eq("parent_profile_id", own.id)
-        .eq("child_profile_id", activeId)
-        .maybeSingle();
-
-      const rawChild = extractJoined(fallbackLink?.profiles);
-      if (rawChild) {
-        child = {
-          ...rawChild,
-          calendar_token: "",
-        };
-      }
-    }
+    const child = extractJoined(link?.profiles);
 
     if (isProfileRow(child)) {
       active = child;
     }
   }
 
-  const { data: linkRows, error: rowsError } = await supabase
+  const { data: linkRows } = await admin
     .from("parent_child_links")
     .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`)
     .eq("parent_profile_id", own.id);
 
-  let finalRows = linkRows as ParentChildProfileRow[] | null;
-  if (
-    rowsError &&
-    (rowsError.message.includes("calendar_token") || rowsError.message.includes("does not exist"))
-  ) {
-    const { data: fallbackRows } = await supabase
-      .from("parent_child_links")
-      .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT_FALLBACK})`)
-      .eq("parent_profile_id", own.id);
-
-    if (fallbackRows) {
-      finalRows = fallbackRows.map((row) => {
-        const rawChild = extractJoined(row.profiles);
-        return {
-          profiles: rawChild ? { ...rawChild, calendar_token: "" } : null,
-        };
-      });
-    }
-  }
+  const finalRows = linkRows as ParentChildProfileRow[] | null;
 
   const linked: ProfileSummary[] = [];
   for (const row of finalRows ?? []) {

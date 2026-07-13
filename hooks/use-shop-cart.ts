@@ -16,8 +16,7 @@ function readFromStorage(): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
     const raw =
-      window.localStorage.getItem(STORAGE_KEY) ??
-      window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -51,8 +50,7 @@ function writeToStorage(items: CartItem[]): void {
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
-  } catch {
-  }
+  } catch {}
 }
 
 export function useShopCart() {

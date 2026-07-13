@@ -2,6 +2,7 @@
 import dotenv from "dotenv";
 dotenv.config({ path: ".env.local" });
 
+import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
@@ -15,7 +16,7 @@ const HAS_ENV = Boolean(
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
-const PASSWORD = "Test123456!";
+const PASSWORD = `Test-${randomBytes(16).toString("base64url")}9aA`;
 
 let admin: SupabaseClient<Database> | null = null;
 let coachAnon: SupabaseClient<Database> | null = null;

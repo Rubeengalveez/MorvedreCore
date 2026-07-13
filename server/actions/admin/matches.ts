@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { insertNotificationsWithPush } from "./notification-dispatch";
 import type { Tables } from "@/types/database";
 import {
@@ -58,9 +57,9 @@ async function recomputeRankingForMatchAll(matchId: string): Promise<void> {
   });
 }
 
-export type MatchRow = Tables<"matches", "Row">;
-export type CallupRow = Tables<"match_callups", "Row">;
-export type MatchStatRow = Tables<"match_stats", "Row">;
+export type MatchRow = Tables<"matches">;
+export type CallupRow = Tables<"match_callups">;
+export type MatchStatRow = Tables<"match_stats">;
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {

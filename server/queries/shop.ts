@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { ShopOrderStatus } from "@/lib/domain/shop";
+import { isMissingShopPersonalizationSchema, type ShopOrderStatus } from "@/lib/domain/shop";
 
 export interface ShopProduct {
   id: string;
@@ -74,11 +74,37 @@ export interface ShopOrder {
 const PRODUCT_FIELDS =
   "id, title, description, category, price_cents, currency, image_url, sizes, available, stock, max_per_order, personalization_enabled, personalization_label, personalization_max_length, created_by, created_at, updated_at";
 
+const LEGACY_PRODUCT_FIELDS =
+  "id, title, description, category, price_cents, currency, image_url, sizes, available, stock, max_per_order, created_by, created_at, updated_at";
+
 const ORDER_FIELDS =
   "id, requested_by, approved_by, managed_by, status, total_cents, currency, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";
 
 const ITEM_FIELDS =
   "id, order_id, product_id, size, personalization, quantity, unit_price_cents, subtotal_cents";
+
+const LEGACY_ITEM_FIELDS =
+  "id, order_id, product_id, size, quantity, unit_price_cents, subtotal_cents";
+
+type ProductRow = Omit<ShopProduct, "images">;
+
+function normalizeProductRows(rows: Array<Record<string, unknown>>): ProductRow[] {
+  return rows.map((row) => ({
+    ...(row as ProductRow),
+    personalization_enabled: Boolean(row.personalization_enabled),
+    personalization_label:
+      typeof row.personalization_label === "string" ? row.personalization_label : "Nombre",
+    personalization_max_length:
+      typeof row.personalization_max_length === "number" ? row.personalization_max_length : 30,
+  }));
+}
+
+function normalizeItemRows(rows: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return rows.map((row) => ({
+    ...row,
+    personalization: typeof row.personalization === "string" ? row.personalization : null,
+  }));
+}
 
 export async function getShopProducts(filter?: {
   category?: string;
@@ -86,36 +112,57 @@ export async function getShopProducts(filter?: {
   availableOnly?: boolean;
 }): Promise<ShopProduct[]> {
   const supabase = await createClient();
-  let q = supabase
-    .from("shop_products")
-    .select(PRODUCT_FIELDS)
-    .order("created_at", { ascending: false });
+  const loadProducts = async (fields: string) => {
+    let query = supabase
+      .from("shop_products")
+      .select(fields)
+      .order("created_at", { ascending: false });
+    if (filter?.category && filter.category !== "all") {
+      query = query.eq("category", filter.category);
+    }
+    if (filter?.search) {
+      query = query.ilike("title", `%${filter.search}%`);
+    }
+    if (filter?.availableOnly) {
+      query = query.eq("available", true);
+    }
+    return query;
+  };
 
-  if (filter?.category && filter.category !== "all") {
-    q = q.eq("category", filter.category);
+  let result = await loadProducts(PRODUCT_FIELDS);
+  if (isMissingShopPersonalizationSchema(result.error)) {
+    result = await loadProducts(LEGACY_PRODUCT_FIELDS);
   }
-  if (filter?.search) {
-    q = q.ilike("title", "%" + filter.search + "%");
+  if (result.error) {
+    throw new Error("No pudimos cargar los productos: " + result.error.message);
   }
-  if (filter?.availableOnly) {
-    q = q.eq("available", true);
-  }
-
-  const { data, error } = await q;
-  if (error) throw new Error("No pudimos cargar los productos: " + error.message);
-  return attachProductImages((data ?? []) as Array<Omit<ShopProduct, "images">>, supabase);
+  return attachProductImages(
+    normalizeProductRows((result.data ?? []) as unknown as Array<Record<string, unknown>>),
+    supabase,
+  );
 }
 
 export async function getShopProduct(productId: string): Promise<ShopProduct | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  const currentResult = await supabase
     .from("shop_products")
     .select(PRODUCT_FIELDS)
     .eq("id", productId)
     .maybeSingle();
-  if (error) return null;
+  let productData = currentResult.data as unknown as Record<string, unknown> | null;
+  let productError = currentResult.error;
+  if (isMissingShopPersonalizationSchema(productError)) {
+    const legacyResult = await supabase
+      .from("shop_products")
+      .select(LEGACY_PRODUCT_FIELDS)
+      .eq("id", productId)
+      .maybeSingle();
+    productData = legacyResult.data as unknown as Record<string, unknown> | null;
+    productError = legacyResult.error;
+  }
+  if (productError) return null;
   const products = await attachProductImages(
-    data ? [data as Omit<ShopProduct, "images">] : [],
+    normalizeProductRows(productData ? [productData] : []),
     supabase,
   );
   return products[0] ?? null;
@@ -210,13 +257,23 @@ export async function getShopOrder(orderId: string): Promise<ShopOrder | null> {
   if (orderErr) return null;
   if (!orderData) return null;
 
-  const { data: itemsData, error: itemsErr } = await supabase
+  const currentItemsResult = await supabase
     .from("shop_order_items")
     .select(ITEM_FIELDS)
     .eq("order_id", orderId);
-  if (itemsErr) return null;
+  let itemRows = currentItemsResult.data as unknown as Array<Record<string, unknown>> | null;
+  let itemsError = currentItemsResult.error;
+  if (isMissingShopPersonalizationSchema(itemsError)) {
+    const legacyItemsResult = await supabase
+      .from("shop_order_items")
+      .select(LEGACY_ITEM_FIELDS)
+      .eq("order_id", orderId);
+    itemRows = legacyItemsResult.data as unknown as Array<Record<string, unknown>> | null;
+    itemsError = legacyItemsResult.error;
+  }
+  if (itemsError) return null;
 
-  const items = await hydrateOrderItems(itemsData ?? [], supabase);
+  const items = await hydrateOrderItems(normalizeItemRows(itemRows ?? []), supabase);
   const profileMap = await loadProfileNames(supabase, collectProfileIdsFromOrders([orderData]));
 
   return assembleOrder(orderData, items, profileMap);
@@ -272,13 +329,23 @@ async function hydrateOrders(
   if (orderRows.length === 0) return [];
   const orderIds = orderRows.map((o) => (o as { id: string }).id);
 
-  const { data: itemsData, error: itemsErr } = await supabase
+  const currentItemsResult = await supabase
     .from("shop_order_items")
     .select(ITEM_FIELDS)
     .in("order_id", orderIds);
-  if (itemsErr) return [];
+  let itemRows = currentItemsResult.data as unknown as Array<Record<string, unknown>> | null;
+  let itemsError = currentItemsResult.error;
+  if (isMissingShopPersonalizationSchema(itemsError)) {
+    const legacyItemsResult = await supabase
+      .from("shop_order_items")
+      .select(LEGACY_ITEM_FIELDS)
+      .in("order_id", orderIds);
+    itemRows = legacyItemsResult.data as unknown as Array<Record<string, unknown>> | null;
+    itemsError = legacyItemsResult.error;
+  }
+  if (itemsError) return [];
 
-  const items = await hydrateOrderItems(itemsData ?? [], supabase);
+  const items = await hydrateOrderItems(normalizeItemRows(itemRows ?? []), supabase);
   const itemsByOrder = new Map<string, ShopOrderItem[]>();
   for (const it of items) {
     const list = itemsByOrder.get(it.order_id) ?? [];

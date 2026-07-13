@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { updateProfileSchema } from "@/lib/domain/admin-schemas";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type UpdateProfileState = { ok?: true; error?: string } | null;
@@ -34,7 +35,8 @@ export async function updateProfile(
     return { error: "Tu sesión ha caducado. Vuelve a iniciar sesión." };
   }
 
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const { error } = await admin
     .from("profiles")
     .update({
       full_name: parsed.data.full_name,

@@ -3,7 +3,8 @@ import { UsersRound } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin } from "@/server/actions/admin/_helpers";
 
 import {
   FamilyFormSheet,
@@ -32,7 +33,8 @@ async function loadData(): Promise<{
   parents: PersonOption[];
   children: PersonOption[];
 }> {
-  const supabase = await createClient();
+  await requireAdmin();
+  const supabase = createAdminClient();
 
   const [{ data: linkData }, { data: profilesData }] = await Promise.all([
     supabase

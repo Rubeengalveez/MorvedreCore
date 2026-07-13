@@ -27,10 +27,6 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
   const product = await getShopProduct(id);
   if (!product) notFound();
 
-  const personalized = /personaliz|nombre|iniciales/i.test(
-    `${product.title} ${product.description}`,
-  );
-
   return (
     <PageShell width="lg" className="gap-5 pb-8">
       <Link
@@ -40,6 +36,36 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Volver a la tienda
       </Link>
+
+      <header className="border-ink-300 border-b pb-5">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+            {product.category}
+          </p>
+          <span
+            className={
+              product.available
+                ? "bg-success/10 text-success rounded-md px-2.5 py-1 text-xs font-extrabold uppercase"
+                : "bg-goggle-red/10 text-goggle-red rounded-md px-2.5 py-1 text-xs font-extrabold uppercase"
+            }
+          >
+            {product.available ? "Disponible" : "Agotado"}
+          </span>
+        </div>
+        <h1 className="text-pool-deep mt-2 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
+          {product.title}
+        </h1>
+        <p className="font-display text-pool-deep mt-3 text-4xl leading-none font-extrabold tracking-tight tabular-nums sm:text-5xl">
+          {formatCents(product.price_cents, product.currency)}
+        </p>
+        <p className="text-ink-500 mt-2 text-sm font-semibold">
+          {product.stock !== null
+            ? product.stock > 0
+              ? `${product.stock} disponibles`
+              : "Sin stock"
+            : "Disponible bajo pedido"}
+        </p>
+      </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] md:items-start md:gap-8">
         <ProductGallery
@@ -52,37 +78,24 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
           }))}
         />
 
-        <div className="flex min-w-0 flex-col gap-5 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
-          <section className="border-ink-200 bg-paper-card shadow-elev-2 rounded-[1.75rem] border p-5 sm:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-                {product.category}
-              </p>
-              <span
-                className={
-                  product.available
-                    ? "bg-success/10 text-success rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase"
-                    : "bg-goggle-red/10 text-goggle-red rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase"
-                }
-              >
-                {product.available ? "Disponible" : "Agotado"}
-              </span>
-            </div>
-            <h1 className="font-display text-pool-deep mt-3 text-3xl leading-tight font-extrabold tracking-tight text-balance">
-              {product.title}
-            </h1>
-            <p className="text-pool-deep mt-5 font-mono text-3xl font-extrabold tabular-nums">
-              {formatCents(product.price_cents, product.currency)}
-            </p>
-            <p className="text-ink-500 mt-2 text-sm font-semibold">
-              {product.stock !== null
-                ? product.stock > 0
-                  ? `${product.stock} disponibles`
-                  : "Sin stock"
-                : "Disponible bajo pedido"}
-            </p>
+        <div className="flex min-w-0 flex-col gap-4 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
+          <section className="border-ink-300 bg-paper-card rounded-xl border p-4 shadow-sm sm:p-5">
+            <AddToCartButton
+              productId={product.id}
+              available={product.available}
+              sizes={product.sizes}
+              personalizationEnabled={product.personalization_enabled}
+              personalizationLabel={product.personalization_label}
+              personalizationMaxLength={product.personalization_max_length}
+            />
+          </section>
 
-            <div className="border-ink-200 mt-5 grid grid-cols-2 border-y py-4">
+          <section className="border-ink-300 bg-paper-card rounded-xl border p-4 sm:p-5">
+            <h2 className="font-display text-pool-deep text-lg font-extrabold">Detalles</h2>
+            <p className="text-ink-700 mt-2 text-base leading-relaxed whitespace-pre-line">
+              {product.description}
+            </p>
+            <div className="border-ink-200 mt-5 grid grid-cols-2 border-t pt-4">
               <TrustLine icon={ShieldCheck} title="Compra del club" text="Sin comisiones" />
               <TrustLine
                 icon={PackageCheck}
@@ -90,26 +103,7 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
                 text="Recogida en el club"
               />
             </div>
-
-            <section aria-labelledby="product-description-heading" className="mt-5">
-              <h2
-                id="product-description-heading"
-                className="font-display text-pool-deep text-lg font-extrabold"
-              >
-                Detalles
-              </h2>
-              <p className="text-ink-700 mt-2 text-base leading-relaxed whitespace-pre-line">
-                {product.description}
-              </p>
-            </section>
           </section>
-
-          <AddToCartButton
-            productId={product.id}
-            available={product.available}
-            sizes={product.sizes}
-            personalized={personalized}
-          />
 
           {!product.available ? (
             <p className="border-ink-200 bg-paper-card text-ink-600 rounded-2xl border p-4 text-center text-base font-semibold">

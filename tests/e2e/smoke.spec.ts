@@ -6,8 +6,9 @@ test.describe("Smoke", () => {
     await expect(page).toHaveTitle(/Morvedre/);
   });
 
-  test("landing page shows the app name", async ({ page }) => {
+  test("landing page redirects unauthenticated users to login", async ({ page }) => {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Morvedre Core" })).toBeVisible();
+    await expect(page).toHaveURL(/\/login(?:\?|$)/, { timeout: 15_000 });
+    await expect(page).toHaveTitle(/Morvedre/);
   });
 });

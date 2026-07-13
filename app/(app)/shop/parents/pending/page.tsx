@@ -77,6 +77,8 @@ export default async function ParentPendingPage() {
                 {o.items.map((i) => (
                   <li key={i.id} className="line-clamp-1">
                     · {i.quantity} × {i.product_title}
+                    {i.size ? ` · Talla ${i.size}` : ""}
+                    {i.personalization ? ` · ${i.personalization}` : ""}
                     {i.size ? ` (${i.size})` : ""}
                   </li>
                 ))}

@@ -1,17 +1,15 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { MdAutorenew, MdCheck, MdClose, MdLock } from "react-icons/md";
+import { MdAutorenew, MdCheck, MdClose } from "react-icons/md";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   approveAccessRequest,
   approveAccessRequestsBulk,
   rejectAccessRequest,
-  updateTempPassword,
-  type AccessRequestActionState,
+  type IssuedCredential,
 } from "@/server/actions/auth";
 
 interface ChildRef {
@@ -50,22 +48,13 @@ function formatDate(iso: string) {
   });
 }
 
-export function AccessRequestsManager({
-  initialRequests,
-  initialTempPassword,
-}: {
-  initialRequests: AccessRequest[];
-  initialTempPassword: string;
-}) {
+export function AccessRequestsManager({ initialRequests }: { initialRequests: AccessRequest[] }) {
   const router = useRouter();
   const [requests, setRequests] = useState<AccessRequest[]>(initialRequests);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [issuedCredentials, setIssuedCredentials] = useState<IssuedCredential[]>([]);
   const [, startTransition] = useTransition();
-  const [tempPasswordState, tempPasswordAction] = useActionState<
-    AccessRequestActionState,
-    FormData
-  >(updateTempPassword, null);
 
   const pendingRequests = requests.filter((r) => r.status === "pending");
   const otherRequests = requests.filter((r) => r.status !== "pending");
@@ -87,6 +76,7 @@ export function AccessRequestsManager({
       const result = await approveAccessRequest(fd);
       setPendingId(null);
       if (result?.success) {
+        setIssuedCredentials(result.credentials ?? []);
         router.refresh();
         setRequests((prev) => prev.map((r) => (r.id === id ? { ...r, status: "approved" } : r)));
       }
@@ -114,6 +104,7 @@ export function AccessRequestsManager({
     startTransition(async () => {
       const result = await approveAccessRequestsBulk(fd);
       if (result?.success) {
+        setIssuedCredentials(result.credentials ?? []);
         router.refresh();
         setRequests((prev) =>
           prev.map((r) => (selected.has(r.id) ? { ...r, status: "approved" } : r)),
@@ -123,57 +114,42 @@ export function AccessRequestsManager({
     });
   };
 
-  const handleTempPasswordSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const fd = new FormData(event.currentTarget);
-    tempPasswordAction(fd);
-  };
-
   return (
     <div className="flex flex-col gap-6">
-      <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4 sm:p-5">
-        <div className="text-pool-deep flex items-center gap-2">
-          <MdLock className="h-5 w-5" />
-          <h2 className="font-display text-lg font-extrabold">Contraseña temporal</h2>
-        </div>
-        <p className="text-ink-600 mt-1 text-sm">
-          Esta es la contraseña que le pasarás manualmente a cada usuario tras aprobarle.
-        </p>
-        <form
-          onSubmit={handleTempPasswordSubmit}
-          className="mt-4 flex max-w-md flex-col gap-2 sm:flex-row"
+      {issuedCredentials.length > 0 ? (
+        <section
+          className="border-pool-teal/40 bg-pool-foam rounded-2xl border p-4 sm:p-5"
+          role="status"
+          aria-live="polite"
         >
-          <label
-            htmlFor="access-temp-password"
-            className="text-pool-deep text-sm font-extrabold sm:sr-only"
-          >
-            Contraseña temporal
-          </label>
-          <Input
-            id="access-temp-password"
-            name="tempPassword"
-            type="text"
-            autoComplete="off"
-            spellCheck={false}
-            defaultValue={initialTempPassword}
-            required
-            minLength={1}
-            className="flex-1"
-          />
-          <Button type="submit" variant="secondary">
-            Guardar
-          </Button>
-        </form>
-        {tempPasswordState?.success ? (
-          <p className="text-success mt-2 text-sm font-semibold" role="status" aria-live="polite">
-            Contraseña actualizada.
-          </p>
-        ) : tempPasswordState?.error ? (
-          <p className="text-danger mt-2 text-sm font-semibold" role="alert">
-            {tempPasswordState.error}
-          </p>
-        ) : null}
-      </section>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-pool-deep text-lg font-extrabold">
+                Credenciales temporales
+              </h2>
+              <p className="text-ink-700 mt-1 text-sm">
+                Pásalas de forma privada. Solo se muestran ahora y cada cuenta tiene una distinta.
+              </p>
+            </div>
+            <Button size="sm" variant="secondary" onClick={() => setIssuedCredentials([])}>
+              Ocultar
+            </Button>
+          </div>
+          <ul className="mt-4 grid gap-2">
+            {issuedCredentials.map((credential) => (
+              <li
+                key={credential.email}
+                className="border-ink-200 bg-paper grid gap-1 rounded-lg border px-3 py-2 text-sm sm:grid-cols-2"
+              >
+                <span className="font-semibold break-all">{credential.email}</span>
+                <code className="text-pool-deep font-mono font-bold break-all sm:text-right">
+                  {credential.temporaryPassword}
+                </code>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section>
         <div className="mb-3 flex items-center justify-between">

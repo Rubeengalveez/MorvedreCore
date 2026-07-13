@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { CacheFirst, ExpirationPlugin, NetworkFirst, Serwist } from "serwist";
+import { CacheFirst, ExpirationPlugin, Serwist } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -17,20 +17,6 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
-    {
-      matcher: ({ request }) => request.mode === "navigate",
-      handler: new NetworkFirst({
-        cacheName: "pages-html",
-        networkTimeoutSeconds: 3,
-        plugins: [
-          new ExpirationPlugin({
-            maxEntries: 32,
-            maxAgeSeconds: 7 * 24 * 60 * 60,
-            purgeOnQuotaError: true,
-          }),
-        ],
-      }),
-    },
     {
       matcher: ({ url }) =>
         url.pathname.startsWith("/brand/") ||
@@ -49,14 +35,6 @@ const serwist = new Serwist({
     },
     ...defaultCache,
   ],
-  fallbacks: {
-    entries: [
-      {
-        url: "/dashboard",
-        matcher: ({ request }) => request.destination === "document",
-      },
-    ],
-  },
 });
 
 serwist.addEventListeners();

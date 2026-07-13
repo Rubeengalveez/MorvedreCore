@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
+import { escapeHtml } from "@/lib/email/html";
 import {
   buildTreasuryClosureWorkbook,
   treasuryClosureFilename,
@@ -266,6 +267,7 @@ export async function sendTreasuryClosureEmail(input: {
 
   const buffer = buildTreasuryClosureWorkbook({ closure, lines });
   const filename = treasuryClosureFilename(closure.period_label);
+  const safePeriodLabel = escapeHtml(closure.period_label);
   const result = await sendEmail({
     to,
     subject: `Cierre de tesoreria - ${closure.period_label}`,
@@ -277,7 +279,7 @@ Total: ${closure.total_cents / 100} EUR
 Lineas: ${lines.length}
 `,
     html: `<p>Hola,</p>
-<p>Adjunto tienes el cierre de tesoreria de <strong>${closure.period_label}</strong>.</p>
+<p>Adjunto tienes el cierre de tesoreria de <strong>${safePeriodLabel}</strong>.</p>
 <ul>
   <li><strong>Total:</strong> ${(closure.total_cents / 100).toFixed(2)} EUR</li>
   <li><strong>Lineas:</strong> ${lines.length}</li>

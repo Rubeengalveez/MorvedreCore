@@ -15,6 +15,7 @@ import {
   updateNewsPostSchema,
 } from "@/lib/domain/admin-schemas";
 import { isExpired, isValidReaction, NEWS_LIMITS } from "@/lib/domain/news";
+import { validateImageFile } from "@/lib/uploads/images";
 
 function toError(e: unknown): string {
   if (e instanceof z.ZodError) return e.issues[0]?.message ?? "Datos inválidos.";
@@ -42,11 +43,11 @@ async function uploadNewsImage(
   postId: string,
   file: File,
 ): Promise<string> {
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `news/${postId}/${Date.now()}.${ext}`;
+  const image = await validateImageFile(file);
+  const path = `news/${postId}/${Date.now()}.${image.extension}`;
   const { error } = await supabase.storage
     .from("news")
-    .upload(path, file, { contentType: file.type, upsert: true });
+    .upload(path, file, { contentType: image.contentType, upsert: true });
   if (error) throw new Error("No pudimos subir la imagen: " + error.message);
   const { data: pub } = supabase.storage.from("news").getPublicUrl(path);
   return pub.publicUrl;

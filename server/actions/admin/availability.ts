@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 import { setAvailabilitySchema } from "@/lib/domain/admin-schemas";
 
-export type AvailabilityRow = Tables<"match_availability", "Row">;
+export type AvailabilityRow = Tables<"match_availability">;
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {

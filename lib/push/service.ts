@@ -1,3 +1,5 @@
+import "server-only";
+
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -10,8 +12,8 @@ interface PushPayload {
 function hasVapidConfig(): boolean {
   return Boolean(
     process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY &&
-      process.env.VAPID_PRIVATE_KEY &&
-      process.env.VAPID_SUBJECT
+    process.env.VAPID_PRIVATE_KEY &&
+    process.env.VAPID_SUBJECT,
   );
 }
 
@@ -19,7 +21,7 @@ function hasVapidConfig(): boolean {
 function encryptPayload(
   clientPublicKeyB64Url: string,
   clientAuthB64Url: string,
-  payloadText: string
+  payloadText: string,
 ): Buffer {
   const clientPublicKey = Buffer.from(clientPublicKeyB64Url, "base64url");
   const clientAuth = Buffer.from(clientAuthB64Url, "base64url");
@@ -40,46 +42,23 @@ function encryptPayload(
     clientPublicKey,
     ephemeralPublicKey,
   ]);
-  const ikm = Buffer.from(
-    crypto.hkdfSync(
-      "sha256",
-      sharedSecret,
-      clientAuth,
-      info,
-      32
-    )
-  );
+  const ikm = Buffer.from(crypto.hkdfSync("sha256", sharedSecret, clientAuth, info, 32));
 
   // 4. Generate random 16-byte salt for RFC 8188
   const salt = crypto.randomBytes(16);
 
   // 5. Derive CEK and Nonce
   const cek = Buffer.from(
-    crypto.hkdfSync(
-      "sha256",
-      ikm,
-      salt,
-      Buffer.from("Content-Encoding: aes128gcm\0", "utf8"),
-      16
-    )
+    crypto.hkdfSync("sha256", ikm, salt, Buffer.from("Content-Encoding: aes128gcm\0", "utf8"), 16),
   );
   const iv = Buffer.from(
-    crypto.hkdfSync(
-      "sha256",
-      ikm,
-      salt,
-      Buffer.from("Content-Encoding: nonce\0", "utf8"),
-      12
-    )
+    crypto.hkdfSync("sha256", ikm, salt, Buffer.from("Content-Encoding: nonce\0", "utf8"), 12),
   );
 
   // 6. Pad payload and encrypt
   // RFC 8188 Section 2: append 0x02 for the last record
   const payloadBuffer = Buffer.from(payloadText, "utf8");
-  const paddedPayload = Buffer.concat([
-    payloadBuffer,
-    Buffer.from([0x02]),
-  ]);
+  const paddedPayload = Buffer.concat([payloadBuffer, Buffer.from([0x02])]);
 
   // Encrypt with AES-128-GCM
   const cipher = crypto.createCipheriv("aes-128-gcm", cek, iv);
@@ -147,14 +126,10 @@ function generateVapidHeader(endpoint: string): Record<string, string> {
   });
 
   // Sign using ES256 in raw format
-  const signature = crypto.sign(
-    "SHA256",
-    Buffer.from(tokenInput),
-    {
-      key: privateKey,
-      dsaEncoding: "ieee-p1363",
-    }
-  );
+  const signature = crypto.sign("SHA256", Buffer.from(tokenInput), {
+    key: privateKey,
+    dsaEncoding: "ieee-p1363",
+  });
 
   const jwt = `${tokenInput}.${signature.toString("base64url")}`;
 
@@ -171,13 +146,13 @@ async function sendPushToSubscription(
     p256dh: string;
     auth: string;
   },
-  payload: PushPayload
+  payload: PushPayload,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const encryptedBody = encryptPayload(
       subscription.p256dh,
       subscription.auth,
-      JSON.stringify(payload)
+      JSON.stringify(payload),
     );
 
     const vapidHeaders = generateVapidHeader(subscription.endpoint);
@@ -188,7 +163,7 @@ async function sendPushToSubscription(
     const response = await fetch(subscription.endpoint, {
       method: "POST",
       headers: {
-        "TTL": "2419200", // 4 weeks
+        TTL: "2419200", // 4 weeks
         "Content-Encoding": "aes128gcm",
         "Content-Type": "application/octet-stream",
         ...vapidHeaders,
@@ -254,7 +229,7 @@ async function sendPushToSubscription(
 
 export async function sendPushToProfile(
   profileId: string,
-  payload: PushPayload
+  payload: PushPayload,
 ): Promise<{ success: boolean; error?: string }> {
   if (!hasVapidConfig()) {
     return { success: false, error: "Missing VAPID configuration env variables" };
@@ -273,15 +248,17 @@ export async function sendPushToProfile(
       return { success: false, error: "No active push subscriptions found" };
     }
 
-    const results = await Promise.all(
-      subs.map((sub) => sendPushToSubscription(sub, payload))
-    );
+    const results = await Promise.all(subs.map((sub) => sendPushToSubscription(sub, payload)));
 
     const success = results.some((r) => r.success);
     if (!success) {
       return {
         success: false,
-        error: results.map((r) => r.error).filter(Boolean).join("; ") || "All attempts failed",
+        error:
+          results
+            .map((r) => r.error)
+            .filter(Boolean)
+            .join("; ") || "All attempts failed",
       };
     }
 
@@ -296,7 +273,7 @@ export async function sendPushToProfile(
 
 export async function sendPushToProfiles(
   profileIds: string[],
-  payload: PushPayload
+  payload: PushPayload,
 ): Promise<void> {
   if (profileIds.length === 0) return;
   if (!hasVapidConfig()) {
@@ -315,9 +292,7 @@ export async function sendPushToProfiles(
     if (error) throw error;
     if (!subs || subs.length === 0) return;
 
-    await Promise.all(
-      subs.map((sub) => sendPushToSubscription(sub, payload))
-    );
+    await Promise.all(subs.map((sub) => sendPushToSubscription(sub, payload)));
   } catch (err) {
     console.error("Failed to send push to profiles:", err);
   }

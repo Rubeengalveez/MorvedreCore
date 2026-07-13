@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
 
-export type NotificationRow = Tables<"notifications", "Row">;
+export type NotificationRow = Tables<"notifications">;
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {

@@ -116,12 +116,12 @@ Estimaciones optimistas. La realidad dirá.
 
 > Demo: "Pulso 'Iniciar nueva temporada 2026/2027', todo se archiva, y un juvenil de primer año ya no aparece en la lista del infantil"
 
-- [ ] Migración: `historical_player_stats`, `historical_team_matchups`, `audit_log`
-- [ ] Server Action: `archiveSeason(seasonId)` (transaccional)
-- [ ] Botón admin "Iniciar nueva temporada" con confirmación de seguridad
-- [ ] Vista "Leyendas del club": top históricos de goles, partidos, MVPs, asistencia
-- [ ] Vista de rivalidades: mejores y peores rivales históricos
-- [ ] Recalculo de categorías en bloque
+- [x] Migración: `historical_player_stats`, `historical_team_matchups`, `audit_log`
+- [x] Server Action: `archiveSeason(seasonId)` (transaccional)
+- [x] Botón admin "Iniciar nueva temporada" con confirmación de seguridad
+- [x] Vista "Leyendas del club": top históricos de goles, partidos, MVPs, asistencia
+- [x] Vista de rivalidades: mejores y peores rivales históricos
+- [x] Recalculo de categorías en bloque
 
 ## Fase 9 — Polish, a11y, offline (1 semana)
 

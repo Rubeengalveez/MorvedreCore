@@ -1,9 +1,17 @@
 import { admin, loadBatch, mergeBatch, rand, randInt, pad2, resetRng } from "./base.mjs";
 
 const REASONS = [
-  "Examen", "Viaje familiar", "Lesión", "Médico", "Cumpleaños",
-  "Boda", "Vacaciones", "Compromiso escolar", "Compromiso laboral del padre/madre",
-  "Enfermedad", "Recuperación post-partido",
+  "Examen",
+  "Viaje familiar",
+  "Lesión",
+  "Médico",
+  "Cumpleaños",
+  "Boda",
+  "Vacaciones",
+  "Compromiso escolar",
+  "Compromiso laboral del padre/madre",
+  "Enfermedad",
+  "Recuperación post-partido",
 ];
 
 async function main() {
@@ -35,7 +43,10 @@ async function main() {
       seen.add(key);
       const reason = REASONS[Math.floor(rand() * REASONS.length)];
       blocks.push({
-        player_id: pid, date: isoDate, available: false, reason,
+        player_id: pid,
+        date: isoDate,
+        available: false,
+        reason,
       });
     }
   }

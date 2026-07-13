@@ -515,3 +515,51 @@ Sustituir el registro público por código de invitación por un flujo en el que
   - Sombras grandes de Tailwind (`shadow-lg`, `shadow-xl`, `shadow-2xl`) reemplazadas por `shadow-elev-*`; `rounded-2xl` en cards reducido a `rounded-lg`.
 - Build de producción y tests locales pasan tras los cambios.
 - Se hizo commit+push de seguridad (`f4ec428`) antes de aplicar el design system.
+
+## 2026-07-11 - Fase 8 Históricos y leyendas
+
+- La transición de temporada es manual desde `/admin/seasons`; no se programa un cierre automático. El formulario propone las fechas del año siguiente y exige escribir exactamente la etiqueta de la temporada que se cierra.
+- `archive_season` se ejecuta como una única transacción, usa un bloqueo transaccional para impedir dos cierres simultáneos y solo acepta la temporada actual. Se bloquea si quedan partidos pendientes, resultados incompletos o actas sin validar.
+- Los históricos son append-only para usuarios autenticados. Solo la función transaccional puede escribirlos. Se guardan también `trainings_attended` y `trainings_total` para calcular la asistencia histórica ponderada correctamente, sin promediar porcentajes de temporadas con distinto número de sesiones.
+- La nueva temporada clona equipos, staff y roles con ámbito de equipo. Las plantillas competitivas solo trasladan automáticamente a quien siga perteneciendo a la categoría derivada para el año de inicio; Escuela conserva su plantilla. Las excepciones y ascensos se reasignan manualmente después. La categoría actual sigue sin almacenarse en `profiles`.
+- La página `/legends` suma temporadas archivadas y la temporada actual en curso. Las rivalidades agrupan nombres normalizados y requieren al menos dos partidos para aparecer como mejor cruce o bestia negra.
+- `audit_log` registra de forma automática cambios en perfiles, roles, temporadas y cierres de tesorería, además de un evento resumen específico del archivado de temporada. Solo los administradores pueden leerlo y ningún usuario puede editarlo.
+
+## 2026-07-12 - Auditoría integral de seguridad y deuda técnica
+
+- Las credenciales de activación dejan de ser compartidas: se genera una contraseña aleatoria distinta por cuenta, se muestra una sola vez al admin y nunca se guarda en tablas de aplicación.
+- Las solicitudes públicas solo admiten los roles jugador y padre/madre. Los roles internos los asigna un admin, y la búsqueda de menores exige nombre completo exacto y año de nacimiento.
+- Se revocan mutaciones directas desde la Data API sobre perfiles, solicitudes de acceso y pedidos de tienda. Todas pasan por Server Actions con Zod y comprobaciones de autorización.
+- Los campos privados de perfiles se retiran de los permisos de columna del rol `authenticated`. Los flujos legítimos de administración y perfil los leen mediante servicio después de autenticar y acotar el sujeto.
+- El token de calendario y el resto de datos privados se tratan como secretos; el feed valida límites y escapa contenido para impedir inyección ICS.
+- El service worker deja de guardar navegaciones autenticadas. Solo conserva recursos estáticos, evitando que datos de una sesión queden visibles a otra persona en el mismo dispositivo.
+- Se recupera la renovación de sesión SSR en el proxy y se añaden cabeceras HTTP defensivas globales.
+- Se actualizan y fijan dependencias, se sustituye la versión vulnerable de SheetJS por su distribución oficial actual y el audit de producción queda sin vulnerabilidades conocidas.
+- Las subidas de imágenes e importaciones tienen límites de tamaño, formato, firma binaria y filas; los datos dinámicos de email se escapan.
+- La migración de endurecimiento es `20260712171403_audit_security_hardening.sql`. El informe verificable queda en `27-security-quality-audit.md`.
+
+## 2026-07-13 - Auditoría cloud, saneamiento de base y nuevo conjunto demo
+
+- Se audita el esquema cloud real y se aplican las migraciones de calidad, consistencia de temporadas y privilegios de funciones documentadas en `27-security-quality-audit.md`.
+- Se elimina `app_settings`, porque solo sostenía la contraseña temporal compartida ya retirada y no tenía otro consumidor.
+- Los tipos TypeScript de Supabase pasan a generarse desde el esquema cloud, evitando mantener una copia manual incompleta.
+- Se borran todos los datos sintéticos anteriores, conservando únicamente el usuario Auth administrador y las temporadas válidas.
+- El administrador real queda representado por un único perfil de Rubén con roles `admin`, `coach` y `player`, vinculado a su cuenta de Google.
+- Los seeders crean contraseñas aleatorias únicas que no se persisten ni muestran. `.seed-batch.json` pasa a ser únicamente estado local ignorado, no un artefacto versionado.
+- El conjunto demo cubre equipos, familias, entrenamientos, partidos pasados y futuros, convocatorias, actas, disponibilidad, noticias, rankings, rachas, tienda, tesorería, viajes, históricos y solicitudes de acceso.
+- El seeder completo termina con una validación obligatoria de cobertura y coherencia. No se generan suscripciones push falsas porque sus endpoints deben pertenecer a navegadores reales.
+
+## 2026-07-13 - Pase de lista diario para entrenadores
+
+- El pase de lista es una sección propia de primer nivel. Solo aparece si el perfil tiene rol `coach`, figura como entrenador principal o ayudante y un administrador ha activado `Puede pasar lista` en `/admin/staff`. Ser administrador por sí solo no concede acceso. Delegados y otros miembros del staff no la ven ni pueden abrir sus rutas.
+- El permiso `manage_attendance` es global por entrenador, no por equipo: un entrenador autorizado puede pasar y corregir las listas de todas las categorías de la misma temporada para cubrir a un compañero ausente. Se guarda una sola vez en `profile_permissions`; la base impide concederlo a quien no tenga ninguna asignación como entrenador y lo retira si pierde su última asignación.
+- El inicio conserva únicamente el saludo compacto y su contenido habitual; la gestión de asistencia no invade esta pantalla.
+- La portada de `Asistencia` muestra los entrenamientos de la fecha elegida. El entrenador puede avanzar o retroceder por días, usar un selector de fecha y volver a cualquier sesión anterior para corregir errores.
+- Cada entrenamiento abre una pantalla independiente. La lista muestra solo el nombre del jugador, sin dorsal ni información que el entrenador no necesita para reconocerlo.
+- Los jugadores sin registro parten como `Presente`. Al abrir la lista se persiste automáticamente el estado completo y cada cambio posterior se vuelve a guardar sin botón de confirmación.
+- El entrenador solo necesita marcar `Ausente` en las excepciones. Puede restablecer todo el grupo como presente con una única acción.
+- La interfaz comunica siempre `Guardando cambios`, `Guardado automáticamente` o un error con opción de reintento.
+- Los controles usan texto, icono, forma y color, con objetivos táctiles de al menos 48 px y mensajes anunciables. No existen gestos ocultos ni controles solo con iconos.
+- El inicio compacto sustituye el saludo grande: “Hola, [nombre]”, rol y fecha ocupan una única franja. La cabecera de `Asistencia` también se reduce a una franja breve para dejar visibles antes los entrenamientos.
+- El servidor verifica que la sesión no esté cancelada, que el entrenador tenga permiso global en esa temporada y que la lista coincida exactamente con la plantilla de esa fecha. RLS permite cubrir otro equipo de la misma temporada, pero rechaza a quien no tenga el permiso. La base también rechaza jugadores ajenos, registra al entrenador autenticado y limita los motivos de ausencia.
+- Las horas de los bloques son horas locales de `Europe/Madrid`; la generación y los datos demo se normalizan para evitar desplazamientos UTC.

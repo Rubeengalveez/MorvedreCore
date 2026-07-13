@@ -110,7 +110,7 @@ page.on("framenavigated", (frame) => events.push({ type: "NAV", url: frame.url()
 // Hacer login via form
 await page.goto("http://localhost:3000/login", { waitUntil: "domcontentloaded" });
 await page.fill('input[name="email"]', "galvillo9@gmail.com");
-await page.fill('input[name="password"]', "Morvedre2026!");
+await page.fill('input[name="password"]', process.env.TEST_PASSWORD);
 await page.click('button[type="submit"]');
 
 // Esperar 30 segundos y ver qué pasa
@@ -204,7 +204,7 @@ Crea un test E2E con Playwright en `tests/e2e/login.spec.ts` que verifique:
 
 ## Output esperado
 
-1. El usuario puede hacer login con `galvillo9@gmail.com` / `Morvedre2026!` desde la pantalla de login.
+1. El usuario puede iniciar sesión con las credenciales E2E configuradas mediante `TEST_ADMIN_EMAIL` y `TEST_PASSWORD`.
 2. Después del login, el navegador va a `/dashboard` (o `/change-password` si `must_change_password` es true).
 3. El usuario puede acceder a todas las páginas autenticadas.
 4. El login con Google OAuth sigue funcionando.

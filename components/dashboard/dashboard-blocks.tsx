@@ -44,7 +44,7 @@ export function NextEventCard({ event, now }: { event: DashboardWeekEvent | null
       href={isMatch ? (`/matches/${event.id}` as Route) : ("/calendar" as Route)}
       data-next-event
       data-event-kind={event.kind}
-      className="group border-ink-300 bg-paper-card shadow-elev-2 hover:shadow-elev-3 block overflow-hidden rounded-md border transition-all"
+      className="group border-ink-300 bg-paper-card shadow-elev-2 hover:shadow-elev-3 block overflow-hidden rounded-md border transition-shadow"
       style={{ borderLeftWidth: "4px", borderLeftColor: event.team_color }}
     >
       <div className="flex items-center gap-3 px-3 py-3.5">

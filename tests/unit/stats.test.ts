@@ -210,6 +210,36 @@ describe("computePlayerStats", () => {
     expect(result.matches_played).toBe(1);
     expect(result.matches_called).toBe(3);
   });
+
+  it("does not count no-shows as matches played", () => {
+    const matches: MatchLite[] = [match({ id: "m-1", status: "played" })];
+    const callups: CallupLite[] = [callup({ match_id: "m-1", status: "no_show" })];
+    const result = computePlayerStats("p-1", "season-1", [], [], matches, callups, []);
+    expect(result.matches_played).toBe(0);
+    expect(result.matches_called).toBe(1);
+  });
+
+  it("does not include future sessions in attendance", () => {
+    const matches = [match({ id: "m-1", team_id: "team-1" })];
+    const callups = [callup({ match_id: "m-1" })];
+    const sessions = [
+      session({ id: "past", scheduled_at: "2026-01-01T10:00:00Z" }),
+      session({ id: "future", scheduled_at: "2026-01-03T10:00:00Z" }),
+    ];
+    const attendanceRows = [attendance({ session_id: "past", present: true })];
+    const result = computePlayerStats(
+      "p-1",
+      "season-1",
+      sessions,
+      attendanceRows,
+      matches,
+      callups,
+      [],
+      "2026-01-02T10:00:00Z",
+    );
+    expect(result.trainings_total).toBe(1);
+    expect(result.attendance_pct).toBe(100);
+  });
 });
 
 describe("aggregateSeasonStats", () => {

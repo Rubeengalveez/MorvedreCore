@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
+import { randomBytes } from 'node:crypto';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ADMIN_EMAIL = 'galvillo9@gmail.com';
 const ADMIN_FULL_NAME = 'Rubén Gálvez';
-const ADMIN_TEMP_PASSWORD = 'MorvedreTemporal2026!';
 
 function loadEnvFile(path) {
   if (!existsSync(path)) return;
@@ -57,7 +57,7 @@ async function ensureAuthUser(email, password) {
   const existingId = await findUserIdByEmail(email);
   if (existingId) {
     console.log(`[auth] Usuario ya existe: ${email} (${existingId})`);
-    return existingId;
+    return { id: existingId, created: false };
   }
   const { data, error } = await admin.auth.admin.createUser({
     email,
@@ -66,7 +66,7 @@ async function ensureAuthUser(email, password) {
   });
   if (error) throw error;
   console.log(`[auth] Usuario creado: ${email} (${data.user.id})`);
-  return data.user.id;
+  return { id: data.user.id, created: true };
 }
 
 async function ensureProfile(authUserId, fullName) {
@@ -104,15 +104,25 @@ async function ensureAdminRole(profileId) {
 }
 
 async function main() {
+  const tempPassword =
+    process.env.ADMIN_TEMP_PASSWORD ?? `Mc-${randomBytes(12).toString('base64url')}9aA`;
+  if (tempPassword.length < 12 || !/[A-Za-z]/.test(tempPassword) || !/\d/.test(tempPassword)) {
+    throw new Error('ADMIN_TEMP_PASSWORD debe tener al menos 12 caracteres, una letra y un número.');
+  }
+
   console.log(`[bootstrap] Iniciando para ${ADMIN_EMAIL}`);
-  const authUserId = await ensureAuthUser(ADMIN_EMAIL, ADMIN_TEMP_PASSWORD);
-  const profileId = await ensureProfile(authUserId, ADMIN_FULL_NAME);
+  const authUser = await ensureAuthUser(ADMIN_EMAIL, tempPassword);
+  const profileId = await ensureProfile(authUser.id, ADMIN_FULL_NAME);
   await ensureAdminRole(profileId);
   console.log('');
   console.log('Bootstrap completado.');
   console.log('  Email:    ' + ADMIN_EMAIL);
-  console.log('  Password: ' + ADMIN_TEMP_PASSWORD);
-  console.log('  Acción:   cambia la contraseña en el primer login.');
+  if (authUser.created) {
+    console.log('  Password temporal: ' + tempPassword);
+    console.log('  Acción: cambia la contraseña en el primer login.');
+  } else {
+    console.log('  La contraseña existente no se ha modificado.');
+  }
 }
 
 main().catch((err) => {

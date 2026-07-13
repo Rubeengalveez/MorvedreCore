@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// CLI para los seeders. Uso: node scripts/seed/index.mjs <modulo|all>
-// Modulos: wipe, players, parent-child, trainings, matches, news, shop, notifications, availability, recompute
-
 import { spawn } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,9 +13,14 @@ const MODULES = {
   matches: "matches.mjs",
   news: "news.mjs",
   shop: "shop.mjs",
+  treasury: "treasury.mjs",
+  travel: "travel.mjs",
   notifications: "notifications.mjs",
   availability: "availability.mjs",
+  history: "history.mjs",
+  "access-requests": "access-requests.mjs",
   recompute: "recompute.mjs",
+  validate: "validate.mjs",
 };
 
 const ORDER = [
@@ -29,9 +31,14 @@ const ORDER = [
   "matches",
   "news",
   "shop",
+  "treasury",
+  "travel",
   "notifications",
   "availability",
+  "history",
+  "access-requests",
   "recompute",
+  "validate",
 ];
 
 function runScript(file) {

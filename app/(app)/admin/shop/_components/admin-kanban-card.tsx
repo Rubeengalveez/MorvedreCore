@@ -102,6 +102,8 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
         {order.items.slice(0, 2).map((i) => (
           <li key={i.id} className="line-clamp-1">
             · {i.quantity} × {i.product_title ?? "?"}
+            {i.size ? ` · ${i.size}` : ""}
+            {i.personalization ? ` · ${i.personalization}` : ""}
           </li>
         ))}
         {order.items.length > 2 ? (

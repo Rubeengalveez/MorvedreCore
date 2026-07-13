@@ -10,6 +10,7 @@ import {
   createTeamSchema,
   idSchema,
   makeRosterSchema,
+  staffAttendancePermissionSchema,
   staffSchema,
   unrosterSchema,
   updateTeamSchema,
@@ -17,7 +18,12 @@ import {
 
 import { requireAdmin } from "./_helpers";
 
-export type Team = Tables<"teams", "Row">;
+type TeamRow = Tables<"teams">;
+export type Team = Omit<TeamRow, "category_code" | "gender" | "team_type"> & {
+  category_code: CategoryCode;
+  gender: TeamGender;
+  team_type: "competitive" | "school";
+};
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
@@ -74,7 +80,7 @@ export async function createTeam(input: {
   revalidatePath("/admin/teams");
   revalidatePath("/admin");
 
-  return data;
+  return data as Team;
 }
 
 export async function updateTeam(
@@ -123,19 +129,25 @@ export async function updateTeam(
   revalidatePath("/admin/teams");
   revalidatePath(`/admin/teams/${parsedId.data.id}`);
 
-  return data;
+  return data as Team;
 }
 
 export async function assignStaff(input: {
   team_id: string;
   profile_id: string;
   role: "head_coach" | "assistant_coach" | "delegate" | "physical_trainer";
+  can_manage_attendance?: boolean;
 }): Promise<void> {
   const admin = await requireAdmin();
 
   const parsed = staffSchema.safeParse(input);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
+  }
+
+  const isCoachRole = parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach";
+  if (parsed.data.can_manage_attendance && !isCoachRole) {
+    throw new Error("Solo un entrenador puede recibir permiso para pasar lista.");
   }
 
   const supabase = await createClient();
@@ -156,8 +168,53 @@ export async function assignStaff(input: {
     throw new Error("No pudimos asignar el rol. Inténtalo de nuevo.");
   }
 
+  if (isCoachRole) {
+    const { error: roleError } = await supabase.from("user_roles").upsert(
+      {
+        profile_id: parsed.data.profile_id,
+        role: "coach",
+        scope_team_id: parsed.data.team_id,
+        granted_by: admin.id,
+      },
+      { onConflict: "profile_id,role,scope_team_id", ignoreDuplicates: true },
+    );
+
+    if (roleError) {
+      await supabase
+        .from("team_staff")
+        .delete()
+        .eq("team_id", parsed.data.team_id)
+        .eq("profile_id", parsed.data.profile_id)
+        .eq("role", parsed.data.role);
+      throw new Error("No pudimos completar los permisos del entrenador. Inténtalo de nuevo.");
+    }
+
+    if (parsed.data.can_manage_attendance) {
+      const { error: permissionError } = await supabase.from("profile_permissions").upsert(
+        {
+          profile_id: parsed.data.profile_id,
+          permission: "manage_attendance",
+          granted_by: admin.id,
+        },
+        { onConflict: "profile_id,permission", ignoreDuplicates: true },
+      );
+
+      if (permissionError) {
+        await supabase
+          .from("team_staff")
+          .delete()
+          .eq("team_id", parsed.data.team_id)
+          .eq("profile_id", parsed.data.profile_id)
+          .eq("role", parsed.data.role);
+        throw new Error("No pudimos activar el pase de lista. Inténtalo de nuevo.");
+      }
+    }
+  }
+
   revalidatePath("/admin/staff");
   revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath("/attendance");
+  revalidatePath("/dashboard");
 }
 
 export async function unassignStaff(input: {
@@ -182,8 +239,79 @@ export async function unassignStaff(input: {
 
   throwIfError(error, "No pudimos quitar el rol. Inténtalo de nuevo.");
 
+  if (parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach") {
+    const { data: remainingCoachStaff, error: remainingError } = await supabase
+      .from("team_staff")
+      .select("role")
+      .eq("team_id", parsed.data.team_id)
+      .eq("profile_id", parsed.data.profile_id)
+      .in("role", ["head_coach", "assistant_coach"])
+      .limit(1);
+
+    throwIfError(remainingError, "No pudimos comprobar los permisos del entrenador.");
+    if ((remainingCoachStaff ?? []).length === 0) {
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .delete()
+        .eq("profile_id", parsed.data.profile_id)
+        .eq("role", "coach")
+        .eq("scope_team_id", parsed.data.team_id);
+      throwIfError(roleError, "No pudimos retirar los permisos del entrenador.");
+    }
+  }
+
   revalidatePath("/admin/staff");
   revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath("/attendance");
+  revalidatePath("/dashboard");
+}
+
+export async function setStaffAttendancePermission(input: {
+  profile_id: string;
+  enabled: boolean;
+}): Promise<void> {
+  const admin = await requireAdmin();
+  const parsed = staffAttendancePermissionSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
+  }
+
+  const supabase = await createClient();
+  const { data: staff, error: staffError } = await supabase
+    .from("team_staff")
+    .select("role")
+    .eq("profile_id", parsed.data.profile_id)
+    .in("role", ["head_coach", "assistant_coach"])
+    .limit(1)
+    .maybeSingle();
+
+  throwIfError(staffError, "No pudimos comprobar la asignación del entrenador.");
+  if (!staff) {
+    throw new Error("Esa persona ya no está asignada como entrenador.");
+  }
+
+  if (parsed.data.enabled) {
+    const { error: permissionError } = await supabase.from("profile_permissions").upsert(
+      {
+        profile_id: parsed.data.profile_id,
+        permission: "manage_attendance",
+        granted_by: admin.id,
+      },
+      { onConflict: "profile_id,permission", ignoreDuplicates: true },
+    );
+    throwIfError(permissionError, "No pudimos activar el permiso de asistencia.");
+  } else {
+    const { error: permissionError } = await supabase
+      .from("profile_permissions")
+      .delete()
+      .eq("profile_id", parsed.data.profile_id)
+      .eq("permission", "manage_attendance");
+    throwIfError(permissionError, "No pudimos retirar el permiso de asistencia.");
+  }
+
+  revalidatePath("/admin/staff");
+  revalidatePath("/attendance");
+  revalidatePath("/dashboard");
 }
 
 export async function rosterPlayer(input: {
@@ -233,7 +361,7 @@ export async function rosterPlayer(input: {
     ? new Date(seasonRow.start_date).getFullYear()
     : new Date().getFullYear();
 
-  if (!canRosterPlayer(player.birth_year, team.category_code, seasonYear)) {
+  if (!canRosterPlayer(player.birth_year, team.category_code as CategoryCode, seasonYear)) {
     throw new Error(
       "El jugador no encaja en la categoría del equipo (admite como máximo un año de diferencia).",
     );

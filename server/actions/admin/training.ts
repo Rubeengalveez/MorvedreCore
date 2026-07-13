@@ -14,10 +14,10 @@ import {
 } from "@/lib/domain/admin-schemas";
 import { generateSessionsFromBlock, type TrainingBlock } from "@/lib/domain/training";
 
-import { requireCoachOf } from "./_helpers";
+import { requireAttendanceManagerOf, requireCoachOf } from "./_helpers";
 
-export type TrainingBlockRow = Tables<"training_blocks", "Row">;
-export type TrainingSessionRow = Tables<"training_sessions", "Row">;
+export type TrainingBlockRow = Tables<"training_blocks">;
+export type TrainingSessionRow = Tables<"training_sessions">;
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
@@ -368,14 +368,10 @@ export async function markAttendance(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  if (parsed.data.entries.length === 0) {
-    return { updated: 0 };
-  }
-
   const supabase = await createClient();
   const { data: session, error: sessionError } = await supabase
     .from("training_sessions")
-    .select("id, team_id")
+    .select("id, team_id, scheduled_at, cancelled")
     .eq("id", parsed.data.session_id)
     .maybeSingle();
 
@@ -384,13 +380,46 @@ export async function markAttendance(input: {
     throw new Error("La sesión no existe.");
   }
 
-  const admin = await requireCoachOf(session.team_id);
+  const admin = await requireAttendanceManagerOf(session.team_id);
+
+  if (session.cancelled) {
+    throw new Error("No puedes pasar lista en un entrenamiento cancelado.");
+  }
+
+  const sessionDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(session.scheduled_at));
+  const { data: roster, error: rosterError } = await supabase
+    .from("team_rosters")
+    .select("player_id")
+    .eq("team_id", session.team_id)
+    .lte("joined_at", sessionDate)
+    .or(`left_at.is.null,left_at.gte.${sessionDate}`);
+
+  throwIfError(rosterError, "No pudimos comprobar la plantilla.");
+
+  const rosterIds = new Set((roster ?? []).map((row) => row.player_id));
+  const entryIds = new Set(parsed.data.entries.map((entry) => entry.player_id));
+  const containsOutsider = parsed.data.entries.some((entry) => !rosterIds.has(entry.player_id));
+  if (containsOutsider) {
+    throw new Error("La lista contiene un jugador que no pertenece a este equipo.");
+  }
+  if (entryIds.size !== rosterIds.size || [...rosterIds].some((id) => !entryIds.has(id))) {
+    throw new Error("La plantilla ha cambiado. Actualiza la página antes de guardar la lista.");
+  }
+
+  if (parsed.data.entries.length === 0) {
+    return { updated: 0 };
+  }
 
   const upsertRows = parsed.data.entries.map((r) => ({
     session_id: parsed.data.session_id,
     player_id: r.player_id,
     present: r.present,
-    reason: r.reason ?? null,
+    reason: r.present ? null : (r.reason ?? null),
     marked_by: admin.id,
   }));
 
@@ -399,10 +428,6 @@ export async function markAttendance(input: {
     .upsert(upsertRows, { onConflict: "session_id,player_id" });
 
   throwIfError(error, "No pudimos guardar la asistencia. Inténtalo de nuevo.");
-
-  revalidatePath("/admin/trainings");
-  revalidatePath(`/admin/trainings/${parsed.data.session_id}`);
-  revalidatePath("/dashboard");
 
   return { updated: upsertRows.length };
 }
@@ -416,7 +441,7 @@ export async function markAllPresent(sessionId: string): Promise<{ updated: numb
   const supabase = await createClient();
   const { data: session, error: sessionError } = await supabase
     .from("training_sessions")
-    .select("id, team_id, scheduled_at")
+    .select("id, team_id, scheduled_at, cancelled")
     .eq("id", parsedId.data.id)
     .maybeSingle();
 
@@ -425,13 +450,25 @@ export async function markAllPresent(sessionId: string): Promise<{ updated: numb
     throw new Error("La sesión no existe.");
   }
 
-  const admin = await requireCoachOf(session.team_id);
+  const admin = await requireAttendanceManagerOf(session.team_id);
+
+  if (session.cancelled) {
+    throw new Error("No puedes pasar lista en un entrenamiento cancelado.");
+  }
+
+  const sessionDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(session.scheduled_at));
 
   const { data: roster, error: rosterError } = await supabase
     .from("team_rosters")
     .select("player_id")
     .eq("team_id", session.team_id)
-    .is("left_at", null);
+    .lte("joined_at", sessionDate)
+    .or(`left_at.is.null,left_at.gte.${sessionDate}`);
 
   throwIfError(rosterError, "No pudimos cargar la plantilla.");
 

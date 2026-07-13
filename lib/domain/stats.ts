@@ -50,11 +50,7 @@ export interface TrainingAttendanceLite {
   present: boolean;
 }
 
-const EFFECTIVE_CALLUP_STATUSES: ReadonlySet<CallupStatus> = new Set([
-  "called",
-  "confirmed",
-  "no_show",
-]);
+const EFFECTIVE_CALLUP_STATUSES: ReadonlySet<CallupStatus> = new Set(["called", "confirmed"]);
 
 function modeTeamId(teamIds: string[]): string | null {
   if (teamIds.length === 0) return null;
@@ -79,6 +75,7 @@ export function computePlayerStats(
   allMatches: MatchLite[],
   allCallups: CallupLite[],
   allStats: MatchStatLite[],
+  throughIso = new Date().toISOString(),
 ): PlayerStats {
   const seasonMatchById = new Map<string, MatchLite>();
   const teamById = new Map<string, string>();
@@ -113,7 +110,12 @@ export function computePlayerStats(
   const primaryTeamId = modeTeamId(teamIds);
 
   const playerTeamSessions = primaryTeamId
-    ? allSessions.filter((s) => s.team_id === primaryTeamId && !s.cancelled)
+    ? allSessions.filter(
+        (session) =>
+          session.team_id === primaryTeamId &&
+          !session.cancelled &&
+          session.scheduled_at <= throughIso,
+      )
     : [];
   const sessionIds = new Set(playerTeamSessions.map((s) => s.id));
   const playerAttendance = allAttendance.filter(

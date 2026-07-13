@@ -59,7 +59,10 @@ export function AddToCartButton({
         <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
           Configura tu producto
         </p>
-        <h2 id="product-options-heading" className="font-display text-pool-deep mt-1 text-xl font-extrabold">
+        <h2
+          id="product-options-heading"
+          className="font-display text-pool-deep mt-1 text-xl font-extrabold"
+        >
           Elige antes de añadir
         </h2>
       </div>
@@ -102,7 +105,10 @@ export function AddToCartButton({
       {personalizationEnabled ? (
         <div>
           <div className="flex items-center justify-between gap-3">
-            <label htmlFor="product-personalization" className="text-pool-deep text-base font-extrabold">
+            <label
+              htmlFor="product-personalization"
+              className="text-pool-deep text-base font-extrabold"
+            >
               {personalizationLabel}
             </label>
             <span className="text-ink-500 text-sm tabular-nums">
@@ -110,7 +116,10 @@ export function AddToCartButton({
             </span>
           </div>
           <div className="relative mt-3">
-            <PenLine className="text-ink-400 pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2" aria-hidden="true" />
+            <PenLine
+              className="text-ink-400 pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2"
+              aria-hidden="true"
+            />
             <input
               id="product-personalization"
               name="personalization"
@@ -131,7 +140,10 @@ export function AddToCartButton({
       ) : null}
 
       {error ? (
-        <p role="alert" className="bg-goggle-red/5 text-goggle-red rounded-lg px-3 py-2.5 text-sm font-semibold">
+        <p
+          role="alert"
+          className="bg-goggle-red/5 text-goggle-red rounded-lg px-3 py-2.5 text-sm font-semibold"
+        >
           {error}
         </p>
       ) : null}
@@ -146,7 +158,11 @@ export function AddToCartButton({
           )}
           aria-live="polite"
         >
-          {added ? <Check className="h-5 w-5" aria-hidden="true" /> : <ShoppingBag className="h-5 w-5" aria-hidden="true" />}
+          {added ? (
+            <Check className="h-5 w-5" aria-hidden="true" />
+          ) : (
+            <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+          )}
           {added ? "Añadido" : "Añadir al carrito"}
         </button>
         <Link

@@ -26,7 +26,12 @@ async function loadData(): Promise<{
 }> {
   const supabase = await createClient();
 
-  const [{ data: staffData }, { data: teamsData }, { data: profilesData }] = await Promise.all([
+  const [
+    { data: staffData },
+    { data: teamsData },
+    { data: profilesData },
+    { data: permissionData },
+  ] = await Promise.all([
     supabase
       .from("team_staff")
       .select(
@@ -41,7 +46,10 @@ async function loadData(): Promise<{
       .select("id, full_name")
       .order("full_name", { ascending: true })
       .limit(2000),
+    supabase.from("profile_permissions").select("profile_id").eq("permission", "manage_attendance"),
   ]);
+
+  const attendanceManagers = new Set((permissionData ?? []).map((row) => row.profile_id));
 
   const rows: StaffRow[] = ((staffData ?? []) as StaffQueryRow[]).map((r) => {
     const teamRaw = Array.isArray(r.team) ? r.team[0] : r.team;
@@ -59,6 +67,7 @@ async function loadData(): Promise<{
       profile_id: r.profile_id,
       profile_name: profile?.full_name ?? "Sin nombre",
       role: r.role,
+      can_manage_attendance: attendanceManagers.has(r.profile_id),
     };
   });
 

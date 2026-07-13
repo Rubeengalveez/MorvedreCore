@@ -6,7 +6,7 @@ import { read, utils } from "xlsx";
 import { xlsxRowSchema, RELATION_VALUES } from "@/lib/domain/import-schema";
 
 import { requireAdmin } from "./_helpers";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 type Relation = (typeof RELATION_VALUES)[number];
 
@@ -45,6 +45,15 @@ function readFile(formData: FormData): File {
   if (!(file instanceof File)) {
     throw new Error("No se ha enviado ningún archivo.");
   }
+  if (file.size === 0) {
+    throw new Error("El archivo está vacío.");
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    throw new Error("El archivo no puede superar 5 MB.");
+  }
+  if (!/\.(xlsx|xls|csv)$/i.test(file.name)) {
+    throw new Error("El archivo debe ser XLSX, XLS o CSV.");
+  }
   return file;
 }
 
@@ -56,7 +65,7 @@ type ParsedFileResult = {
 async function parseFile(formData: FormData): Promise<ParsedFileResult> {
   const file = readFile(formData);
   const arrayBuffer = await file.arrayBuffer();
-  const workbook = read(arrayBuffer, { type: "array" });
+  const workbook = read(arrayBuffer, { type: "array", sheetRows: 2001 });
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
     throw new Error("El archivo no contiene hojas.");
@@ -66,6 +75,9 @@ async function parseFile(formData: FormData): Promise<ParsedFileResult> {
     defval: null,
     raw: true,
   });
+  if (raw.length > 2000) {
+    throw new Error("El archivo no puede contener más de 2000 filas.");
+  }
 
   const currentYear = new Date().getFullYear();
   const rows: PreviewRow[] = [];
@@ -121,7 +133,7 @@ export async function commitImport(formData: FormData): Promise<ImportResult> {
   await requireAdmin();
 
   const { rows, errors: parseErrors } = await parseFile(formData);
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const result: ImportResult = { created: 0, skipped: 0, errors: [...parseErrors] };
 
   const { data: currentSeason } = await supabase

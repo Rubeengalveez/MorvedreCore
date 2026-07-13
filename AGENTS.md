@@ -36,13 +36,14 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 7.5 — Cierre operativo. COMPLETADA, compilando, validada con tests locales y build de producción, push a `main`.** Ver `docs/planning/25-operational-closure-summary.md` para el detalle.
+**Fase 8 — Históricos y leyendas. COMPLETADA en el repositorio, compilando y validada con tests locales y build de producción.** Ver `docs/planning/26-phase-8-summary.md` para el detalle.
 
 Pendiente para probar en el cloud:
+
 - Comprobar que las notificaciones push nativas se reciben y desactivan correctamente si expiran.
 - Probar el envío de correos de cierre a través de Resend.
 
-Próxima fase: **Fase 8 — Históricos y leyendas** (historial de estadísticas, rivales, botón de archivar temporada).
+Próxima fase: **Fase 9 — Polish, accesibilidad y offline**.
 
 ### Lo que ya está implementado (Fase 0 + 1 + 2)
 
@@ -105,7 +106,7 @@ Próxima fase: **Fase 8 — Históricos y leyendas** (historial de estadísticas
 
 ## Próximo paso acordado
 
-**Fase 8 — Históricos y leyendas**: histórico de estadísticas de jugadores, histórico de enfrentamientos contra rivales, log de auditoría y botón admin "Iniciar nueva temporada" (archivar).
+**Fase 9 — Polish, accesibilidad y offline**: auditoría WCAG, caché offline de vistas de solo lectura, página sin conexión y mejoras PWA.
 
 ## Documentos disponibles
 
@@ -135,6 +136,7 @@ Próxima fase: **Fase 8 — Históricos y leyendas** (historial de estadísticas
 - `docs/planning/23-phase-7-summary.md` — resumen Fase 7 (Coches/Logística)
 - `docs/planning/24-operational-closure-plan.md` — plan de cierre operativo
 - `docs/planning/25-operational-closure-summary.md` — resumen de cierre operativo (Fase 7.5)
+- `docs/planning/26-phase-8-summary.md` — resumen Fase 8 (Históricos y leyendas)
 - `docs/planning/18-visual-identity-v2.md` — tesis de diseño "marcador de piscina en el bolsillo"
 
 ## Si dudas

@@ -17,6 +17,23 @@ export const SHOP_ORDER_STATUS_LABELS: Record<ShopOrderStatus, string> = {
   cancelled: "Cancelado",
 };
 
+export function isMissingShopPersonalizationSchema(
+  error: {
+    code?: string | null;
+    message?: string | null;
+  } | null,
+): boolean {
+  if (!error) return false;
+  const message = error.message?.toLowerCase() ?? "";
+  return (
+    (error.code === "42703" || error.code === "PGRST204") &&
+    (message.includes("personalization_enabled") ||
+      message.includes("personalization_label") ||
+      message.includes("personalization_max_length") ||
+      message.includes("personalization"))
+  );
+}
+
 export const SHOP_KANBAN_COLUMNS: ReadonlyArray<{
   id: ShopOrderStatus;
   title: string;
@@ -229,7 +246,10 @@ export function summarizeCart(
     }
     const size = item.size?.trim() || null;
     if (product.sizes && product.sizes.length > 0 && (!size || !product.sizes.includes(size))) {
-      return { ok: false, error: `Selecciona una talla válida para ${product.title ?? "el producto"}.` };
+      return {
+        ok: false,
+        error: `Selecciona una talla válida para ${product.title ?? "el producto"}.`,
+      };
     }
     const personalization = item.personalization?.trim() || null;
     if (product.personalization_enabled && !personalization) {
@@ -238,10 +258,7 @@ export function summarizeCart(
         error: `Escribe la personalización para ${product.title ?? "el producto"}.`,
       };
     }
-    if (
-      personalization &&
-      personalization.length > (product.personalization_max_length ?? 60)
-    ) {
+    if (personalization && personalization.length > (product.personalization_max_length ?? 60)) {
       return {
         ok: false,
         error: `La personalización de ${product.title ?? "el producto"} es demasiado larga.`,

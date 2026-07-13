@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { Check, PackageOpen, ShoppingBag, Trash2 } from "lucide-react";
+import { Check, PackageOpen, Send, ShoppingBag, Trash2 } from "lucide-react";
 
 import { useShopCart } from "@/hooks/use-shop-cart";
 import { formatCents, summarizeCart } from "@/lib/domain/shop";
@@ -25,7 +25,12 @@ export function CartClient({ products }: CartClientProps) {
   const [pending, startTransition] = useTransition();
 
   const cartSummary = summarizeCart(
-    cart.items.map((item) => ({ product_id: item.productId, size: item.size, quantity: 1 })),
+    cart.items.map((item) => ({
+      product_id: item.productId,
+      size: item.size,
+      personalization: item.personalization,
+      quantity: 1,
+    })),
     products,
   );
   const productById = new Map(products.map((product) => [product.id, product]));
@@ -42,6 +47,7 @@ export function CartClient({ products }: CartClientProps) {
           items: cartSummary.lines!.map((line) => ({
             product_id: line.product_id,
             size: line.size,
+            personalization: line.personalization,
             quantity: 1,
           })),
           notes: notes.trim() || null,
@@ -108,7 +114,7 @@ export function CartClient({ products }: CartClientProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_320px] md:items-start">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
       <div className="flex flex-col gap-5">
         <section aria-labelledby="cart-products-heading">
           <div className="mb-3 flex items-end justify-between px-1">
@@ -122,14 +128,14 @@ export function CartClient({ products }: CartClientProps) {
               {cart.items.length}
             </span>
           </div>
-          <ul className="border-ink-200 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-2xl border shadow-sm">
+          <ul className="border-ink-300 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-xl border shadow-sm">
             {cart.items.map((item) => {
               const product = productById.get(item.productId);
               if (!product) return null;
               return (
                 <li
-                  key={`${item.productId}-${item.size ?? ""}`}
-                  className="flex min-h-28 items-center gap-3 px-4 py-4"
+                  key={`${item.productId}-${item.size ?? ""}-${item.personalization ?? ""}`}
+                  className="grid min-h-28 grid-cols-[4.5rem_minmax(0,1fr)_3rem] items-center gap-3 px-3 py-4 sm:grid-cols-[5rem_minmax(0,1fr)_auto_3rem] sm:px-4"
                 >
                   {product.image_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -138,27 +144,38 @@ export function CartClient({ products }: CartClientProps) {
                       alt={product.title}
                       width={80}
                       height={96}
-                      className="border-ink-200 h-24 w-20 shrink-0 rounded-xl border object-cover"
+                      className="border-ink-200 h-20 w-18 shrink-0 rounded-lg border object-cover sm:h-24 sm:w-20"
                     />
                   ) : (
-                    <span className="bg-pool-foam text-pool-deep flex h-24 w-20 shrink-0 items-center justify-center rounded-xl">
+                    <span className="bg-pool-foam text-pool-deep flex h-20 w-18 shrink-0 items-center justify-center rounded-lg sm:h-24 sm:w-20">
                       <PackageOpen className="h-7 w-7" aria-hidden="true" />
                     </span>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="font-display text-pool-deep line-clamp-2 text-base leading-tight font-extrabold">
+                    <p className="text-pool-deep line-clamp-2 text-base leading-snug font-extrabold">
                       {product.title}
                     </p>
                     <p className="text-ink-500 mt-1 text-sm">
                       {item.size ? `Talla ${item.size}` : "Talla única"}
                     </p>
-                    <p className="text-pool-deep mt-2 font-mono text-lg font-extrabold tabular-nums">
-                      {formatCents(product.price_cents, product.currency)}
-                    </p>
+                    {item.personalization ? (
+                      <p className="text-pool-blue mt-1 text-sm font-extrabold">
+                        {product.personalization_label}: {item.personalization}
+                      </p>
+                    ) : null}
                   </div>
+                  <p className="text-pool-deep col-start-2 font-mono text-lg font-extrabold tabular-nums sm:col-auto">
+                    {formatCents(product.price_cents, product.currency)}
+                  </p>
                   <button
                     type="button"
-                    onClick={() => cart.removeItem(item.productId, item.size ?? null)}
+                    onClick={() =>
+                      cart.removeItem(
+                        item.productId,
+                        item.size ?? null,
+                        item.personalization ?? null,
+                      )
+                    }
                     className="border-ink-200 text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
                     aria-label={`Eliminar ${product.title}`}
                   >
@@ -178,13 +195,13 @@ export function CartClient({ products }: CartClientProps) {
             id="cart-notes-heading"
             className="font-display text-pool-deep text-lg font-extrabold"
           >
-            Personalización o indicaciones
+            Indicaciones del pedido
           </h2>
           <label
             htmlFor="shop-order-notes"
             className="text-ink-600 mt-1 block text-sm leading-relaxed"
           >
-            Si una prenda lleva nombre, escribe aquí el producto y el texto exacto.
+            Opcional. Úsalo solo si necesitas aclarar algo a la encargada.
           </label>
           <textarea
             id="shop-order-notes"
@@ -193,29 +210,29 @@ export function CartClient({ products }: CartClientProps) {
             onChange={(event) => setNotes(event.target.value)}
             autoComplete="off"
             rows={3}
-            placeholder="Ejemplo: Sudadera talla M — RUBÉN…"
+            placeholder="Escribe una indicación general…"
             className="border-ink-200 bg-paper text-pool-deep placeholder:text-ink-400 focus-visible:ring-pool-blue mt-3 w-full resize-y rounded-xl border p-3 text-base outline-none focus-visible:ring-2"
           />
         </section>
       </div>
 
-      <aside className="border-ink-200 bg-paper-card shadow-elev-2 rounded-2xl border p-4 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
-        <p className="text-ink-500 text-xs font-extrabold tracking-[0.12em] uppercase">Resumen</p>
+      <aside className="border-pool-deep bg-pool-deep text-paper shadow-elev-2 rounded-xl border p-5 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
+        <p className="text-paper/65 text-xs font-extrabold tracking-[0.12em] uppercase">Resumen</p>
         {cartSummary.ok ? (
           <>
             <div className="mt-3 flex items-end justify-between gap-4">
-              <span className="text-ink-700 text-base font-semibold">Total</span>
-              <span className="text-pool-deep font-mono text-3xl font-extrabold tabular-nums">
+              <span className="text-paper/80 text-base font-semibold">Total</span>
+              <span className="text-paper font-mono text-3xl font-extrabold tabular-nums">
                 {formatCents(cartSummary.total_cents!, "EUR")}
               </span>
             </div>
-            <p className="text-ink-500 mt-2 text-sm leading-relaxed">
-              {cart.items.length} {cart.items.length === 1 ? "producto" : "productos"}. La solicitud
-              se enviará para aprobación.
+            <p className="text-paper/70 mt-3 text-sm leading-relaxed">
+              {cart.items.length} {cart.items.length === 1 ? "producto" : "productos"}. Se guardará
+              en Mis pedidos y la encargada recibirá el aviso.
             </p>
           </>
         ) : (
-          <p role="alert" className="text-goggle-red mt-3 text-sm font-semibold">
+          <p role="alert" className="text-paper mt-3 text-sm font-semibold">
             {cartSummary.error}
           </p>
         )}
@@ -223,7 +240,7 @@ export function CartClient({ products }: CartClientProps) {
         {error ? (
           <p
             role="alert"
-            className="bg-goggle-red/5 text-goggle-red mt-3 rounded-xl px-3 py-2 text-sm font-semibold"
+            className="bg-paper/10 text-paper mt-3 rounded-lg px-3 py-2 text-sm font-semibold"
           >
             {error}
           </p>
@@ -233,9 +250,9 @@ export function CartClient({ products }: CartClientProps) {
           type="button"
           disabled={pending || !cartSummary.ok}
           onClick={handleCheckout}
-          className="bg-action hover:bg-action-dark text-paper focus-visible:ring-pool-blue mt-5 inline-flex min-h-13 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-[background-color,transform,opacity] duration-200 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
+          className="bg-action hover:bg-action-dark text-paper focus-visible:ring-paper mt-5 inline-flex min-h-13 w-full touch-manipulation items-center justify-center gap-2 rounded-lg px-4 text-base font-extrabold transition-[background-color,transform,opacity] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
         >
-          <ShoppingBag className="h-5 w-5" aria-hidden="true" />
+          <Send className="h-5 w-5" aria-hidden="true" />
           {pending ? "Enviando…" : "Enviar solicitud"}
         </button>
       </aside>

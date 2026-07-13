@@ -117,32 +117,146 @@ export function slugify(s) {
 }
 
 const FIRST_NAMES_M = [
-  "Hugo", "Mateo", "Martín", "Lucas", "Leo", "Daniel", "Alejandro", "Pablo", "Manuel",
-  "Álvaro", "Adrián", "David", "Mario", "Bruno", "Izan", "Oliver", "Héctor", "Thiago",
-  "Liam", "Marco", "Marc", "Nacho", "Joel", "Arnau", "Eric", "Pol", "Rayan", "Pau", "Saúl",
-  "Iván", "Marc", "Joan", "Biel", "Jan", "Nil", "Gerard", "Oriol", "Aritz", "Xavi", "Iker",
-  "Asier", "Ander", "Mikel", "Unai", "Gorka", "Eneko", "Aitor",
+  "Hugo",
+  "Mateo",
+  "Martín",
+  "Lucas",
+  "Leo",
+  "Daniel",
+  "Alejandro",
+  "Pablo",
+  "Manuel",
+  "Álvaro",
+  "Adrián",
+  "David",
+  "Mario",
+  "Bruno",
+  "Izan",
+  "Oliver",
+  "Héctor",
+  "Thiago",
+  "Liam",
+  "Marco",
+  "Marc",
+  "Nacho",
+  "Joel",
+  "Arnau",
+  "Eric",
+  "Pol",
+  "Rayan",
+  "Pau",
+  "Saúl",
+  "Iván",
+  "Marc",
+  "Joan",
+  "Biel",
+  "Jan",
+  "Nil",
+  "Gerard",
+  "Oriol",
+  "Aritz",
+  "Xavi",
+  "Iker",
+  "Asier",
+  "Ander",
+  "Mikel",
+  "Unai",
+  "Gorka",
+  "Eneko",
+  "Aitor",
 ];
 const FIRST_NAMES_F = [
-  "Carmen", "Lucía", "Sofía", "Martina", "María", "Julia", "Paula", "Daniela", "Valeria",
-  "Alba", "Emma", "Carla", "Sara", "Noa", "Laura", "Andrea", "Marta", "Claudia", "Elena",
-  "Nora", "Vega", "Aroa", "Naia", "Ainara", "Maialen", "June", "Aitana", "Irene", "Ona",
-  "Aitana", "Ariadna", "Cloe", "Olivia",
+  "Carmen",
+  "Lucía",
+  "Sofía",
+  "Martina",
+  "María",
+  "Julia",
+  "Paula",
+  "Daniela",
+  "Valeria",
+  "Alba",
+  "Emma",
+  "Carla",
+  "Sara",
+  "Noa",
+  "Laura",
+  "Andrea",
+  "Marta",
+  "Claudia",
+  "Elena",
+  "Nora",
+  "Vega",
+  "Aroa",
+  "Naia",
+  "Ainara",
+  "Maialen",
+  "June",
+  "Aitana",
+  "Irene",
+  "Ona",
+  "Aitana",
+  "Ariadna",
+  "Cloe",
+  "Olivia",
 ];
 const LAST_NAMES = [
-  "García", "Rodríguez", "Martínez", "López", "Sánchez", "Pérez", "Gómez", "Fernández",
-  "Ruiz", "Hernández", "Jiménez", "Díaz", "Moreno", "Muñoz", "Romero", "Alonso", "Navarro",
-  "Torres", "Domínguez", "Vázquez", "Ramos", "Gil", "Molina", "Serrano", "Blanco", "Pascual",
-  "Gallego", "Vidal", "Bravo", "Carmona", "Iglesias", "Castro", "Cano", "Prieto", "Carmona",
-  "Méndez", "León", "Vargas", "Ibarra", "Aguilar", "Crespo", "Rojas", "Bravo", "Esteve",
-  "Solà", "Pujol", "Carbonell", "Ferrer", "Vila", "Vallès", "Pons",
+  "García",
+  "Rodríguez",
+  "Martínez",
+  "López",
+  "Sánchez",
+  "Pérez",
+  "Gómez",
+  "Fernández",
+  "Ruiz",
+  "Hernández",
+  "Jiménez",
+  "Díaz",
+  "Moreno",
+  "Muñoz",
+  "Romero",
+  "Alonso",
+  "Navarro",
+  "Torres",
+  "Domínguez",
+  "Vázquez",
+  "Ramos",
+  "Gil",
+  "Molina",
+  "Serrano",
+  "Blanco",
+  "Pascual",
+  "Gallego",
+  "Vidal",
+  "Bravo",
+  "Carmona",
+  "Iglesias",
+  "Castro",
+  "Cano",
+  "Prieto",
+  "Carmona",
+  "Méndez",
+  "León",
+  "Vargas",
+  "Ibarra",
+  "Aguilar",
+  "Crespo",
+  "Rojas",
+  "Bravo",
+  "Esteve",
+  "Solà",
+  "Pujol",
+  "Carbonell",
+  "Ferrer",
+  "Vila",
+  "Vallès",
+  "Pons",
 ];
 
-export function pickUniqueName(seed) {
+export function pickUniqueName(_seed) {
   const isFemale = rand() < 0.3;
-  const first = isFemale
-    ? randPick(FIRST_NAMES_F)
-    : randPick(FIRST_NAMES_M);
+  const first = isFemale ? randPick(FIRST_NAMES_F) : randPick(FIRST_NAMES_M);
   const last1 = randPick(LAST_NAMES);
   const last2 = randPick(LAST_NAMES);
   if (last1 === last2) return `${first} ${last1}`;
@@ -151,6 +265,16 @@ export function pickUniqueName(seed) {
 
 export function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+export async function fetchAll(queryFactory, pageSize = 1000) {
+  const rows = [];
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await queryFactory().range(from, from + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < pageSize) return rows;
+  }
 }
 
 export { ADMIN_EMAIL };

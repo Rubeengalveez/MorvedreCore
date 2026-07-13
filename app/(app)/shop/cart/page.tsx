@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProducts } from "@/server/queries/shop";
@@ -27,19 +27,17 @@ export default async function CartPage() {
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Seguir comprando
       </Link>
-      <header className="bg-pool-deep text-paper shadow-elev-3 flex items-start justify-between gap-4 rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-7">
-        <div>
-          <p className="text-paper/65 text-xs font-extrabold tracking-[0.14em] uppercase">
-            Tienda Morvedre
-          </p>
-          <h1 className="font-display mt-2 text-3xl font-extrabold tracking-tight">Tu carrito</h1>
-          <p className="text-paper/75 mt-2 text-base">
-            Revisa tallas y personalización antes de enviar.
-          </p>
-        </div>
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
-          <ShoppingBag className="h-6 w-6" aria-hidden="true" />
-        </span>
+      <header className="border-ink-300 border-b pb-5">
+        <p className="text-pool-blue text-xs font-extrabold tracking-[0.14em] uppercase">
+          Tienda Morvedre
+        </p>
+        <h1 className="font-display text-pool-deep mt-1 text-3xl font-extrabold tracking-tight">
+          Revisa tu solicitud
+        </h1>
+        <p className="text-ink-600 mt-2 max-w-xl text-base leading-relaxed">
+          Cada producto conserva su talla y personalización. Enviar la solicitud no realiza ningún
+          pago.
+        </p>
       </header>
       <CartClient products={products} myProfileId={ctx.activeProfile.id} />
     </PageShell>

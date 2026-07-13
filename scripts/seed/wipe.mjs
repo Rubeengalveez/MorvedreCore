@@ -46,29 +46,144 @@ const BATCH_FILE = resolve(ROOT, ".seed-batch.json");
 // Cada tabla con un filtro que matchea TODAS las filas
 // (PKs compuestas necesitan un filtro distinto a id)
 const TABLES = [
-  { table: "shop_order_items", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "shop_orders", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "shop_products", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "news_reactions", filter: { op: "neq", col: "post_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "news_posts", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "match_stats", filter: { op: "neq", col: "match_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "match_callups", filter: { op: "neq", col: "match_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "match_availability", filter: { op: "neq", col: "player_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "matches", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "training_attendance", filter: { op: "neq", col: "session_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "training_sessions", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "training_blocks", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "opponent_stats", filter: { op: "neq", col: "team_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "ranking_snapshots", filter: { op: "neq", col: "player_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "streaks", filter: { op: "neq", col: "subject_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "notifications", filter: { op: "neq", col: "recipient_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "parent_child_links", filter: { op: "neq", col: "parent_profile_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "profile_notification_prefs", filter: { op: "neq", col: "profile_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "team_staff", filter: { op: "neq", col: "profile_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "team_rosters", filter: { op: "neq", col: "player_id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "user_roles", filter: { op: "neq", col: "profile_id", val: "00000000-0000-0000-0000-000000000000" } },
+  { table: "audit_log", filter: { op: "neq", col: "id", val: 0 } },
+  {
+    table: "access_request_children",
+    filter: { op: "neq", col: "request_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "access_requests",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "travel_reservations",
+    filter: { op: "neq", col: "offer_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "travel_offers",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "treasury_lines",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "treasury_period_closures",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "treasury_profile_concepts",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "treasury_concepts",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "shop_product_images",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "shop_order_items",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "shop_orders",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "shop_products",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "news_reactions",
+    filter: { op: "neq", col: "post_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "news_posts",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "match_stats",
+    filter: { op: "neq", col: "match_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "match_callups",
+    filter: { op: "neq", col: "match_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "match_availability",
+    filter: { op: "neq", col: "player_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "matches",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "training_attendance",
+    filter: { op: "neq", col: "session_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "training_sessions",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "training_blocks",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "opponent_stats",
+    filter: { op: "neq", col: "team_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "ranking_snapshots",
+    filter: { op: "neq", col: "player_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "streaks",
+    filter: { op: "neq", col: "subject_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "notifications",
+    filter: { op: "neq", col: "recipient_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "push_subscriptions",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "historical_team_matchups",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "historical_player_stats",
+    filter: { op: "neq", col: "profile_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "parent_child_links",
+    filter: { op: "neq", col: "parent_profile_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "profile_notification_prefs",
+    filter: { op: "neq", col: "profile_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "team_staff",
+    filter: { op: "neq", col: "profile_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "team_rosters",
+    filter: { op: "neq", col: "player_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "user_roles",
+    filter: { op: "neq", col: "profile_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
   { table: "teams", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
-  { table: "profiles", filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" } },
+  {
+    table: "profiles",
+    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
+  },
 ];
 
 async function empty() {
@@ -78,7 +193,7 @@ async function empty() {
     if (filter.op === "neq") q = q.neq(filter.col, filter.val);
     const { error } = await q;
     if (error) {
-      console.error(`  ! ${table}: ${error.message}`);
+      throw new Error(`${table}: ${error.message}`);
     } else {
       console.log(`  - ${table}: vaciada`);
     }
@@ -88,18 +203,19 @@ async function empty() {
 async function deleteAuthUsers() {
   console.log("\n[wipe] Borrando auth users que no sean admin...");
   let deleted = 0;
-  let page = 1;
   while (true) {
-    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 100 });
+    const { data, error } = await admin.auth.admin.listUsers({ page: 1, perPage: 100 });
     if (error) throw error;
     if (!data.users || data.users.length === 0) break;
+    let deletedInPage = 0;
     for (const u of data.users) {
       if (u.email && u.email.toLowerCase() === ADMIN_EMAIL) continue;
       const { error: delErr } = await admin.auth.admin.deleteUser(u.id);
-      if (!delErr) deleted++;
+      if (delErr) throw delErr;
+      deleted++;
+      deletedInPage++;
     }
-    if (data.users.length < 100) break;
-    page++;
+    if (deletedInPage === 0) break;
   }
   console.log(`  - ${deleted} auth users borrados (admin '${ADMIN_EMAIL}' conservado)`);
 }
@@ -115,7 +231,9 @@ async function main() {
   await empty();
   await deleteAuthUsers();
   await clearBatch();
-  console.log("\n[wipe] Listo. La base de datos está limpia (excepto el admin y las 3 seasons).");
+  console.log(
+    "\n[wipe] Listo. La base está limpia; se conservan solo el acceso admin y las temporadas.",
+  );
   console.log("[wipe] Para repoblar: node scripts/seed/index.mjs all");
 }
 

@@ -1,9 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+function getSafeRedirectPath(value: string | null): string {
+  if (!value || !value.startsWith("/") || value.startsWith("//")) return "/dashboard";
+  return value;
+}
+
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const next = searchParams.get("next") || "/dashboard";
+  const next = getSafeRedirectPath(searchParams.get("next"));
 
   const supabase = await createClient();
 

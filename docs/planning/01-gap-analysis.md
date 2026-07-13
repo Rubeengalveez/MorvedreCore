@@ -60,14 +60,14 @@ Marca `[F]` si es bloqueante, `[I]` si es importante pero tiene default razonabl
 
 ## 5. Estadísticas
 
-| #   | Hueco                                    | Severidad | Estado                                                                                                                              |
+| # | Hueco | Severidad | Estado |
 | --- | ---------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------- | ----- | --------------------- |
-| 5.1 | ¿Quién mete el acta y quién valida?      | `[F]`     | ✅ Resuelto: solo el delegado, sin validación                                                                                       |
-| 5.2 | ¿Se puede editar un acta después?        | `[F]`     | ⏳ Default: sí, hasta 7 días después. Queda en `audit_log`                                                                          |
-| 5.3 | ¿Qué se cuenta en "exclusiones"?         | `[I]`     | ⏳ Default: total por partido. Distinción por tipo en versión 2                                                                     |
-| 5.4 | Distinción fase regular / playoff / copa | `[C]`     | ⏳ Default: añadir un campo `match.phase: 'regular'                                                                                 | 'playoff' | 'cup' | 'friendly'`, editable |
-| 5.5 | Rankings públicos: ¿opt-out?             | `[C]`     | ✅ Resuelto: todos los rankings son públicos dentro del club. No hay opt-out                                                        |
-| 5.6 | "Leyendas del club": ¿ranking histórico? | `[I]`     | ⏳ Default: top goleadores histórico + partidos históricos + máximos asistentes. Se construye progresivamente. No hay MVP histórico |
+| 5.1 | ¿Quién mete el acta y quién valida? | `[F]` | ✅ Resuelto: solo el delegado, sin validación |
+| 5.2 | ¿Se puede editar un acta después? | `[F]` | ⏳ Default: sí, hasta 7 días después. Queda en `audit_log` |
+| 5.3 | ¿Qué se cuenta en "exclusiones"? | `[I]` | ⏳ Default: total por partido. Distinción por tipo en versión 2 |
+| 5.4 | Distinción fase regular / playoff / copa | `[C]` | ⏳ Default: añadir un campo `match.phase: 'regular'                                                                                 | 'playoff' | 'cup' | 'friendly'`, editable |
+| 5.5 | Rankings públicos: ¿opt-out? | `[C]` | ✅ Resuelto: todos los rankings son públicos dentro del club. No hay opt-out |
+| 5.6 | "Leyendas del club": ¿ranking histórico? | `[I]` | ⏳ Default: top goleadores histórico + partidos históricos + máximos asistentes. Se construye progresivamente. No hay MVP histórico |
 
 ## 6. Tienda
 

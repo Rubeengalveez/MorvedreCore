@@ -5,6 +5,7 @@ import {
   formatSeasonLabel,
   currentSeasonStart,
   currentSeasonEnd,
+  nextSeasonDraft,
 } from "@/lib/domain/seasons";
 
 describe("inferSeasonForDate", () => {
@@ -96,5 +97,15 @@ describe("currentSeasonEnd", () => {
     expect(currentSeasonEnd(2026, 0)).toEqual(new Date(2026, 6, 31));
     expect(currentSeasonEnd(2026, 5)).toEqual(new Date(2026, 6, 31));
     expect(currentSeasonEnd(2026, 7)).toEqual(new Date(2026, 6, 31));
+  });
+});
+
+describe("nextSeasonDraft", () => {
+  it("moves both dates one year and builds the next label", () => {
+    expect(nextSeasonDraft({ start_date: "2025-09-01", end_date: "2026-07-31" })).toEqual({
+      label: "2026/2027",
+      start_date: "2026-09-01",
+      end_date: "2027-07-31",
+    });
   });
 });

@@ -51,14 +51,6 @@ export default async function AccessRequestsPage() {
 
   const requests = await getAccessRequests();
 
-  const { data: tempPasswordRow } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "access_temp_password")
-    .single();
-
-  const tempPassword = tempPasswordRow?.value ?? "Morvedre2026!";
-
   return (
     <AdminPageShell width="lg">
       <AdminPageHeader
@@ -66,7 +58,7 @@ export default async function AccessRequestsPage() {
         description="Revisa quién pide acceso y asigna el perfil correcto antes de aprobarlo."
         icon={<UserCheck className="h-6 w-6" aria-hidden="true" />}
       />
-      <AccessRequestsManager initialRequests={requests} initialTempPassword={tempPassword} />
+      <AccessRequestsManager initialRequests={requests} />
     </AdminPageShell>
   );
 }

@@ -53,10 +53,7 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       parent_profile_id: String(formData.get("parent_profile_id") ?? ""),
       child_profile_id: String(formData.get("child_profile_id") ?? ""),
       relation: String(formData.get("relation") ?? "legal_guardian") as
-        | "mother"
-        | "father"
-        | "legal_guardian"
-        | "other",
+        "mother" | "father" | "legal_guardian" | "other",
     });
     return { ok: true };
   } catch (err) {

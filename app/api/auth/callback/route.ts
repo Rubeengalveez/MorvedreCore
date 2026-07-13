@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 function getSafeRedirectPath(value: string | null, fallback: string) {
   if (!value) return fallback;
@@ -53,7 +54,8 @@ export async function GET(request: NextRequest) {
       } = await supabase.auth.getUser();
 
       if (user) {
-        const { data: profile } = await supabase
+        const admin = createAdminClient();
+        const { data: profile } = await admin
           .from("profiles")
           .select("must_change_password")
           .eq("auth_user_id", user.id)

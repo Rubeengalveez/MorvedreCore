@@ -67,7 +67,8 @@ const teamEditSchema = z
     { message: "Datos inválidos.", path: ["label"] },
   );
 
-type TeamEditValues = z.infer<typeof teamEditSchema>;
+type TeamEditInput = z.input<typeof teamEditSchema>;
+type TeamEditValues = z.output<typeof teamEditSchema>;
 
 type ActionState = { ok?: true; error?: string } | null;
 
@@ -109,7 +110,7 @@ export function TeamEditSheet({ team, trigger }: TeamEditSheetProps) {
   const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
 
-  const form = useForm<TeamEditValues>({
+  const form = useForm<TeamEditInput, unknown, TeamEditValues>({
     resolver: zodResolver(teamEditSchema),
     defaultValues: {
       label: team.label,

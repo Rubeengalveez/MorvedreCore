@@ -14,7 +14,7 @@ export function CartButton() {
     <Link
       href={"/shop/cart" as Route}
       data-cart-button
-      className="border-ink-300 bg-paper-card text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue relative inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-lg border px-4 text-sm font-extrabold shadow-sm transition-[border-color,background-color,transform] hover:bg-pool-foam focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
+      className="border-ink-300 bg-paper-card text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue hover:bg-pool-foam relative inline-flex min-h-12 touch-manipulation items-center justify-center gap-2 rounded-lg border px-4 text-sm font-extrabold shadow-sm transition-[border-color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
       aria-label={count > 0 ? `Carrito, ${count} artículos` : "Carrito"}
     >
       <ShoppingBag className="h-5 w-5" aria-hidden="true" />

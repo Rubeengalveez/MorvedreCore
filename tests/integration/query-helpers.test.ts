@@ -175,7 +175,7 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
 
   it("getCurrentSeason returns the season with is_current=true", async () => {
     const { getCurrentSeason } = await import("@/server/queries/seasons");
-    const season = await getCurrentSeason();
+    const season = await getCurrentSeason(admin ?? undefined);
     expect(season).not.toBeNull();
     expect(season?.is_current).toBe(true);
     expect(season?.label).toBeTruthy();
@@ -184,7 +184,7 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
   it("getTeamById returns the seeded team", async () => {
     if (!testTeamId) return;
     const { getTeamById } = await import("@/server/queries/teams");
-    const team = await getTeamById(testTeamId);
+    const team = await getTeamById(testTeamId, admin ?? undefined);
     expect(team).not.toBeNull();
     expect(team?.id).toBe(testTeamId);
     expect(team?.category_code).toBe("cadete");
@@ -193,7 +193,7 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
   it("getTeamRoster returns the seeded player", async () => {
     if (!testTeamId) return;
     const { getTeamRoster } = await import("@/server/queries/teams");
-    const roster = await getTeamRoster(testTeamId);
+    const roster = await getTeamRoster(testTeamId, admin ?? undefined);
     const found = roster.find((r) => r.player_id === testPlayerId);
     expect(found).toBeDefined();
     expect(found?.full_name).toContain(TEST_PREFIX);
@@ -202,7 +202,7 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
   it("getTeamStaff returns the seeded staff", async () => {
     if (!testTeamId) return;
     const { getTeamStaff } = await import("@/server/queries/teams");
-    const staff = await getTeamStaff(testTeamId);
+    const staff = await getTeamStaff(testTeamId, admin ?? undefined);
     const found = staff.find((s) => s.profile_id === testStaffProfileId);
     expect(found).toBeDefined();
     expect(found?.role).toBe("head_coach");
@@ -211,7 +211,7 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
   it("getTeamsForProfileInSeason returns the team for a player", async () => {
     if (!testPlayerId || !testSeasonId) return;
     const { getTeamsForProfileInSeason } = await import("@/server/queries/teams");
-    const teams = await getTeamsForProfileInSeason(testPlayerId, testSeasonId);
+    const teams = await getTeamsForProfileInSeason(testPlayerId, testSeasonId, admin ?? undefined);
     expect(teams.length).toBeGreaterThanOrEqual(1);
     const found = teams.find((t) => t.id === testTeamId);
     expect(found).toBeDefined();
@@ -221,7 +221,11 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
   it("getTeamsForProfileInSeason returns the team for a staff member", async () => {
     if (!testStaffProfileId || !testSeasonId) return;
     const { getTeamsForProfileInSeason } = await import("@/server/queries/teams");
-    const teams = await getTeamsForProfileInSeason(testStaffProfileId, testSeasonId);
+    const teams = await getTeamsForProfileInSeason(
+      testStaffProfileId,
+      testSeasonId,
+      admin ?? undefined,
+    );
     const found = teams.find((t) => t.id === testTeamId);
     expect(found).toBeDefined();
   });
@@ -235,14 +239,18 @@ describe.skipIf(!HAS_ENV)("query helpers (integration)", () => {
   it("isProfileStaffInSeason returns true for the seeded staff", async () => {
     if (!testStaffProfileId || !testSeasonId) return;
     const { isProfileStaffInSeason } = await import("@/server/queries/teams");
-    const result = await isProfileStaffInSeason(testStaffProfileId, testSeasonId);
+    const result = await isProfileStaffInSeason(
+      testStaffProfileId,
+      testSeasonId,
+      admin ?? undefined,
+    );
     expect(result).toBe(true);
   });
 
   it("isProfilePlayerInSeason returns true for the seeded player", async () => {
     if (!testPlayerId || !testSeasonId) return;
     const { isProfilePlayerInSeason } = await import("@/server/queries/teams");
-    const result = await isProfilePlayerInSeason(testPlayerId, testSeasonId);
+    const result = await isProfilePlayerInSeason(testPlayerId, testSeasonId, admin ?? undefined);
     expect(result).toBe(true);
   });
 });

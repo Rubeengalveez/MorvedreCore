@@ -5,6 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { requireAdmin, requireCoachOf } from "./_helpers";
 import { computeMvp, type MvpCandidate } from "@/lib/domain/mvp";
 import {
   applyStreak,
@@ -172,6 +173,9 @@ export async function recomputeStreaksForMatch(
   if (!match) return;
   const m = match as MatchRowLite;
   if (m.status !== "played") return;
+  if (!client) {
+    await requireCoachOf(m.team_id);
+  }
 
   await recomputeStreaksForMatchInternal(m);
 }
@@ -288,7 +292,7 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
       data.rosters.filter((r) => r.team_id === teamId && r.left_at == null).map((r) => r.player_id),
     ),
   );
-  const teamSessions = data.sessions.filter((s) => s.team_id === teamId);
+  const teamSessions = data.sessions.filter((session) => session.team_id === teamId);
   for (const pid of teamPlayerIds) {
     const playerAtt = data.attendance.filter((a) => a.player_id === pid);
     await upsertStreakFromEvents(
@@ -296,7 +300,7 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
       "player",
       pid,
       "train_consec",
-      trainConsecEvents(teamSessions, playerAtt),
+      trainConsecEvents(teamSessions, playerAtt, nowIso),
       nowIso,
       admin,
     );
@@ -338,6 +342,7 @@ async function upsertStreakFromEvents(
 }
 
 export async function recomputeAllStreaks(seasonId: string): Promise<void> {
+  await requireAdmin();
   const supabase = await createClient();
   const { data: matches } = await supabase
     .from("matches")

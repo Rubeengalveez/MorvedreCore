@@ -31,7 +31,7 @@ for (const vp of viewports) {
 
   for (const p of pages) {
     try {
-      const response = await page.goto(`${baseUrl}${p.path}`, { waitUntil: "networkidle" });
+      await page.goto(`${baseUrl}${p.path}`, { waitUntil: "networkidle" });
       await page.waitForTimeout(1500);
       const m = await page.evaluate(() => {
         const doc = document.documentElement;

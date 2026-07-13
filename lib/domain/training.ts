@@ -34,20 +34,32 @@ export interface TrainingSession {
   cancelled: boolean;
 }
 
+const CLUB_TIME_ZONE = "Europe/Madrid";
+const clubDateTimeFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: CLUB_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
 function parseISODate(s: string): Date {
   const [y, m, d] = s.split("-").map(Number);
-  return new Date(y, m - 1, d);
+  return new Date(Date.UTC(y, m - 1, d));
 }
 
 function formatISODate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(d.getUTCDate()).padStart(2, "0");
   return `${y}-${m}-${dd}`;
 }
 
 function isoWeekday(d: Date): number {
-  const day = d.getDay();
+  const day = d.getUTCDay();
   return day === 0 ? 7 : day;
 }
 
@@ -58,23 +70,48 @@ function parseTime(time: string): { hours: number; minutes: number } {
 
 function eachDateInRange(start: Date, end: Date): Date[] {
   const dates: Date[] = [];
-  const cur = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-  const last = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+  const cur = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+  const last = new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate()));
   while (cur.getTime() <= last.getTime()) {
     dates.push(new Date(cur));
-    cur.setDate(cur.getDate() + 1);
+    cur.setUTCDate(cur.getUTCDate() + 1);
   }
   return dates;
 }
 
+function timeZoneOffsetMs(value: Date): number {
+  const parts = clubDateTimeFormatter.formatToParts(value);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((item) => item.type === type)?.value ?? 0);
+  const representedAsUtc = Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+  );
+  return representedAsUtc - value.getTime();
+}
+
 function combineDateAndTime(date: Date, time: string): Date {
   const t = parseTime(time);
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), t.hours, t.minutes, 0, 0);
+  const wallClockAsUtc = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    t.hours,
+    t.minutes,
+  );
+  const firstGuess = new Date(wallClockAsUtc);
+  const firstResult = new Date(wallClockAsUtc - timeZoneOffsetMs(firstGuess));
+  return new Date(wallClockAsUtc - timeZoneOffsetMs(firstResult));
 }
 
 export function weekdayMatches(weekday: number, date: Date | string): boolean {
-  const d = typeof date === "string" ? parseISODate(date) : new Date(date.getTime());
-  return isoWeekday(d) === weekday;
+  if (typeof date === "string") return isoWeekday(parseISODate(date)) === weekday;
+  const day = date.getDay();
+  return (day === 0 ? 7 : day) === weekday;
 }
 
 export function durationMinutes(startTime: string, endTime: string): number {
@@ -140,7 +177,7 @@ export function nextSessionDate(block: TrainingBlock, after: Date): Date | null 
   if (end.getTime() < start.getTime()) return null;
   const weekdaySet = new Set(block.weekdays);
   const dates = eachDateInRange(start, end);
-  const afterTime = new Date(after.getFullYear(), after.getMonth(), after.getDate()).getTime();
+  const afterTime = Date.UTC(after.getFullYear(), after.getMonth(), after.getDate());
   for (const d of dates) {
     if (d.getTime() <= afterTime) continue;
     if (weekdaySet.has(isoWeekday(d))) return d;

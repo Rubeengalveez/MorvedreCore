@@ -79,7 +79,7 @@ build:       29 rutas, 0 errores
 ## Cómo probar
 
 1. **Aplicar migración 0026** (news_posts + news_reactions) y **0027** (policies de storage) en el SQL Editor de Supabase. El SQL consolidado está en `docs/apply-phase-4-migrations.sql` (se genera ejecutando `node scripts/apply-phase4-migrations.mjs` que también crea el bucket `news` automáticamente).
-2. Login como `galvillo9@gmail.com` / `Morvedre2026!`.
+2. Login con una cuenta admin de pruebas configurada fuera del repositorio.
 3. Ir a `/news` (bottom nav) → feed con noticias (vacío al inicio).
 4. Ir a `/admin/news` → botón "Nueva" → crear noticia con título + cuerpo markdown.
 5. Probar pinear (aparece arriba del feed) y reaccionar (3 tipos: me gusta, ánimo, gracias).

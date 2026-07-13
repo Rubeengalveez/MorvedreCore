@@ -13,8 +13,8 @@ Sustituir el registro público por código de invitación por un flujo en el que
 | Registro por código (`/register`)           | Se elimina por completo.                                                                                                                           | Se borra la página, el formulario, las server actions y la tabla `registration_codes`.                                                                       |
 | Perfiles de staff (coach, admin, directiva) | El admin los crea manualmente desde el nuevo panel.                                                                                                | El panel `/admin/access-requests` servirá también para dar de alta a entrenadores y directivos.                                                              |
 | Usuarios ya registrados                     | Siguen entrando igual.                                                                                                                             | No se tocan sus contraseñas ni perfiles.                                                                                                                     |
-| Contraseña temporal                         | `Morvedre2026!` compartida para todas las activaciones.                                                                                            | El sistema la usará para crear la cuenta auth al aprobar. Se guardará en BD para poder cambiarla sin desplegar.                                              |
-| Caducidad de la contraseña                  | No caduca.                                                                                                                                         | El código/password es permanente hasta que el admin lo cambie.                                                                                               |
+| Contraseña temporal                         | Única, aleatoria y distinta para cada activación.                                                                                                  | Se genera al aprobar, se muestra una sola vez al admin y no se almacena en texto plano.                                                                      |
+| Caducidad de la contraseña                  | Se sustituye en el primer acceso.                                                                                                                  | `must_change_password` impide usar la aplicación hasta definir una contraseña propia.                                                                        |
 | Canal para pasar la contraseña              | El admin la envía por email/WhatsApp manualmente.                                                                                                  | El sistema no envía la contraseña al usuario; sí avisa al admin de que hay solicitudes nuevas.                                                               |
 | Proveedor de email para avisos al admin     | **Resend** (100 emails/día gratis).                                                                                                                | Habrá que configurar `RESEND_API_KEY` y `RESEND_FROM_EMAIL`.                                                                                                 |
 | Google OAuth                                | Si el email no está vinculado, va al formulario de solicitud.                                                                                      | Tras aprobar, el usuario puede seguir entrando con Google y también con email+contraseña; se le obligará a definir una contraseña propia en el primer login. |
@@ -26,7 +26,7 @@ Sustituir el registro público por código de invitación por un flujo en el que
 | Niño sin email propio                       | El padre lo gestiona desde su cuenta de padre; el hijo no tiene login propio.                                                                      | El perfil del hijo debe existir previamente (dado de alta por admin o por solicitud con email del hijo si lo tiene).                                         |
 | Emparejamiento con perfil existente         | Automático si coinciden nombre y apellidos (sin importar mayúsculas) y año de nacimiento. Si hay duda, se muestran candidatos y el admin confirma. | Server action de normalización de texto + comparación por año.                                                                                               |
 | "Perfil activado"                           | El usuario ha cambiado ya su contraseña temporal por una propia.                                                                                   | Estado final del flujo. Mientras tanto es `approved` (admin ya dio el ok).                                                                                   |
-| Búsqueda de hijos en formulario de padre    | Autocompletado por nombre completo.                                                                                                                | Endpoint de búsqueda de perfiles de jugador.                                                                                                                 |
+| Búsqueda de hijos en formulario de padre    | Coincidencia exacta por nombre completo y año de nacimiento.                                                                                       | Reduce la enumeración pública de menores y devuelve solo coincidencias activables.                                                                           |
 | Varios hijos                                | Sí, un padre puede seleccionar varios en la misma solicitud.                                                                                       | Tabla intermedia `access_request_children`.                                                                                                                  |
 | Hijo no existe/no activado                  | Se bloquea el envío y se explica el paso previo.                                                                                                   | Mensaje claro: solicitar primero la cuenta de jugador o pedir al club el alta.                                                                               |
 | Relación padre-hijo                         | Se pregunta en el formulario: madre, padre, tutor legal, otro.                                                                                     | Se guarda en `parent_child_links.relation`.                                                                                                                  |
@@ -39,7 +39,7 @@ Sustituir el registro público por código de invitación por un flujo en el que
 ```
 pending     → el usuario ha enviado la solicitud, el admin no ha actuado
 approved    → el admin ha aprobado; el sistema ha creado la cuenta auth
-              con la contraseña temporal. El admin le pasa la contraseña.
+              con una contraseña aleatoria que se muestra al admin una sola vez.
 activated   → el usuario ha entrado y ha cambiado la contraseña.
 rejected    → se elimina la solicitud (no se persiste).
 ```
@@ -74,7 +74,7 @@ La transición a `activated` ocurre automáticamente cuando `profiles.must_chang
 ### 4.4. Solicitud de padre/madre
 
 1. Formulario: nombre completo del padre/madre, relación, búsqueda de hijos.
-2. Autocompletado contra perfiles de jugador.
+2. Búsqueda exacta por nombre completo y año de nacimiento contra perfiles de jugador.
 3. Solo permite seleccionar hijos que ya existan como perfiles en el club.
    - Si un hijo no aparece, se bloquea y se explica: "Si tu hijo/a tiene email propio, solicita primero su cuenta de jugador; si no, pide al club que lo den de alta."
 4. Se envía email de aviso al admin.
@@ -92,14 +92,14 @@ La transición a `activated` ocurre automáticamente cuando `profiles.must_chang
 1. El admin entra a `/admin/access-requests`.
 2. Ve listado de solicitudes `pending`.
 3. Puede:
-   - **Aprobar una**: el sistema crea el `auth.users` con la contraseña temporal, vincula el perfil, inserta el rol y (si es padre) los enlaces a hijos. Pasa a `approved`.
+   - **Aprobar una**: el sistema crea el `auth.users` con una contraseña aleatoria única, vincula el perfil, inserta el rol y (si es padre) los enlaces a hijos. Pasa a `approved`.
    - **Aprobar en bloque**: misma acción para varias seleccionadas.
    - **Rechazar**: elimina la solicitud.
-4. El admin le pasa manualmente la contraseña temporal al usuario.
+4. El panel muestra las credenciales emitidas una sola vez y el admin las comunica al usuario por un canal adecuado.
 
 ### 4.7. Primer login y activación
 
-1. El usuario entra con email + `Morvedre2026!`.
+1. El usuario entra con su email y la contraseña única que recibió.
 2. Si el perfil tiene `must_change_password = true` → `/change-password`.
 3. Cambia la contraseña.
 4. El sistema marca `profiles.must_change_password = false` y la solicitud pasa a `activated`.
@@ -137,23 +137,7 @@ CREATE TABLE public.access_request_children (
 );
 ```
 
-### 5.3. Nueva tabla: `app_settings`
-
-```sql
-CREATE TABLE public.app_settings (
-  key text PRIMARY KEY,
-  value text NOT NULL,
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  updated_by uuid REFERENCES public.profiles(id) ON DELETE SET NULL
-);
-
--- Valor inicial
-INSERT INTO public.app_settings (key, value) VALUES ('access_temp_password', 'Morvedre2026!');
-```
-
-Solo los admins pueden leer/escribir esta tabla. Se usará en el panel para permitir cambiar la contraseña temporal sin desplegar.
-
-### 5.4. Cambios en tablas existentes
+### 5.3. Cambios en tablas existentes
 
 - Eliminar `registration_codes` y todas sus referencias.
 - `profiles` no cambia de estructura; se usa `auth_user_id` y `must_change_password` como hasta ahora.
@@ -161,7 +145,7 @@ Solo los admins pueden leer/escribir esta tabla. Se usará en el panel para perm
 
 ## 6. Pantallas y componentes nuevos
 
-- `/login/request` → selección de rol (jugador / padre / staff).
+- `/login/request` → selección de rol (jugador / padre).
 - `/login/request/player` → formulario de solicitud de jugador.
 - `/login/request/parent` → formulario de solicitud de padre con búsqueda de hijos.
 - `/admin/access-requests` → panel de gestión.
@@ -178,20 +162,19 @@ Se eliminan:
 ## 7. Server actions necesarias
 
 - `submitAccessRequest(formData)` — valida y crea `access_requests` (+ `access_request_children` si aplica).
-- `approveAccessRequest(requestId)` — crea auth user con contraseña temporal, vincula perfil, asigna rol, enlaza hijos.
+- `approveAccessRequest(requestId)` — crea auth user con contraseña única, vincula perfil, asigna rol, enlaza hijos y devuelve la credencial una sola vez.
 - `approveAccessRequestsBulk(requestIds[])` — aprobación en bloque.
 - `rejectAccessRequest(requestId)` — elimina la solicitud.
 - `getAccessRequests(status?)` — listado para el panel admin.
-- `searchChildrenProfiles(query)` — autocompletado de hijos.
-- `updateTempPassword(newPassword)` — admin cambia la contraseña temporal en `app_settings`.
+- `searchChildrenProfiles(fullName, birthYear)` — búsqueda exacta de hijos.
 - `signIn(formData)` — modificar para redirigir a `/login/request` cuando el email no tenga cuenta.
 
 ## 8. Seguridad
 
-- RLS en `access_requests`, `access_request_children` y `app_settings`.
+- RLS en `access_requests` y `access_request_children`; la creación pública solo pasa por Server Actions validadas.
 - Solo admins pueden aprobar/rechazar.
 - Rate limiting simple en `submitAccessRequest`: máximo 3 solicitudes por email en 24h y/o IP.
-- La contraseña temporal se almacena en BD como texto plano (aceptado por el stakeholder por ser una app interna de club). Solo accesible por service_role / admin.
+- La contraseña temporal no se persiste en tablas de aplicación y es distinta para cada cuenta.
 - El login con la contraseña temporal obliga a cambiarla antes de usar la app.
 
 ## 9. Notificaciones
@@ -219,13 +202,13 @@ El padre no puede dar de alta a un hijo dentro del formulario de padre. Debe exi
 3. Esperar aprobación y activación del hijo.
 4. Enviar solicitud de padre vinculando al hijo ya activado.
 
-### 10.3. Contraseña temporal editable desde admin
+### 10.3. Credencial de activación única
 
-La contraseña temporal se editará desde el propio panel `/admin/access-requests`, en una pequeña sección de configuración al inicio de la página. No se crea una ruta `/admin/settings` exclusiva para esto.
+El panel `/admin/access-requests` muestra al aprobar una credencial aleatoria distinta para cada usuario. La lista puede ocultarse y no puede recuperarse después; si se pierde, se restablece la contraseña desde Supabase Auth.
 
 ## 11. Próximos pasos
 
-1. Crear la migración SQL con `access_requests`, `access_request_children`, `app_settings` y eliminación de `registration_codes`.
+1. Crear la migración SQL con `access_requests`, `access_request_children` y eliminación de `registration_codes`.
 2. Implementar server actions y RLS.
 3. Crear las nuevas pantallas de solicitud y el panel de admin.
 4. Integrar Resend para el aviso de nuevas solicitudes.

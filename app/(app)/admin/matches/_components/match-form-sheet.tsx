@@ -73,10 +73,7 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       team_id: String(formData.get("team_id") ?? ""),
       opponent: String(formData.get("opponent") ?? ""),
       competition_type: String(formData.get("competition_type") ?? "league") as
-        | "league"
-        | "cup"
-        | "tournament"
-        | "friendly",
+        "league" | "cup" | "tournament" | "friendly",
       is_home: formData.get("is_home") === "true",
       location: String(formData.get("location") ?? "") || undefined,
       pool_name: String(formData.get("pool_name") ?? "") || undefined,

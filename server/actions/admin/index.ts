@@ -7,5 +7,3 @@ export * from "./matches";
 export * from "./availability";
 export * from "./notifications";
 export { type CallupSuggestion } from "@/lib/domain/callups";
-export { requireAdmin, requireCoachOf } from "./_helpers";
-export type { AdminProfile } from "./_helpers";

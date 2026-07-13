@@ -3,11 +3,18 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
-import { MdHome, MdCalendarMonth, MdEmojiEvents, MdGroups, MdStorefront } from "react-icons/md";
+import {
+  MdCalendarMonth,
+  MdEmojiEvents,
+  MdFactCheck,
+  MdGroups,
+  MdHome,
+  MdStorefront,
+} from "react-icons/md";
 
 import { cn } from "@/lib/utils/cn";
 
-const items = [
+const baseItems = [
   { href: "/dashboard", label: "Inicio", Icon: MdHome },
   { href: "/calendar", label: "Calendario", Icon: MdCalendarMonth },
   { href: "/rankings", label: "Rankings", Icon: MdEmojiEvents },
@@ -15,8 +22,15 @@ const items = [
   { href: "/shop", label: "Tienda", Icon: MdStorefront },
 ] as const;
 
-export function BottomNav() {
+export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
   const pathname = usePathname();
+  const items = showAttendance
+    ? [
+        baseItems[0],
+        { href: "/attendance", label: "Asistencia", Icon: MdFactCheck } as const,
+        ...baseItems.slice(1),
+      ]
+    : baseItems;
 
   return (
     <nav
@@ -24,11 +38,19 @@ export function BottomNav() {
       data-bottom-nav
       className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--bottom-nav-height)] px-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:px-6"
     >
-      <div className="bg-paper/95 shadow-elev-5 relative mx-auto grid h-16 w-full max-w-xl grid-cols-5 items-stretch rounded-[1.45rem] border border-white/90 p-1.5 backdrop-blur-md md:max-w-2xl">
+      <div
+        className={cn(
+          "bg-paper/95 shadow-elev-5 relative mx-auto grid h-16 w-full max-w-xl items-stretch rounded-[1.45rem] border border-white/90 p-1.5 backdrop-blur-md md:max-w-2xl",
+          showAttendance ? "grid-cols-6" : "grid-cols-5",
+        )}
+      >
         {items.map((item) => {
           const Icon = item.Icon;
           const href = item.href;
-          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          const isActive =
+            pathname === href ||
+            pathname.startsWith(`${href}/`) ||
+            (href === "/rankings" && pathname.startsWith("/legends"));
           return (
             <Link
               key={href}
@@ -56,8 +78,26 @@ export function BottomNav() {
               >
                 {item.label === "Calendario" ? (
                   <>
-                    <span className="min-[390px]:hidden">Agenda</span>
-                    <span className="hidden min-[390px]:inline">Calendario</span>
+                    <span className={showAttendance ? "min-[420px]:hidden" : "min-[390px]:hidden"}>
+                      Agenda
+                    </span>
+                    <span
+                      className={
+                        showAttendance ? "hidden min-[420px]:inline" : "hidden min-[390px]:inline"
+                      }
+                    >
+                      Calendario
+                    </span>
+                  </>
+                ) : item.label === "Asistencia" ? (
+                  <>
+                    <span className="min-[420px]:hidden">Lista</span>
+                    <span className="hidden min-[420px]:inline">Asistencia</span>
+                  </>
+                ) : item.label === "Rankings" && showAttendance ? (
+                  <>
+                    <span className="min-[360px]:hidden">Ránk.</span>
+                    <span className="hidden min-[360px]:inline">Rankings</span>
                   </>
                 ) : (
                   item.label

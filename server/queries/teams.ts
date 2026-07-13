@@ -1,7 +1,8 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database";
+import type { Database, Tables } from "@/types/database";
 
-export type Team = Tables<"teams", "Row">;
+export type Team = Tables<"teams">;
 
 export interface TeamSummary {
   id: string;
@@ -66,8 +67,11 @@ const TEAM_PUBLIC_SELECT = `
   home_pool
 `;
 
-export async function getTeamById(teamId: string): Promise<Team | null> {
-  const supabase = await createClient();
+export async function getTeamById(
+  teamId: string,
+  client?: SupabaseClient<Database>,
+): Promise<Team | null> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase.from("teams").select("*").eq("id", teamId).maybeSingle();
 
   if (error) {
@@ -77,8 +81,11 @@ export async function getTeamById(teamId: string): Promise<Team | null> {
   return data;
 }
 
-export async function getTeamRoster(teamId: string): Promise<RosterPlayer[]> {
-  const supabase = await createClient();
+export async function getTeamRoster(
+  teamId: string,
+  client?: SupabaseClient<Database>,
+): Promise<RosterPlayer[]> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("team_rosters")
     .select(
@@ -135,8 +142,11 @@ export async function getTeamRoster(teamId: string): Promise<RosterPlayer[]> {
   return result;
 }
 
-export async function getTeamStaff(teamId: string): Promise<StaffMember[]> {
-  const supabase = await createClient();
+export async function getTeamStaff(
+  teamId: string,
+  client?: SupabaseClient<Database>,
+): Promise<StaffMember[]> {
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("team_staff")
     .select(
@@ -194,8 +204,9 @@ export async function getTeamStaff(teamId: string): Promise<StaffMember[]> {
 export async function getTeamsForProfileInSeason(
   profileId: string,
   seasonId: string,
+  client?: SupabaseClient<Database>,
 ): Promise<TeamSummary[]> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
 
   const { data: rosterRows, error: rosterError } = await supabase
     .from("team_rosters")
@@ -285,8 +296,9 @@ export async function getTeamsForProfileInSeason(
 export async function isProfileStaffInSeason(
   profileId: string,
   seasonId: string,
+  client?: SupabaseClient<Database>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("team_staff")
     .select("team_id, teams!team_staff_team_id_fkey(season_id)")
@@ -498,8 +510,9 @@ export async function getTeamMatches(
 export async function isProfilePlayerInSeason(
   profileId: string,
   seasonId: string,
+  client?: SupabaseClient<Database>,
 ): Promise<boolean> {
-  const supabase = await createClient();
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("team_rosters")
     .select("team_id, teams!team_rosters_team_id_fkey(season_id)")

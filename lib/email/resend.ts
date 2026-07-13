@@ -1,3 +1,7 @@
+import "server-only";
+
+import { escapeHtml } from "@/lib/email/html";
+
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "galvillo9@gmail.com";
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL;
 const API_KEY = process.env.RESEND_API_KEY;
@@ -85,6 +89,9 @@ export async function sendAdminAccessRequestNotification({
   role: string;
 }): Promise<{ success: boolean; error?: string }> {
   const roleLabel = getRoleLabel(role);
+  const safeEmail = escapeHtml(email);
+  const safeFullName = escapeHtml(fullName);
+  const safeRoleLabel = escapeHtml(roleLabel);
 
   return sendEmail({
     to: ADMIN_EMAIL,
@@ -102,9 +109,9 @@ Entra en /admin/access-requests para revisarla.
     html: `<p>Hola,</p>
 <p>Has recibido una nueva solicitud de acceso en Morvedre Core.</p>
 <ul>
-  <li><strong>Email:</strong> ${email}</li>
-  <li><strong>Nombre:</strong> ${fullName}</li>
-  <li><strong>Tipo:</strong> ${roleLabel}</li>
+  <li><strong>Email:</strong> ${safeEmail}</li>
+  <li><strong>Nombre:</strong> ${safeFullName}</li>
+  <li><strong>Tipo:</strong> ${safeRoleLabel}</li>
 </ul>
 <p>Entra en <strong>/admin/access-requests</strong> para revisarla.</p>`,
   });

@@ -257,8 +257,7 @@ export async function getNextEventForProfile(input: {
   ).find((m) => calledMatchIds.has(m.id));
 
   const nextTraining = (trainingRes.data ?? [])[0] as
-    | { id: string; scheduled_at: string; location: string | null; teams: unknown }
-    | undefined;
+    { id: string; scheduled_at: string; location: string | null; teams: unknown } | undefined;
   const nextUserMatch = userMatch ?? null;
 
   const trainingTime = nextTraining?.scheduled_at ?? null;

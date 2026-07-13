@@ -1,16 +1,19 @@
 import { test, expect, type Page } from "@playwright/test";
 
+const TEST_ADMIN_EMAIL = process.env.TEST_ADMIN_EMAIL;
+const TEST_PASSWORD = process.env.TEST_PASSWORD;
+
 async function loginAsAdmin(page: Page) {
+  if (!TEST_ADMIN_EMAIL || !TEST_PASSWORD) {
+    throw new Error("Faltan TEST_ADMIN_EMAIL y TEST_PASSWORD.");
+  }
   await page.goto("/login");
-  await page.getByLabel("Email").fill("galvillo9@gmail.com");
-  await page.getByLabel(/contrase/i).fill(process.env.TEST_PASSWORD ?? "Rga7707Rga:1");
+  await page.getByLabel("Email").fill(TEST_ADMIN_EMAIL);
+  await page.locator('input[name="password"]').fill(TEST_PASSWORD);
   await page.getByRole("button", { name: /entrar/i }).click();
-  await page.waitForURL((url) => !url.toString().includes("?"), { timeout: 10_000 });
+  await page.waitForURL(/\/(dashboard|change-password)(?:\?|$)/, { timeout: 10_000 });
   if (page.url().includes("change-password")) {
-    await page.getByLabel(/nueva contraseña/i).fill("Rga7707Rga:1");
-    await page.getByLabel(/repite/i).fill("Rga7707Rga:1");
-    await page.getByRole("button", { name: /guardar/i }).click();
-    await page.waitForURL(/\/dashboard/, { timeout: 10_000 });
+    throw new Error("La cuenta E2E requiere un cambio de contraseña manual antes de probarla.");
   }
 }
 
@@ -19,14 +22,14 @@ test.describe("Morvedre Core critical flows", () => {
     await page.goto("/login");
     await expect(page).toHaveTitle(/Morvedre Core/);
     await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel(/contrase/i)).toBeVisible();
+    await expect(page.locator('input[name="password"]')).toBeVisible();
     await expect(page.getByRole("button", { name: /entrar/i })).toBeVisible();
   });
 
-  test("login form has method=post to prevent password in URL", async ({ page }) => {
+  test("login form uses a React server action", async ({ page }) => {
     await page.goto("/login");
-    const formMethod = await page.locator("form").first().getAttribute("method");
-    expect(formMethod?.toLowerCase()).toBe("post");
+    const formAction = await page.locator("form").first().getAttribute("action");
+    expect(formAction).toMatch(/^javascript:/);
   });
 
   test("skip link is present", async ({ page }) => {
@@ -36,6 +39,7 @@ test.describe("Morvedre Core critical flows", () => {
   });
 
   test("icon buttons have aria-labels on dashboard", async ({ page }) => {
+    test.skip(!TEST_ADMIN_EMAIL || !TEST_PASSWORD, "Credenciales E2E no configuradas.");
     await loginAsAdmin(page);
     await page.goto("/dashboard");
     const iconButtons = page.locator("button[aria-label]");
@@ -44,6 +48,7 @@ test.describe("Morvedre Core critical flows", () => {
   });
 
   test("calendar shows legend and view mode tabs", async ({ page }) => {
+    test.skip(!TEST_ADMIN_EMAIL || !TEST_PASSWORD, "Credenciales E2E no configuradas.");
     await loginAsAdmin(page);
     await page.goto("/calendar");
     const tabs = page.getByRole("tab");

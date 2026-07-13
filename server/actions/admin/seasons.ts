@@ -4,11 +4,16 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import type { Tables } from "@/types/database";
-import { createSeasonSchema, idSchema, updateSeasonSchema } from "@/lib/domain/admin-schemas";
+import {
+  archiveSeasonSchema,
+  createSeasonSchema,
+  idSchema,
+  updateSeasonSchema,
+} from "@/lib/domain/admin-schemas";
 
 import { requireAdmin } from "./_helpers";
 
-export type Season = Tables<"seasons", "Row">;
+export type Season = Tables<"seasons">;
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
@@ -124,22 +129,71 @@ export async function setCurrentSeason(id: string): Promise<void> {
   revalidatePath("/dashboard");
 }
 
-export async function archiveSeason(id: string): Promise<void> {
+export type ArchiveSeasonResult = {
+  new_season_id: string;
+  historical_players: number;
+  historical_matchups: number;
+  teams_created: number;
+  rosters_carried: number;
+};
+
+export async function archiveSeason(input: {
+  season_id: string;
+  label: string;
+  start_date: string;
+  end_date: string;
+  confirmation: string;
+}): Promise<ArchiveSeasonResult> {
   await requireAdmin();
 
-  const parsedId = idSchema.safeParse({ id });
-  if (!parsedId.success) {
-    throw new Error("Identificador inválido.");
+  const parsed = archiveSeasonSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
   const supabase = await createClient();
-  const { error } = await supabase
-    .from("seasons")
-    .update({ is_current: false, archived_at: new Date().toISOString() })
-    .eq("id", parsedId.data.id);
 
-  throwIfError(error, "No pudimos archivar la temporada.");
+  const { data: source, error: sourceError } = await supabase
+    .from("seasons")
+    .select("id, label, is_current, archived_at")
+    .eq("id", parsed.data.season_id)
+    .maybeSingle();
+
+  throwIfError(sourceError, "No pudimos comprobar la temporada actual.");
+  if (!source) {
+    throw new Error("La temporada no existe.");
+  }
+  if (source.archived_at) {
+    throw new Error("La temporada ya está archivada.");
+  }
+  if (!source.is_current) {
+    throw new Error("Solo puedes cerrar la temporada actual.");
+  }
+  if (parsed.data.confirmation !== source.label) {
+    throw new Error(`Escribe exactamente ${source.label} para confirmar.`);
+  }
+
+  const { data, error } = await supabase.rpc("archive_season", {
+    p_season_id: parsed.data.season_id,
+    p_new_label: parsed.data.label,
+    p_new_start_date: parsed.data.start_date,
+    p_new_end_date: parsed.data.end_date,
+  });
+
+  if (error) {
+    throw new Error(error.message || "No pudimos iniciar la nueva temporada.");
+  }
+  if (!data) {
+    throw new Error("La transición no devolvió un resultado válido.");
+  }
 
   revalidatePath("/admin/seasons");
-  revalidatePath(`/admin/seasons/${parsedId.data.id}`);
+  revalidatePath("/admin/teams");
+  revalidatePath("/admin/players");
+  revalidatePath("/dashboard");
+  revalidatePath("/rankings");
+  revalidatePath("/legends");
+  revalidatePath("/team");
+
+  return data as ArchiveSeasonResult;
 }

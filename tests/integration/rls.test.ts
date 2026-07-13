@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { randomBytes } from "node:crypto";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -14,7 +15,7 @@ const URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
 
-const PASSWORD = "Test123456!";
+const PASSWORD = `Test-${randomBytes(16).toString("base64url")}9aA`;
 
 let admin: SupabaseClient<Database> | null = null;
 let adminAnon: SupabaseClient<Database> | null = null;
@@ -275,11 +276,11 @@ describe.skipIf(!HAS_ENV)("RLS policies (integration)", () => {
     }
   });
 
-  it("regular user can SELECT their own profile row", async () => {
+  it("regular user can SELECT their own public profile columns", async () => {
     if (!regularAnon || !regularProfileId) return;
     const { data, error } = await regularAnon
       .from("profiles")
-      .select("id, full_name, phone_e164, email_contact")
+      .select("id, full_name, birth_year, cap_number")
       .eq("id", regularProfileId)
       .maybeSingle();
     expect(error).toBeNull();
@@ -287,37 +288,47 @@ describe.skipIf(!HAS_ENV)("RLS policies (integration)", () => {
     expect(data?.id).toBe(regularProfileId);
   });
 
-  it("regular user CANNOT SELECT another user's private row", async () => {
+  it("regular user cannot SELECT private profile columns", async () => {
     if (!regularAnon || !childProfileId) return;
     const { data, error } = await regularAnon
       .from("profiles")
-      .select("id, full_name, phone_e164, email_contact")
+      .select("phone_e164, email_contact, notes, calendar_token")
       .eq("id", childProfileId)
       .maybeSingle();
     expect(data).toBeNull();
-    expect(error).toBeNull();
+    expect(error).not.toBeNull();
   });
 
-  it("parent CAN SELECT their own child's row", async () => {
+  it("parent cannot bypass private columns through the Data API", async () => {
     if (!parentAnon || !childProfileId) return;
     const { data, error } = await parentAnon
       .from("profiles")
-      .select("id, full_name, phone_e164, email_contact")
+      .select("phone_e164, email_contact, notes, calendar_token")
       .eq("id", childProfileId)
       .maybeSingle();
-    expect(error).toBeNull();
-    expect(data).not.toBeNull();
-    expect(data?.id).toBe(childProfileId);
+    expect(error).not.toBeNull();
+    expect(data).toBeNull();
   });
 
-  it("unrelated user CANNOT SELECT another user's private row", async () => {
+  it("unrelated user can read public profile columns but not private ones", async () => {
     if (!unrelatedAnon || !regularProfileId) return;
-    const { data } = await unrelatedAnon
+    const { data: publicData, error: publicError } = await unrelatedAnon
       .from("profiles")
-      .select("id, full_name, phone_e164, email_contact")
+      .select("id, full_name, birth_year")
       .eq("id", regularProfileId)
       .maybeSingle();
-    expect(data).toBeNull();
+    expect(publicError).toBeNull();
+    expect(publicData?.id).toBe(regularProfileId);
+
+    const { data: privateData, error: privateError } = await unrelatedAnon
+      .from("profiles")
+      .select(
+        "phone_e164, email_contact, school_payment_paid, must_change_password, calendar_token",
+      )
+      .eq("id", regularProfileId)
+      .maybeSingle();
+    expect(privateError).not.toBeNull();
+    expect(privateData).toBeNull();
   });
 
   it("profiles_public view exposes public columns for any authenticated user", async () => {

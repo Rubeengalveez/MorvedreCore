@@ -17,10 +17,12 @@ import {
 } from "@/lib/domain/admin-schemas";
 import {
   isValidShopOrderStatus,
+  isMissingShopPersonalizationSchema,
   parseProduct,
   summarizeCart,
   type ShopOrderStatus,
 } from "@/lib/domain/shop";
+import { validateImageFile } from "@/lib/uploads/images";
 
 function toError(e: unknown): string {
   if (e instanceof z.ZodError) return e.issues[0]?.message ?? "Datos inválidos.";
@@ -34,11 +36,11 @@ async function uploadShopImage(
   index = 0,
 ): Promise<{ url: string; path: string }> {
   const admin = createAdminClient();
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const path = `shop/${productId}/${Date.now()}-${index}.${ext}`;
+  const image = await validateImageFile(file);
+  const path = `shop/${productId}/${Date.now()}-${index}.${image.extension}`;
   const { error } = await admin.storage
     .from("shop-images")
-    .upload(path, file, { contentType: file.type, upsert: true });
+    .upload(path, file, { contentType: image.contentType, upsert: true });
   if (error) throw new Error("No pudimos subir la imagen: " + error.message);
   const { data: pub } = admin.storage.from("shop-images").getPublicUrl(path);
   return { url: pub.publicUrl, path };
@@ -117,27 +119,36 @@ export async function createShopProduct(input: {
   const me = await requireSessionProfile();
   const admin = createAdminClient();
 
-  const { data: created, error } = await admin
+  const baseProduct = {
+    title: product.value!.title,
+    description: product.value!.description,
+    category: product.value!.category,
+    price_cents: product.value!.price_cents,
+    currency: product.value!.currency,
+    image_url: product.value!.image_url,
+    sizes: product.value!.sizes,
+    available: product.value!.available,
+    stock: product.value!.stock,
+    max_per_order: product.value!.max_per_order,
+    created_by: me.id,
+  };
+  let createResult = await admin
     .from("shop_products")
     .insert({
-      title: product.value!.title,
-      description: product.value!.description,
-      category: product.value!.category,
-      price_cents: product.value!.price_cents,
-      currency: product.value!.currency,
-      image_url: product.value!.image_url,
-      sizes: product.value!.sizes,
-      available: product.value!.available,
-      stock: product.value!.stock,
-      max_per_order: product.value!.max_per_order,
+      ...baseProduct,
       personalization_enabled: product.value!.personalization_enabled,
       personalization_label: product.value!.personalization_label,
       personalization_max_length: product.value!.personalization_max_length,
-      created_by: me.id,
     })
     .select("id")
     .single();
-  if (error) throw new Error("No pudimos crear el producto: " + error.message);
+  if (isMissingShopPersonalizationSchema(createResult.error)) {
+    createResult = await admin.from("shop_products").insert(baseProduct).select("id").single();
+  }
+  if (createResult.error) {
+    throw new Error("No pudimos crear el producto: " + createResult.error.message);
+  }
+  const created = createResult.data;
 
   const files = input.imageFiles?.length
     ? input.imageFiles
@@ -202,26 +213,33 @@ export async function updateShopProduct(input: {
     });
   }
 
-  const { error } = await admin
+  const baseUpdates = {
+    title: product.value!.title,
+    description: product.value!.description,
+    category: product.value!.category,
+    price_cents: product.value!.price_cents,
+    currency: product.value!.currency,
+    image_url: imageUrl,
+    sizes: product.value!.sizes,
+    available: product.value!.available,
+    stock: product.value!.stock,
+    max_per_order: product.value!.max_per_order,
+  };
+  let updateResult = await admin
     .from("shop_products")
     .update({
-      title: product.value!.title,
-      description: product.value!.description,
-      category: product.value!.category,
-      price_cents: product.value!.price_cents,
-      currency: product.value!.currency,
-      image_url: imageUrl,
-      sizes: product.value!.sizes,
-      available: product.value!.available,
-      stock: product.value!.stock,
-      max_per_order: product.value!.max_per_order,
+      ...baseUpdates,
       personalization_enabled: product.value!.personalization_enabled,
       personalization_label: product.value!.personalization_label,
       personalization_max_length: product.value!.personalization_max_length,
     })
     .eq("id", input.product_id);
-
-  if (error) throw new Error("No pudimos actualizar el producto: " + error.message);
+  if (isMissingShopPersonalizationSchema(updateResult.error)) {
+    updateResult = await admin.from("shop_products").update(baseUpdates).eq("id", input.product_id);
+  }
+  if (updateResult.error) {
+    throw new Error("No pudimos actualizar el producto: " + updateResult.error.message);
+  }
   revalidatePath("/shop");
   revalidatePath(`/shop/${input.product_id}`);
   revalidatePath("/admin/shop");
@@ -292,13 +310,41 @@ export async function createShopOrder(input: {
   const { createClient } = await import("@/lib/supabase/server");
   const supabase = await createClient();
   const productIds = Array.from(new Set(parsed.data.items.map((i) => i.product_id)));
-  const { data: products, error: pErr } = await supabase
+  let supportsPersonalization = true;
+  const currentProductResult = await supabase
     .from("shop_products")
     .select(
       "id, price_cents, available, max_per_order, title, sizes, personalization_enabled, personalization_max_length",
     )
     .in("id", productIds);
-  if (pErr) throw new Error("No pudimos cargar los productos: " + pErr.message);
+  let productRows = currentProductResult.data as unknown as Array<Record<string, unknown>> | null;
+  let productError = currentProductResult.error;
+  if (isMissingShopPersonalizationSchema(productError)) {
+    supportsPersonalization = false;
+    const legacyProductResult = await supabase
+      .from("shop_products")
+      .select("id, price_cents, available, max_per_order, title, sizes")
+      .in("id", productIds);
+    productRows = legacyProductResult.data as unknown as Array<Record<string, unknown>> | null;
+    productError = legacyProductResult.error;
+  }
+  if (productError) {
+    throw new Error("No pudimos cargar los productos: " + productError.message);
+  }
+  const products = (productRows ?? []).map((row) => ({
+    id: String(row.id),
+    title: String(row.title),
+    price_cents: Number(row.price_cents),
+    available: Boolean(row.available),
+    max_per_order: Number(row.max_per_order),
+    sizes: Array.isArray(row.sizes) ? row.sizes.map(String) : [],
+    personalization_enabled:
+      "personalization_enabled" in row && Boolean(row.personalization_enabled),
+    personalization_max_length:
+      "personalization_max_length" in row && typeof row.personalization_max_length === "number"
+        ? row.personalization_max_length
+        : 30,
+  }));
   if (!products || products.length !== productIds.length) {
     throw new Error("Uno o más productos no existen.");
   }
@@ -307,7 +353,7 @@ export async function createShopOrder(input: {
     parsed.data.items.map((i) => ({
       product_id: i.product_id,
       size: i.size ?? null,
-      personalization: i.personalization ?? null,
+      personalization: supportsPersonalization ? (i.personalization ?? null) : null,
       quantity: i.quantity,
     })),
     products,
@@ -337,10 +383,15 @@ export async function createShopOrder(input: {
     unit_price_cents: line.unit_price_cents,
     subtotal_cents: line.subtotal_cents,
   }));
-  const { error: iErr } = await admin.from("shop_order_items").insert(items as never);
-  if (iErr) {
+  let itemsResult = await admin.from("shop_order_items").insert(items as never);
+  if (isMissingShopPersonalizationSchema(itemsResult.error)) {
+    itemsResult = await admin
+      .from("shop_order_items")
+      .insert(items.map(({ personalization: _personalization, ...item }) => item) as never);
+  }
+  if (itemsResult.error) {
     await admin.from("shop_orders").delete().eq("id", order.id);
-    throw new Error("No pudimos guardar los productos del pedido: " + iErr.message);
+    throw new Error("No pudimos guardar los productos del pedido: " + itemsResult.error.message);
   }
 
   await notifyParentsOfOrder(order.id, me.id, products);
@@ -407,6 +458,36 @@ export async function decideShopOrder(input: {
   const parsed = decideShopOrderSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
 
+  const { createClient } = await import("@/lib/supabase/server");
+  const supabase = await createClient();
+  const { data: order } = await supabase
+    .from("shop_orders")
+    .select("requested_by, status")
+    .eq("id", parsed.data.order_id)
+    .maybeSingle();
+  if (!order || order.status !== "pending_parent") {
+    throw new Error("El pedido no existe o ya no está pendiente.");
+  }
+
+  const [{ data: parentLink }, { data: adminRole }] = await Promise.all([
+    supabase
+      .from("parent_child_links")
+      .select("parent_profile_id")
+      .eq("parent_profile_id", me.id)
+      .eq("child_profile_id", order.requested_by)
+      .maybeSingle(),
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("profile_id", me.id)
+      .eq("role", "admin")
+      .is("scope_team_id", null)
+      .maybeSingle(),
+  ]);
+  if (!parentLink && !adminRole) {
+    throw new Error("Solo su familia puede decidir este pedido.");
+  }
+
   const admin = createAdminClient();
   const now = new Date().toISOString();
 
@@ -422,7 +503,8 @@ export async function decideShopOrder(input: {
   const { error } = await admin
     .from("shop_orders")
     .update(updates as never)
-    .eq("id", parsed.data.order_id);
+    .eq("id", parsed.data.order_id)
+    .eq("status", "pending_parent");
   if (error) throw new Error("No pudimos actualizar el pedido: " + error.message);
 
   revalidatePath(`/shop/orders/${parsed.data.order_id}`);

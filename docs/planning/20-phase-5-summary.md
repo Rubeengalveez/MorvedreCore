@@ -72,7 +72,7 @@ build:       33 rutas, 0 errores
    - Pulsa Run
    - Crea las 3 tablas, el enum, las policies de RLS y las policies del bucket shop-images
 
-2. Login como galvillo9@gmail.com / Morvedre2026!
+2. Login con una cuenta admin de pruebas configurada fuera del repositorio.
 
 3. Como admin:
    - /admin/shop -> Kanban de pedidos (vacio al inicio)

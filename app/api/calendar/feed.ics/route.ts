@@ -7,20 +7,32 @@ import { getCurrentSeason } from "@/server/queries/seasons";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
 import type { Tables } from "@/types/database";
 
-const querySchema = z.object({
-  team: z.string().uuid().optional(),
-  from: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  to: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-});
+const querySchema = z
+  .object({
+    team: z.string().uuid().optional(),
+    from: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+    to: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/)
+      .optional(),
+  })
+  .superRefine((value, context) => {
+    if (!value.from || !value.to) return;
+    const from = new Date(`${value.from}T00:00:00Z`);
+    const to = new Date(`${value.to}T00:00:00Z`);
+    const days = (to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000);
+    if (days < 0 || days > 366) {
+      context.addIssue({ code: "custom", message: "El rango debe estar entre 0 y 366 días." });
+    }
+  });
 
-type CalendarTraining = Tables<"training_sessions", "Row">;
-type CalendarMatch = Tables<"matches", "Row">;
+const calendarTokenSchema = z.string().uuid();
+
+type CalendarTraining = Tables<"training_sessions">;
+type CalendarMatch = Tables<"matches">;
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -95,14 +107,16 @@ function matchToVEvent(m: CalendarMatch, teamLabel: string, teamColor: string): 
   const summary = escapeIcs(
     m.is_home ? `${teamLabel} vs ${m.opponent}` : `${m.opponent} vs ${teamLabel}`,
   );
-  const desc = [
-    `Competición: ${m.competition_type}`,
-    m.location ? `Sede: ${m.location}` : "",
-    m.pool_name ? `Piscina: ${m.pool_name}` : "",
-    m.notes ? `Notas: ${m.notes}` : "",
-  ]
-    .filter(Boolean)
-    .join("\\n");
+  const desc = escapeIcs(
+    [
+      `Competición: ${m.competition_type}`,
+      m.location ? `Sede: ${m.location}` : "",
+      m.pool_name ? `Piscina: ${m.pool_name}` : "",
+      m.notes ? `Notas: ${m.notes}` : "",
+    ]
+      .filter(Boolean)
+      .join("\n"),
+  );
   const uid = `match-${m.id}@morvedre-core`;
   const status =
     m.status === "cancelled" ? "CANCELLED" : m.status === "postponed" ? "CANCELLED" : "CONFIRMED";
@@ -132,11 +146,15 @@ export async function GET(request: Request) {
   let activeProfileId: string;
 
   if (token) {
+    const parsedToken = calendarTokenSchema.safeParse(token);
+    if (!parsedToken.success) {
+      return new NextResponse("Not authenticated", { status: 401 });
+    }
     const admin = createAdminClient();
     const { data: profile, error } = await admin
       .from("profiles")
       .select("id")
-      .eq("calendar_token", token)
+      .eq("calendar_token", parsedToken.data)
       .maybeSingle();
 
     if (error || !profile) {

@@ -1,36 +1,14 @@
 import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
-import { createClient } from "@/lib/supabase/server";
 import { getShopOrdersForKanban } from "@/server/queries/shop";
+import { hasAdminAccess } from "@/server/actions/admin/_helpers";
 import type { ShopOrderStatus } from "@/lib/domain/shop";
 
 export const dynamic = "force-dynamic";
 
-async function isAdmin(): Promise<boolean> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return false;
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!profile) return false;
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("profile_id", profile.id)
-    .eq("role", "admin")
-    .is("scope_team_id", null)
-    .maybeSingle();
-  return !!data;
-}
-
 export async function GET() {
-  if (!(await isAdmin())) {
+  if (!(await hasAdminAccess())) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -41,6 +19,7 @@ export async function GET() {
     {
       producto: string;
       talla: string;
+      personalizacion: string;
       categoria: string;
       cantidad: number;
       importe: number;
@@ -55,10 +34,12 @@ export async function GET() {
     for (const item of order.items) {
       const product = item.product_title ?? "Producto";
       const size = item.size ?? "Sin talla";
-      const key = `${item.product_id}:${size}`;
+      const personalization = item.personalization ?? "Sin personalización";
+      const key = `${item.product_id}:${size}:${personalization}`;
       const current = grouped.get(key) ?? {
         producto: product,
         talla: size,
+        personalizacion: personalization,
         categoria: item.product_category ?? "",
         cantidad: 0,
         importe: 0,
@@ -79,6 +60,7 @@ export async function GET() {
         Solicitante: order.requested_by_name ?? order.requested_by,
         Producto: product,
         Talla: size,
+        Personalizacion: personalization,
         Cantidad: item.quantity,
         "Precio unitario": item.unit_price_cents / 100,
         Subtotal: item.subtotal_cents / 100,
@@ -89,6 +71,7 @@ export async function GET() {
   const summaryRows = Array.from(grouped.values()).map((row) => ({
     Producto: row.producto,
     Talla: row.talla,
+    Personalizacion: row.personalizacion,
     Categoria: row.categoria,
     Cantidad: row.cantidad,
     Importe: row.importe,
@@ -106,6 +89,7 @@ export async function GET() {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": 'attachment; filename="pedidos_tienda_agrupados.xlsx"',
+      "Cache-Control": "private, no-store",
     },
   });
 }

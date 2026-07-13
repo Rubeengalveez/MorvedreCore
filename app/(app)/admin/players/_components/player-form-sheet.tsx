@@ -98,10 +98,7 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
     await createPlayer({
       full_name: String(formData.get("full_name") ?? ""),
       gender: String(formData.get("gender") ?? "prefer_not_to_say") as
-        | "male"
-        | "female"
-        | "other"
-        | "prefer_not_to_say",
+        "male" | "female" | "other" | "prefer_not_to_say",
       birth_year: Number(birthYear),
       cap_number: cap && String(cap).trim() !== "" ? Number(cap) : undefined,
       phone_e164: String(formData.get("phone_e164") ?? "") || undefined,

@@ -30,3 +30,19 @@ export function seasonContainsDate(seasonStart: Date, seasonEnd: Date, date: Dat
   const t = date.getTime();
   return t >= seasonStart.getTime() && t <= seasonEnd.getTime();
 }
+
+export function nextSeasonDraft(season: { start_date: string; end_date: string }): {
+  label: string;
+  start_date: string;
+  end_date: string;
+} {
+  const start = new Date(`${season.start_date}T12:00:00Z`);
+  const end = new Date(`${season.end_date}T12:00:00Z`);
+  start.setUTCFullYear(start.getUTCFullYear() + 1);
+  end.setUTCFullYear(end.getUTCFullYear() + 1);
+  return {
+    label: `${start.getUTCFullYear()}/${end.getUTCFullYear()}`,
+    start_date: start.toISOString().slice(0, 10),
+    end_date: end.toISOString().slice(0, 10),
+  };
+}

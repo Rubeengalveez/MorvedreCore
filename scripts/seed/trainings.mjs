@@ -1,5 +1,41 @@
-import { admin, loadBatch, mergeBatch, rand, randInt, pad2, isoDate, resetRng } from "./base.mjs";
+import { admin, loadBatch, mergeBatch, rand, pad2, isoDate, resetRng } from "./base.mjs";
 import { randomUUID } from "node:crypto";
+
+const clubDateTimeFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Madrid",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+
+function clubTimeToUtc(date, hour) {
+  const wallClockAsUtc = Date.UTC(
+    date.getUTCFullYear(),
+    date.getUTCMonth(),
+    date.getUTCDate(),
+    hour,
+  );
+  const offsetAt = (value) => {
+    const parts = clubDateTimeFormatter.formatToParts(value);
+    const part = (type) => Number(parts.find((item) => item.type === type)?.value ?? 0);
+    return (
+      Date.UTC(
+        part("year"),
+        part("month") - 1,
+        part("day"),
+        part("hour"),
+        part("minute"),
+        part("second"),
+      ) - value.getTime()
+    );
+  };
+  const first = new Date(wallClockAsUtc - offsetAt(new Date(wallClockAsUtc)));
+  return new Date(wallClockAsUtc - offsetAt(first));
+}
 
 async function main() {
   resetRng();
@@ -18,68 +54,95 @@ async function main() {
   const sessionIds = [];
   const attendance = [];
   const now = new Date();
+  const schedules = {
+    Benjamín: { days: [1, 3], hour: 17 },
+    Alevín: { days: [2, 4], hour: 17 },
+    Infantil: { days: [1, 3, 5], hour: 18 },
+    "Cadete A": { days: [2, 4, 5], hour: 19 },
+    "Cadete B": { days: [1, 3, 5], hour: 19 },
+    Juvenil: { days: [1, 3, 5], hour: 20 },
+    Absoluto: { days: [2, 4, 5], hour: 20 },
+    Escuela: { days: [2, 4], hour: 17 },
+  };
 
   for (const [label, teamId] of teamIdByLabel) {
     const players = (playerIdsByTeam[label] ?? []).map((id) => ({ id }));
     if (players.length === 0) continue;
 
-    const blockDefs = [
-      { startMonth: 8, endMonth: 1, days: [1, 3], hour: 17 },
-      { startMonth: 1, endMonth: 6, days: [2, 4], hour: 18 },
-    ];
+    const schedule = schedules[label] ?? { days: [2, 4], hour: 18 };
+    const blockDefs = [{ start: "2025-09-01", end: "2026-07-31", ...schedule }];
     for (const def of blockDefs) {
       const blockId = randomUUID();
-      const start = new Date(Date.UTC(2025, def.startMonth, 1));
-      const end = new Date(Date.UTC(2026, def.endMonth, 0));
-      const { error: bErr } = await admin.from("training_blocks").upsert({
-        id: blockId, team_id: teamId, label: `Temporada ${label} (${def.startMonth + 1}-${def.endMonth + 1})`,
-        weekdays: def.days,
-        start_date: isoDate(start), end_date: isoDate(end),
-        start_time: `${pad2(def.hour)}:00`, end_time: `${pad2(def.hour + 1)}:30`,
-        kind: label === "Escuela" ? "mixed" : "water",
-        is_active: true, created_by: null,
-      }, { onConflict: "id" });
+      const start = new Date(`${def.start}T00:00:00Z`);
+      const end = new Date(`${def.end}T00:00:00Z`);
+      const { error: bErr } = await admin.from("training_blocks").upsert(
+        {
+          id: blockId,
+          team_id: teamId,
+          label: `Temporada 2025/2026 · ${label}`,
+          weekdays: def.days,
+          start_date: isoDate(start),
+          end_date: isoDate(end),
+          start_time: `${pad2(def.hour)}:00`,
+          end_time: `${pad2(def.hour + 1)}:30`,
+          kind: label === "Escuela" ? "mixed" : "water",
+          is_active: true,
+          created_by: null,
+        },
+        { onConflict: "id" },
+      );
       if (bErr) {
         console.error(`  ! Bloque ${label}: ${bErr.message}`);
         continue;
       }
       blockIds.push(blockId);
 
-      for (let d = new Date(start); d <= end && d <= now; d.setUTCDate(d.getUTCDate() + 1)) {
+      for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
         const dow = d.getUTCDay();
         const monFirst = dow === 0 ? 7 : dow;
         if (!def.days.includes(monFirst)) continue;
-        if (rand() < 0.10) continue;
 
         const sessionId = randomUUID();
         const hour = def.hour;
-        const { error: sErr } = await admin.from("training_sessions").upsert({
-          id: sessionId, block_id: blockId, team_id: teamId,
-          scheduled_at: `${isoDate(d)}T${pad2(hour)}:00:00Z`,
-          duration_minutes: 90,
-          location: "Piscina Municipal Puerto Sagunto",
-          notes: null,
-          cancelled: false,
-        }, { onConflict: "id" });
+        const scheduledAt = clubTimeToUtc(d, hour);
+        const isPast = scheduledAt < now;
+        const cancelled = rand() < 0.04;
+        const { error: sErr } = await admin.from("training_sessions").upsert(
+          {
+            id: sessionId,
+            block_id: blockId,
+            team_id: teamId,
+            scheduled_at: scheduledAt.toISOString(),
+            duration_minutes: 90,
+            location: "Piscina Municipal Puerto Sagunto",
+            notes: cancelled ? "Sesión cancelada por mantenimiento de la piscina." : null,
+            cancelled,
+          },
+          { onConflict: "id" },
+        );
         if (sErr) continue;
         sessionIds.push(sessionId);
 
+        if (!isPast || cancelled) continue;
         for (const p of players) {
           const r = rand();
-          if (r < 0.80) {
+          if (r < 0.84) {
             attendance.push({
-              session_id: sessionId, player_id: p.id, present: true,
-              reason: null, marked_by: null, marked_at: d.toISOString(),
+              session_id: sessionId,
+              player_id: p.id,
+              present: true,
+              reason: null,
+              marked_by: null,
+              marked_at: new Date(scheduledAt.getTime() + 90 * 60_000).toISOString(),
             });
-          } else if (r < 0.95) {
+          } else if (r < 0.97) {
             attendance.push({
-              session_id: sessionId, player_id: p.id, present: false,
-              reason: randPickReason(), marked_by: null, marked_at: d.toISOString(),
-            });
-          } else {
-            attendance.push({
-              session_id: sessionId, player_id: p.id, present: true,
-              reason: null, marked_by: null, marked_at: d.toISOString(),
+              session_id: sessionId,
+              player_id: p.id,
+              present: false,
+              reason: randPickReason(),
+              marked_by: null,
+              marked_at: new Date(scheduledAt.getTime() + 90 * 60_000).toISOString(),
             });
           }
         }
@@ -103,7 +166,17 @@ async function main() {
 }
 
 function randPickReason() {
-  const reasons = ["Lesión", "Viaje familiar", "Estudios", "Examen", "Enfermedad", "Médico", "Vacaciones", "Trabajo", "Cumpleaños"];
+  const reasons = [
+    "Lesión",
+    "Viaje familiar",
+    "Estudios",
+    "Examen",
+    "Enfermedad",
+    "Médico",
+    "Vacaciones",
+    "Trabajo",
+    "Cumpleaños",
+  ];
   return reasons[Math.floor(rand() * reasons.length)];
 }
 

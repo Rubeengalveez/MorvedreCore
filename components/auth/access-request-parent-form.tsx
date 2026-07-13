@@ -43,27 +43,29 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
   const [fullName, setFullName] = useState("");
   const [relation, setRelation] = useState("");
   const [query, setQuery] = useState("");
+  const [childBirthYear, setChildBirthYear] = useState("");
   const [results, setResults] = useState<ChildOption[]>([]);
   const [selected, setSelected] = useState<ChildOption[]>([]);
   const [searching, setSearching] = useState(false);
 
-  const runSearch = useCallback(async (value: string) => {
-    if (value.trim().length < 3) {
+  const runSearch = useCallback(async (value: string, birthYearValue: string) => {
+    const birthYear = Number(birthYearValue);
+    if (value.trim().length < 5 || !Number.isInteger(birthYear)) {
       setResults([]);
       return;
     }
     setSearching(true);
-    const data = await searchChildrenProfiles(value);
+    const data = await searchChildrenProfiles({ query: value, birthYear });
     setResults(data?.children ?? []);
     setSearching(false);
   }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      runSearch(query);
+      runSearch(query, childBirthYear);
     }, 300);
     return () => clearTimeout(timer);
-  }, [query, runSearch]);
+  }, [childBirthYear, query, runSearch]);
 
   const toggleChild = (child: ChildOption) => {
     setSelected((prev) => {
@@ -189,10 +191,27 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
         </label>
         <Input
           id="childSearch"
+          name="childSearch"
           type="text"
-          placeholder="Escribe el nombre de tu hijo/a"
+          placeholder="Nombre y apellidos completos"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
+          autoComplete="off"
+          className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
+        />
+        <label htmlFor="childBirthYear" className="text-eyebrow text-ink-700 mt-2">
+          Año de nacimiento del hijo/a
+        </label>
+        <Input
+          id="childBirthYear"
+          name="childBirthYear"
+          type="number"
+          inputMode="numeric"
+          min={1900}
+          max={new Date().getFullYear()}
+          placeholder="2012"
+          value={childBirthYear}
+          onChange={(e) => setChildBirthYear(e.target.value)}
           autoComplete="off"
           className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
@@ -213,7 +232,7 @@ export function AccessRequestParentForm({ email }: AccessRequestParentFormProps)
               </li>
             ))}
           </ul>
-        ) : query.trim().length >= 3 && !searching ? (
+        ) : query.trim().length >= 5 && childBirthYear && !searching ? (
           <p className="text-ink-600 text-xs">
             No se encontraron hijos/as activados con ese nombre.
           </p>

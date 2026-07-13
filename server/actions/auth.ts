@@ -1,10 +1,10 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import { z } from "zod";
 
-import type { Database } from "@/types/database";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAccessRequestNotification } from "@/lib/email/resend";
@@ -41,7 +41,7 @@ const submitAccessRequestSchema = z
   .object({
     email: z.string().email("Introduce un email válido."),
     fullName: z.string().min(2, "Introduce tu nombre completo."),
-    role: z.enum(["player", "parent", "coach", "delegate", "directiva", "admin"], {
+    role: z.enum(["player", "parent"], {
       message: "Selecciona un tipo de cuenta.",
     }),
     birthYear: z.preprocess(
@@ -79,18 +79,24 @@ const submitAccessRequestSchema = z
 
 const accessRequestIdSchema = z.string().uuid("Identificador de solicitud inválido.");
 
-const updateTempPasswordSchema = z.object({
-  tempPassword: z.string().min(1, "La contraseña temporal no puede estar vacía."),
-});
-
 const searchChildrenSchema = z.object({
-  query: z.string().trim().min(3, "Escribe al menos 3 caracteres."),
+  query: z.string().trim().min(5, "Escribe el nombre completo."),
+  birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
 });
 
 export type PasswordResetState = { error?: string; success?: boolean } | null;
 export type UpdatePasswordState = { error?: string } | null;
 export type SubmitAccessRequestState = { error?: string; success?: boolean } | null;
-export type AccessRequestActionState = { error?: string; success?: boolean } | null;
+export interface IssuedCredential {
+  email: string;
+  temporaryPassword: string;
+}
+
+export type AccessRequestActionState = {
+  error?: string;
+  success?: boolean;
+  credentials?: IssuedCredential[];
+} | null;
 export type SearchChildrenState = {
   children?: { id: string; full_name: string; birth_year: number | null }[];
   error?: string;
@@ -122,28 +128,27 @@ function parseChildrenIds(raw: string | undefined): string[] {
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed.filter((id): id is string => typeof id === "string");
+    if (Array.isArray(parsed)) {
+      return Array.from(
+        new Set(
+          parsed.filter(
+            (id): id is string => typeof id === "string" && z.string().uuid().safeParse(id).success,
+          ),
+        ),
+      ).slice(0, 10);
+    }
   } catch {
     return raw
       .split(",")
       .map((s) => s.trim())
-      .filter(Boolean);
+      .filter((id) => z.string().uuid().safeParse(id).success)
+      .slice(0, 10);
   }
   return [];
 }
 
-async function getTempPassword(): Promise<string> {
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("app_settings")
-    .select("value")
-    .eq("key", "access_temp_password")
-    .single();
-
-  if (error || !data) {
-    return "Morvedre2026!";
-  }
-  return data.value;
+function generateTemporaryPassword(): string {
+  return `Mc-${randomBytes(12).toString("base64url")}9aA`;
 }
 
 async function findAuthUserByEmail(email: string) {
@@ -168,7 +173,8 @@ async function requireCurrentAdminProfile(): Promise<{ id: string }> {
     throw new Error("No has iniciado sesión.");
   }
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient();
+  const { data: profile } = await admin
     .from("profiles")
     .select("id")
     .eq("auth_user_id", user.id)
@@ -194,17 +200,25 @@ async function requireCurrentAdminProfile(): Promise<{ id: string }> {
 async function rateLimitCheck(email: string) {
   const supabase = createAdminClient();
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count, error } = await supabase
-    .from("access_requests")
-    .select("id", { count: "exact", head: true })
-    .ilike("email", email)
-    .gte("created_at", oneDayAgo);
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const [{ count: emailCount, error: emailError }, { count: globalCount, error: globalError }] =
+    await Promise.all([
+      supabase
+        .from("access_requests")
+        .select("id", { count: "exact", head: true })
+        .ilike("email", email)
+        .gte("created_at", oneDayAgo),
+      supabase
+        .from("access_requests")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", oneHourAgo),
+    ]);
 
-  if (error) {
-    console.error("[rateLimitCheck] error:", error);
-    return false;
+  if (emailError || globalError) {
+    console.error("[rateLimitCheck] error:", emailError ?? globalError);
+    return true;
   }
-  return (count ?? 0) >= 3;
+  return (emailCount ?? 0) >= 3 || (globalCount ?? 0) >= 50;
 }
 
 async function findCandidateProfile(fullName: string, birthYear: number) {
@@ -293,7 +307,8 @@ export async function signIn(formData: FormData) {
     redirect(`/login/request?${params.toString()}` as Route);
   }
 
-  const { data: profile } = await supabase
+  const signInAdmin = createAdminClient();
+  const { data: profile } = await signInAdmin
     .from("profiles")
     .select("must_change_password")
     .eq("auth_user_id", authData.user.id)
@@ -373,7 +388,8 @@ export async function updatePassword(
     return { error: "No pudimos cambiar la contraseña. Inténtalo de nuevo." };
   }
 
-  const { error: profileError } = await supabase
+  const profileAdmin = createAdminClient();
+  const { error: profileError } = await profileAdmin
     .from("profiles")
     .update({ must_change_password: false })
     .eq("auth_user_id", user.id);
@@ -383,8 +399,7 @@ export async function updatePassword(
   }
 
   if (user.email) {
-    const admin = createAdminClient();
-    await admin
+    await profileAdmin
       .from("access_requests")
       .update({ status: "activated" })
       .ilike("email", user.email)
@@ -510,7 +525,7 @@ export async function submitAccessRequest(
 export async function getAccessRequests(status?: "pending" | "approved" | "activated") {
   try {
     await requireCurrentAdminProfile();
-  } catch (err) {
+  } catch {
     return [];
   }
 
@@ -563,7 +578,11 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
     return { error: "La solicitud no existe o ya ha sido gestionada." };
   }
 
-  const tempPassword = await getTempPassword();
+  if (request.role !== "player" && request.role !== "parent") {
+    return { error: "Los roles internos se asignan desde la gestión de personal." };
+  }
+
+  const tempPassword = generateTemporaryPassword();
   let authUserId: string | null = null;
   let createdAuthUser = false;
 
@@ -628,9 +647,7 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
           auth_user_id: authUserId,
           email_contact: request.email,
           must_change_password: true,
-          gender: (request.gender ?? undefined) as
-            | Database["public"]["Enums"]["gender"]
-            | undefined,
+          gender: request.gender ?? undefined,
         })
         .eq("id", request.candidate_profile_id);
 
@@ -646,9 +663,7 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
           auth_user_id: authUserId,
           full_name: request.full_name,
           birth_year: request.birth_year,
-          gender: (request.gender ?? undefined) as
-            | Database["public"]["Enums"]["gender"]
-            | undefined,
+          gender: request.gender ?? undefined,
           email_contact: request.email,
           must_change_password: true,
         })
@@ -665,7 +680,7 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
     const { error: roleError } = await adminUser.from("user_roles").upsert(
       {
         profile_id: profileId,
-        role: request.role as Database["public"]["Enums"]["user_role"],
+        role: request.role,
         scope_team_id: null,
       },
       { onConflict: "profile_id,role,scope_team_id" },
@@ -700,7 +715,10 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
       throw new Error("No se pudo actualizar el estado de la solicitud.");
     }
 
-    return { success: true };
+    return {
+      success: true,
+      credentials: [{ email: request.email, temporaryPassword: tempPassword }],
+    };
   } catch (err) {
     if (createdAuthUser && authUserId) {
       await adminUser.auth.admin.deleteUser(authUserId).catch((e) => {
@@ -732,6 +750,7 @@ export async function approveAccessRequestsBulk(
 
   let approved = 0;
   const errors: string[] = [];
+  const credentials: IssuedCredential[] = [];
 
   for (const id of ids) {
     const fd = new FormData();
@@ -739,6 +758,7 @@ export async function approveAccessRequestsBulk(
     const result = await approveAccessRequest(fd);
     if (result?.success) {
       approved++;
+      credentials.push(...(result.credentials ?? []));
     } else if (result?.error) {
       errors.push(result.error);
     }
@@ -748,7 +768,7 @@ export async function approveAccessRequestsBulk(
     return { error: errors[0] };
   }
 
-  return { success: true };
+  return { success: true, credentials };
 }
 
 export async function rejectAccessRequest(formData: FormData): Promise<AccessRequestActionState> {
@@ -763,8 +783,8 @@ export async function rejectAccessRequest(formData: FormData): Promise<AccessReq
     return { error: err instanceof Error ? err.message : "No tienes permisos." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("access_requests").delete().eq("id", parsed.data);
+  const admin = createAdminClient();
+  const { error } = await admin.from("access_requests").delete().eq("id", parsed.data);
 
   if (error) {
     console.error("[rejectAccessRequest] error:", error);
@@ -774,56 +794,22 @@ export async function rejectAccessRequest(formData: FormData): Promise<AccessReq
   return { success: true };
 }
 
-export async function updateTempPassword(
-  _prevState: AccessRequestActionState,
-  formData: FormData,
-): Promise<AccessRequestActionState> {
-  const parsed = updateTempPasswordSchema.safeParse({
-    tempPassword: formData.get("tempPassword"),
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Contraseña inválida." };
-  }
-
-  let adminProfile: { id: string };
-  try {
-    adminProfile = await requireCurrentAdminProfile();
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "No tienes permisos." };
-  }
-
-  const supabase = await createClient();
-  const { error } = await supabase
-    .from("app_settings")
-    .update({ value: parsed.data.tempPassword, updated_by: adminProfile.id })
-    .eq("key", "access_temp_password");
-
-  if (error) {
-    console.error("[updateTempPassword] error:", error);
-    return { error: "No pudimos actualizar la contraseña temporal." };
-  }
-
-  return { success: true };
-}
-
-export async function searchChildrenProfiles(query: string): Promise<SearchChildrenState> {
-  const parsed = searchChildrenSchema.safeParse({ query });
+export async function searchChildrenProfiles(input: unknown): Promise<SearchChildrenState> {
+  const parsed = searchChildrenSchema.safeParse(input);
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "Búsqueda inválida." };
   }
 
   const supabase = createAdminClient();
-  const search = normalizeFullName(parsed.data.query);
-
   const { data, error } = await supabase
     .from("profiles")
     .select("id, full_name, birth_year")
     .not("auth_user_id", "is", null)
     .eq("must_change_password", false)
-    .ilike("full_name", `%${search}%`)
+    .eq("birth_year", parsed.data.birthYear)
+    .ilike("full_name", parsed.data.query.replace(/\s+/g, " ").trim())
     .order("full_name")
-    .limit(10);
+    .limit(3);
 
   if (error) {
     console.error("[searchChildrenProfiles] error:", error);

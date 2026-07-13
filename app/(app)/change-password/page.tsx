@@ -7,6 +7,7 @@ import { AppPageHero } from "@/components/ui/app-page-hero";
 import { PageShell } from "@/components/ui/page-shell";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -27,7 +28,8 @@ export default async function ChangePasswordPage() {
     redirect("/login" as Route);
   }
 
-  const { data: profile } = await supabase
+  const admin = createAdminClient();
+  const { data: profile } = await admin
     .from("profiles")
     .select("must_change_password, full_name")
     .eq("auth_user_id", user.id)

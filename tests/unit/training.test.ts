@@ -118,12 +118,14 @@ describe("generateSessionsFromBlock", () => {
     const sessions = generateSessionsFromBlock(block);
     expect(sessions).toHaveLength(1);
     const s = sessions[0]!;
-    const startLocal = new Date(s.start_datetime);
-    const endLocal = new Date(s.end_datetime);
-    expect(startLocal.getHours()).toBe(16);
-    expect(startLocal.getMinutes()).toBe(30);
-    expect(endLocal.getHours()).toBe(18);
-    expect(endLocal.getMinutes()).toBe(0);
+    const localTime = new Intl.DateTimeFormat("es-ES", {
+      timeZone: "Europe/Madrid",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    expect(localTime.format(new Date(s.start_datetime))).toBe("16:30");
+    expect(localTime.format(new Date(s.end_datetime))).toBe("18:00");
+    expect(s.start_datetime).toBe("2026-09-07T14:30:00.000Z");
     expect(s.duration_minutes).toBe(90);
   });
 

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Tables } from "@/types/database";
 import {
   createPlayerSchema,
@@ -16,7 +17,7 @@ import {
 import { requireAdmin } from "./_helpers";
 import { rosterPlayer, unrosterPlayer } from "./teams";
 
-export type Player = Tables<"profiles", "Row">;
+export type Player = Tables<"profiles">;
 
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
@@ -46,7 +47,7 @@ export async function createPlayer(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("profiles")
     .insert({
@@ -108,7 +109,7 @@ export async function updatePlayer(
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("profiles")
     .update({

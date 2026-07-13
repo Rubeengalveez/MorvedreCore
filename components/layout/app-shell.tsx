@@ -4,9 +4,16 @@ import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
 
 export type AppShellProps = TopBarProps & {
   children: React.ReactNode;
+  showAttendance: boolean;
 };
 
-export function AppShell({ ownProfile, activeProfile, linkedProfiles, children }: AppShellProps) {
+export function AppShell({
+  ownProfile,
+  activeProfile,
+  linkedProfiles,
+  showAttendance,
+  children,
+}: AppShellProps) {
   return (
     <div className="app-stage bg-paper flex min-h-dvh flex-col">
       <TopBar
@@ -17,7 +24,7 @@ export function AppShell({ ownProfile, activeProfile, linkedProfiles, children }
       <main id="main-content" className="flex-1 pb-[calc(var(--bottom-nav-height)+0.5rem)]">
         {children}
       </main>
-      <BottomNav />
+      <BottomNav showAttendance={showAttendance} />
       <PwaInstallPrompt />
     </div>
   );

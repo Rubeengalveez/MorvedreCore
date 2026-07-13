@@ -46,62 +46,82 @@ function throwIfError(error: { message: string } | null, fallback: string): void
   }
 }
 
+async function loadAllRows<T>(
+  buildPage: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await buildPage(from, from + 999);
+    if (error) throw new Error(error.message);
+    rows.push(...(data ?? []));
+    if (!data || data.length < 1000) return rows;
+  }
+}
+
 async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<typeof createClient>>) {
   const supabase = client || (await createClient());
-  const [
-    { data: players, error: playersError },
-    { data: teams, error: teamsError },
-    { data: matches, error: matchesError },
-    { data: callups, error: callupsError },
-    { data: stats, error: statsError },
-    { data: sessions, error: sessionsError },
-    { data: attendance, error: attendanceError },
-    { data: rosters, error: rostersError },
-  ] = await Promise.all([
-    supabase.from("profiles").select("id, full_name, photo_url, cap_number, birth_year"),
-    supabase
-      .from("teams")
-      .select("id, label, category_code, color, season_id")
-      .eq("season_id", seasonId),
-    supabase
-      .from("matches")
-      .select("id, team_id, season_id, status, scheduled_at, final_score_us, final_score_them")
-      .eq("season_id", seasonId),
-    supabase
-      .from("match_callups")
-      .select("match_id, player_id, status, matches!match_callups_match_id_fkey(season_id)")
-      .eq("matches.season_id", seasonId),
-    supabase
-      .from("match_stats")
-      .select(
-        "match_id, player_id, goals, exclusions, mvp, matches!match_stats_match_id_fkey(season_id)",
-      )
-      .eq("matches.season_id", seasonId),
-    supabase
-      .from("training_sessions")
-      .select(
-        "id, team_id, cancelled, scheduled_at, teams!training_sessions_team_id_fkey(season_id)",
-      )
-      .eq("teams.season_id", seasonId),
-    supabase
-      .from("training_attendance")
-      .select(
-        "session_id, player_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id))",
+  const [players, teams, matches, callups, stats, sessions, attendance, rosters] =
+    await Promise.all([
+      loadAllRows((from, to) =>
+        supabase
+          .from("profiles")
+          .select("id, full_name, photo_url, cap_number, birth_year")
+          .range(from, to),
       ),
-    supabase
-      .from("team_rosters")
-      .select("player_id, team_id, teams!team_rosters_team_id_fkey(season_id)")
-      .is("left_at", null),
-  ]);
-
-  throwIfError(playersError, "No pudimos cargar los jugadores.");
-  throwIfError(teamsError, "No pudimos cargar los equipos.");
-  throwIfError(matchesError, "No pudimos cargar los partidos.");
-  throwIfError(callupsError, "No pudimos cargar las convocatorias.");
-  throwIfError(statsError, "No pudimos cargar las estadísticas.");
-  throwIfError(sessionsError, "No pudimos cargar los entrenamientos.");
-  throwIfError(attendanceError, "No pudimos cargar la asistencia.");
-  throwIfError(rostersError, "No pudimos cargar las plantillas.");
+      loadAllRows((from, to) =>
+        supabase
+          .from("teams")
+          .select("id, label, category_code, color, season_id")
+          .eq("season_id", seasonId)
+          .range(from, to),
+      ),
+      loadAllRows((from, to) =>
+        supabase
+          .from("matches")
+          .select("id, team_id, season_id, status, scheduled_at, final_score_us, final_score_them")
+          .eq("season_id", seasonId)
+          .range(from, to),
+      ),
+      loadAllRows((from, to) =>
+        supabase
+          .from("match_callups")
+          .select("match_id, player_id, status, matches!inner(season_id)")
+          .eq("matches.season_id", seasonId)
+          .range(from, to),
+      ),
+      loadAllRows((from, to) =>
+        supabase
+          .from("match_stats")
+          .select("match_id, player_id, goals, exclusions, mvp, matches!inner(season_id)")
+          .eq("matches.season_id", seasonId)
+          .range(from, to),
+      ),
+      loadAllRows((from, to) =>
+        supabase
+          .from("training_sessions")
+          .select("id, team_id, cancelled, scheduled_at, teams!inner(season_id)")
+          .eq("teams.season_id", seasonId)
+          .range(from, to),
+      ),
+      loadAllRows((from, to) =>
+        supabase
+          .from("training_attendance")
+          .select("session_id, player_id, present, training_sessions!inner(teams!inner(season_id))")
+          .eq("training_sessions.teams.season_id", seasonId)
+          .range(from, to),
+      ),
+      loadAllRows((from, to) =>
+        supabase
+          .from("team_rosters")
+          .select("player_id, team_id, teams!inner(season_id)")
+          .eq("teams.season_id", seasonId)
+          .is("left_at", null)
+          .range(from, to),
+      ),
+    ]);
 
   return {
     players: (players ?? []) as unknown as PlayerRow[],
@@ -205,6 +225,89 @@ function buildSnapshotsForPlayer(
   ];
 }
 
+type SeasonData = Awaited<ReturnType<typeof loadSeasonData>>;
+
+function buildPlayerSnapshots(
+  playerId: string,
+  seasonId: string,
+  data: SeasonData,
+): ComputedSnapshot[] {
+  const player = data.players.find((candidate) => candidate.id === playerId);
+  if (!player) return [];
+
+  const primaryTeamEntry = data.rosters
+    .filter((roster) => roster.player_id === playerId)
+    .map((roster) => data.teams.find((team) => team.id === roster.team_id))
+    .find((team): team is TeamRow => Boolean(team));
+  const primaryTeam = primaryTeamEntry
+    ? {
+        id: primaryTeamEntry.id,
+        label: primaryTeamEntry.label,
+        color: primaryTeamEntry.color,
+        category_code: primaryTeamEntry.category_code,
+      }
+    : null;
+
+  const matchLites: MatchLite[] = data.matches.map((match) => ({
+    id: match.id,
+    season_id: match.season_id,
+    team_id: match.team_id,
+    status: match.status,
+  }));
+  const callupLites: CallupLite[] = data.callups.map((callup) => ({
+    match_id: callup.match_id,
+    player_id: callup.player_id,
+    status: callup.status as CallupLite["status"],
+  }));
+  const statLites: MatchStatLite[] = data.stats.map((stat) => ({
+    match_id: stat.match_id,
+    player_id: stat.player_id,
+    goals: stat.goals,
+    exclusions: stat.exclusions,
+    mvp: stat.mvp,
+  }));
+  const sessionLites: TrainingSessionLite[] = data.sessions.map((session) => ({
+    id: session.id,
+    team_id: session.team_id,
+    cancelled: session.cancelled,
+    scheduled_at: session.scheduled_at,
+  }));
+  const attendanceLites: TrainingAttendanceLite[] = data.attendance
+    .filter((attendance) => attendance.player_id === playerId)
+    .map((attendance) => ({
+      session_id: attendance.session_id,
+      player_id: attendance.player_id,
+      present: attendance.present,
+    }));
+
+  return buildSnapshotsForPlayer(
+    seasonId,
+    player,
+    primaryTeam,
+    matchLites,
+    callupLites,
+    statLites,
+    sessionLites,
+    attendanceLites,
+  );
+}
+
+async function saveSnapshots(
+  admin: ReturnType<typeof createAdminClient>,
+  snapshots: ComputedSnapshot[],
+): Promise<void> {
+  for (let index = 0; index < snapshots.length; index += 250) {
+    const { error } = await admin.from("ranking_snapshots").upsert(
+      snapshots.slice(index, index + 250).map((snapshot) => ({
+        ...snapshot,
+        updated_at: new Date().toISOString(),
+      })),
+      { onConflict: "season_id,scope,scope_key,player_id" },
+    );
+    throwIfError(error, "No pudimos actualizar los rankings.");
+  }
+}
+
 export async function recomputePlayerRanking(playerId: string, seasonId: string): Promise<void> {
   const parsed = recomputeRankingSchema.safeParse({ season_id: seasonId, player_id: playerId });
   if (!parsed.success) {
@@ -226,11 +329,14 @@ export async function recomputeSeasonRanking(seasonId: string): Promise<void> {
   }
 
   await requireAdmin();
-  const { players } = await loadSeasonData(seasonId);
-
-  for (const player of players) {
-    await recomputeSnapshotForPlayer(player.id, seasonId);
-  }
+  const admin = createAdminClient();
+  const data = await loadSeasonData(seasonId, admin);
+  const snapshots = data.players.flatMap((player) =>
+    buildPlayerSnapshots(player.id, seasonId, data),
+  );
+  const { error } = await admin.from("ranking_snapshots").delete().eq("season_id", seasonId);
+  throwIfError(error, "No pudimos reiniciar los rankings.");
+  await saveSnapshots(admin, snapshots);
 
   revalidatePath("/rankings");
   revalidatePath("/profile");
@@ -296,71 +402,9 @@ export async function recomputeSnapshotForPlayer(
   seasonId: string,
 ): Promise<void> {
   const admin = createAdminClient();
-  const { players, teams, matches, callups, stats, sessions, attendance, rosters } =
-    await loadSeasonData(seasonId, admin);
-
-  const player = players.find((p) => p.id === playerId);
-  if (!player) {
-    return;
-  }
-
-  const seasonTeams = teams;
-  const playerRosterEntries = rosters.filter((r) => r.player_id === playerId);
-  const primaryTeamEntry =
-    playerRosterEntries
-      .map((r) => seasonTeams.find((t) => t.id === r.team_id))
-      .find((t): t is TeamRow => Boolean(t)) ?? null;
-  const primaryTeam = primaryTeamEntry
-    ? {
-        id: primaryTeamEntry.id,
-        label: primaryTeamEntry.label,
-        color: primaryTeamEntry.color,
-        category_code: primaryTeamEntry.category_code,
-      }
-    : null;
-
-  const matchLites: MatchLite[] = matches.map((m) => ({
-    id: m.id,
-    season_id: m.season_id,
-    team_id: m.team_id,
-    status: m.status,
-  }));
-  const callupLites: CallupLite[] = callups.map((c) => ({
-    match_id: c.match_id,
-    player_id: c.player_id,
-    status: c.status as CallupLite["status"],
-  }));
-  const statLites: MatchStatLite[] = stats.map((s) => ({
-    match_id: s.match_id,
-    player_id: s.player_id,
-    goals: s.goals,
-    exclusions: s.exclusions,
-    mvp: s.mvp,
-  }));
-  const sessionLites: TrainingSessionLite[] = sessions.map((s) => ({
-    id: s.id,
-    team_id: s.team_id,
-    cancelled: s.cancelled,
-    scheduled_at: s.scheduled_at,
-  }));
-  const attendanceLites: TrainingAttendanceLite[] = attendance
-    .filter((a) => a.player_id === playerId)
-    .map((a) => ({
-      session_id: a.session_id,
-      player_id: a.player_id,
-      present: a.present,
-    }));
-
-  const snapshots = buildSnapshotsForPlayer(
-    seasonId,
-    player,
-    primaryTeam,
-    matchLites,
-    callupLites,
-    statLites,
-    sessionLites,
-    attendanceLites,
-  );
+  const data = await loadSeasonData(seasonId, admin);
+  const snapshots = buildPlayerSnapshots(playerId, seasonId, data);
+  if (snapshots.length === 0) return;
 
   await admin
     .from("ranking_snapshots")
@@ -368,28 +412,7 @@ export async function recomputeSnapshotForPlayer(
     .eq("player_id", playerId)
     .eq("season_id", seasonId);
 
-  if (snapshots.length > 0) {
-    const { error: upsertError } = await admin.from("ranking_snapshots").upsert(
-      snapshots.map((s) => ({
-        season_id: s.season_id,
-        scope: s.scope,
-        scope_key: s.scope_key,
-        player_id: s.player_id,
-        matches_played: s.matches_played,
-        matches_called: s.matches_called,
-        goals: s.goals,
-        exclusions: s.exclusions,
-        mvp_count: s.mvp_count,
-        trainings_attended: s.trainings_attended,
-        trainings_total: s.trainings_total,
-        attendance_pct: s.attendance_pct,
-        attendance_streak: s.attendance_streak,
-        updated_at: new Date().toISOString(),
-      })),
-      { onConflict: "season_id,scope,scope_key,player_id" },
-    );
-    throwIfError(upsertError, "No pudimos actualizar los rankings.");
-  }
+  await saveSnapshots(admin, snapshots);
 }
 
 export async function bulkUnvalidateMatchStats(matchIds: string[], reason: string): Promise<void> {

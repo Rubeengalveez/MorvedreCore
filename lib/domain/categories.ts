@@ -1,11 +1,5 @@
 export type CategoryCode =
-  | "benjamin"
-  | "alevin"
-  | "infantil"
-  | "cadete"
-  | "juvenil"
-  | "absoluto"
-  | "escuela";
+  "benjamin" | "alevin" | "infantil" | "cadete" | "juvenil" | "absoluto" | "escuela";
 
 export type TeamGender = "male" | "female" | "mixed";
 

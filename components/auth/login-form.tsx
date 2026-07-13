@@ -58,9 +58,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
           startTransition(async () => {
             try {
               await signIn(formData);
-            } catch {
-              // El server action redirige o lanza; useTransition termina.
-            }
+            } catch {}
           });
         }}
         className="flex w-full flex-col gap-4"

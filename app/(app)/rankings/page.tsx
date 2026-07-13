@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { Trofeo } from "@/components/brand/pictograms";
@@ -142,6 +143,14 @@ export default async function RankingsPage({
         title="Rankings"
         description="Goles, asistencia, MVP y rachas de la temporada."
         icon={<Trofeo className="h-7 w-7" accent="currentColor" />}
+        action={
+          <Link
+            href="/legends"
+            className="focus-visible:ring-ball-gold inline-flex min-h-11 items-center rounded-lg border border-white/20 bg-white/10 px-4 text-sm font-extrabold text-white transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Ver leyendas y rivalidades
+          </Link>
+        }
       />
 
       <RankingsContent

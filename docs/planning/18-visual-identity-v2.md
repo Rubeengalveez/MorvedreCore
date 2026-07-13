@@ -392,7 +392,7 @@ Combinación de **eyebrow label** (eyebrow 0.12em, uppercase) + **número de ín
 
 ```ts
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-display font-semibold transition-all " +
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap font-display font-semibold transition-[color,background-color,border-color,box-shadow,transform] " +
     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-paper " +
     "disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] " +
     "rounded-[var(--r-sm)]",
@@ -451,7 +451,7 @@ Añadir prop `teamColor?: string`. Si se pasa, el fondo del avatar con iniciales
 
 ```tsx
 export function Avatar({ src, name, size = 40, teamColor, className, style }: AvatarProps) {
-  if (src) return /* image */;
+  if (src) return; /* image */
   return (
     <span
       className="inline-flex shrink-0 items-center justify-center rounded-full font-display font-extrabold text-paper"

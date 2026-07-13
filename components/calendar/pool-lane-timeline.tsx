@@ -26,7 +26,7 @@ export function PoolLaneTimeline({
   const dateLabel = formatLongDate(`${selectedIso}T12:00:00`);
 
   return (
-    <div className="flex h-full flex-col transition-all duration-300 ease-out">
+    <div className="flex h-full flex-col transition-[height,opacity,transform] duration-300 ease-out">
       <div className="border-ink-200 mb-3 flex shrink-0 items-center justify-between border-b pb-2">
         <h3 className="font-display text-pool-deep text-sm font-extrabold tracking-wider uppercase">
           {dateLabel}

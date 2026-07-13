@@ -116,6 +116,21 @@ describe("trainConsecEvents", () => {
     expect(evs[0]?.pass).toBe(true);
     expect(evs[1]?.pass).toBe(false);
   });
+
+  it("ignores sessions after the requested cutoff", () => {
+    const evs = trainConsecEvents(
+      [
+        { id: "past", scheduled_at: at(4), cancelled: false },
+        { id: "future", scheduled_at: at(2), cancelled: false },
+      ],
+      [
+        { session_id: "past", present: true },
+        { session_id: "future", present: false },
+      ],
+      at(3),
+    );
+    expect(evs).toEqual([{ occurred_at: at(4), pass: true }]);
+  });
 });
 
 describe("mvpConsecEvents", () => {

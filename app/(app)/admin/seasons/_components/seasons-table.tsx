@@ -9,7 +9,7 @@ import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { Calendario } from "@/components/brand/pictograms";
 import { Sheet, SheetBody, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
-import { archiveSeason, setCurrentSeason, type Season } from "@/server/actions/admin";
+import { setCurrentSeason, type Season } from "@/server/actions/admin";
 
 import { SeasonFormSheet } from "./season-form-sheet";
 
@@ -62,15 +62,17 @@ function RowActions({ season }: { season: Season }) {
       <SheetContent size="sm">
         <SheetBody>
           <div className="flex flex-col gap-2 pb-4">
-            <SeasonFormSheet
-              mode={{ kind: "edit", season }}
-              trigger={
-                <Button variant="secondary" size="lg" className="w-full justify-start">
-                  Editar
-                </Button>
-              }
-            />
-            {!isCurrent ? (
+            {!isArchived ? (
+              <SeasonFormSheet
+                mode={{ kind: "edit", season }}
+                trigger={
+                  <Button variant="secondary" size="lg" className="w-full justify-start">
+                    Editar
+                  </Button>
+                }
+              />
+            ) : null}
+            {!isCurrent && !isArchived ? (
               <Button
                 variant="secondary"
                 size="lg"
@@ -84,28 +86,6 @@ function RowActions({ season }: { season: Season }) {
               >
                 {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
                 Marcar como actual
-              </Button>
-            ) : null}
-            {!isArchived ? (
-              <Button
-                variant="danger"
-                size="lg"
-                className="w-full justify-start"
-                disabled={pending}
-                onClick={() => {
-                  if (
-                    !window.confirm(
-                      `¿Archivar la temporada ${season.label}? Esta acción no se puede deshacer.`,
-                    )
-                  ) {
-                    return;
-                  }
-                  startTransition(async () => {
-                    await archiveSeason(season.id);
-                  });
-                }}
-              >
-                Archivar
               </Button>
             ) : null}
           </div>

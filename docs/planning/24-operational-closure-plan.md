@@ -6,15 +6,15 @@
 
 ## Estado por pendiente
 
-| Pendiente | Estado actual | Criterio de cerrado |
-| --- | --- | --- |
-| Notificaciones push reales | No implementado. Existe service worker base e in-app notifications. | Suscripcion push por perfil, guardado seguro en DB, envio desde eventos clave, permiso UI, prueba en movil/desktop. |
-| Envio automatico del cierre de tesoreria por email | Parcial. Existe Resend para solicitudes de acceso y export Excel de cierre. | Boton/accion para enviar cierre, adjuntar Excel, marcar `sent_at/status`, y prueba real con Resend. |
-| Recordatorio mensual de pagos mediante cron | No implementado. | Cron real que detecta lineas pendientes y envia email/notificacion a familias antes del cierre mensual. |
-| Exportacion de pedidos de tienda agrupados por producto | No implementado. | Ruta admin `.xlsx` agrupada por producto/talla/personalizacion, enlazada desde `/admin/shop`. |
-| Cron real para caducidad de noticias | Parcial. Existe `archive_expired_news()`, pero no schedule real. | Migracion con schedule real o endpoint cron protegido; validacion remota. |
-| Proteccion contra contrasenas filtradas en Supabase | Bloqueado por plan. La documentacion oficial indica que requiere Pro o superior. | Activado si se sube a Pro, o riesgo aceptado documentado si se mantiene coste 0. |
-| Pruebas manuales completas con distintos roles y datos reales | No cerradas como checklist formal. | Checklist por rol completado: admin, coach, delegate, player, parent, directiva/tesoreria/tienda. |
+| Pendiente                                                     | Estado actual                                                                    | Criterio de cerrado                                                                                                 |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Notificaciones push reales                                    | No implementado. Existe service worker base e in-app notifications.              | Suscripcion push por perfil, guardado seguro en DB, envio desde eventos clave, permiso UI, prueba en movil/desktop. |
+| Envio automatico del cierre de tesoreria por email            | Parcial. Existe Resend para solicitudes de acceso y export Excel de cierre.      | Boton/accion para enviar cierre, adjuntar Excel, marcar `sent_at/status`, y prueba real con Resend.                 |
+| Recordatorio mensual de pagos mediante cron                   | No implementado.                                                                 | Cron real que detecta lineas pendientes y envia email/notificacion a familias antes del cierre mensual.             |
+| Exportacion de pedidos de tienda agrupados por producto       | No implementado.                                                                 | Ruta admin `.xlsx` agrupada por producto/talla/personalizacion, enlazada desde `/admin/shop`.                       |
+| Cron real para caducidad de noticias                          | Parcial. Existe `archive_expired_news()`, pero no schedule real.                 | Migracion con schedule real o endpoint cron protegido; validacion remota.                                           |
+| Proteccion contra contrasenas filtradas en Supabase           | Bloqueado por plan. La documentacion oficial indica que requiere Pro o superior. | Activado si se sube a Pro, o riesgo aceptado documentado si se mantiene coste 0.                                    |
+| Pruebas manuales completas con distintos roles y datos reales | No cerradas como checklist formal.                                               | Checklist por rol completado: admin, coach, delegate, player, parent, directiva/tesoreria/tienda.                   |
 
 ## Alcance de la Fase 7.5
 

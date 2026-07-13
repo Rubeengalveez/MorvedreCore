@@ -12,10 +12,12 @@ import {
   idSchema,
   isoDate,
   linkSchema,
+  markAttendanceSchema,
   parentRelationEnum,
   recomputeRankingSchema,
   roleAssignmentSchema,
   staffRoleEnum,
+  staffAttendancePermissionSchema,
   staffSchema,
   teamGenderEnum,
   teamTypeEnum,
@@ -267,6 +269,17 @@ describe("staffSchema", () => {
     expect(staffSchema.safeParse(validStaff).success).toBe(true);
   });
 
+  it("defaults attendance access to disabled", () => {
+    const result = staffSchema.parse(validStaff);
+    expect(result.can_manage_attendance).toBe(false);
+  });
+
+  it("accepts explicit attendance access", () => {
+    expect(staffSchema.safeParse({ ...validStaff, can_manage_attendance: true }).success).toBe(
+      true,
+    );
+  });
+
   it("rejects an invalid role", () => {
     expect(staffSchema.safeParse({ ...validStaff, role: "coach" }).success).toBe(false);
   });
@@ -274,6 +287,24 @@ describe("staffSchema", () => {
   it("rejects non-UUID ids", () => {
     expect(staffSchema.safeParse({ ...validStaff, team_id: "x" }).success).toBe(false);
     expect(staffSchema.safeParse({ ...validStaff, profile_id: "x" }).success).toBe(false);
+  });
+});
+
+describe("staffAttendancePermissionSchema", () => {
+  const validPermission = {
+    profile_id: "550e8400-e29b-41d4-a716-446655440001",
+    enabled: true,
+  };
+
+  it("accepts attendance access for a coach", () => {
+    expect(staffAttendancePermissionSchema.safeParse(validPermission).success).toBe(true);
+  });
+
+  it("rejects an invalid profile", () => {
+    expect(
+      staffAttendancePermissionSchema.safeParse({ ...validPermission, profile_id: "invalid" })
+        .success,
+    ).toBe(false);
   });
 });
 
@@ -289,6 +320,31 @@ describe("unrosterSchema", () => {
 
   it("rejects non-UUID values", () => {
     expect(unrosterSchema.safeParse({ team_id: "x", player_id: "y" }).success).toBe(false);
+  });
+});
+
+describe("markAttendanceSchema", () => {
+  const sessionId = "550e8400-e29b-41d4-a716-446655440000";
+  const playerId = "550e8400-e29b-41d4-a716-446655440001";
+
+  it("accepts a complete valid attendance entry", () => {
+    expect(
+      markAttendanceSchema.safeParse({
+        session_id: sessionId,
+        entries: [{ player_id: playerId, present: true, reason: null }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects duplicate players", () => {
+    const result = markAttendanceSchema.safeParse({
+      session_id: sessionId,
+      entries: [
+        { player_id: playerId, present: true },
+        { player_id: playerId, present: false },
+      ],
+    });
+    expect(result.success).toBe(false);
   });
 });
 

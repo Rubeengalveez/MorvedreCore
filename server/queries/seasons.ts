@@ -1,20 +1,23 @@
 import { cache } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database";
+import type { Database, Tables } from "@/types/database";
 
-export type Season = Tables<"seasons", "Row">;
+export type Season = Tables<"seasons">;
 
-export const getCurrentSeason = cache(async (): Promise<Season | null> => {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("seasons")
-    .select("*")
-    .eq("is_current", true)
-    .maybeSingle();
+export const getCurrentSeason = cache(
+  async (client?: SupabaseClient<Database>): Promise<Season | null> => {
+    const supabase = client ?? (await createClient());
+    const { data, error } = await supabase
+      .from("seasons")
+      .select("*")
+      .eq("is_current", true)
+      .maybeSingle();
 
-  if (error) {
-    throw new Error("No pudimos cargar la temporada actual.");
-  }
+    if (error) {
+      throw new Error("No pudimos cargar la temporada actual.");
+    }
 
-  return data;
-});
+    return data;
+  },
+);

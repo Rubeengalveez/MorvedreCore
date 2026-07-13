@@ -93,6 +93,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 <p className="text-ink-500 mt-1 text-sm">
                   {item.size ? `Talla ${item.size}` : "Talla única"}
                 </p>
+                {item.personalization ? (
+                  <p className="text-pool-blue mt-1 text-sm font-extrabold">
+                    Personalización: {item.personalization}
+                  </p>
+                ) : null}
               </div>
               <p className="text-pool-deep shrink-0 font-mono text-base font-extrabold tabular-nums">
                 {formatCents(item.subtotal_cents, order.currency)}

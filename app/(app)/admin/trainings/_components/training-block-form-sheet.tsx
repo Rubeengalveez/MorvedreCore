@@ -65,9 +65,7 @@ const formSchema = z.object({
 type FormValues = z.infer<typeof formSchema>;
 
 type ActionState =
-  | { ok: true; blockId: string; generated: number }
-  | { ok?: false; error: string }
-  | null;
+  { ok: true; blockId: string; generated: number } | { ok?: false; error: string } | null;
 
 type TeamOption = Team & { season_label: string };
 
@@ -85,11 +83,7 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       end_time: String(formData.get("end_time") ?? ""),
       location: String(formData.get("location") ?? "") || undefined,
       kind: String(formData.get("kind") ?? "water") as
-        | "water"
-        | "dry"
-        | "physical"
-        | "technical"
-        | "mixed",
+        "water" | "dry" | "physical" | "technical" | "mixed",
     });
     const generated = await generateSessionsFromBlockAction(block.id);
     return { ok: true, blockId: block.id, generated: generated.created };

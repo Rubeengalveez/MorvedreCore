@@ -1,10 +1,7 @@
 export type TreasuryConceptKind = "fee" | "material" | "tournament" | "adjustment" | "discount";
 export type TreasuryPeriodicity = "monthly" | "seasonal" | "one_off";
 export type TreasuryAppliesTo =
-  | "all_players"
-  | "all_members"
-  | "specific_role"
-  | "specific_profile";
+  "all_players" | "all_members" | "specific_role" | "specific_profile";
 export type TreasuryClosureStatus = "draft" | "sent" | "archived";
 export type TreasuryPaymentMethod = "bank_transfer" | "bizum" | "cash" | "other";
 

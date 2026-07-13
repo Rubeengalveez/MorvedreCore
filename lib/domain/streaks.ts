@@ -1,9 +1,5 @@
 export type StreakType =
-  | "goals_consec"
-  | "excl_consec"
-  | "train_consec"
-  | "mvp_consec"
-  | "wins_consec";
+  "goals_consec" | "excl_consec" | "train_consec" | "mvp_consec" | "wins_consec";
 
 export type StreakSubjectType = "player" | "team";
 
@@ -129,11 +125,12 @@ export function exclConsecEvents(
 export function trainConsecEvents(
   sessions: Array<{ id: string; scheduled_at: string; cancelled: boolean }>,
   attendance: Array<{ session_id: string; present: boolean }>,
+  throughIso?: string,
 ): StreakEvent[] {
   const map = new Map<string, boolean>();
   for (const a of attendance) map.set(a.session_id, a.present);
   return sessions
-    .filter((s) => !s.cancelled)
+    .filter((session) => !session.cancelled && (!throughIso || session.scheduled_at <= throughIso))
     .slice()
     .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
     .map((s) => ({ occurred_at: s.scheduled_at, pass: map.get(s.id) === true }));

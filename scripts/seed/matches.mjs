@@ -1,15 +1,23 @@
-import { admin, loadBatch, mergeBatch, rand, randInt, pad2, resetRng } from "./base.mjs";
+import { admin, loadBatch, mergeBatch, rand, randInt, resetRng } from "./base.mjs";
 import { randomUUID } from "node:crypto";
 
-const COMPETITION_TYPES = ["league", "cup", "tournament", "friendly"];
-
 const OPPONENTS = [
-  "CN Elche", "CN Valencia", "CN Godella", "CN Petrer", "CE Mediterrani",
-  "CW Castellon", "Askartza LE", "CN Sabadell Sur", "CN Terrassa", "CN Barcelona",
-  "CN Sant Andreu", "CN Rubí", "CE Arenys de Munt", "CN Montjuïc", "CN Sallent",
+  "CN Elche",
+  "CN Valencia",
+  "CN Godella",
+  "CN Petrer",
+  "CE Mediterrani",
+  "CW Castellon",
+  "Askartza LE",
+  "CN Sabadell Sur",
+  "CN Terrassa",
+  "CN Barcelona",
+  "CN Sant Andreu",
+  "CN Rubí",
+  "CE Arenys de Munt",
+  "CN Montjuïc",
+  "CN Sallent",
 ];
-
-const CALLUP_STATUSES = ["called", "confirmed", "declined", "withdrawn", "no_show"];
 
 async function main() {
   resetRng();
@@ -39,7 +47,7 @@ async function main() {
   const matchIds = [];
   const now = new Date();
   const seasonStart = new Date("2025-09-15T00:00:00Z");
-  const seasonEnd = new Date("2026-06-15T00:00:00Z");
+  const seasonEnd = new Date("2026-05-31T00:00:00Z");
 
   const weekendDates = [];
   for (let d = new Date(seasonStart); d <= seasonEnd; d.setUTCDate(d.getUTCDate() + 1)) {
@@ -52,7 +60,7 @@ async function main() {
     if (players.length < 8) continue;
     const coachId = coachIdByTeamLabel.get(label) ?? null;
 
-    const selectedWeekends = pickEvenlySpaced(weekendDates, 14);
+    const selectedWeekends = pickEvenlySpaced(weekendDates, 12);
     for (let i = 0; i < selectedWeekends.length; i++) {
       const sat = selectedWeekends[i];
       const opp = OPPONENTS[i % OPPONENTS.length];
@@ -62,9 +70,17 @@ async function main() {
       date.setUTCHours(hour, 0, 0, 0);
       const isPast = date < now;
       await createMatch({
-        seasonId, teamId, opponent: opp, scheduledAt: date,
-        competitionType: "league", isHome, isPast,
-        players, coachId, teamLabel: label, matchIds,
+        seasonId,
+        teamId,
+        opponent: opp,
+        scheduledAt: date,
+        competitionType: "league",
+        isHome,
+        isPast,
+        players,
+        coachId,
+        teamLabel: label,
+        matchIds,
       });
     }
 
@@ -78,19 +94,51 @@ async function main() {
       date.setUTCHours(hour, 30, 0, 0);
       const isPast = date < now;
       await createMatch({
-        seasonId, teamId, opponent: opp, scheduledAt: date,
-        competitionType: "cup", isHome, isPast,
-        players, coachId, teamLabel: label, matchIds,
+        seasonId,
+        teamId,
+        opponent: opp,
+        scheduledAt: date,
+        competitionType: "cup",
+        isHome,
+        isPast,
+        players,
+        coachId,
+        teamLabel: label,
+        matchIds,
       });
     }
 
     const fri = new Date("2025-09-06T00:00:00Z");
     if (fri < now) {
       await createMatch({
-        seasonId, teamId, opponent: OPPONENTS[(label.length * 3) % OPPONENTS.length],
+        seasonId,
+        teamId,
+        opponent: OPPONENTS[(label.length * 3) % OPPONENTS.length],
         scheduledAt: new Date(Date.UTC(2025, 8, 6, 11, 0, 0)),
-        competitionType: "friendly", isHome: true, isPast: true,
-        players, coachId, teamLabel: label, matchIds,
+        competitionType: "friendly",
+        isHome: true,
+        isPast: true,
+        players,
+        coachId,
+        teamLabel: label,
+        matchIds,
+      });
+    }
+
+    for (let i = 0; i < 2; i++) {
+      const date = new Date(Date.UTC(2026, 6, 18 + i * 7, matchHourForTeam(label), 0, 0));
+      await createMatch({
+        seasonId,
+        teamId,
+        opponent: OPPONENTS[(label.length + i * 4) % OPPONENTS.length],
+        scheduledAt: date,
+        competitionType: i === 0 ? "tournament" : "friendly",
+        isHome: i === 1,
+        isPast: false,
+        players,
+        coachId,
+        teamLabel: label,
+        matchIds,
       });
     }
   }
@@ -108,7 +156,7 @@ function pickEvenlySpaced(arr, n) {
   return out;
 }
 
-function matchHourForTeam(label, sat) {
+function matchHourForTeam(label, _sat) {
   if (label === "Benjamín") return 9;
   if (label === "Alevín") return 10;
   if (label === "Infantil") return 12;
@@ -119,22 +167,43 @@ function matchHourForTeam(label, sat) {
 }
 
 async function createMatch(opts) {
-  const { seasonId, teamId, opponent, scheduledAt, competitionType, isHome, isPast, players, coachId, teamLabel, matchIds } = opts;
+  const {
+    seasonId,
+    teamId,
+    opponent,
+    scheduledAt,
+    competitionType,
+    isHome,
+    isPast,
+    players,
+    coachId,
+    teamLabel,
+    matchIds,
+  } = opts;
   const matchId = randomUUID();
-  let ourScore = null, theirScore = null;
+  let ourScore = null,
+    theirScore = null;
   if (isPast) {
     ourScore = randInt(3, 14);
     theirScore = randInt(2, 12);
   }
-  const { error: mErr } = await admin.from("matches").upsert({
-    id: matchId, season_id: seasonId, team_id: teamId,
-    opponent, competition_type: competitionType, is_home: isHome,
-    location: isHome ? "Piscina Municipal Puerto Sagunto" : `Piscina ${opponent}`,
-    pool_name: isHome ? "Piscina 25m" : null,
-    scheduled_at: scheduledAt.toISOString().slice(0, 19) + "Z",
-    status: isPast ? "played" : "scheduled",
-    final_score_us: ourScore, final_score_them: theirScore,
-  }, { onConflict: "id" });
+  const { error: mErr } = await admin.from("matches").upsert(
+    {
+      id: matchId,
+      season_id: seasonId,
+      team_id: teamId,
+      opponent,
+      competition_type: competitionType,
+      is_home: isHome,
+      location: isHome ? "Piscina Municipal Puerto Sagunto" : `Piscina ${opponent}`,
+      pool_name: isHome ? "Piscina 25m" : null,
+      scheduled_at: scheduledAt.toISOString().slice(0, 19) + "Z",
+      status: isPast ? "played" : "scheduled",
+      final_score_us: ourScore,
+      final_score_them: theirScore,
+    },
+    { onConflict: "id" },
+  );
   if (mErr) {
     console.error(`  ! Match ${teamLabel} vs ${opponent}: ${mErr.message}`);
     return;
@@ -144,40 +213,59 @@ async function createMatch(opts) {
   const numCallups = Math.min(13, players.length);
   const shuffled = [...players].sort(() => rand() - 0.5).slice(0, numCallups);
   const callups = shuffled.map((p, idx) => {
-    let status, confirmedAt = null;
+    let status,
+      confirmedAt = null;
     if (isPast) {
       status = rand() < 0.95 ? "confirmed" : "no_show";
       confirmedAt = scheduledAt.toISOString();
     } else {
       const r = rand();
-      if (r < 0.5) { status = "confirmed"; confirmedAt = new Date(Date.now() - 3600000).toISOString(); }
-      else if (r < 0.7) status = "declined";
+      if (r < 0.5) {
+        status = "confirmed";
+        confirmedAt = new Date(Date.now() - 3600000).toISOString();
+      } else if (r < 0.7) status = "declined";
       else status = "called";
     }
     return {
-      match_id: matchId, player_id: p.id, cap_number: idx + 1,
-      status, confirmed_at: confirmedAt, source_team_id: null,
+      match_id: matchId,
+      player_id: p.id,
+      cap_number: idx + 1,
+      status,
+      confirmed_at: confirmedAt,
+      source_team_id: null,
     };
   });
-  const { error: cErr } = await admin.from("match_callups").upsert(callups, { onConflict: "match_id,player_id" });
+  const { error: cErr } = await admin
+    .from("match_callups")
+    .upsert(callups, { onConflict: "match_id,player_id" });
   if (cErr) console.error(`  ! Callups ${matchId}: ${cErr.message}`);
 
   if (isPast) {
     let goalsAssigned = 0;
-    const stats = shuffled.map((p) => {
-      let goals = 0;
-      if (rand() < 0.4 && goalsAssigned < ourScore) {
-        goals = Math.min(randInt(1, 3), ourScore - goalsAssigned);
-        goalsAssigned += goals;
-      }
-      const exclusions = rand() < 0.3 ? randInt(1, 2) : 0;
-      return {
-        match_id: matchId, player_id: p.id,
-        goals, exclusions, mvp: false,
-        entered_by: coachId, entered_at: scheduledAt.toISOString(),
-        validated_by: coachId, validated_at: scheduledAt.toISOString(),
-      };
-    });
+    const participatingIds = new Set(
+      callups.filter((callup) => callup.status === "confirmed").map((callup) => callup.player_id),
+    );
+    const stats = shuffled
+      .filter((player) => participatingIds.has(player.id))
+      .map((p) => {
+        let goals = 0;
+        if (rand() < 0.4 && goalsAssigned < ourScore) {
+          goals = Math.min(randInt(1, 3), ourScore - goalsAssigned);
+          goalsAssigned += goals;
+        }
+        const exclusions = rand() < 0.3 ? randInt(1, 2) : 0;
+        return {
+          match_id: matchId,
+          player_id: p.id,
+          goals,
+          exclusions,
+          mvp: false,
+          entered_by: coachId,
+          entered_at: scheduledAt.toISOString(),
+          validated_by: coachId,
+          validated_at: scheduledAt.toISOString(),
+        };
+      });
     if (goalsAssigned < ourScore) {
       const remain = ourScore - goalsAssigned;
       const last = stats[0];
@@ -188,7 +276,9 @@ async function createMatch(opts) {
       if (sorted[0].goals > 0) sorted[0].mvp = true;
       else stats[randInt(0, stats.length - 1)].mvp = true;
     }
-    const { error: sErr } = await admin.from("match_stats").upsert(stats, { onConflict: "match_id,player_id" });
+    const { error: sErr } = await admin
+      .from("match_stats")
+      .upsert(stats, { onConflict: "match_id,player_id" });
     if (sErr) console.error(`  ! Stats ${matchId}: ${sErr.message}`);
   }
 }

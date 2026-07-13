@@ -14,14 +14,12 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { CoachAttendanceCard } from "@/components/dashboard/coach-attendance-card";
 import { PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
 import { formatRelativeUpcoming } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getDashboardAudience,
-  getDashboardCoachTask,
   getUpcomingDashboardEvents,
   type DashboardWeekEvent,
 } from "@/server/queries/dashboard";
@@ -61,12 +59,7 @@ export default async function DashboardPage() {
   if (!season) {
     return (
       <PageShell width="md" className="pb-8">
-        <HomeHero
-          firstName={firstName}
-          now={now}
-          contextLabel="Club"
-          description="La temporada activa todavía no está configurada."
-        />
+        <HomeHero firstName={firstName} now={now} contextLabel="Club" />
       </PageShell>
     );
   }
@@ -80,9 +73,8 @@ export default async function DashboardPage() {
   );
   const supabase = await createClient();
 
-  const [events, coachTask, streaks, playerStatsRes, teams, newsFeed] = await Promise.all([
+  const [events, streaks, playerStatsRes, teams, newsFeed] = await Promise.all([
     getUpcomingDashboardEvents(teamIds, now),
-    isCoach ? getDashboardCoachTask(audience.staff_teams, now) : Promise.resolve(null),
     isPlayer
       ? getStreaksForPlayer(season.id, activeProfile.id)
       : Promise.resolve([] as ActiveStreakRow[]),
@@ -114,33 +106,15 @@ export default async function DashboardPage() {
           : isAdmin
             ? "Gestión del club"
             : "Club";
-  const description =
-    isPlayer && isCoach
-      ? "Tu agua y tus equipos, ordenados por lo que necesita atención."
-      : isCoach
-        ? "Sesiones, listas y próximos compromisos de tus equipos."
-        : isPlayer
-          ? "Tu próximo turno en el agua y cómo va tu temporada."
-          : linkedProfiles.length > 0
-            ? "La actividad deportiva de tu familia, sin perderte nada."
-            : "Lo importante del club, en un solo lugar.";
-
   return (
     <PageShell width="md" className="gap-6 pb-8">
-      <HomeHero
-        firstName={firstName}
-        now={now}
-        contextLabel={contextLabel}
-        description={description}
-      />
+      <HomeHero firstName={firstName} now={now} contextLabel={contextLabel} />
 
       {events[0] ? (
         <NextTurn event={events[0]} now={now} />
       ) : (
         <QuietWeek isPlayer={isPlayer} isCoach={isCoach} />
       )}
-
-      {coachTask ? <CoachAttendanceCard task={coachTask} /> : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-6">
@@ -204,41 +178,39 @@ function HomeHero({
   firstName,
   now,
   contextLabel,
-  description,
 }: {
   firstName: string;
   now: Date;
   contextLabel: string;
-  description: string;
 }) {
-  const hour = now.getHours();
-  const greeting = hour < 12 ? "Buenos días" : hour < 20 ? "Buenas tardes" : "Buenas noches";
   return (
-    <header className="bg-pool-deep text-paper shadow-elev-3 relative overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-8">
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-0 right-0 w-2/5 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08))]"
-      />
-      <div className="relative">
-        <div className="flex items-start justify-between gap-3">
-          <p className="text-paper/65 pt-1 text-xs font-extrabold tracking-[0.16em] uppercase">
+    <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-3.5 sm:px-5 sm:py-4">
+      <div className="flex items-center gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="text-pool-blue text-[11px] font-extrabold tracking-[0.14em] uppercase">
             {contextLabel}
           </p>
-          <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl border border-white/15 bg-white/10 sm:h-16 sm:w-16">
-            <span className="font-mono text-2xl leading-none font-extrabold tabular-nums sm:text-3xl">
-              {dayFormatter.format(now)}
-            </span>
-            <span className="text-paper/70 mt-1 text-[10px] font-extrabold tracking-[0.12em] uppercase">
-              {monthFormatter.format(now).replace(".", "")}
-            </span>
-          </div>
+          <h1 className="font-display text-pool-deep mt-0.5 truncate text-[1.35rem] leading-tight font-extrabold tracking-tight">
+            Hola, {firstName}
+          </h1>
         </div>
-        <h1 className="font-display -mt-3 max-w-lg text-3xl leading-[1.02] font-extrabold tracking-tight text-balance sm:-mt-4 sm:text-4xl">
-          {greeting}, {firstName}
-        </h1>
-        <p className="text-paper/75 mt-3 max-w-lg text-base leading-relaxed text-pretty">
-          {description}
-        </p>
+        <time
+          dateTime={now.toISOString()}
+          className="bg-pool-foam text-pool-deep border-pool-blue/15 flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border"
+          aria-label={new Intl.DateTimeFormat("es-ES", {
+            timeZone: "Europe/Madrid",
+            weekday: "long",
+            day: "numeric",
+            month: "long",
+          }).format(now)}
+        >
+          <span className="font-mono text-lg leading-none font-extrabold tabular-nums">
+            {dayFormatter.format(now)}
+          </span>
+          <span className="text-pool-blue mt-0.5 text-[9px] font-extrabold tracking-[0.1em] uppercase">
+            {monthFormatter.format(now).replace(".", "")}
+          </span>
+        </time>
       </div>
     </header>
   );

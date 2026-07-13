@@ -38,7 +38,7 @@ dev:         pnpm dev arranca y /dashboard redirige a /login (middleware OK)
 - **Migraciones aplicadas**: 0001 (init) + 0002 (fix user_roles)
 - **Usuario admin**:
   - email: `galvillo9@gmail.com`
-  - password temporal: `MorvedreTemporal2026!`
+  - contraseña temporal configurada fuera del repositorio y sustituida en el primer acceso
   - rol: admin
   - `must_change_password: true`
 - **Auth user id**: `0c6b0daf-b513-4ebf-89bc-9b7b0e9b58d7`
@@ -53,7 +53,7 @@ pnpm install
 pnpm dev   # http://localhost:3000
 ```
 
-Login con `galvillo9@gmail.com` y `MorvedreTemporal2026!`. La app te obliga a cambiar la contraseña en el primer login.
+Login con la cuenta admin y la contraseña de activación configurada fuera del repositorio. La app obliga a cambiarla en el primer acceso.
 
 ## Pendiente
 

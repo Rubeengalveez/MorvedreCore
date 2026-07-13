@@ -46,6 +46,11 @@ export const updateSeasonSchema = z
     },
   );
 
+export const archiveSeasonSchema = createSeasonSchema.safeExtend({
+  season_id: z.string().uuid("Temporada inválida."),
+  confirmation: z.string().trim().min(1, "Escribe el nombre de la temporada para confirmar."),
+});
+
 export const categoryEnum = z.enum([
   "benjamin",
   "alevin",
@@ -104,6 +109,12 @@ export const staffSchema = z.object({
   team_id: z.string().uuid("Equipo inválido."),
   profile_id: z.string().uuid("Persona inválida."),
   role: staffRoleEnum,
+  can_manage_attendance: z.boolean().optional().default(false),
+});
+
+export const staffAttendancePermissionSchema = z.object({
+  profile_id: z.string().uuid("Persona inválida."),
+  enabled: z.boolean(),
 });
 
 export const unrosterSchema = z.object({
@@ -259,7 +270,7 @@ export const createNewsPostSchema = z.object({
 });
 
 export const updateNewsPostSchema = createNewsPostSchema
-  .extend({
+  .safeExtend({
     post_id: z.string().uuid("Post inválido."),
   })
   .refine((v) => v.audience !== "team" || !!v.audience_team_id, {
@@ -575,7 +586,20 @@ export const markAttendanceSchema = z.object({
       }),
     )
     .min(0)
-    .max(50),
+    .max(50)
+    .superRefine((entries, context) => {
+      const seen = new Set<string>();
+      for (const entry of entries) {
+        if (seen.has(entry.player_id)) {
+          context.addIssue({
+            code: "custom",
+            message: "Hay jugadores repetidos en la lista.",
+          });
+          return;
+        }
+        seen.add(entry.player_id);
+      }
+    }),
 });
 
 export const setMatchStatusSchema = z.object({
@@ -646,7 +670,7 @@ export const upsertShopProductSchema = z.object({
   personalization_max_length: z.number().int().min(1).max(60).default(30),
 });
 
-export const updateShopProductSchema = upsertShopProductSchema.extend({
+export const updateShopProductSchema = upsertShopProductSchema.safeExtend({
   product_id: z.string().uuid("Producto inv�lido."),
 });
 
