@@ -60,9 +60,9 @@ export function EventSheet({
               : "No hay eventos programados."}
           </SheetDescription>
         </SheetHeader>
-        <SheetBody>
+        <SheetBody className="pb-[max(2rem,env(safe-area-inset-bottom))]">
           {day && (day.trainings.length > 0 || day.matches.length > 0) ? (
-            <ul className="flex flex-col gap-4 pb-[env(safe-area-inset-bottom)]">
+            <ul className="flex flex-col gap-4 pb-4">
               {day.trainings.map((t) => (
                 <li key={t.id}>
                   <TrainingRow training={t} isCoach={isCoach || isAdmin} />

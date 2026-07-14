@@ -32,6 +32,13 @@ export interface RankingPlayer {
   team_color: string | null;
   primary_value: number;
   full_name_locale: string;
+  matches_played: number;
+  goals: number;
+  exclusions: number;
+  mvp_count: number;
+  trainings_attended: number;
+  trainings_total: number;
+  attendance_pct: number;
 }
 
 export interface RankingRow extends RankingPlayer {
@@ -92,6 +99,13 @@ function toRankingPlayer(player: PlayerStatsInput, primary: number): RankingPlay
     team_color: player.team_color,
     primary_value: primary,
     full_name_locale: player.full_name,
+    matches_played: player.matches_played,
+    goals: player.goals,
+    exclusions: player.exclusions,
+    mvp_count: player.mvp_count,
+    trainings_attended: player.trainings_attended,
+    trainings_total: player.trainings_total,
+    attendance_pct: player.attendance_pct,
   };
 }
 
@@ -128,18 +142,9 @@ export function computeRanking(
   const sliced = top_n != null ? ranked.slice(0, top_n) : ranked;
 
   const rows: RankingRow[] = [];
-  let lastValue: number | null = null;
-  let lastPosition = 0;
   for (let i = 0; i < sliced.length; i++) {
     const entry = sliced[i]!;
-    let position: number;
-    if (lastValue !== null && entry.primary_value === lastValue) {
-      position = lastPosition;
-    } else {
-      position = i + 1;
-      lastPosition = position;
-      lastValue = entry.primary_value;
-    }
+    const position = i + 1;
     rows.push({
       ...entry,
       position,

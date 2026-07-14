@@ -563,3 +563,17 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - El inicio compacto sustituye el saludo grande: “Hola, [nombre]”, rol y fecha ocupan una única franja. La cabecera de `Asistencia` también se reduce a una franja breve para dejar visibles antes los entrenamientos.
 - El servidor verifica que la sesión no esté cancelada, que el entrenador tenga permiso global en esa temporada y que la lista coincida exactamente con la plantilla de esa fecha. RLS permite cubrir otro equipo de la misma temporada, pero rechaza a quien no tenga el permiso. La base también rechaza jugadores ajenos, registra al entrenador autenticado y limita los motivos de ausencia.
 - Las horas de los bloques son horas locales de `Europe/Madrid`; la generación y los datos demo se normalizan para evitar desplazamientos UTC.
+
+## 2026-07-14 - Pulido de producto y rediseño operativo
+
+- Se abre una iteración transversal de Perfil, Tienda, Equipos, Rankings, Calendario y Partido a partir de la revisión manual del administrador.
+- Perfil deja de comportarse como un segundo calendario y se centra en identidad, roles, situación deportiva y accesos de cuenta.
+- Tienda se trata como catálogo bajo demanda: no se comunica stock ni número de unidades disponibles.
+- Equipos se ordena siempre de categorías pequeñas a mayores. La pertenencia como jugador y la asignación como entrenador titular se comunican de forma distinta; el permiso global de apoyo entre entrenadores no altera esas marcas personales.
+- Los tres primeros puestos de Rankings son tres personas ordenadas de forma determinista, aunque compartan valor. Las tarjetas incluyen contexto de partidos o entrenamientos para que la cifra sea interpretable.
+- La convocatoria sugerida pondera en este orden: continuidad respecto al partido anterior, goles, edad adecuada, asistencia y disciplina.
+- Las cabeceras de sección pasan a ser compactas. El movimiento se usa como respuesta y orientación, respeta reducción de movimiento y evita animaciones decorativas constantes.
+- Rachas deja de depender de una pestaña secundaria: tiene acceso destacado desde Rankings y un selector visual que explica entrenos, goles, exclusiones y MVP, con comparación entre racha actual y mejor racha.
+- `Absoluto` no tiene una edad máxima artificial. Cualquier jugador adulto válido se deriva como Absoluto; solo se rechazan años de nacimiento futuros.
+- El acta guarda el borrador completo antes de validarlo, de modo que `Validar y cerrar` nunca bloquea datos antiguos por omitir un guardado previo.
+- El alcance y los criterios verificables quedan en `29-polish-product-redesign-plan.md`.

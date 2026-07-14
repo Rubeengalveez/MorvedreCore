@@ -101,7 +101,6 @@ export async function createShopProduct(input: {
   image_url?: string | null;
   sizes?: string[];
   available?: boolean;
-  stock?: number | null;
   max_per_order?: number;
   personalization_enabled?: boolean;
   personalization_label?: string;
@@ -128,7 +127,6 @@ export async function createShopProduct(input: {
     image_url: product.value!.image_url,
     sizes: product.value!.sizes,
     available: product.value!.available,
-    stock: product.value!.stock,
     max_per_order: product.value!.max_per_order,
     created_by: me.id,
   };
@@ -182,7 +180,6 @@ export async function updateShopProduct(input: {
   image_url?: string | null;
   sizes?: string[];
   available?: boolean;
-  stock?: number | null;
   max_per_order?: number;
   personalization_enabled?: boolean;
   personalization_label?: string;
@@ -222,7 +219,6 @@ export async function updateShopProduct(input: {
     image_url: imageUrl,
     sizes: product.value!.sizes,
     available: product.value!.available,
-    stock: product.value!.stock,
     max_per_order: product.value!.max_per_order,
   };
   let updateResult = await admin

@@ -54,7 +54,6 @@ describe("parseProduct", () => {
       image_url: null,
       sizes: ["S", "M", "L"],
       available: true,
-      stock: 10,
       max_per_order: 5,
       currency: "EUR",
     });

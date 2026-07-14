@@ -42,7 +42,7 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
         const pre = new Set<string>();
         const caps: Record<string, string> = {};
         for (const s of data) {
-          if (s.has_conflict) continue;
+          if (s.has_conflict || s.is_substitute) continue;
           if (s.cap_number != null) caps[s.player_id] = String(s.cap_number);
           pre.add(s.player_id);
         }
@@ -154,10 +154,13 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-ink-600 text-sm">
-        Hemos propuesto {suggestions.length} jugadores. Selecciona quién convocar y ajusta los
-        dorsales si lo necesitas.
-      </p>
+      <div className="border-pool-blue/20 bg-pool-foam/60 rounded-xl border p-3">
+        <p className="text-pool-deep text-sm font-extrabold">Cómo se ha preparado la propuesta</p>
+        <p className="text-ink-600 mt-1 text-sm leading-relaxed">
+          Primero mantiene la convocatoria anterior. Después valora goles, edad, asistencia y, como
+          último desempate, menos expulsiones.
+        </p>
+      </div>
       {commitError ? (
         <Alert variant="danger" title="Error">
           {commitError}
@@ -213,6 +216,9 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
                       </span>
                     ) : null}
                   </div>
+                  {s.reason ? (
+                    <span className="text-ink-500 mt-1 text-xs leading-relaxed">{s.reason}</span>
+                  ) : null}
                 </div>
               </div>
               <div className="border-ink-200 flex items-center justify-between gap-3 border-t pt-2 sm:border-t-0 sm:pt-0">

@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { Route } from "next";
 import { redirect } from "next/navigation";
+import { ArrowRight, Flame } from "lucide-react";
 
 import { Trofeo } from "@/components/brand/pictograms";
-import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
@@ -135,23 +136,62 @@ export default async function RankingsPage({
   });
 
   const scopeLabel = scopeLabelOf(scope, meta);
+  const streakScope =
+    scope.kind === "all"
+      ? "all"
+      : scope.kind === "category"
+        ? `category:${scope.category_code}`
+        : `team:${scope.team_id}`;
+  const streakHref = `/rankings?scope=${encodeURIComponent(streakScope)}&metric=streak` as Route;
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
-      <AppPageHero
-        eyebrow={`${meta.season.label} · ${scopeLabel}`}
-        title="Rankings"
-        description="Goles, asistencia, MVP y rachas de la temporada."
-        icon={<Trofeo className="h-7 w-7" accent="currentColor" />}
-        action={
-          <Link
-            href="/legends"
-            className="focus-visible:ring-ball-gold inline-flex min-h-11 items-center rounded-lg border border-white/20 bg-white/10 px-4 text-sm font-extrabold text-white transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none"
-          >
-            Ver leyendas y rivalidades
-          </Link>
-        }
-      />
+      <header className="border-ink-300 border-b pb-4">
+        <div>
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+            {meta.season.label} · {scopeLabel}
+          </p>
+          <h1 className="font-display text-pool-deep mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Rankings
+          </h1>
+          <p className="text-ink-600 mt-1 text-sm">Rendimiento y constancia de la temporada.</p>
+        </div>
+      </header>
+
+      <div className="grid grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] gap-2.5">
+        <Link
+          href={streakHref}
+          aria-current={metric === "streak" ? "page" : undefined}
+          className="border-ball-gold/70 bg-ball-gold/10 text-pool-deep hover:border-ball-gold focus-visible:ring-ball-gold group flex min-h-20 items-center gap-3 rounded-2xl border p-3 transition-[border-color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
+        >
+          <span className="bg-ball-gold/25 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+            <Flame className="text-action h-6 w-6" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-extrabold">Rachas</span>
+            <span className="text-ink-600 block text-xs leading-snug">
+              Quién está encadenando éxitos
+            </span>
+          </span>
+          <ArrowRight
+            className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+            aria-hidden="true"
+          />
+        </Link>
+        <Link
+          href="/legends"
+          className="border-ink-200 bg-paper-card text-pool-deep hover:border-pool-blue/40 focus-visible:ring-pool-blue group flex min-h-20 items-center gap-2 rounded-2xl border p-3 transition-[border-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block font-extrabold">Leyendas</span>
+            <span className="text-ink-500 block text-xs leading-snug">Historia del club</span>
+          </span>
+          <ArrowRight
+            className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+            aria-hidden="true"
+          />
+        </Link>
+      </div>
 
       <RankingsContent
         meta={meta}

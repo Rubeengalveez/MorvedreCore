@@ -217,13 +217,16 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
         {/* ROSTER */}
         <section className="flex flex-col gap-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-ink-900 text-lg font-black">
-              Convocatoria
-              <span className="text-ink-500 ml-1.5 text-base font-semibold">
-                ({callups.length})
-              </span>
-            </h2>
+          <div className="border-ink-200 flex items-end justify-between gap-3 border-b pb-3">
+            <div>
+              <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+                Equipo para el partido
+              </p>
+              <h2 className="text-pool-deep mt-0.5 text-xl font-black">Convocatoria</h2>
+              <p className="text-ink-500 mt-0.5 text-sm">
+                {callups.length} {callups.length === 1 ? "jugador" : "jugadores"}
+              </p>
+            </div>
             {isCoach && (
               <Button
                 asChild
@@ -243,7 +246,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               description="Cuando el entrenador la publique, aparecerá aquí."
             />
           ) : (
-            <ul className="flex flex-col gap-2">
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {callups.map((c) => {
                 const stats = statsMap.get(c.player_id);
                 const isConfirmed = c.status === "confirmed" || c.status === "called";
@@ -253,11 +256,11 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                 return (
                   <li
                     key={c.player_id}
-                    className="bg-paper-card border-ink-200 flex min-h-16 items-center gap-3 rounded-xl border px-4 py-3 select-none"
+                    className="bg-paper-card border-ink-200 shadow-elev-1 flex min-h-16 items-center gap-3 rounded-xl border px-3 py-3 select-none"
                   >
                     {/* Avatar with status dot */}
                     <div className="relative shrink-0">
-                      <Avatar src={c.photo_url} name={c.full_name} size={44} />
+                      <Avatar src={c.photo_url} name={c.full_name} size={40} />
                       {/* Status dot overlay (bottom-right) */}
                       {!isPlayed && (
                         <span
@@ -276,11 +279,26 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                     {/* Name & Cap */}
                     <div className="flex min-w-0 flex-1 flex-col">
                       <span className="text-ink-900 truncate text-sm font-bold">{c.full_name}</span>
-                      {c.cap_number != null && (
-                        <span className="text-ink-500 text-xs font-semibold">
-                          Gorro #{c.cap_number}
-                        </span>
-                      )}
+                      <span
+                        className={cn(
+                          "mt-0.5 text-xs font-semibold",
+                          isConfirmed
+                            ? "text-success"
+                            : isDeclined
+                              ? "text-danger"
+                              : "text-ink-500",
+                        )}
+                      >
+                        {isPlayed
+                          ? c.cap_number != null
+                            ? `Gorro ${c.cap_number}`
+                            : "Sin dorsal"
+                          : isConfirmed
+                            ? "Asistencia confirmada"
+                            : isDeclined
+                              ? "No puede asistir"
+                              : "Pendiente de respuesta"}
+                      </span>
                     </div>
 
                     {/* Stats badges (only played matches) */}

@@ -11,7 +11,6 @@ export interface ShopProduct {
   image_url: string | null;
   sizes: string[];
   available: boolean;
-  stock: number | null;
   max_per_order: number;
   personalization_enabled: boolean;
   personalization_label: string;
@@ -72,10 +71,10 @@ export interface ShopOrder {
 }
 
 const PRODUCT_FIELDS =
-  "id, title, description, category, price_cents, currency, image_url, sizes, available, stock, max_per_order, personalization_enabled, personalization_label, personalization_max_length, created_by, created_at, updated_at";
+  "id, title, description, category, price_cents, currency, image_url, sizes, available, max_per_order, personalization_enabled, personalization_label, personalization_max_length, created_by, created_at, updated_at";
 
 const LEGACY_PRODUCT_FIELDS =
-  "id, title, description, category, price_cents, currency, image_url, sizes, available, stock, max_per_order, created_by, created_at, updated_at";
+  "id, title, description, category, price_cents, currency, image_url, sizes, available, max_per_order, created_by, created_at, updated_at";
 
 const ORDER_FIELDS =
   "id, requested_by, approved_by, managed_by, status, total_cents, currency, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";

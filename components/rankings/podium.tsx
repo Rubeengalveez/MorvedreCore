@@ -1,16 +1,18 @@
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils/cn";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
-import { type RankingRow } from "@/lib/domain/rankings";
+import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
+import { metricContext } from "./ranking-row";
 
 export interface PodiumProps {
   items: RankingRow[];
   metricLabel: string;
   metricSuffix: string;
+  metric: RankingMetric;
   myPlayerId: string;
 }
 
-export function Podium({ items, metricLabel, metricSuffix, myPlayerId }: PodiumProps) {
+export function Podium({ items, metricLabel, metricSuffix, metric, myPlayerId }: PodiumProps) {
   const first = items.find((i) => i.position === 1) ?? null;
   const rest = items.filter((i) => i.position === 2 || i.position === 3);
 
@@ -32,6 +34,7 @@ export function Podium({ items, metricLabel, metricSuffix, myPlayerId }: PodiumP
           row={first}
           metricLabel={metricLabel}
           metricSuffix={metricSuffix}
+          metric={metric}
           isMe={first.player_id === myPlayerId}
         />
       ) : null}
@@ -44,6 +47,7 @@ export function Podium({ items, metricLabel, metricSuffix, myPlayerId }: PodiumP
               row={row}
               metricLabel={metricLabel}
               metricSuffix={metricSuffix}
+              metric={metric}
               isMe={row.player_id === myPlayerId}
             />
           ))}
@@ -63,11 +67,13 @@ function PodiumLeader({
   row,
   metricLabel,
   metricSuffix,
+  metric,
   isMe,
 }: {
   row: RankingRow;
   metricLabel: string;
   metricSuffix: string;
+  metric: RankingMetric;
   isMe: boolean;
 }) {
   const teamColor = row.team_color ?? "var(--pool-blue)";
@@ -109,6 +115,7 @@ function PodiumLeader({
             ) : null}
           </h3>
           <p className="text-paper/70 mt-1 text-sm font-semibold">{categoryLabel(row)}</p>
+          <p className="text-paper/55 mt-1 text-xs">{metricContext(row, metric)}</p>
         </div>
 
         <div className="shrink-0 text-right">
@@ -132,11 +139,13 @@ function PodiumRunner({
   row,
   metricLabel,
   metricSuffix,
+  metric,
   isMe,
 }: {
   row: RankingRow;
   metricLabel: string;
   metricSuffix: string;
+  metric: RankingMetric;
   isMe: boolean;
 }) {
   const teamColor = row.team_color ?? "var(--pool-blue)";
@@ -167,6 +176,7 @@ function PodiumRunner({
           ) : null}
         </p>
         <p className="text-ink-600 mt-1 line-clamp-1 text-sm font-semibold">{categoryLabel(row)}</p>
+        <p className="text-ink-500 mt-1 text-xs">{metricContext(row, metric)}</p>
       </div>
       <div className="shrink-0 text-right">
         <p className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums">

@@ -19,7 +19,7 @@ const SheetOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "bg-ink-900/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 backdrop-blur-sm",
+      "bg-ink-900/50 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 touch-none overscroll-none backdrop-blur-sm",
       className,
     )}
     {...props}
@@ -107,7 +107,7 @@ const SheetDescription = React.forwardRef<
 SheetDescription.displayName = DialogPrimitive.Description.displayName;
 
 const SheetBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex-1 overflow-y-auto px-5", className)} {...props} />
+  <div className={cn("flex-1 overflow-y-auto overscroll-contain px-5", className)} {...props} />
 );
 SheetBody.displayName = "SheetBody";
 

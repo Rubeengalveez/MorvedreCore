@@ -20,35 +20,35 @@ export function AppPageHero({
   return (
     <header
       className={cn(
-        "bg-pool-deep text-paper shadow-elev-3 relative overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-8",
+        "border-ink-300 flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-end sm:justify-between",
         className,
       )}
     >
-      <div
-        aria-hidden="true"
-        className="absolute inset-y-0 right-0 w-2/5 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08))]"
-      />
-      <div className="relative flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
-          <p className="text-paper/65 text-xs font-extrabold tracking-[0.16em] uppercase">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.16em] uppercase">
             {eyebrow}
           </p>
-          <h1 className="font-display mt-2 text-3xl leading-[1.04] font-extrabold tracking-tight text-balance sm:text-4xl">
+          <h1 className="font-display text-pool-deep mt-1 text-2xl leading-[1.04] font-extrabold tracking-tight text-balance sm:text-3xl">
             {title}
           </h1>
           {description ? (
-            <p className="text-paper/75 mt-3 max-w-lg text-sm leading-relaxed text-pretty sm:text-base">
+            <p className="text-ink-600 mt-1 max-w-lg text-sm leading-relaxed text-pretty">
               {description}
             </p>
           ) : null}
         </div>
         {icon ? (
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10 sm:h-14 sm:w-14">
+          <span className="bg-pool-foam text-pool-deep flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
             {icon}
           </span>
         ) : null}
       </div>
-      {action ? <div className="relative mt-5">{action}</div> : null}
+      {action ? (
+        <div className="[&_a]:!border-ink-200 [&_a]:!bg-paper-card [&_a]:!text-pool-deep [&_button]:!border-ink-200 [&_button]:!bg-paper-card [&_button]:!text-pool-deep shrink-0">
+          {action}
+        </div>
+      ) : null}
     </header>
   );
 }

@@ -23,7 +23,6 @@ export interface ShopEditorFormInitial {
   images?: Array<{ id: string; url: string; is_cover: boolean; sort_order: number }>;
   sizes: string[];
   available: boolean;
-  stock: number | null;
   max_per_order: number;
   personalization_enabled: boolean;
   personalization_label: string;
@@ -54,7 +53,6 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
     image_url: initial?.image_url ?? null,
     sizes: initial?.sizes ?? [],
     available: initial?.available ?? true,
-    stock: initial?.stock ?? null,
     max_per_order: initial?.max_per_order ?? 1,
     personalization_enabled: initial?.personalization_enabled ?? false,
     personalization_label: initial?.personalization_label ?? "Nombre",
@@ -90,7 +88,6 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             image_url: form.image_url,
             sizes: sizesClean,
             available: form.available,
-            stock: form.stock,
             max_per_order: form.max_per_order,
             personalization_enabled: form.personalization_enabled,
             personalization_label: form.personalization_label,
@@ -108,7 +105,6 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             image_url: form.image_url,
             sizes: sizesClean,
             available: form.available,
-            stock: form.stock,
             max_per_order: form.max_per_order,
             personalization_enabled: form.personalization_enabled,
             personalization_label: form.personalization_label,
@@ -244,15 +240,6 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           </div>
         ) : null}
       </div>
-      <Field label="Stock (vacío para ilimitado)">
-        <Input
-          type="number"
-          min={0}
-          max={1000}
-          value={form.stock ?? ""}
-          onChange={(e) => update("stock", e.target.value === "" ? null : Number(e.target.value))}
-        />
-      </Field>
       <Field label="Fotos del producto">
         <input
           ref={fileRef}
@@ -357,7 +344,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           onChange={(e) => update("available", e.target.checked)}
           className="h-4 w-4"
         />
-        Disponible
+        Visible en el catálogo
       </label>
       {error ? (
         <div

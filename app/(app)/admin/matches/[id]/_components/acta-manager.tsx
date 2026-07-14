@@ -1,16 +1,15 @@
 "use client";
 
-import { MdCheckCircle, MdAutorenew, MdStar, MdStarBorder } from "react-icons/md";
+import { CheckCircle2, Loader2, Minus, Plus, Save, Star } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
 import {
-  recordMatchStat,
-  setMatchStatus,
+  saveMatchSheet,
   validateMatchStats,
   type CallupRow,
   type MatchRow,
@@ -32,52 +31,66 @@ export interface ActaManagerProps {
   entries: ActaEntry[];
 }
 
+type StatDraft = Record<string, { goals: number; exclusions: number }>;
+
 export function ActaManager({ match, entries }: ActaManagerProps) {
-  const [us, setUs] = useState<string>(
-    match.final_score_us != null ? String(match.final_score_us) : "",
-  );
-  const [them, setThem] = useState<string>(
-    match.final_score_them != null ? String(match.final_score_them) : "",
+  const router = useRouter();
+  const [scoreUs, setScoreUs] = useState(match.final_score_us ?? 0);
+  const [scoreThem, setScoreThem] = useState(match.final_score_them ?? 0);
+  const [draft, setDraft] = useState<StatDraft>(() =>
+    Object.fromEntries(
+      entries.map((entry) => [
+        entry.player.id,
+        { goals: entry.stat?.goals ?? 0, exclusions: entry.stat?.exclusions ?? 0 },
+      ]),
+    ),
   );
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const validated = entries.some((entry) => entry.stat?.validated_at != null);
+  const totalGoals = useMemo(
+    () => Object.values(draft).reduce((total, item) => total + item.goals, 0),
+    [draft],
+  );
 
-  const isPlayed = match.status === "played";
+  function sheetInput() {
+    return {
+      match_id: match.id,
+      final_score_us: scoreUs,
+      final_score_them: scoreThem,
+      stats: entries.map((entry) => ({
+        player_id: entry.player.id,
+        goals: draft[entry.player.id]?.goals ?? 0,
+        exclusions: draft[entry.player.id]?.exclusions ?? 0,
+      })),
+    };
+  }
 
-  function setScore() {
-    if (us === "" || them === "") return;
-    const usN = Number(us);
-    const themN = Number(them);
-    if (!Number.isFinite(usN) || !Number.isFinite(themN)) return;
-    setError(null);
-    setSuccess(null);
-    startTransition(async () => {
-      try {
-        await setMatchStatus(match.id, "played", usN, themN);
-        setSuccess("Resultado guardado.");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "No pudimos guardar.");
-      }
+  function changeStat(playerId: string, field: "goals" | "exclusions", delta: number) {
+    setDraft((current) => {
+      const previous = current[playerId] ?? { goals: 0, exclusions: 0 };
+      const max = field === "goals" ? 99 : 3;
+      return {
+        ...current,
+        [playerId]: {
+          ...previous,
+          [field]: Math.max(0, Math.min(max, previous[field] + delta)),
+        },
+      };
     });
   }
 
-  function markPlayed() {
+  function save() {
     setError(null);
     setSuccess(null);
     startTransition(async () => {
       try {
-        const usN = us === "" ? null : Number(us);
-        const themN = them === "" ? null : Number(them);
-        await setMatchStatus(
-          match.id,
-          "played",
-          usN != null && Number.isFinite(usN) ? usN : null,
-          themN != null && Number.isFinite(themN) ? themN : null,
-        );
-        setSuccess("Partido marcado como jugado.");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "No pudimos actualizar.");
+        await saveMatchSheet(sheetInput());
+        setSuccess("Acta y resultado guardados.");
+        router.refresh();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "No pudimos guardar el acta.");
       }
     });
   }
@@ -87,224 +100,226 @@ export function ActaManager({ match, entries }: ActaManagerProps) {
     setSuccess(null);
     startTransition(async () => {
       try {
+        await saveMatchSheet(sheetInput());
         await validateMatchStats(match.id);
-        setSuccess("Acta validada. Ya no se puede modificar.");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "No pudimos validar.");
+        setSuccess("Acta validada. Los rankings ya pueden usar estos datos.");
+        router.refresh();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "No pudimos validar el acta.");
       }
     });
   }
 
   if (entries.length === 0) {
     return (
-      <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-        <p className="text-pool-deep text-base font-semibold">No hay jugadores convocados.</p>
+      <div className="border-ink-300 bg-paper-card rounded-2xl border border-dashed p-6 text-center">
+        <p className="text-pool-deep font-extrabold">Primero prepara la convocatoria</p>
         <p className="text-ink-600 mt-1 text-sm">
-          Crea primero la convocatoria en la pestaña anterior.
+          El acta se completa con los jugadores convocados.
         </p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       {error ? (
-        <Alert variant="danger" title="Error">
+        <Alert variant="danger" title="No se ha guardado">
           {error}
         </Alert>
       ) : null}
       {success ? (
-        <Alert variant="success" title="Listo">
+        <Alert variant="success" title="Todo listo">
           {success}
         </Alert>
       ) : null}
 
-      <ul className="flex flex-col gap-2">
-        {entries.map((e) => (
-          <StatRow key={e.callup.player_id} entry={e} disabled={isPlayed} />
-        ))}
-      </ul>
-
-      <div className="border-ink-300 bg-paper rounded-md border p-4">
-        <h3 className="font-display text-pool-deep text-lg font-bold">Resultado final</h3>
-        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
-          <div className="flex-1">
-            <label
-              htmlFor="score-us"
-              className="text-ink-600 text-xs font-semibold tracking-wider uppercase"
-            >
-              Nosotros
-            </label>
-            <Input
-              id="score-us"
-              type="number"
-              min={0}
-              max={99}
-              value={us}
-              onChange={(e) => setUs(e.target.value)}
-              onBlur={setScore}
-              className="mt-1 font-mono text-lg"
-            />
+      <section className="bg-pool-deep text-paper shadow-elev-3 rounded-2xl p-4 sm:p-5">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <p className="text-paper/60 text-xs font-extrabold tracking-[0.12em] uppercase">
+              Resultado
+            </p>
+            <h3 className="font-display mt-1 text-xl font-extrabold">Marcador final</h3>
           </div>
-          <span className="font-display text-ink-600 self-center text-2xl font-extrabold">–</span>
-          <div className="flex-1">
-            <label
-              htmlFor="score-them"
-              className="text-ink-600 text-xs font-semibold tracking-wider uppercase"
-            >
-              Rival
-            </label>
-            <Input
-              id="score-them"
-              type="number"
-              min={0}
-              max={99}
-              value={them}
-              onChange={(e) => setThem(e.target.value)}
-              onBlur={setScore}
-              className="mt-1 font-mono text-lg"
-            />
-          </div>
+          <span className="text-paper/70 text-xs font-bold">{totalGoals} goles en el acta</span>
         </div>
-      </div>
+        <div className="mt-4 grid grid-cols-[1fr_auto_1fr] items-end gap-3">
+          <ScoreControl
+            label="Morvedre"
+            value={scoreUs}
+            onChange={setScoreUs}
+            disabled={validated}
+          />
+          <span className="text-paper/45 pb-4 text-2xl font-black">–</span>
+          <ScoreControl
+            label="Rival"
+            value={scoreThem}
+            onChange={setScoreThem}
+            disabled={validated}
+          />
+        </div>
+      </section>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-        <Button type="button" variant="secondary" size="md" onClick={validate} disabled={pending}>
+      <section aria-labelledby="player-stats-title" className="flex flex-col gap-3">
+        <div>
+          <h3
+            id="player-stats-title"
+            className="font-display text-pool-deep text-lg font-extrabold"
+          >
+            Estadísticas por jugador
+          </h3>
+          <p className="text-ink-600 mt-0.5 text-sm">
+            Usa + y −. No necesitas escribir en campos pequeños.
+          </p>
+        </div>
+        <ul className="flex flex-col gap-2">
+          {entries.map((entry) => {
+            const values = draft[entry.player.id] ?? { goals: 0, exclusions: 0 };
+            return (
+              <li
+                key={entry.player.id}
+                className={cn(
+                  "border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3",
+                  entry.stat?.mvp && "border-ball-gold/60 bg-ball-gold/5",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Avatar name={entry.player.full_name} src={entry.player.photo_url} size={44} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-pool-deep truncate font-extrabold">
+                      {entry.player.full_name}
+                    </p>
+                    {entry.stat?.mvp ? (
+                      <p className="text-ink-600 mt-0.5 flex items-center gap-1 text-xs font-bold">
+                        <Star
+                          className="text-ball-gold h-3.5 w-3.5 fill-current"
+                          aria-hidden="true"
+                        />
+                        MVP calculado
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <Stepper
+                    label="Goles"
+                    value={values.goals}
+                    onDecrease={() => changeStat(entry.player.id, "goals", -1)}
+                    onIncrease={() => changeStat(entry.player.id, "goals", 1)}
+                    disabled={validated}
+                  />
+                  <Stepper
+                    label="Expulsiones"
+                    value={values.exclusions}
+                    onDecrease={() => changeStat(entry.player.id, "exclusions", -1)}
+                    onIncrease={() => changeStat(entry.player.id, "exclusions", 1)}
+                    disabled={validated}
+                  />
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+
+      <div className="border-ink-200 bg-paper/95 shadow-elev-4 sticky bottom-[calc(var(--bottom-nav-height)+0.5rem)] z-10 flex flex-col gap-2 rounded-2xl border p-3 backdrop-blur sm:static sm:flex-row sm:justify-end sm:bg-transparent sm:p-0 sm:shadow-none">
+        <Button
+          type="button"
+          size="lg"
+          onClick={save}
+          disabled={pending || validated}
+          className="sm:min-w-48"
+        >
           {pending ? (
-            <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           ) : (
-            <MdCheckCircle className="h-4 w-4" aria-hidden="true" />
+            <Save className="h-5 w-5" aria-hidden="true" />
           )}
-          Validar acta
+          {pending ? "Guardando…" : "Guardar acta"}
         </Button>
-        {!isPlayed ? (
-          <Button type="button" size="md" onClick={markPlayed} disabled={pending}>
-            {pending ? <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
-            Marcar como jugado
-          </Button>
-        ) : null}
+        <Button
+          type="button"
+          variant="secondary"
+          size="lg"
+          onClick={validate}
+          disabled={pending || validated}
+        >
+          <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+          {validated ? "Acta validada" : "Validar y cerrar"}
+        </Button>
       </div>
     </div>
   );
 }
 
-function StatRow({ entry, disabled }: { entry: ActaEntry; disabled: boolean }) {
-  const [goals, setGoals] = useState<string>(entry.stat ? String(entry.stat.goals) : "0");
-  const [exclusions, setExclusions] = useState<string>(
-    entry.stat ? String(entry.stat.exclusions) : "0",
-  );
-  const [pending, startTransition] = useTransition();
-
-  const isMvp = entry.stat?.mvp ?? false;
-
-  const dirty = useMemo(() => {
-    if (!entry.stat) {
-      return goals !== "0" || exclusions !== "0";
-    }
-    return goals !== String(entry.stat.goals) || exclusions !== String(entry.stat.exclusions);
-  }, [entry.stat, goals, exclusions]);
-
-  function commit() {
-    if (!dirty) return;
-    const goalsN = Math.max(0, Math.min(99, Number(goals) || 0));
-    const exclusionsN = Math.max(0, Math.min(3, Number(exclusions) || 0));
-    startTransition(async () => {
-      await recordMatchStat({
-        match_id: entry.callup.match_id,
-        player_id: entry.callup.player_id,
-        goals: goalsN,
-        exclusions: exclusionsN,
-      });
-    });
-  }
-
+function ScoreControl({
+  label,
+  value,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  onChange: (value: number) => void;
+  disabled: boolean;
+}) {
   return (
-    <li
-      className={cn(
-        "bg-paper flex flex-col gap-3 rounded-md border p-3 sm:flex-row sm:items-center sm:justify-between",
-        isMvp ? "border-ball-gold bg-ball-gold/5" : "border-ink-300",
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <Avatar name={entry.player.full_name} src={entry.player.photo_url} size={40} />
-        <div className="flex flex-col">
-          <span className="font-display text-pool-deep text-base font-bold">
-            {entry.player.full_name}
-          </span>
-          {entry.callup.cap_number != null ? (
-            <span className="text-ink-600 font-mono text-xs">Dorsal {entry.callup.cap_number}</span>
-          ) : null}
-        </div>
-      </div>
-      <div className="border-ink-200 flex items-center justify-between gap-3 border-t pt-2 sm:border-t-0 sm:pt-0">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5">
-            <label
-              htmlFor={`goals-${entry.callup.player_id}`}
-              className="text-ink-600 text-xs font-bold uppercase"
-            >
-              Goles
-            </label>
-            <Input
-              id={`goals-${entry.callup.player_id}`}
-              type="number"
-              min={0}
-              max={20}
-              value={goals}
-              onChange={(e) => setGoals(e.target.value)}
-              onBlur={commit}
-              disabled={disabled}
-              className="h-10 w-12 px-1 py-1 text-center font-mono text-sm"
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <label
-              htmlFor={`excl-${entry.callup.player_id}`}
-              className="text-ink-600 text-xs font-bold uppercase"
-            >
-              Excl.
-            </label>
-            <Input
-              id={`excl-${entry.callup.player_id}`}
-              type="number"
-              min={0}
-              max={3}
-              value={exclusions}
-              onChange={(e) => setExclusions(e.target.value)}
-              onBlur={commit}
-              disabled={disabled}
-              className="h-10 w-12 px-1 py-1 text-center font-mono text-sm"
-            />
-          </div>
-        </div>
+    <div className="text-center">
+      <p className="text-paper/70 text-xs font-extrabold uppercase">{label}</p>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={0}
+        max={99}
+        value={value}
+        onChange={(event) => onChange(Math.max(0, Math.min(99, Number(event.target.value) || 0)))}
+        disabled={disabled}
+        className="bg-paper/10 text-paper focus-visible:ring-ball-gold mt-1 h-16 w-full rounded-xl border border-white/15 text-center font-mono text-4xl font-black outline-none focus-visible:ring-2"
+      />
+    </div>
+  );
+}
 
-        <div className="flex items-center gap-2">
-          {isMvp ? (
-            <div
-              title="MVP del partido (calculado automáticamente)"
-              className="border-ball-gold bg-ball-gold/20 text-pool-deep inline-flex h-10 min-h-10 w-10 min-w-10 items-center justify-center rounded border"
-            >
-              <MdStar className="text-ball-gold h-6 w-6" aria-hidden="true" />
-            </div>
-          ) : (
-            <div
-              title="No es MVP"
-              className="text-ink-300 inline-flex h-10 min-h-10 w-10 min-w-10 items-center justify-center rounded border border-transparent"
-            >
-              <MdStarBorder className="text-ink-300 h-6 w-6" aria-hidden="true" />
-            </div>
-          )}
-
-          {pending ? (
-            <MdAutorenew
-              className="text-ink-600 h-5 w-5 shrink-0 animate-spin"
-              aria-hidden="true"
-            />
-          ) : (
-            <div className="h-5 w-5 shrink-0" />
-          )}
-        </div>
+function Stepper({
+  label,
+  value,
+  onDecrease,
+  onIncrease,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  onDecrease: () => void;
+  onIncrease: () => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="border-ink-200 bg-paper-sunk rounded-xl border p-2">
+      <p className="text-ink-600 text-center text-xs font-extrabold uppercase">{label}</p>
+      <div className="mt-1 grid grid-cols-[3rem_1fr_3rem] items-center">
+        <button
+          type="button"
+          onClick={onDecrease}
+          disabled={disabled || value === 0}
+          className="border-ink-200 bg-paper-card text-pool-deep focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-lg border focus-visible:ring-2 focus-visible:outline-none disabled:opacity-35"
+          aria-label={`Restar ${label.toLowerCase()}`}
+        >
+          <Minus className="h-5 w-5" aria-hidden="true" />
+        </button>
+        <span className="text-pool-deep text-center font-mono text-2xl font-black tabular-nums">
+          {value}
+        </span>
+        <button
+          type="button"
+          onClick={onIncrease}
+          disabled={disabled}
+          className="bg-pool-deep text-paper focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-lg focus-visible:ring-2 focus-visible:outline-none"
+          aria-label={`Sumar ${label.toLowerCase()}`}
+        >
+          <Plus className="h-5 w-5" aria-hidden="true" />
+        </button>
       </div>
-    </li>
+    </div>
   );
 }

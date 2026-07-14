@@ -71,7 +71,6 @@ export interface ParsedProduct {
     image_url: string | null;
     sizes: string[];
     available: boolean;
-    stock: number | null;
     max_per_order: number;
     personalization_enabled: boolean;
     personalization_label: string;
@@ -119,8 +118,6 @@ export function parseProduct(input: unknown): ParsedProduct {
         .filter((s) => s.length > 0 && s.length <= 20)
     : [];
   const available = v.available === false ? false : true;
-  const stock = typeof v.stock === "number" ? Math.floor(v.stock) : null;
-  if (stock !== null && (stock < 0 || stock > 1000)) return { ok: false, error: "Stock inválido." };
   const maxPerOrder = typeof v.max_per_order === "number" ? Math.floor(v.max_per_order) : 10;
   if (maxPerOrder < 1 || maxPerOrder > MAX_QUANTITY) {
     return { ok: false, error: "Cantidad máxima por pedido entre 1 y " + MAX_QUANTITY + "." };
@@ -151,7 +148,6 @@ export function parseProduct(input: unknown): ParsedProduct {
       image_url: imageUrl,
       sizes,
       available,
-      stock,
       max_per_order: maxPerOrder,
       personalization_enabled: personalizationEnabled,
       personalization_label: personalizationLabel,

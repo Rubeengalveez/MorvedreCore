@@ -156,26 +156,19 @@ export default async function AdminHomePage() {
     <div className="relative">
       <LanePattern as="div" className="absolute inset-0 opacity-70" />
       <PageShell width="md">
-        <header
-          data-admin-hero
-          className="bg-pool-deep text-paper shadow-elev-3 flex items-center gap-3 overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7 sm:py-7"
-        >
+        <header data-admin-hero className="border-ink-200 flex items-center gap-3 border-b pb-4">
           <div
             aria-hidden="true"
-            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10"
+            className="bg-pool-foam text-pool-deep flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
           >
-            <MdSports className="text-paper h-7 w-7" />
+            <MdSports className="h-6 w-6" />
           </div>
           <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <Eyebrow tone="inverse" className="text-paper/80">
-              Centro de mando
-            </Eyebrow>
-            <h1 className="font-display text-paper text-2xl leading-tight font-extrabold sm:text-3xl">
+            <Eyebrow>Centro de mando</Eyebrow>
+            <h1 className="font-display text-pool-deep text-xl leading-tight font-extrabold sm:text-2xl">
               {greeting}
             </h1>
-            <p className="text-paper/75 mt-1 text-sm sm:text-base">
-              Organiza el club desde un único lugar.
-            </p>
+            <p className="text-ink-500 text-sm">Organiza el club desde un único lugar.</p>
           </div>
         </header>
 

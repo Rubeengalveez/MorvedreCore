@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Route } from "next";
 import { Box, PackageOpen, Search, ShoppingBag } from "lucide-react";
 
@@ -42,26 +43,19 @@ export default async function ShopPage({
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
-      <header className="border-ink-300 border-b pb-5">
-        <p className="text-pool-blue text-xs font-extrabold tracking-[0.14em] uppercase">
-          Vestuario del club
-        </p>
-        <h1 className="font-display text-pool-deep mt-1 text-3xl leading-tight font-extrabold tracking-tight sm:text-4xl">
-          Tienda Morvedre
-        </h1>
-        <p className="text-ink-600 mt-2 max-w-lg text-base leading-relaxed">
-          Elige el producto, configura sus opciones y envía una solicitud cuando lo tengas claro.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <CartButton />
-          <Link
-            href={"/shop/orders" as Route}
-            className="border-ink-300 bg-paper-card text-pool-deep hover:border-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-2 rounded-lg border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <PackageOpen className="h-5 w-5" aria-hidden="true" />
-            Mis pedidos
-          </Link>
+      <header className="border-ink-300 flex items-start justify-between gap-3 border-b pb-4">
+        <div className="min-w-0">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.14em] uppercase">
+            Vestuario del club
+          </p>
+          <h1 className="font-display text-pool-deep mt-1 text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
+            Tienda Morvedre
+          </h1>
+          <p className="text-ink-600 mt-1 max-w-lg text-sm leading-relaxed">
+            Productos bajo pedido, preparados por el club.
+          </p>
         </div>
+        <CartButton />
       </header>
 
       <form
@@ -86,6 +80,19 @@ export default async function ShopPage({
         />
         {category ? <input type="hidden" name="category" value={category} /> : null}
       </form>
+
+      <Link
+        href={"/shop/orders" as Route}
+        className="border-ink-200 bg-paper-card text-pool-deep shadow-elev-1 hover:border-pool-blue/40 focus-visible:ring-pool-blue flex min-h-14 items-center gap-3 rounded-xl border px-4 transition-[border-color,transform,box-shadow] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
+      >
+        <span className="bg-pool-foam flex h-9 w-9 items-center justify-center rounded-lg">
+          <PackageOpen className="text-pool-blue h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-extrabold">Mis pedidos</span>
+          <span className="text-ink-500 block text-xs">Consulta su preparación y entrega</span>
+        </span>
+      </Link>
 
       {categories.length > 0 ? (
         <nav
@@ -153,13 +160,12 @@ function ProductCard({ product }: { product: ShopProduct }) {
     >
       <div className="bg-paper-sunk relative aspect-[4/5] overflow-hidden">
         {product.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={product.image_url}
             alt={product.title}
             width={600}
             height={750}
-            loading="lazy"
+            unoptimized
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none"
           />
         ) : (
@@ -176,12 +182,14 @@ function ProductCard({ product }: { product: ShopProduct }) {
           {product.title}
         </h3>
         <p className="text-ink-500 mt-1 text-xs font-semibold">{variantText}</p>
-        <div className="border-ink-200 mt-auto flex items-end justify-between gap-2 border-t pt-3">
-          <span className="text-pool-deep font-mono text-xl font-extrabold tabular-nums">
+        <div className="border-ink-200 mt-auto border-t pt-3">
+          <span className="text-pool-deep block font-mono text-lg font-extrabold whitespace-nowrap tabular-nums sm:text-xl">
             {formatCents(product.price_cents, product.currency)}
           </span>
           {product.personalization_enabled ? (
-            <span className="text-pool-blue text-xs font-extrabold">Personalizable</span>
+            <span className="text-pool-blue mt-1 block truncate text-xs font-extrabold">
+              Personalizable
+            </span>
           ) : null}
         </div>
       </div>

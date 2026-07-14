@@ -26,6 +26,11 @@ export interface PlayerForCallup {
   category_code: CategoryCode;
   cap_number: number | null;
   current_team_id: string | null;
+  birth_year?: number | null;
+  was_previous_callup?: boolean;
+  goals?: number;
+  attendance_pct?: number;
+  exclusions?: number;
 }
 
 export interface AvailabilityRow {
@@ -146,7 +151,7 @@ export function suggestCallup(args: SuggestCallupArgs): CallupSuggestion[] {
 
   type Scored = {
     player: PlayerForCallup;
-    priority: number;
+    eligibilityTier: number;
     isAscending: boolean;
   };
 
@@ -158,7 +163,11 @@ export function suggestCallup(args: SuggestCallupArgs): CallupSuggestion[] {
       : null;
 
     if (playerTeam && playerTeam.id === targetTeam.id) {
-      scored.push({ player, priority: 0, isAscending: false });
+      scored.push({
+        player,
+        eligibilityTier: 0,
+        isAscending: false,
+      });
       continue;
     }
 
@@ -166,7 +175,11 @@ export function suggestCallup(args: SuggestCallupArgs): CallupSuggestion[] {
       if (playerTeam && isPlayerBRuleBlocked(player.id, playerTeam.id, targetTeam.id, allTeams)) {
         continue;
       }
-      scored.push({ player, priority: 1, isAscending: false });
+      scored.push({
+        player,
+        eligibilityTier: 1,
+        isAscending: false,
+      });
       continue;
     }
 
@@ -175,11 +188,17 @@ export function suggestCallup(args: SuggestCallupArgs): CallupSuggestion[] {
     }
 
     const dist = targetIdx - categoryIndex(player.category_code);
-    scored.push({ player, priority: 10 + Math.abs(dist), isAscending: dist > 0 });
+    scored.push({
+      player,
+      eligibilityTier: 10 + Math.abs(dist),
+      isAscending: dist > 0,
+    });
   }
 
   scored.sort((a, b) => {
-    if (a.priority !== b.priority) return a.priority - b.priority;
+    if (a.eligibilityTier !== b.eligibilityTier) return a.eligibilityTier - b.eligibilityTier;
+    const priority = compareCallupPriority(a.player, b.player, scheduledAt);
+    if (priority !== 0) return priority;
     const capA = a.player.cap_number ?? 100;
     const capB = b.player.cap_number ?? 100;
     if (capA !== capB) return capA - capB;
@@ -198,9 +217,46 @@ export function suggestCallup(args: SuggestCallupArgs): CallupSuggestion[] {
       is_ascending: s.isAscending,
       has_conflict: findConflicts(s.player.id, scheduledDate, allAvailability),
       is_substitute: idx >= max,
-      reason: null,
+      reason: suggestionReason(s.player),
     };
   });
+}
+
+function callupPriority(player: PlayerForCallup, scheduledAt: Date | string): number[] {
+  const matchYear = new Date(scheduledAt).getFullYear();
+  const age = player.birth_year ? Math.max(0, matchYear - player.birth_year) : 0;
+  return [
+    player.was_previous_callup ? 1 : 0,
+    Math.max(0, player.goals ?? 0),
+    age,
+    Math.max(0, Math.min(100, player.attendance_pct ?? 0)),
+    -Math.max(0, player.exclusions ?? 0),
+  ];
+}
+
+function compareCallupPriority(
+  first: PlayerForCallup,
+  second: PlayerForCallup,
+  scheduledAt: Date | string,
+): number {
+  const firstPriority = callupPriority(first, scheduledAt);
+  const secondPriority = callupPriority(second, scheduledAt);
+  for (let index = 0; index < firstPriority.length; index += 1) {
+    const difference = (secondPriority[index] ?? 0) - (firstPriority[index] ?? 0);
+    if (difference !== 0) return difference;
+  }
+  return 0;
+}
+
+function suggestionReason(player: PlayerForCallup): string {
+  const parts: string[] = [];
+  if (player.was_previous_callup) parts.push("Estuvo en la convocatoria anterior");
+  if ((player.goals ?? 0) > 0) parts.push(`${player.goals} goles`);
+  if ((player.attendance_pct ?? 0) > 0) {
+    parts.push(`${Math.round(player.attendance_pct ?? 0)}% de asistencia`);
+  }
+  if ((player.exclusions ?? 0) === 0) parts.push("Sin expulsiones");
+  return parts.length > 0 ? parts.join(" · ") : "Plantilla y categoría compatibles";
 }
 
 export function defaultCapForPlayer(

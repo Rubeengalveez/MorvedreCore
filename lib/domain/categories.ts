@@ -33,8 +33,6 @@ export const CATEGORY_DEFAULT_GENDER: Record<CategoryCode, TeamGender> = {
   escuela: "mixed",
 };
 
-const MAX_AGE_THRESHOLD = 25;
-
 export function ageIndex(birthYear: number, currentYear: number): number {
   return currentYear - birthYear;
 }
@@ -43,11 +41,6 @@ export function inferCategory(birthYear: number, currentYear: number): CategoryC
   if (birthYear > currentYear) {
     throw new Error(
       `birthYear (${birthYear}) cannot be in the future (currentYear: ${currentYear})`,
-    );
-  }
-  if (birthYear < currentYear - MAX_AGE_THRESHOLD) {
-    throw new Error(
-      `birthYear (${birthYear}) is too old for the roster (currentYear: ${currentYear})`,
     );
   }
   const age = ageIndex(birthYear, currentYear);
@@ -62,6 +55,5 @@ export function inferCategory(birthYear: number, currentYear: number): CategoryC
 export function safeInferCategory(birthYear: number, currentYear: number): CategoryCode | null {
   const age = ageIndex(birthYear, currentYear);
   if (age < 0) return null;
-  if (age > MAX_AGE_THRESHOLD) return null;
   return inferCategory(birthYear, currentYear);
 }

@@ -1,11 +1,12 @@
 import { PositionChip } from "@/components/ui/position-chip";
 import { cn } from "@/lib/utils/cn";
-import { type RankingRow } from "@/lib/domain/rankings";
+import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
 
 export interface RankingRowItemProps {
   row: RankingRow;
   metricLabel: string;
   metricSuffix: string;
+  metric: RankingMetric;
   isMe: boolean;
   showMedal?: boolean;
 }
@@ -14,6 +15,7 @@ export function RankingRowItem({
   row,
   metricLabel,
   metricSuffix,
+  metric,
   isMe,
   showMedal = false,
 }: RankingRowItemProps) {
@@ -24,6 +26,7 @@ export function RankingRowItem({
     <div
       className={cn(
         "border-ink-300 bg-paper-card shadow-elev-1 flex min-h-[66px] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors",
+        isTop10 && !isMe && "border-pool-blue/25 bg-pool-foam/20",
         isMe && "border-ball-gold/70 bg-ball-gold/10 ring-ball-gold/35 ring-2",
       )}
       style={{ borderLeftWidth: "4px", borderLeftColor: row.team_color ?? "var(--pool-blue)" }}
@@ -50,8 +53,27 @@ export function RankingRowItem({
         <p className="text-ink-500 mt-1 text-xs leading-none font-extrabold tracking-[0.08em] uppercase">
           {metricLabel}
         </p>
+        <p className="text-ink-500 mt-1 max-w-28 text-xs leading-tight">
+          {metricContext(row, metric)}
+        </p>
       </div>
       {showMedal && row.medal ? <span className="sr-only">{row.medal}</span> : null}
     </div>
   );
+}
+
+export function metricContext(row: RankingRow, metric: RankingMetric): string {
+  if (metric === "attendance") {
+    return `${row.trainings_attended}/${row.trainings_total} entrenos`;
+  }
+  if (metric === "mvp") {
+    const pct = row.matches_played > 0 ? Math.round((row.mvp_count / row.matches_played) * 100) : 0;
+    return `${row.matches_played} PJ · ${pct}%`;
+  }
+  if (metric === "goals" || metric === "exclusions") {
+    const total = metric === "goals" ? row.goals : row.exclusions;
+    const average = row.matches_played > 0 ? total / row.matches_played : 0;
+    return `${row.matches_played} PJ · ${average.toLocaleString("es-ES", { maximumFractionDigits: 1 })}/partido`;
+  }
+  return "Racha consecutiva";
 }

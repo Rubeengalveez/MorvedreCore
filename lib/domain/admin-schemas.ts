@@ -663,7 +663,6 @@ export const upsertShopProductSchema = z.object({
   image_url: z.string().url("URL inv�lida.").max(500).nullable().optional(),
   sizes: z.array(z.string().trim().min(1).max(20)).max(20).optional(),
   available: z.boolean().default(true),
-  stock: z.number().int().min(0).max(1000).nullable().optional(),
   max_per_order: z.number().int().min(1).max(20).default(10),
   personalization_enabled: z.boolean().default(false),
   personalization_label: z.string().trim().min(1).max(40).default("Nombre"),

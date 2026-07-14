@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -51,8 +51,7 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
+function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (
     <Button type="submit" size="lg" className="w-full" disabled={pending}>
       {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
@@ -84,15 +83,15 @@ function Toggle({
         aria-checked={value}
         onClick={() => onChange(!value)}
         className={
-          "focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
+          "focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative inline-flex h-12 w-14 shrink-0 cursor-pointer items-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
           (value ? "bg-pool-blue" : "bg-ink-300")
         }
       >
         <span
           aria-hidden="true"
           className={
-            "bg-paper inline-block h-5 w-5 rounded-full transition-transform " +
-            (value ? "translate-x-6" : "translate-x-1")
+            "bg-paper inline-block h-6 w-6 rounded-lg transition-transform " +
+            (value ? "translate-x-7" : "translate-x-1")
           }
         />
       </button>
@@ -106,9 +105,10 @@ export interface MatchDetailsFormProps {
 }
 
 export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
-  const [, startTransition] = useTransition();
+  const [pending, startTransition] = useTransition();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -147,6 +147,8 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
           notes: values.notes && values.notes.trim() !== "" ? values.notes : null,
         });
         setSuccess(true);
+        form.reset(values);
+        router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "No pudimos guardar.");
       }
@@ -177,127 +179,20 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
           <span className="text-ink-600">· temporada</span>
         </div>
 
-        <FormField
-          control={form.control}
-          name="opponent"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Rival</FormLabel>
-              <FormControl>
-                <Input
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+        <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
+          <div>
+            <h3 className="text-pool-deep font-extrabold">Partido</h3>
+            <p className="text-ink-500 mt-0.5 text-sm">Rival, competición y situación actual.</p>
+          </div>
           <FormField
             control={form.control}
-            name="competition_type"
+            name="opponent"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Competición</FormLabel>
-                <FormControl>
-                  <Select
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  >
-                    {COMPETITION_OPTIONS.map((c) => (
-                      <option key={c.value} value={c.value}>
-                        {c.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="status"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Estado</FormLabel>
-                <FormControl>
-                  <Select
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  >
-                    {STATUS_OPTIONS.map((s) => (
-                      <option key={s.value} value={s.value}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </Select>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
-
-        <FormField
-          control={form.control}
-          name="is_home"
-          render={({ field }) => (
-            <FormItem>
-              <Toggle
-                value={field.value}
-                onChange={field.onChange}
-                label="Juegas en casa"
-                description="Si lo desactivas, el partido se juega fuera."
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="scheduled_at_local"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Fecha y hora</FormLabel>
-              <FormControl>
-                <Input
-                  type="datetime-local"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="location"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Lugar</FormLabel>
+                <FormLabel>Rival</FormLabel>
                 <FormControl>
                   <Input
-                    value={field.value ?? ""}
+                    value={field.value}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     name={field.name}
@@ -309,15 +204,92 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
             )}
           />
 
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="competition_type"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Competición</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    >
+                      {COMPETITION_OPTIONS.map((c) => (
+                        <option key={c.value} value={c.value}>
+                          {c.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Estado</FormLabel>
+                  <FormControl>
+                    <Select
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    >
+                      {STATUS_OPTIONS.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
           <FormField
             control={form.control}
-            name="pool_name"
+            name="is_home"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Piscina</FormLabel>
+                <Toggle
+                  value={field.value}
+                  onChange={field.onChange}
+                  label="Juegas en casa"
+                  description="Si lo desactivas, el partido se juega fuera."
+                />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </section>
+
+        <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
+          <div>
+            <h3 className="text-pool-deep font-extrabold">Cuándo y dónde</h3>
+            <p className="text-ink-500 mt-0.5 text-sm">Información que verá todo el equipo.</p>
+          </div>
+          <FormField
+            control={form.control}
+            name="scheduled_at_local"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Fecha y hora</FormLabel>
                 <FormControl>
                   <Input
-                    value={field.value ?? ""}
+                    type="datetime-local"
+                    value={field.value}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
                     name={field.name}
@@ -328,47 +300,95 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
               </FormItem>
             )}
           />
-        </div>
 
-        <FormField
-          control={form.control}
-          name="logistics_enabled"
-          render={({ field }) => (
-            <FormItem>
-              <Toggle
-                value={field.value}
-                onChange={field.onChange}
-                label="Activar logística"
-                description="Habilita la pestaña de logística (coches, viajes)."
-              />
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lugar</FormLabel>
+                  <FormControl>
+                    <Input
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notas</FormLabel>
-              <FormControl>
-                <textarea
-                  rows={3}
-                  value={field.value ?? ""}
+            <FormField
+              control={form.control}
+              name="pool_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Piscina</FormLabel>
+                  <FormControl>
+                    <Input
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </section>
+
+        <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
+          <div>
+            <h3 className="text-pool-deep font-extrabold">Organización</h3>
+            <p className="text-ink-500 mt-0.5 text-sm">Desplazamiento y notas para el grupo.</p>
+          </div>
+          <FormField
+            control={form.control}
+            name="logistics_enabled"
+            render={({ field }) => (
+              <FormItem>
+                <Toggle
+                  value={field.value}
                   onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                  className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  label="Activar logística"
+                  description="Habilita la pestaña de logística (coches, viajes)."
                 />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <SubmitButton label="Guardar cambios" />
+          <FormField
+            control={form.control}
+            name="notes"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Notas</FormLabel>
+                <FormControl>
+                  <textarea
+                    rows={3}
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                    className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </section>
+
+        <SubmitButton label="Guardar cambios" pending={pending} />
       </form>
     </Form>
   );

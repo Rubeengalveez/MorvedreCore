@@ -50,27 +50,29 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
         Partido
       </Link>
 
-      <header className="bg-pool-deep shadow-elev-3 overflow-hidden rounded-[1.75rem] text-white">
-        <div className="flex items-start gap-4 p-5">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-white/15 bg-white/10">
-            <CarFront className="h-7 w-7" aria-hidden="true" />
+      <header className="border-ink-200 bg-paper-card overflow-hidden rounded-2xl border shadow-sm">
+        <div className="flex items-start gap-3 p-4">
+          <div className="bg-pool-foam text-pool-deep flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+            <CarFront className="h-6 w-6" aria-hidden="true" />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-bold text-white/65">{travel.team_label}</p>
-            <h1 className="truncate text-xl font-black">Viaje a {travel.opponent}</h1>
-            <p className="mt-1 text-sm font-semibold text-white/75">
+            <p className="text-ink-500 text-sm font-bold">{travel.team_label}</p>
+            <h1 className="text-pool-deep truncate text-xl font-black">
+              Viaje a {travel.opponent}
+            </h1>
+            <p className="text-ink-500 mt-1 text-sm font-semibold">
               {formatLongDate(travel.scheduled_at)} · {formatTimeOfDay(travel.scheduled_at)}
             </p>
           </div>
         </div>
-        <div className="grid grid-cols-2 border-t border-white/15">
-          <div className="border-r border-white/15 p-4">
-            <p className="text-xs font-bold text-white/55">PUNTO DE ENCUENTRO</p>
-            <p className="mt-1 text-sm font-bold">{meetingPoint}</p>
+        <div className="border-ink-200 bg-paper-sunk grid grid-cols-2 border-t">
+          <div className="border-ink-200 border-r p-3.5">
+            <p className="text-ink-500 text-[11px] font-bold">PUNTO DE ENCUENTRO</p>
+            <p className="text-pool-deep mt-1 text-sm font-bold">{meetingPoint}</p>
           </div>
-          <div className="p-4">
-            <p className="text-xs font-bold text-white/55">COMPENSACIÓN</p>
-            <p className="mt-1 text-sm font-bold">
+          <div className="p-3.5">
+            <p className="text-ink-500 text-[11px] font-bold">COMPENSACIÓN</p>
+            <p className="text-pool-deep mt-1 text-sm font-bold">
               {formatTravelCompensation(travel.travel_compensation_cents)} por coche
             </p>
           </div>

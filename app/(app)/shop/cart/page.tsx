@@ -16,7 +16,7 @@ export const metadata = { title: "Carrito — Morvedre Core" };
 export default async function CartPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const products = await getShopProducts({ availableOnly: true });
+  const products = await getShopProducts();
 
   return (
     <PageShell width="lg" className="gap-5 pb-8">

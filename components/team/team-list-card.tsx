@@ -7,7 +7,7 @@ import type { TeamListItem } from "@/server/queries/teams";
 
 export interface TeamListCardProps {
   team: TeamListItem;
-  isMyTeam?: boolean;
+  relationship?: "player" | "coach" | "both" | null;
 }
 
 const GENDER_LABELS: Record<string, string> = {
@@ -16,17 +16,19 @@ const GENDER_LABELS: Record<string, string> = {
   mixed: "Mixto",
 };
 
-export function TeamListCard({ team, isMyTeam = false }: TeamListCardProps) {
+export function TeamListCard({ team, relationship = null }: TeamListCardProps) {
   const href = `/team/${team.id}` as Route;
 
   return (
     <Link
       href={href}
       data-team-card
-      data-my-team={isMyTeam}
+      data-team-relationship={relationship ?? "none"}
       className={cn(
         "group border-ink-200 bg-paper-card focus-visible:ring-pool-blue hover:border-pool-blue/40 hover:shadow-elev-2 relative flex min-h-24 w-full touch-manipulation items-center gap-4 overflow-hidden rounded-2xl border px-4 py-3.5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none",
-        isMyTeam && "border-pool-blue/35 shadow-elev-1",
+        relationship === "player" && "border-pool-blue/45 bg-pool-foam/35",
+        relationship === "coach" && "border-pool-deep/45 shadow-elev-2",
+        relationship === "both" && "border-ball-gold/65 bg-ball-gold/5 shadow-elev-2",
       )}
     >
       <span
@@ -40,9 +42,14 @@ export function TeamListCard({ team, isMyTeam = false }: TeamListCardProps) {
           <h3 className="font-display text-pool-deep truncate text-lg leading-tight font-extrabold">
             {team.label}
           </h3>
-          {isMyTeam ? (
-            <span className="border-pool-blue/25 bg-pool-foam text-pool-deep rounded-full border px-2 py-0.5 text-xs font-extrabold tracking-wide uppercase">
-              Tu equipo
+          {relationship === "player" || relationship === "both" ? (
+            <span className="border-pool-blue/25 bg-pool-foam text-pool-deep rounded-full border px-2 py-0.5 text-xs font-extrabold">
+              Juegas aquí
+            </span>
+          ) : null}
+          {relationship === "coach" || relationship === "both" ? (
+            <span className="bg-pool-deep text-paper rounded-full px-2 py-0.5 text-xs font-extrabold">
+              Entrenador titular
             </span>
           ) : null}
         </div>

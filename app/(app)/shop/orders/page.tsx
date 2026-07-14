@@ -7,6 +7,7 @@ import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopOrdersForPlayer } from "@/server/queries/shop";
 import { SHOP_ORDER_STATUS_LABELS, formatCents } from "@/lib/domain/shop";
 import { PageShell } from "@/components/ui/page-shell";
+import { AppPageHero } from "@/components/ui/app-page-hero";
 import { formatRelativeIso } from "@/lib/domain/calendar";
 import { cn } from "@/lib/utils/cn";
 
@@ -28,18 +29,11 @@ export default async function MyOrdersPage() {
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Volver a la tienda
       </Link>
-      <header className="bg-pool-deep text-paper shadow-elev-3 flex items-start justify-between gap-4 rounded-[1.75rem] px-5 py-6 sm:px-7">
-        <div>
-          <p className="text-paper/65 text-xs font-extrabold tracking-[0.14em] uppercase">
-            Seguimiento
-          </p>
-          <h1 className="font-display mt-2 text-3xl font-extrabold tracking-tight">Mis pedidos</h1>
-          <p className="text-paper/75 mt-2 text-base">Consulta el estado de tus solicitudes.</p>
-        </div>
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/15 bg-white/10">
-          <ReceiptText className="h-6 w-6" aria-hidden="true" />
-        </span>
-      </header>
+      <AppPageHero
+        eyebrow="Seguimiento"
+        title="Mis pedidos"
+        description="Consulta el estado de tus solicitudes."
+      />
 
       {orders.length === 0 ? (
         <div className="border-ink-200 bg-paper-card flex min-h-64 flex-col items-center justify-center rounded-[1.75rem] border border-dashed px-6 text-center">

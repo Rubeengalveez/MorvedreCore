@@ -38,33 +38,16 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
       </Link>
 
       <header className="border-ink-300 border-b pb-5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-            {product.category}
-          </p>
-          <span
-            className={
-              product.available
-                ? "bg-success/10 text-success rounded-md px-2.5 py-1 text-xs font-extrabold uppercase"
-                : "bg-goggle-red/10 text-goggle-red rounded-md px-2.5 py-1 text-xs font-extrabold uppercase"
-            }
-          >
-            {product.available ? "Disponible" : "Agotado"}
-          </span>
-        </div>
+        <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+          {product.category}
+        </p>
         <h1 className="text-pool-deep mt-2 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
           {product.title}
         </h1>
         <p className="font-display text-pool-deep mt-3 text-4xl leading-none font-extrabold tracking-tight tabular-nums sm:text-5xl">
           {formatCents(product.price_cents, product.currency)}
         </p>
-        <p className="text-ink-500 mt-2 text-sm font-semibold">
-          {product.stock !== null
-            ? product.stock > 0
-              ? `${product.stock} disponibles`
-              : "Sin stock"
-            : "Disponible bajo pedido"}
-        </p>
+        <p className="text-ink-500 mt-2 text-sm font-semibold">Se prepara bajo pedido</p>
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] md:items-start md:gap-8">

@@ -131,7 +131,36 @@ export function CartClient({ products }: CartClientProps) {
           <ul className="border-ink-300 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-xl border shadow-sm">
             {cart.items.map((item) => {
               const product = productById.get(item.productId);
-              if (!product) return null;
+              if (!product) {
+                return (
+                  <li
+                    key={`${item.productId}-${item.size ?? ""}-${item.personalization ?? ""}`}
+                    className="grid min-h-24 grid-cols-[minmax(0,1fr)_3rem] items-center gap-3 px-4 py-4"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-pool-deep font-extrabold">Producto retirado</p>
+                      <p className="text-ink-600 mt-1 text-sm leading-relaxed">
+                        Ya no forma parte del catálogo. Puedes quitarlo para continuar con tu
+                        solicitud.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        cart.removeItem(
+                          item.productId,
+                          item.size ?? null,
+                          item.personalization ?? null,
+                        )
+                      }
+                      className="border-ink-200 text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-12 w-12 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                      aria-label="Eliminar producto retirado"
+                    >
+                      <Trash2 className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </li>
+                );
+              }
               return (
                 <li
                   key={`${item.productId}-${item.size ?? ""}-${item.personalization ?? ""}`}
@@ -155,6 +184,11 @@ export function CartClient({ products }: CartClientProps) {
                     <p className="text-pool-deep line-clamp-2 text-base leading-snug font-extrabold">
                       {product.title}
                     </p>
+                    {!product.available ? (
+                      <p className="text-goggle-red mt-1 text-xs font-extrabold">
+                        Retirado temporalmente
+                      </p>
+                    ) : null}
                     <p className="text-ink-500 mt-1 text-sm">
                       {item.size ? `Talla ${item.size}` : "Talla única"}
                     </p>

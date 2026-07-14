@@ -68,7 +68,6 @@ export default async function EditShopProductPage({ params }: { params: Promise<
           })),
           sizes: product.sizes,
           available: product.available,
-          stock: product.stock,
           max_per_order: product.max_per_order,
           personalization_enabled: product.personalization_enabled,
           personalization_label: product.personalization_label,

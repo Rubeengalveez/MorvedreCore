@@ -1436,7 +1436,6 @@ export type Database = {
           personalization_max_length: number;
           price_cents: number;
           sizes: string[];
-          stock: number | null;
           title: string;
           updated_at: string;
         };
@@ -1455,7 +1454,6 @@ export type Database = {
           personalization_max_length?: number;
           price_cents: number;
           sizes?: string[];
-          stock?: number | null;
           title: string;
           updated_at?: string;
         };
@@ -1474,7 +1472,6 @@ export type Database = {
           personalization_max_length?: number;
           price_cents?: number;
           sizes?: string[];
-          stock?: number | null;
           title?: string;
           updated_at?: string;
         };

@@ -1,27 +1,27 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { LogOut, ChevronRight, User } from "lucide-react";
-
-import { Avatar } from "@/components/ui/avatar";
-import { CapTile } from "@/components/ui/cap-tile";
-import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/ui/eyebrow";
-import { PageShell } from "@/components/ui/page-shell";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { Equipo, Gorro, Porteria, SilbatoActivo, Trofeo } from "@/components/brand/pictograms";
-import { ProfileSwitcherInline } from "@/components/profile/profile-switcher-inline";
-import { CalendarSyncCard } from "@/components/profile/calendar-sync-card";
 import {
-  AvailabilityCalendar,
-  type AvailabilityDay,
-} from "@/components/profile/availability-calendar";
-import { todayIso, addDaysIso } from "@/lib/domain/calendar";
-import { CATEGORY_LABELS, inferCategory, type CategoryCode } from "@/lib/domain/categories";
+  Bell,
+  CalendarDays,
+  ChevronRight,
+  KeyRound,
+  LogOut,
+  Settings2,
+  ShieldCheck,
+  Shirt,
+  Trophy,
+  UserRoundPen,
+  UsersRound,
+} from "lucide-react";
+
+import { CalendarSyncCard } from "@/components/profile/calendar-sync-card";
+import { ProfileSwitcherInline } from "@/components/profile/profile-switcher-inline";
+import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/server/actions/auth";
-import { computePlayerStats } from "@/lib/domain/stats";
-import { getRankings } from "@/server/queries/rankings";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
 
@@ -30,11 +30,11 @@ export const revalidate = 0;
 
 export const metadata = {
   title: "Tu perfil — Morvedre Core",
-  description: "Edita tus datos de jugador y contacto.",
+  description: "Tu identidad, actividad deportiva y preferencias del club.",
 };
 
 const ROLE_LABELS: Record<string, string> = {
-  admin: "Admin",
+  admin: "Administrador",
   coach: "Entrenador",
   delegate: "Delegado",
   directiva: "Directiva",
@@ -42,251 +42,77 @@ const ROLE_LABELS: Record<string, string> = {
   player: "Jugador",
 };
 
-const ROLE_PRIORITY: Record<string, number> = {
-  admin: 0,
-  directiva: 1,
-  coach: 2,
-  delegate: 3,
-  player: 4,
-  parent: 5,
+const STAFF_ROLE_LABELS: Record<string, string> = {
+  head_coach: "Entrenador titular",
+  assistant_coach: "Entrenador ayudante",
+  physical_trainer: "Preparador físico",
+  delegate: "Delegado",
 };
 
-function extractYear(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return value;
-  if (typeof value === "string") {
-    const n = Number(value);
-    if (Number.isFinite(n)) return n;
-  }
-  return null;
+interface Snapshot {
+  matches_played: number;
+  goals: number;
+  exclusions: number;
+  mvp_count: number;
+  trainings_attended: number;
+  trainings_total: number;
+  attendance_pct: number;
 }
 
 export default async function ProfilePage() {
-  const supabase = await createClient();
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const { activeProfile, ownProfile, linkedProfiles } = ctx;
 
-  const [seasonRes, ownProfileRolesRes] = await Promise.all([
-    supabase.from("seasons").select("id, is_current").eq("is_current", true).maybeSingle(),
-    supabase.from("user_roles").select("role, scope_team_id").eq("profile_id", ownProfile.id),
-  ]);
-  const seasonId = seasonRes.data?.id ?? null;
-
-  const roles = (
-    (ownProfileRolesRes.data ?? []) as Array<{ role: string; scope_team_id: string | null }>
-  )
-    .map((r) => r.role)
-    .filter((r) => r in ROLE_LABELS)
-    .sort((a, b) => (ROLE_PRIORITY[a] ?? 99) - (ROLE_PRIORITY[b] ?? 99));
-
-  const isAdmin = roles.includes("admin");
-  const isPlayer = roles.includes("player");
-  const isCoach = roles.includes("coach");
-
-  const teams = seasonId ? await getTeamsForProfileInSeason(activeProfile.id, seasonId) : [];
-
-  const teamIds = teams.map((t) => t.id);
-  const primaryTeam = teams[0] ?? null;
-
-  const teamColor = activeProfile.team_color ?? primaryTeam?.color ?? "var(--pool-blue)";
-  const primaryRole = roles[0] ?? null;
-
-  const now = new Date();
-  const today = todayIso();
-  const halfYearAhead = addDaysIso(today, 180);
-  const oneYearAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 365).toISOString();
-
-  const [
-    availabilityData,
-    attendanceData,
-    allMatches,
-    allSessions,
-    callupsData,
-    coachMatchesRes,
-    upcomingMatchesRes,
-    upcomingSessionsRes,
-  ] = await Promise.all([
-    supabase
-      .from("match_availability")
-      .select("date, available, reason")
-      .eq("player_id", activeProfile.id)
-      .gte("date", today)
-      .lte("date", halfYearAhead),
-    supabase
-      .from("training_attendance")
-      .select("session_id, present, marked_at")
-      .eq("player_id", activeProfile.id)
-      .gte("marked_at", oneYearAgo),
-    supabase
-      .from("matches")
-      .select(
-        "id, scheduled_at, status, opponent, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
-      )
-      .in("team_id", teamIds.length > 0 ? teamIds : ["00000000-0000-0000-0000-000000000000"])
-      .lte("scheduled_at", new Date().toISOString())
-      .order("scheduled_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("training_sessions")
-      .select("id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(label, color)")
-      .in("team_id", teamIds.length > 0 ? teamIds : ["00000000-0000-0000-0000-000000000000"])
-      .lte("scheduled_at", new Date().toISOString())
-      .order("scheduled_at", { ascending: false })
-      .limit(20),
-    supabase
-      .from("match_callups")
-      .select("match_id, status")
-      .eq("player_id", activeProfile.id)
-      .gte("created_at", oneYearAgo),
-    isCoach
-      ? supabase
-          .from("matches")
-          .select(
-            "id, scheduled_at, opponent, status, teams!matches_team_id_fkey(id, label, color)",
-          )
-          .in("team_id", teamIds.length > 0 ? teamIds : ["00000000-0000-0000-0000-000000000000"])
-          .in("status", ["scheduled", "in_progress"])
-          .gte("scheduled_at", new Date().toISOString())
-          .order("scheduled_at", { ascending: true })
-          .limit(6)
-      : Promise.resolve({ data: [] as Array<unknown> }),
-    supabase
-      .from("matches")
-      .select("id, scheduled_at, status, opponent, teams!matches_team_id_fkey(label, color)")
-      .in("team_id", teamIds.length > 0 ? teamIds : ["00000000-0000-0000-0000-000000000000"])
-      .gte("scheduled_at", today)
-      .lte("scheduled_at", new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString())
-      .order("scheduled_at", { ascending: true }),
-    supabase
-      .from("training_sessions")
-      .select("id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(label, color)")
-      .in("team_id", teamIds.length > 0 ? teamIds : ["00000000-0000-0000-0000-000000000000"])
-      .gte("scheduled_at", today)
-      .lte("scheduled_at", new Date(now.getTime() + 180 * 24 * 60 * 60 * 1000).toISOString())
-      .order("scheduled_at", { ascending: true }),
+  const { activeProfile, linkedProfiles, ownProfile } = ctx;
+  const supabase = await createClient();
+  const [{ data: season }, { data: activeRoles }, { data: ownRoles }] = await Promise.all([
+    supabase.from("seasons").select("id, label").eq("is_current", true).maybeSingle(),
+    supabase.from("user_roles").select("role").eq("profile_id", activeProfile.id),
+    supabase.from("user_roles").select("role").eq("profile_id", ownProfile.id),
   ]);
 
-  const availability: AvailabilityDay[] = (
-    (availabilityData.data ?? []) as Array<{
-      date: string;
-      available: boolean;
-      reason: string | null;
-    }>
-  ).map((row) => ({
-    iso: row.date,
-    available: row.available,
-    reason: row.reason,
-  }));
-
-  const upcomingMatches = (upcomingMatchesRes.data ?? []).map((row) => ({
-    id: row.id,
-    scheduled_at: row.scheduled_at,
-    opponent: row.opponent,
-    team_label: row.teams?.label ?? "Equipo",
-    team_color: row.teams?.color ?? "var(--pool-blue)",
-  }));
-
-  const upcomingSessions = (upcomingSessionsRes.data ?? []).map((row) => ({
-    id: row.id,
-    scheduled_at: row.scheduled_at,
-    cancelled: row.cancelled,
-    team_label: row.teams?.label ?? "Equipo",
-    team_color: row.teams?.color ?? "var(--pool-blue)",
-  }));
-
-  const playerStats = computePlayerStats(
-    activeProfile.id,
-    seasonId ?? "",
-    (allSessions.data ?? []) as unknown as Array<{
-      id: string;
-      team_id: string;
-      cancelled: boolean;
-      scheduled_at: string;
-    }>,
-    (attendanceData.data ?? []) as unknown as Array<{
-      session_id: string;
-      player_id: string;
-      present: boolean;
-    }>,
-    (allMatches.data ?? []) as unknown as Array<{
-      id: string;
-      team_id: string;
-      status: "scheduled" | "in_progress" | "played" | "cancelled" | "postponed";
-      scheduled_at: string;
-      final_score_us: number | null;
-      final_score_them: number | null;
-      season_id: string;
-    }>,
-    (callupsData.data ?? []) as unknown as Array<{
-      match_id: string;
-      player_id: string;
-      status: "called" | "confirmed" | "declined" | "withdrawn" | "no_show";
-    }>,
-    [] as Array<{
-      match_id: string;
-      player_id: string;
-      goals: number;
-      exclusions: number;
-      mvp: boolean;
-    }>,
+  const roles = Array.from(new Set((activeRoles ?? []).map((item) => item.role))).filter(
+    (role) => role in ROLE_LABELS,
   );
+  const ownRoleNames = new Set((ownRoles ?? []).map((item) => item.role));
+  const isAdmin = ownRoleNames.has("admin");
 
-  const birthYear = extractYear(activeProfile.birth_year);
-  let categoryLabel: string | null = null;
-  if (birthYear != null) {
-    try {
-      categoryLabel = inferCategory(birthYear, now.getFullYear());
-    } catch {
-      categoryLabel = null;
-    }
-  }
+  const [teams, rosterResult, staffResult, snapshotResult] = season
+    ? await Promise.all([
+        getTeamsForProfileInSeason(activeProfile.id, season.id),
+        supabase
+          .from("team_rosters")
+          .select("team_id")
+          .eq("player_id", activeProfile.id)
+          .is("left_at", null),
+        supabase.from("team_staff").select("team_id, role").eq("profile_id", activeProfile.id),
+        supabase
+          .from("ranking_snapshots")
+          .select(
+            "matches_played, goals, exclusions, mvp_count, trainings_attended, trainings_total, attendance_pct",
+          )
+          .eq("season_id", season.id)
+          .eq("scope", "all")
+          .eq("scope_key", "all")
+          .eq("player_id", activeProfile.id)
+          .maybeSingle(),
+      ])
+    : [
+        [],
+        { data: [] as Array<{ team_id: string }> },
+        { data: [] as Array<{ team_id: string; role: string }> },
+        { data: null },
+      ];
 
-  const coachUpcoming = (
-    (coachMatchesRes.data ?? []) as Array<{
-      id: string;
-      scheduled_at: string;
-      opponent: string;
-      status: string;
-      teams: unknown;
-    }>
-  ).map((row) => {
-    const teamRaw = Array.isArray(row.teams) ? row.teams[0] : row.teams;
-    const team = teamRaw as { id?: string; label?: string; color?: string } | null;
-    return {
-      id: row.id,
-      scheduled_at: row.scheduled_at,
-      opponent: row.opponent,
-      status: row.status,
-      team_id: team?.id ?? "",
-      team_label: team?.label ?? "",
-      team_color: team?.color ?? "var(--pool-blue)",
-    };
-  });
-
-  const stats = [
-    {
-      label: "Partidos",
-      value: String(playerStats.matches_played),
-      color: "var(--ball-gold)",
-    },
-    {
-      label: "Goles",
-      value: String(playerStats.goals),
-      color: "var(--success)",
-    },
-    {
-      label: "Excl.",
-      value: String(playerStats.exclusions),
-      color: "var(--goggle-red)",
-    },
-    {
-      label: "Asist.",
-      value: playerStats.attendance_pct > 0 ? `${playerStats.attendance_pct}%` : "—",
-      color: "var(--pool-blue)",
-    },
-  ];
-
-  const showStatsGrid = playerStats.matches_played > 0 || playerStats.trainings_total > 0;
+  const playerTeamIds = new Set((rosterResult.data ?? []).map((item) => item.team_id));
+  const staffByTeam = new Map(
+    (staffResult.data ?? []).map((item) => [item.team_id, item.role] as const),
+  );
+  const snapshot = snapshotResult.data as Snapshot | null;
+  const hasSportSummary = Boolean(
+    snapshot && (snapshot.matches_played > 0 || snapshot.trainings_total > 0),
+  );
+  const teamColor = activeProfile.team_color ?? teams[0]?.color ?? "var(--pool-blue)";
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
@@ -298,195 +124,158 @@ export default async function ProfilePage() {
         />
       ) : null}
 
-      <header className="bg-pool-deep text-paper shadow-elev-3 relative overflow-hidden rounded-[1.75rem] px-5 py-6 sm:px-7">
-        <div
-          aria-hidden="true"
-          className="absolute inset-y-0 right-0 w-2/5 bg-[linear-gradient(90deg,transparent,rgba(255,255,255,0.08))]"
+      <header className="border-ink-200 bg-paper-card shadow-elev-1 flex items-center gap-4 rounded-2xl border p-4 sm:p-5">
+        <Avatar
+          name={activeProfile.full_name}
+          src={activeProfile.photo_url}
+          size={64}
+          teamColor={teamColor}
         />
-        <div className="relative flex items-center gap-4">
-          <Avatar
-            name={activeProfile.full_name}
-            src={activeProfile.photo_url}
-            size={56}
-            teamColor={teamColor}
-            className="ring-2 ring-white/60"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-paper/65 text-xs font-extrabold tracking-[0.14em] uppercase">
-              Tu perfil
-            </p>
-            <h1 className="font-display text-paper mt-1 truncate text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
-              {activeProfile.full_name}
-            </h1>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {primaryRole ? (
-                <span className="text-paper inline-flex min-h-7 items-center rounded-full border border-white/15 bg-white/10 px-2.5 text-xs font-extrabold uppercase">
-                  {ROLE_LABELS[primaryRole]}
+        <div className="min-w-0 flex-1">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+            Perfil activo
+          </p>
+          <h1 className="font-display text-pool-deep mt-1 truncate text-2xl leading-tight font-extrabold tracking-tight">
+            {activeProfile.full_name}
+          </h1>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {roles.length > 0 ? (
+              roles.map((role) => (
+                <span
+                  key={role}
+                  className="border-ink-200 bg-paper-sunk text-ink-700 inline-flex min-h-7 items-center rounded-full border px-2.5 text-xs font-bold"
+                >
+                  {ROLE_LABELS[role]}
                 </span>
-              ) : null}
-              {categoryLabel ? (
-                <span className="text-paper inline-flex min-h-7 items-center rounded-full border border-white/15 bg-white/10 px-2.5 text-xs font-extrabold uppercase">
-                  {CATEGORY_LABELS[categoryLabel as CategoryCode]}
-                </span>
-              ) : null}
-              {activeProfile.cap_number != null ? (
-                <CapTile number={activeProfile.cap_number} teamColor={teamColor} size="sm" />
-              ) : null}
-            </div>
+              ))
+            ) : (
+              <span className="text-ink-500 text-sm">Miembro del club</span>
+            )}
           </div>
         </div>
       </header>
 
-      {showStatsGrid ? (
-        <section
-          aria-label="Estadísticas de la temporada"
-          className="border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-2 overflow-hidden rounded-2xl border sm:grid-cols-4"
-        >
-          {stats.map((s, i) => (
-            <div
-              key={s.label}
-              className={`flex flex-col items-center gap-1 px-2 py-4 ${
-                i < stats.length - 1 ? "border-ink-200 border-r" : ""
-              }`}
-            >
-              <p className="text-pool-deep font-mono text-xl leading-none font-extrabold tabular-nums">
-                {s.value}
-              </p>
-              <p className="text-ink-600 text-xs font-bold uppercase">{s.label}</p>
-            </div>
-          ))}
+      <nav aria-label="Accesos desde tu perfil" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <QuickLink href="/calendar" label="Calendario" icon={CalendarDays} />
+        <QuickLink href="/team" label="Equipos" icon={UsersRound} />
+        <QuickLink href="/rankings" label="Rankings" icon={Trophy} />
+        <QuickLink href="/shop/orders" label="Mis pedidos" icon={Shirt} />
+      </nav>
+
+      {hasSportSummary && snapshot ? (
+        <section aria-labelledby="season-summary-title" className="flex flex-col gap-3">
+          <SectionTitle
+            id="season-summary-title"
+            eyebrow={season?.label ?? "Temporada actual"}
+            title="Tu temporada"
+          />
+          <div className="border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-2 overflow-hidden rounded-2xl border sm:grid-cols-4">
+            <Stat
+              value={snapshot.goals}
+              label="Goles"
+              detail={`${snapshot.matches_played} partidos`}
+            />
+            <Stat
+              value={snapshot.mvp_count}
+              label="MVP"
+              detail={`${snapshot.matches_played} partidos`}
+            />
+            <Stat
+              value={`${Number(snapshot.attendance_pct).toLocaleString("es-ES")}%`}
+              label="Asistencia"
+              detail={`${snapshot.trainings_attended}/${snapshot.trainings_total} entrenos`}
+            />
+            <Stat
+              value={snapshot.exclusions}
+              label="Expulsiones"
+              detail={`${snapshot.matches_played} partidos`}
+            />
+          </div>
         </section>
       ) : null}
 
-      {isPlayer && seasonId ? (
-        <PlayerRankingSummary
-          profileId={activeProfile.id}
-          seasonId={seasonId}
-          birthYear={activeProfile.birth_year}
+      <section aria-labelledby="profile-teams-title" className="flex flex-col gap-3">
+        <SectionTitle
+          id="profile-teams-title"
+          eyebrow="Temporada actual"
+          title="Equipos y funciones"
         />
-      ) : null}
-
-      {primaryTeam ? (
-        <Link
-          href={`/team/${primaryTeam.id}` as Route}
-          className="border-ink-200 bg-paper-card shadow-elev-1 hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-20 touch-manipulation items-center justify-between rounded-2xl border p-4 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <div className="flex items-center gap-3">
-            <PictogramBadge pictogram={Equipo} color={primaryTeam.color} size="md" />
-            <div>
-              <Eyebrow>Tu equipo</Eyebrow>
-              <p className="font-display text-pool-deep text-base font-extrabold">
-                {primaryTeam.label}
-              </p>
-            </div>
-          </div>
-          <ChevronRight className="text-ink-600 h-5 w-5" />
-        </Link>
-      ) : null}
-
-      {isCoach && coachUpcoming.length > 0 ? (
-        <section
-          aria-labelledby="coach-week-heading"
-          className="border-ink-200 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-4"
-        >
-          <div className="flex items-center gap-2">
-            <PictogramBadge pictogram={SilbatoActivo} color="var(--pool-teal)" size="sm" />
-            <h2
-              id="coach-week-heading"
-              className="font-display text-pool-deep text-sm font-extrabold"
-            >
-              Mis equipos esta semana
-            </h2>
-          </div>
-          <ul className="flex flex-col gap-1.5">
-            {coachUpcoming.slice(0, 3).map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/matches/${m.id}` as Route}
-                  className="hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-16 items-center gap-2.5 rounded-xl border p-3 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                  style={{
-                    borderColor: m.team_color,
-                    backgroundColor: `color-mix(in oklab, ${m.team_color} 5%, var(--paper))`,
-                  }}
-                >
-                  <PictogramBadge pictogram={Gorro} color={m.team_color} size="sm" />
-                  <div className="min-w-0 flex-1">
-                    <Eyebrow style={{ color: m.team_color }}>{m.team_label}</Eyebrow>
-                    <p className="font-display text-pool-deep line-clamp-1 text-sm font-extrabold">
-                      vs {m.opponent}
-                    </p>
-                  </div>
-                  <span className="text-ink-600 shrink-0 text-xs font-bold uppercase">
-                    {new Date(m.scheduled_at).toLocaleDateString("es-ES", {
-                      weekday: "short",
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                </Link>
-              </li>
-            ))}
+        {teams.length > 0 ? (
+          <ul className="flex flex-col gap-2">
+            {teams.map((team) => {
+              const staffRole = staffByTeam.get(team.id);
+              const isPlayer = playerTeamIds.has(team.id);
+              return (
+                <li key={team.id}>
+                  <Link
+                    href={`/team/${team.id}` as Route}
+                    className="border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue/40 focus-visible:ring-pool-blue flex min-h-18 items-center gap-3 rounded-xl border p-3 transition-[border-color,transform,box-shadow] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="h-10 w-1.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: team.color }}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-pool-deep truncate font-extrabold">{team.label}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {staffRole ? (
+                          <span className="bg-pool-deep text-paper rounded-full px-2 py-0.5 text-xs font-bold">
+                            {STAFF_ROLE_LABELS[staffRole] ?? "Cuerpo técnico"}
+                          </span>
+                        ) : null}
+                        {isPlayer ? (
+                          <span className="bg-pool-foam text-pool-deep rounded-full px-2 py-0.5 text-xs font-bold">
+                            Jugador
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                    <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
-        </section>
-      ) : null}
-
-      <section
-        aria-labelledby="availability-heading"
-        className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4 sm:p-5"
-      >
-        <div className="mb-3 flex flex-col gap-1">
-          <h2
-            id="availability-heading"
-            className="font-display text-pool-deep text-base font-extrabold"
-          >
-            Disponibilidad
-          </h2>
-          <p className="text-ink-600 text-sm leading-relaxed">
-            Toca un día para marcar si no podrás asistir. Tu entrenador lo verá al preparar la
-            convocatoria.
-          </p>
-        </div>
-        <AvailabilityCalendar
-          initialAvailability={availability}
-          todayIso={today}
-          upcomingMatches={upcomingMatches}
-          upcomingSessions={upcomingSessions}
-        />
+        ) : (
+          <div className="border-ink-200 bg-paper-card text-ink-600 rounded-xl border border-dashed p-4 text-sm">
+            Este perfil todavía no está vinculado a un equipo de la temporada actual.
+          </div>
+        )}
       </section>
 
-      <CalendarSyncCard
-        token={activeProfile.calendar_token}
-        baseUrl={process.env.NEXT_PUBLIC_APP_URL || ""}
-      />
+      <section aria-labelledby="profile-settings-title" className="flex flex-col gap-3">
+        <SectionTitle id="profile-settings-title" eyebrow="Cuenta" title="Datos y preferencias" />
+        <div className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 divide-y overflow-hidden rounded-2xl border">
+          <SettingsLink href="/profile/edit" label="Editar datos del perfil" icon={UserRoundPen} />
+          <SettingsLink href="/notifications" label="Notificaciones" icon={Bell} />
+          <SettingsLink href="/change-password" label="Cambiar contraseña" icon={KeyRound} />
+          {isAdmin ? (
+            <SettingsLink href="/admin" label="Panel de administración" icon={ShieldCheck} />
+          ) : null}
+        </div>
+      </section>
 
-      <div className="grid grid-cols-2 gap-2 pt-1">
-        <Link
-          href={"/profile/edit" as Route}
-          className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <User className="h-4 w-4" aria-hidden="true" />
-          Editar perfil
-        </Link>
-        <Link
-          href={"/change-password" as Route}
-          className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Contraseña
-        </Link>
-        {isAdmin ? (
-          <Link
-            href={"/admin" as Route}
-            className="border-ink-300 bg-paper-card text-ink-900 hover:bg-pool-foam focus-visible:ring-pool-blue col-span-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <PictogramBadge pictogram={Porteria} color="var(--pool-deep)" size="sm" />
-            Panel de administración
-          </Link>
-        ) : null}
-      </div>
+      <details className="border-ink-200 bg-paper-card group rounded-2xl border">
+        <summary className="focus-visible:ring-pool-blue flex min-h-14 cursor-pointer list-none items-center gap-3 rounded-2xl px-4 font-extrabold focus-visible:ring-2 focus-visible:outline-none">
+          <Settings2 className="text-pool-blue h-5 w-5" aria-hidden="true" />
+          <span className="text-pool-deep flex-1">Sincronizar con otro calendario</span>
+          <ChevronRight
+            className="text-ink-400 h-5 w-5 transition-transform group-open:rotate-90 motion-reduce:transition-none"
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="px-3 pb-3">
+          <CalendarSyncCard
+            token={activeProfile.calendar_token}
+            baseUrl={process.env.NEXT_PUBLIC_APP_URL || ""}
+          />
+        </div>
+      </details>
 
-      <form action={signOut} className="pt-1">
+      <form action={signOut}>
         <Button type="submit" variant="secondary" size="md" className="w-full">
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="h-4 w-4" aria-hidden="true" />
           Cerrar sesión
         </Button>
       </form>
@@ -494,148 +283,66 @@ export default async function ProfilePage() {
   );
 }
 
-async function PlayerRankingSummary({
-  profileId,
-  seasonId,
-  birthYear,
+function QuickLink({
+  href,
+  label,
+  icon: Icon,
 }: {
-  profileId: string;
-  seasonId: string;
-  birthYear: number | null;
+  href: string;
+  label: string;
+  icon: typeof CalendarDays;
 }) {
-  if (birthYear == null) return null;
-  const categoryCode = inferCategory(birthYear, new Date().getFullYear());
-  if (!categoryCode) return null;
-
-  const [goalsRank, attendanceRank] = await Promise.all([
-    getRankings({
-      season_id: seasonId,
-      scope: { kind: "category", category_code: categoryCode },
-      metric: "goals",
-      my_player_id: profileId,
-    }),
-    getRankings({
-      season_id: seasonId,
-      scope: { kind: "category", category_code: categoryCode },
-      metric: "attendance",
-      my_player_id: profileId,
-      min_trainings_total: 3,
-    }),
-  ]);
-
-  if (!goalsRank.my_position && !attendanceRank.my_position) return null;
-
   return (
-    <section
-      aria-labelledby="my-rankings-heading"
-      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3"
+    <Link
+      href={href as Route}
+      className="border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue/40 focus-visible:ring-pool-blue flex min-h-20 flex-col items-center justify-center gap-2 rounded-xl border px-2 text-center transition-[border-color,transform,box-shadow] hover:-translate-y-0.5 focus-visible:ring-2 focus-visible:outline-none active:translate-y-0 motion-reduce:transition-none"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <PictogramBadge pictogram={Trofeo} color="var(--ball-gold)" size="sm" />
-          <h2
-            id="my-rankings-heading"
-            className="font-display text-pool-deep text-sm font-extrabold"
-          >
-            Tu posición en los rankings
-          </h2>
-        </div>
-        <Link
-          href={"/rankings" as Route}
-          className="text-pool-blue text-xs font-bold hover:underline"
-        >
-          Ver todo
-        </Link>
-      </div>
-      <div className="grid grid-cols-3 gap-2">
-        {goalsRank.my_position ? (
-          <RankingMiniCard
-            label="Goles"
-            suffix=""
-            position={goalsRank.my_position.row.position}
-            value={goalsRank.my_position.row.primary_value}
-            totalPlayers={goalsRank.total_players}
-            accent="var(--ball-gold)"
-          />
-        ) : null}
-        {attendanceRank.my_position ? (
-          <RankingMiniCard
-            label="Asist."
-            suffix="%"
-            position={attendanceRank.my_position.row.position}
-            value={attendanceRank.my_position.row.primary_value}
-            totalPlayers={attendanceRank.total_players}
-            accent="var(--pool-blue)"
-          />
-        ) : null}
-        <RankingRelativeCard
-          goalsDelta={goalsRank.my_position?.delta_to_next ?? null}
-          attendanceDelta={attendanceRank.my_position?.delta_to_next ?? null}
-        />
-      </div>
-    </section>
+      <Icon className="text-pool-blue h-5 w-5" aria-hidden="true" />
+      <span className="text-pool-deep text-sm font-extrabold">{label}</span>
+    </Link>
   );
 }
 
-function RankingMiniCard({
+function SettingsLink({
+  href,
   label,
-  suffix,
-  position,
-  value,
-  totalPlayers,
-  accent,
+  icon: Icon,
 }: {
+  href: string;
   label: string;
-  suffix: string;
-  position: number;
-  value: number;
-  totalPlayers: number;
-  accent: string;
+  icon: typeof Settings2;
 }) {
   return (
-    <div className="border-ink-300 bg-pool-foam/40 flex flex-col items-center gap-0.5 rounded-md border p-2">
-      <p className="tracking-eyebrow text-ink-600 text-xs font-bold uppercase">{label}</p>
-      <span
-        className="text-paper inline-flex h-7 min-w-7 items-center justify-center rounded-sm px-1.5 font-mono text-base leading-none font-extrabold tabular-nums"
-        style={{ backgroundColor: accent }}
-      >
-        {position}
-      </span>
-      <p className="text-pool-deep font-mono text-sm leading-none font-extrabold tabular-nums">
-        {value}
-        {suffix}
-      </p>
-      <p className="tracking-eyebrow text-ink-500 text-xs uppercase">de {totalPlayers}</p>
+    <Link
+      href={href as Route}
+      className="hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-14 items-center gap-3 px-4 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+    >
+      <Icon className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
+      <span className="text-pool-deep flex-1 font-bold">{label}</span>
+      <ChevronRight className="text-ink-400 h-5 w-5" aria-hidden="true" />
+    </Link>
+  );
+}
+
+function SectionTitle({ id, eyebrow, title }: { id: string; eyebrow: string; title: string }) {
+  return (
+    <div>
+      <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">{eyebrow}</p>
+      <h2 id={id} className="font-display text-pool-deep mt-0.5 text-xl font-extrabold">
+        {title}
+      </h2>
     </div>
   );
 }
 
-function RankingRelativeCard({
-  goalsDelta,
-  attendanceDelta,
-}: {
-  goalsDelta: number | null;
-  attendanceDelta: number | null;
-}) {
-  const goalTxt =
-    goalsDelta == null
-      ? "Eres el #1"
-      : goalsDelta === 0
-        ? "Líder en goles"
-        : `A ${goalsDelta} del 1º en goles`;
-  const attTxt =
-    attendanceDelta == null
-      ? null
-      : attendanceDelta === 0
-        ? "Líder en asist."
-        : `A ${attendanceDelta} del 1º en asist.`;
+function Stat({ value, label, detail }: { value: number | string; label: string; detail: string }) {
   return (
-    <div className="border-ink-300 bg-pool-foam/40 flex flex-col items-center gap-0.5 rounded-md border p-2">
-      <p className="tracking-eyebrow text-ink-600 text-xs font-bold uppercase">Reta al líder</p>
-      <p className="font-display text-pool-deep text-center text-xs leading-tight font-extrabold">
-        {goalTxt}
+    <div className="border-ink-200 flex min-h-24 flex-col justify-center border-r border-b px-3 py-3 even:border-r-0 sm:border-b-0 sm:last:border-r-0 sm:even:border-r">
+      <p className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums">
+        {value}
       </p>
-      {attTxt ? <p className="text-ink-600 text-center text-xs font-medium">{attTxt}</p> : null}
+      <p className="text-ink-700 mt-1 text-xs font-extrabold uppercase">{label}</p>
+      <p className="text-ink-500 mt-1 text-xs">{detail}</p>
     </div>
   );
 }

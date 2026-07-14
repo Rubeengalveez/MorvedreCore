@@ -69,8 +69,9 @@ describe("inferCategory", () => {
     expect(() => inferCategory(2027, 2026)).toThrow();
   });
 
-  it("throws when birthYear is too old (older than 25)", () => {
-    expect(() => inferCategory(1990, 2026)).toThrow();
+  it("keeps adult players in the absolute category regardless of age", () => {
+    expect(inferCategory(1990, 2026)).toBe("absoluto");
+    expect(inferCategory(1950, 2026)).toBe("absoluto");
   });
 });
 

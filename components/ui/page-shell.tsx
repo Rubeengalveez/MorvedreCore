@@ -26,7 +26,7 @@ export function PageShell({
     <div className="relative min-h-full w-full overflow-x-hidden">
       <div
         className={cn(
-          "relative z-[1] mx-auto flex w-full flex-col gap-4 py-4 sm:py-5",
+          "page-enter relative z-[1] mx-auto flex w-full flex-col gap-4 py-4 sm:py-5",
           !bleed && "page-gutter",
           widthClass[width],
           className,

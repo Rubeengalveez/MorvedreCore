@@ -3,6 +3,10 @@
 import { cn } from "@/lib/utils/cn";
 import { type CategoryCode } from "@/lib/domain/categories";
 import { type RankingMetric, type RankingScope, paginateRanking } from "@/lib/domain/rankings";
+import { streakLabel } from "@/lib/domain/streaks";
+import Link from "next/link";
+import type { Route } from "next";
+import { Dumbbell, Goal, ShieldAlert, Star } from "lucide-react";
 import type { RankingsPageMeta, RankingResult } from "@/server/queries/rankings";
 
 import { ScopeTabs } from "./scope-tabs";
@@ -136,6 +140,7 @@ export function RankingsContent({
               items={top3}
               metricLabel={metricMeta.label}
               metricSuffix={metricMeta.suffix}
+              metric={activeMetric}
               myPlayerId={myPlayerId}
             />
           ) : null}
@@ -159,6 +164,7 @@ export function RankingsContent({
                       row={row}
                       metricLabel={metricMeta.label}
                       metricSuffix={metricMeta.suffix}
+                      metric={activeMetric}
                       isMe={row.player_id === myPlayerId}
                     />
                   </li>
@@ -191,61 +197,139 @@ function StreakControls({
   activeStreakOrder: "current" | "best";
   baseHref: string;
 }) {
+  const descriptions = {
+    train_consec: "Entrenamientos consecutivos con asistencia registrada.",
+    goals_consec: "Partidos consecutivos marcando al menos un gol.",
+    excl_consec: "Partidos consecutivos con al menos una expulsión.",
+    mvp_consec: "Partidos consecutivos siendo elegido MVP.",
+  } as const;
+  const options = [
+    {
+      id: "train_consec",
+      label: "Entrenos",
+      short: "Días seguidos asistiendo",
+      icon: Dumbbell,
+    },
+    {
+      id: "goals_consec",
+      label: "Goles",
+      short: "Partidos seguidos marcando",
+      icon: Goal,
+    },
+    {
+      id: "excl_consec",
+      label: "Exclusiones",
+      short: "Tendencia a corregir",
+      icon: ShieldAlert,
+    },
+    {
+      id: "mvp_consec",
+      label: "MVP",
+      short: "Partidos seguidos como MVP",
+      icon: Star,
+    },
+  ] as const;
+
+  function streakHref(key: "streak_type" | "streak_order", value: string): string {
+    const [path, query = ""] = baseHref.split("?");
+    const params = new URLSearchParams(query);
+    params.set(key, value);
+    params.delete("page");
+    return `${path}?${params.toString()}`;
+  }
+
   return (
-    <div
-      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-2.5"
+    <section
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-3"
       data-streak-controls
+      aria-labelledby="streak-controls-title"
     >
-      <div className="no-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1">
-        {[
-          { id: "train_consec", label: "Entrenos" },
-          { id: "goals_consec", label: "Goles" },
-          { id: "excl_consec", label: "Exclusiones" },
-          { id: "mvp_consec", label: "MVP" },
-        ].map((t) => {
-          const isActive = activeStreakType === t.id;
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-action text-[11px] font-extrabold tracking-[0.12em] uppercase">
+            En directo
+          </p>
+          <h2 id="streak-controls-title" className="text-pool-deep text-lg font-extrabold">
+            Elige tu racha
+          </h2>
+        </div>
+        <span className="text-ink-500 text-xs font-semibold">4 tipos</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        {options.map((option) => {
+          const isActive = activeStreakType === option.id;
+          const Icon = option.icon;
           return (
-            <a
-              key={t.id}
-              href={`${baseHref}&streak_type=${t.id}`}
-              data-streak-type={t.id}
+            <Link
+              key={option.id}
+              href={streakHref("streak_type", option.id) as Route}
+              data-streak-type={option.id}
+              aria-current={isActive ? "true" : undefined}
               className={cn(
-                "touch-target inline-flex min-h-12 shrink-0 items-center rounded-xl px-3 text-sm font-extrabold transition-[background-color,color,box-shadow] motion-reduce:transition-none",
+                "focus-visible:ring-pool-blue flex min-h-20 touch-manipulation items-center gap-2.5 rounded-xl border p-2.5 transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
                 isActive
-                  ? "bg-pool-deep text-paper shadow-elev-1"
-                  : "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam border",
+                  ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
+                  : "border-ink-200 bg-paper text-pool-deep hover:border-pool-blue/50 hover:bg-pool-foam/40",
               )}
             >
-              {t.label}
-            </a>
+              <span
+                className={cn(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                  isActive ? "bg-white/12" : "bg-pool-foam",
+                )}
+              >
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-extrabold">{option.label}</span>
+                <span
+                  className={cn(
+                    "mt-0.5 block text-[11px] leading-snug",
+                    isActive ? "text-paper/75" : "text-ink-500",
+                  )}
+                >
+                  {option.short}
+                </span>
+              </span>
+            </Link>
           );
         })}
       </div>
 
-      <div className="bg-paper-sunk grid grid-cols-2 gap-1 rounded-sm p-1">
-        <a
-          href={`${baseHref}&streak_order=current`}
-          data-streak-order="current"
-          className={cn(
-            "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
-            activeStreakOrder === "current"
-              ? "bg-action text-paper shadow-elev-1"
-              : "text-pool-deep",
-          )}
-        >
-          Actual
-        </a>
-        <a
-          href={`${baseHref}&streak_order=best`}
-          data-streak-order="best"
-          className={cn(
-            "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
-            activeStreakOrder === "best" ? "bg-action text-paper shadow-elev-1" : "text-pool-deep",
-          )}
-        >
-          Mejor
-        </a>
+      <div>
+        <p className="text-ink-500 mb-1.5 text-xs font-bold">Qué quieres comparar</p>
+        <div className="bg-paper-sunk grid grid-cols-2 gap-1 rounded-xl p-1">
+          <Link
+            href={streakHref("streak_order", "current") as Route}
+            data-streak-order="current"
+            className={cn(
+              "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+              activeStreakOrder === "current"
+                ? "bg-action text-paper shadow-elev-1"
+                : "text-pool-deep",
+            )}
+          >
+            Racha actual
+          </Link>
+          <Link
+            href={streakHref("streak_order", "best") as Route}
+            data-streak-order="best"
+            className={cn(
+              "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+              activeStreakOrder === "best"
+                ? "bg-action text-paper shadow-elev-1"
+                : "text-pool-deep",
+            )}
+          >
+            Mejor racha
+          </Link>
+        </div>
       </div>
-    </div>
+      <p className="border-ink-200 bg-paper-sunk text-ink-600 rounded-xl border px-3 py-2.5 text-sm leading-relaxed">
+        <span className="text-pool-deep font-extrabold">{streakLabel(activeStreakType)}.</span>{" "}
+        {descriptions[activeStreakType]}
+      </p>
+    </section>
   );
 }

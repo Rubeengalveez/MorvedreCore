@@ -103,13 +103,6 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
                   item.label
                 )}
               </span>
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "bg-ball-gold absolute bottom-1.5 h-1 w-1 rounded-full transition-opacity duration-200 motion-reduce:transition-none",
-                  isActive ? "opacity-100" : "opacity-0",
-                )}
-              />
             </Link>
           );
         })}

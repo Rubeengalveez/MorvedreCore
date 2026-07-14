@@ -44,6 +44,7 @@ export function Logo({
         alt="Escudo Waterpolo Morvedre"
         width={px}
         height={px}
+        unoptimized
         priority={px >= 80}
         className="shrink-0"
       />

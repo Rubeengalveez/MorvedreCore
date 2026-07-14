@@ -324,24 +324,28 @@ export default async function MatchDetailPage({
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-col">
-                <h2 className="font-display text-pool-deep text-lg font-bold">
-                  Jugadores convocados
+                <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+                  Paso 1
+                </p>
+                <h2 className="font-display text-pool-deep text-xl font-extrabold">
+                  Prepara el equipo
                 </h2>
-                <p className="text-ink-600 text-xs">{callupEntries.length} en la convocatoria</p>
+                <p className="text-ink-600 mt-0.5 text-sm">
+                  Revisa la propuesta, las respuestas y los dorsales.
+                </p>
               </div>
               <Sheet>
                 <SheetTrigger asChild>
                   <Button size="sm">
                     <MdAutoAwesome className="h-4 w-4" aria-hidden="true" />
-                    Sugerir convocatoria
+                    Preparar propuesta
                   </Button>
                 </SheetTrigger>
                 <SheetContent size="lg">
                   <SheetHeader>
-                    <SheetTitle>Sugerir convocatoria</SheetTitle>
+                    <SheetTitle>Propuesta de convocatoria</SheetTitle>
                     <SheetDescription>
-                      Te proponemos los jugadores disponibles. Marca y ajusta dorsales antes de
-                      confirmar.
+                      Una base ordenada con continuidad, rendimiento, edad, asistencia y disciplina.
                     </SheetDescription>
                   </SheetHeader>
                   <SheetBody>
@@ -356,7 +360,17 @@ export default async function MatchDetailPage({
 
         {tab === "acta" ? (
           <>
-            <h2 className="font-display text-pool-deep text-lg font-bold">Acta del partido</h2>
+            <div>
+              <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+                Paso 2
+              </p>
+              <h2 className="font-display text-pool-deep text-xl font-extrabold">
+                Completa el acta
+              </h2>
+              <p className="text-ink-600 mt-0.5 text-sm">
+                Resultado, goles y expulsiones con controles grandes.
+              </p>
+            </div>
             <ActaManager
               match={{
                 id: match.id,
@@ -371,7 +385,17 @@ export default async function MatchDetailPage({
 
         {tab === "detalles" ? (
           <>
-            <h2 className="font-display text-pool-deep text-lg font-bold">Detalles del partido</h2>
+            <div>
+              <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+                Configuración
+              </p>
+              <h2 className="font-display text-pool-deep text-xl font-extrabold">
+                Detalles del partido
+              </h2>
+              <p className="text-ink-600 mt-0.5 text-sm">
+                Edita la información que verá el equipo.
+              </p>
+            </div>
             {match.team ? (
               <MatchDetailsForm match={match} team={match.team} />
             ) : (

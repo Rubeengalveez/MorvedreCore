@@ -1,5 +1,5 @@
 import { PageSkeleton } from "@/components/ui/page-skeleton";
 
-export default function RootLoading() {
+export default function AppLoading() {
   return <PageSkeleton />;
 }

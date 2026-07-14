@@ -4,7 +4,6 @@ import type { Route } from "next";
 import { ArrowLeft, Shield, Swords, Trophy } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Medal } from "@/components/ui/medal";
 import { PageShell, SectionHeader } from "@/components/ui/page-shell";
@@ -142,30 +141,35 @@ function RivalList({ rows, tone }: { rows: RivalryRow[]; tone: "best" | "tough" 
 export default async function LegendsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ metric?: string }>;
+  searchParams: Promise<{ metric?: string; rival?: string }>;
 }) {
-  const metric = parseMetric((await searchParams).metric);
+  const params = await searchParams;
+  const metric = parseMetric(params.metric);
+  const rivalView = params.rival === "tough" ? "tough" : "best";
   const history = await getClubHistory(metric);
   const best = bestRivals(history.rivalries);
   const toughest = toughestRivals(history.rivalries);
 
   return (
     <PageShell width="lg" className="gap-6 pb-8">
-      <AppPageHero
-        eyebrow={`${history.archivedSeasons} temporadas archivadas${history.currentSeasonLabel ? ` · ${history.currentSeasonLabel} en curso` : ""}`}
-        title="Leyendas del club"
-        description="La huella acumulada de quienes han defendido el gorro del Morvedre."
-        icon={<Trophy className="h-7 w-7" aria-hidden="true" />}
-        action={
-          <Link
-            href="/rankings"
-            className="focus-visible:ring-ball-gold inline-flex min-h-11 items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 text-sm font-extrabold text-white transition-colors hover:bg-white/15 focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            Rankings de temporada
-          </Link>
-        }
-      />
+      <header className="border-ink-300 border-b pb-4">
+        <Link
+          href="/rankings"
+          className="text-pool-blue focus-visible:ring-pool-blue inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Rankings de temporada
+        </Link>
+        <p className="text-pool-blue mt-2 text-xs font-extrabold tracking-[0.12em] uppercase">
+          {history.archivedSeasons} temporadas archivadas
+        </p>
+        <h1 className="font-display text-pool-deep mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
+          Leyendas del club
+        </h1>
+        <p className="text-ink-600 mt-1 text-sm leading-relaxed">
+          La huella acumulada de quienes han defendido el gorro del Morvedre.
+        </p>
+      </header>
 
       <section aria-labelledby="legends-title" className="flex flex-col gap-3">
         <SectionHeader
@@ -221,21 +225,43 @@ export default async function LegendsPage({
         <h2 id="rivalries-title" className="sr-only">
           Mejores y peores rivales
         </h2>
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Shield className="text-success h-5 w-5" aria-hidden="true" />
-              <h3 className="text-pool-deep font-display text-lg font-extrabold">Mejores cruces</h3>
-            </div>
-            <RivalList rows={best} tone="best" />
-          </div>
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <Swords className="text-goggle-red h-5 w-5" aria-hidden="true" />
-              <h3 className="text-pool-deep font-display text-lg font-extrabold">Bestias negras</h3>
-            </div>
-            <RivalList rows={toughest} tone="tough" />
-          </div>
+        <nav
+          aria-label="Tipo de rivalidad"
+          className="bg-paper-sunk grid grid-cols-2 gap-1 rounded-xl p-1"
+        >
+          <Link
+            href={`/legends?metric=${metric}&rival=best` as Route}
+            aria-current={rivalView === "best" ? "page" : undefined}
+            className={cn(
+              "focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
+              rivalView === "best" ? "bg-paper-card text-success shadow-elev-1" : "text-ink-600",
+            )}
+          >
+            <Shield className="h-4 w-4" aria-hidden="true" />
+            Mejores cruces
+          </Link>
+          <Link
+            href={`/legends?metric=${metric}&rival=tough` as Route}
+            aria-current={rivalView === "tough" ? "page" : undefined}
+            className={cn(
+              "focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
+              rivalView === "tough"
+                ? "bg-paper-card text-goggle-red shadow-elev-1"
+                : "text-ink-600",
+            )}
+          >
+            <Swords className="h-4 w-4" aria-hidden="true" />
+            Bestias negras
+          </Link>
+        </nav>
+        <div className="flex flex-col gap-2">
+          <h3 className="text-pool-deep font-display text-lg font-extrabold">
+            {rivalView === "best" ? "Rivales más favorables" : "Rivales más difíciles"}
+          </h3>
+          <RivalList
+            rows={rivalView === "best" ? best : toughest}
+            tone={rivalView === "best" ? "best" : "tough"}
+          />
         </div>
       </section>
     </PageShell>

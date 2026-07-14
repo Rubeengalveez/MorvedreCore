@@ -1,10 +1,11 @@
 "use client";
 
-import { MdNorthEast, MdAutorenew, MdWarning, MdCheck, MdDelete } from "react-icons/md";
+import { AlertTriangle, ArrowUpRight, Check, Loader2, Trash2, X } from "lucide-react";
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
+import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { cn } from "@/lib/utils/cn";
@@ -24,187 +25,234 @@ export interface CallupEntry {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  called: "Convocado",
+  called: "Sin responder",
   confirmed: "Confirmado",
-  declined: "Rechazado",
+  declined: "No puede ir",
   withdrawn: "Baja",
   no_show: "No se presentó",
 };
 
-const STATUS_BADGE: Record<string, string> = {
-  called: "bg-pool-teal/15 text-pool-deep",
-  confirmed: "bg-success/15 text-success",
-  declined: "bg-danger/15 text-danger",
-  withdrawn: "bg-ink-300/40 text-ink-600",
-  no_show: "bg-danger/15 text-danger",
-};
-
-export interface CallupListProps {
-  entries: CallupEntry[];
-}
-
-export function CallupList({ entries }: CallupListProps) {
+export function CallupList({ entries }: { entries: CallupEntry[] }) {
   if (entries.length === 0) {
     return (
-      <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-        <p className="text-pool-deep text-base font-semibold">Aún no hay convocatoria.</p>
+      <div className="border-ink-300 bg-paper-card rounded-2xl border border-dashed p-6 text-center">
+        <p className="text-pool-deep font-extrabold">La convocatoria está vacía</p>
         <p className="text-ink-600 mt-1 text-sm">
-          Pulsa &ldquo;Sugerir convocatoria&rdquo; para empezar.
+          Usa la propuesta para empezar con una base razonada.
         </p>
       </div>
     );
   }
 
+  const confirmed = entries.filter((entry) => entry.callup.status === "confirmed").length;
+  const unavailable = entries.filter((entry) =>
+    ["declined", "withdrawn", "no_show"].includes(entry.callup.status),
+  ).length;
+
   return (
-    <ul className="flex flex-col gap-2">
-      {entries.map((e) => (
-        <CallupRowItem key={e.callup.player_id} entry={e} />
-      ))}
-    </ul>
+    <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-3 gap-2" aria-label="Resumen de convocatoria">
+        <Summary value={entries.length} label="Convocados" />
+        <Summary value={confirmed} label="Confirmados" tone="success" />
+        <Summary value={unavailable} label="Bajas" tone="danger" />
+      </div>
+      <ul className="flex flex-col gap-2">
+        {entries.map((entry) => (
+          <CallupRowItem key={entry.callup.player_id} entry={entry} />
+        ))}
+      </ul>
+    </div>
   );
 }
 
 function CallupRowItem({ entry }: { entry: CallupEntry }) {
-  const [capDraft, setCapDraft] = useState<string>(
+  const router = useRouter();
+  const [capDraft, setCapDraft] = useState(
     entry.callup.cap_number != null ? String(entry.callup.cap_number) : "",
   );
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const [savingCap, startSavingCap] = useTransition();
-
   const categoryLabel = entry.player?.category_code
     ? (CATEGORY_LABELS[entry.player.category_code as CategoryCode] ?? entry.player.category_code)
     : null;
 
-  const currentCap = entry.callup.cap_number != null ? entry.callup.cap_number : null;
+  function run(action: () => Promise<unknown>) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await action();
+        router.refresh();
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "No pudimos guardar el cambio.");
+      }
+    });
+  }
 
   function commitCap() {
-    if (capDraft.trim() === "") return;
     const value = Number(capDraft);
-    if (!Number.isFinite(value) || value === currentCap) return;
-    startSavingCap(async () => {
-      await updateCallup(entry.callup.match_id, entry.callup.player_id, { cap_number: value });
-    });
+    if (!Number.isInteger(value) || value < 0 || value > 99) {
+      setError("El dorsal debe estar entre 0 y 99.");
+      return;
+    }
+    if (value === entry.callup.cap_number) return;
+    run(() => updateCallup(entry.callup.match_id, entry.callup.player_id, { cap_number: value }));
   }
 
   function remove() {
     if (
       !window.confirm(`¿Quitar a ${entry.player?.full_name ?? "este jugador"} de la convocatoria?`)
-    ) {
+    )
       return;
-    }
-    startTransition(async () => {
-      await deleteCallup(entry.callup.match_id, entry.callup.player_id);
-    });
+    run(() => deleteCallup(entry.callup.match_id, entry.callup.player_id));
   }
 
-  function setStatus(status: CallupRow["status"]) {
-    startTransition(async () => {
-      await updateCallup(entry.callup.match_id, entry.callup.player_id, {
-        status: status as "called" | "confirmed" | "declined" | "withdrawn" | "no_show",
-      });
-    });
+  function setStatus(status: "confirmed" | "declined") {
+    run(() => updateCallup(entry.callup.match_id, entry.callup.player_id, { status }));
   }
+
+  const statusTone =
+    entry.callup.status === "confirmed"
+      ? "bg-success/10 text-success"
+      : ["declined", "withdrawn", "no_show"].includes(entry.callup.status)
+        ? "bg-danger/10 text-danger"
+        : "bg-pool-foam text-pool-deep";
 
   return (
     <li
       className={cn(
-        "bg-paper flex flex-col gap-2 rounded-md border p-3",
-        entry.hasConflict ? "border-danger/30" : "border-ink-300",
+        "border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3",
+        entry.hasConflict && "border-danger/35",
       )}
     >
       <div className="flex items-center gap-3">
         <Avatar
           name={entry.player?.full_name ?? "?"}
           src={entry.player?.photo_url ?? null}
-          size={40}
+          size={44}
         />
-        <div className="flex flex-1 flex-col">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="font-display text-pool-deep text-base font-bold">
-              {entry.player?.full_name ?? "Jugador sin nombre"}
-            </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-pool-deep truncate font-extrabold">
+            {entry.player?.full_name ?? "Jugador sin nombre"}
+          </p>
+          <div className="mt-1 flex flex-wrap gap-1.5">
             {categoryLabel ? (
-              <span className="border-ink-300 text-ink-600 inline-flex min-h-6 items-center rounded-full border px-2 text-xs font-semibold">
-                {categoryLabel}
-              </span>
+              <span className="text-ink-600 text-xs font-bold">{categoryLabel}</span>
             ) : null}
             {entry.sourceTeamLabel ? (
-              <span className="bg-pool-foam text-pool-deep inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-semibold">
-                <MdNorthEast className="h-3.5 w-3.5" aria-hidden="true" />
+              <span className="text-pool-blue flex items-center gap-1 text-xs font-bold">
+                <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
                 {entry.sourceTeamLabel}
               </span>
             ) : null}
             {entry.hasConflict ? (
-              <span className="bg-danger/15 text-danger inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-semibold">
-                <MdWarning className="h-3.5 w-3.5" aria-hidden="true" />
-                No disponible
+              <span className="text-danger flex items-center gap-1 text-xs font-extrabold">
+                <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                Marcó que no puede
               </span>
             ) : null}
           </div>
-          <span
+        </div>
+        <span
+          className={cn("shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold", statusTone)}
+        >
+          {STATUS_LABELS[entry.callup.status] ?? entry.callup.status}
+        </span>
+      </div>
+
+      <div className="border-ink-200 mt-3 grid grid-cols-[5.5rem_1fr_auto] items-end gap-2 border-t pt-3">
+        <label className="text-ink-600 text-xs font-extrabold uppercase">
+          Dorsal
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={0}
+            max={99}
+            value={capDraft}
+            onChange={(event) => setCapDraft(event.target.value)}
+            onBlur={commitCap}
+            className="mt-1 h-12 text-center font-mono text-lg"
+          />
+        </label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setStatus("confirmed")}
+            disabled={pending}
             className={cn(
-              "mt-0.5 inline-flex min-h-6 w-fit items-center rounded-full px-2 text-xs font-semibold",
-              STATUS_BADGE[entry.callup.status] ?? "border-ink-300 text-ink-600 border",
+              "focus-visible:ring-pool-blue flex min-h-12 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-extrabold focus-visible:ring-2 focus-visible:outline-none",
+              entry.callup.status === "confirmed"
+                ? "border-success bg-success text-paper"
+                : "border-success/30 text-success",
             )}
           >
-            {STATUS_LABELS[entry.callup.status] ?? entry.callup.status}
-          </span>
+            <Check className="h-4 w-4" aria-hidden="true" />
+            Confirma
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatus("declined")}
+            disabled={pending}
+            className={cn(
+              "focus-visible:ring-pool-blue flex min-h-12 items-center justify-center gap-1 rounded-xl border px-2 text-xs font-extrabold focus-visible:ring-2 focus-visible:outline-none",
+              entry.callup.status === "declined"
+                ? "border-danger bg-danger text-paper"
+                : "border-danger/30 text-danger",
+            )}
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+            No puede
+          </button>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-danger hover:bg-danger/10 h-10 w-10 min-w-10 p-0"
+        <button
+          type="button"
           onClick={remove}
           disabled={pending}
-          aria-label="Quitar de la convocatoria"
+          className="border-ink-200 text-danger focus-visible:ring-danger flex h-12 w-12 items-center justify-center rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
+          aria-label={`Quitar a ${entry.player?.full_name ?? "jugador"}`}
         >
           {pending ? (
-            <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
+            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
           ) : (
-            <MdDelete className="h-5 w-5" aria-hidden="true" />
+            <Trash2 className="h-5 w-5" aria-hidden="true" />
           )}
-        </Button>
+        </button>
       </div>
-      <div className="flex items-center gap-2">
-        <Input
-          type="number"
-          min={0}
-          max={99}
-          value={capDraft}
-          onChange={(e) => setCapDraft(e.target.value)}
-          onBlur={commitCap}
-          className="w-20"
-          placeholder="Dorsal"
-        />
-        {savingCap ? (
-          <MdAutorenew className="text-ink-600 h-4 w-4 animate-spin" aria-hidden="true" />
-        ) : null}
-        <div className="ml-auto flex gap-1">
-          {entry.callup.status !== "confirmed" ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setStatus("confirmed")}
-              disabled={pending}
-              className="text-success hover:bg-success/10 h-10"
-            >
-              <MdCheck className="h-5 w-5" aria-hidden="true" />
-              Confirmar
-            </Button>
-          ) : null}
-          {entry.callup.status !== "declined" ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setStatus("declined")}
-              disabled={pending}
-              className="text-danger hover:bg-danger/10 h-10"
-            >
-              Baja
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      {error ? (
+        <Alert variant="danger" title="No se ha guardado">
+          {error}
+        </Alert>
+      ) : null}
     </li>
+  );
+}
+
+function Summary({
+  value,
+  label,
+  tone = "default",
+}: {
+  value: number;
+  label: string;
+  tone?: "default" | "success" | "danger";
+}) {
+  return (
+    <div
+      className={cn(
+        "border-ink-200 bg-paper-card rounded-xl border px-2 py-3 text-center",
+        tone === "success" && "border-success/25",
+        tone === "danger" && "border-danger/25",
+      )}
+    >
+      <p
+        className={cn(
+          "text-pool-deep font-mono text-xl font-black",
+          tone === "success" && "text-success",
+          tone === "danger" && "text-danger",
+        )}
+      >
+        {value}
+      </p>
+      <p className="text-ink-500 mt-0.5 truncate text-xs font-bold">{label}</p>
+    </div>
   );
 }

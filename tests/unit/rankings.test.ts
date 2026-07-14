@@ -57,16 +57,16 @@ describe("computeRanking", () => {
     expect(result[3]?.medal).toBeNull();
   });
 
-  it("uses the same position for ties (1,1,3) and medals follow position", () => {
+  it("uses deterministic visual positions for ties so the podium is always complete", () => {
     const players = [
       makePlayer({ player_id: "p-1", full_name: "Ana", goals: 7 }),
       makePlayer({ player_id: "p-2", full_name: "Bea", goals: 7 }),
       makePlayer({ player_id: "p-3", full_name: "Cris", goals: 4 }),
     ];
     const result = computeRanking(players, { metric: "goals", scope: { kind: "all" } });
-    expect(result.map((r) => r.position)).toEqual([1, 1, 3]);
+    expect(result.map((r) => r.position)).toEqual([1, 2, 3]);
     expect(result[0]?.medal).toBe("gold");
-    expect(result[1]?.medal).toBe("gold");
+    expect(result[1]?.medal).toBe("silver");
     expect(result[2]?.medal).toBe("bronze");
   });
 

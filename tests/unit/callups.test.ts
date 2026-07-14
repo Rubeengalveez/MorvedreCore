@@ -297,6 +297,65 @@ describe("suggestCallup", () => {
     expect(suggestions.filter((s) => s.is_substitute)).toHaveLength(2);
   });
 
+  it("prioritizes previous callup, goals, age, attendance and fewer exclusions in that order", () => {
+    const orderedPlayers = [
+      player({
+        id: "previous",
+        full_name: "Anterior",
+        current_team_id: CADETE_A.id,
+        was_previous_callup: true,
+      }),
+      player({
+        id: "goals",
+        full_name: "Goles",
+        current_team_id: CADETE_A.id,
+        goals: 8,
+        birth_year: 2012,
+        attendance_pct: 100,
+      }),
+      player({
+        id: "age",
+        full_name: "Edad",
+        current_team_id: CADETE_A.id,
+        goals: 7,
+        birth_year: 2009,
+      }),
+      player({
+        id: "attendance",
+        full_name: "Asistencia",
+        current_team_id: CADETE_A.id,
+        goals: 7,
+        birth_year: 2010,
+        attendance_pct: 95,
+        exclusions: 3,
+      }),
+      player({
+        id: "discipline",
+        full_name: "Disciplina",
+        current_team_id: CADETE_A.id,
+        goals: 7,
+        birth_year: 2010,
+        attendance_pct: 95,
+        exclusions: 0,
+      }),
+    ];
+    const suggestions = suggestCallup({
+      targetTeam: CADETE_A,
+      scheduledAt: "2026-10-10",
+      allTeams,
+      allPlayers: orderedPlayers,
+      allAvailability: [],
+    });
+
+    expect(suggestions.map((suggestion) => suggestion.player_id)).toEqual([
+      "previous",
+      "goals",
+      "age",
+      "discipline",
+      "attendance",
+    ]);
+  });
+
   it("excludes players more than one category below the target (too young to call up)", () => {
     const players = [
       player({

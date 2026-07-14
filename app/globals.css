@@ -272,6 +272,14 @@
     transition: width 1000ms linear;
   }
 
+  .page-enter {
+    animation: pageEnter 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .skeleton-pulse {
+    animation: skeletonPulse 1200ms ease-in-out infinite;
+  }
+
   /* Safe-area utilities */
   .safe-area-pt {
     padding-top: env(safe-area-inset-top);
@@ -355,6 +363,27 @@
   }
   50% {
     opacity: 0.55;
+  }
+}
+
+@keyframes pageEnter {
+  0% {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skeletonPulse {
+  0%,
+  100% {
+    opacity: 0.48;
+  }
+  50% {
+    opacity: 0.9;
   }
 }
 

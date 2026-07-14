@@ -648,6 +648,8 @@ export async function recordMatchStat(input: {
     throw new Error("El partido no existe.");
   }
 
+  await requireCoachOf(match.team_id);
+
   const { data: callup, error: callupError } = await supabase
     .from("match_callups")
     .select("player_id")
@@ -702,6 +704,93 @@ export async function recordMatchStat(input: {
   await recomputeStreaksForMatch(parsed.data.match_id).catch(() => undefined);
 
   return data;
+}
+
+const saveMatchSheetSchema = z.object({
+  match_id: z.string().uuid(),
+  final_score_us: z.number().int().min(0).max(99),
+  final_score_them: z.number().int().min(0).max(99),
+  stats: z
+    .array(
+      z.object({
+        player_id: z.string().uuid(),
+        goals: z.number().int().min(0).max(99),
+        exclusions: z.number().int().min(0).max(3),
+      }),
+    )
+    .min(1)
+    .max(30),
+});
+
+export async function saveMatchSheet(input: z.input<typeof saveMatchSheetSchema>): Promise<void> {
+  const parsed = saveMatchSheetSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Acta inválida.");
+  }
+
+  const me = await loadCurrentUserProfile();
+  const supabase = await createClient();
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("team_id")
+    .eq("id", parsed.data.match_id)
+    .maybeSingle();
+  throwIfError(matchError, "No pudimos cargar el partido.");
+  if (!match) throw new Error("El partido no existe.");
+  await requireCoachOf(match.team_id);
+
+  const playerIds = parsed.data.stats.map((item) => item.player_id);
+  const { data: callups, error: callupsError } = await supabase
+    .from("match_callups")
+    .select("player_id")
+    .eq("match_id", parsed.data.match_id)
+    .in("player_id", playerIds);
+  throwIfError(callupsError, "No pudimos comprobar la convocatoria.");
+  if (new Set((callups ?? []).map((item) => item.player_id)).size !== new Set(playerIds).size) {
+    throw new Error("El acta contiene un jugador que no estaba convocado.");
+  }
+
+  const { data: lockedStats, error: lockedError } = await supabase
+    .from("match_stats")
+    .select("player_id")
+    .eq("match_id", parsed.data.match_id)
+    .not("validated_by", "is", null)
+    .limit(1);
+  throwIfError(lockedError, "No pudimos comprobar el estado del acta.");
+  if ((lockedStats?.length ?? 0) > 0 && !me.isAdmin) {
+    throw new Error("El acta ya está validada y solo un administrador puede modificarla.");
+  }
+
+  const enteredAt = new Date().toISOString();
+  const { error: statsError } = await supabase.from("match_stats").upsert(
+    parsed.data.stats.map((item) => ({
+      match_id: parsed.data.match_id,
+      player_id: item.player_id,
+      goals: item.goals,
+      exclusions: item.exclusions,
+      mvp: false,
+      entered_by: me.id,
+      entered_at: enteredAt,
+    })),
+    { onConflict: "match_id,player_id" },
+  );
+  throwIfError(statsError, "No pudimos guardar las estadísticas del acta.");
+
+  const { error: resultError } = await supabase
+    .from("matches")
+    .update({
+      status: "played",
+      final_score_us: parsed.data.final_score_us,
+      final_score_them: parsed.data.final_score_them,
+    })
+    .eq("id", parsed.data.match_id);
+  throwIfError(resultError, "No pudimos guardar el resultado.");
+
+  const { recomputeStreaksForMatch } = await import("./streaks");
+  await recomputeStreaksForMatch(parsed.data.match_id).catch(() => undefined);
+  revalidatePath("/admin/matches");
+  revalidatePath(`/admin/matches/${parsed.data.match_id}`);
+  revalidatePath(`/matches/${parsed.data.match_id}`);
 }
 
 export async function validateMatchStats(matchId: string): Promise<void> {
@@ -761,7 +850,7 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
 
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, scheduled_at, team_id, teams(id, category_code, label)")
+    .select("id, season_id, scheduled_at, team_id, teams(id, category_code, label)")
     .eq("id", matchId)
     .maybeSingle();
 
@@ -789,6 +878,8 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
     { data: rosters, error: rostersError },
     { data: profiles, error: profilesError },
     { data: availability, error: availabilityError },
+    { data: previousMatches, error: previousMatchError },
+    { data: snapshots, error: snapshotsError },
   ] = await Promise.all([
     supabase.from("teams").select("id, category_code, label"),
     supabase.from("team_rosters").select("team_id, player_id").is("left_at", null),
@@ -797,12 +888,36 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
       .from("match_availability")
       .select("player_id, date, available, reason")
       .eq("date", localIsoDate(match.scheduled_at)),
+    supabase
+      .from("matches")
+      .select("id")
+      .eq("team_id", match.team_id)
+      .lt("scheduled_at", match.scheduled_at)
+      .neq("status", "cancelled")
+      .order("scheduled_at", { ascending: false })
+      .limit(1),
+    supabase
+      .from("ranking_snapshots")
+      .select("player_id, goals, exclusions, attendance_pct")
+      .eq("season_id", match.season_id)
+      .eq("scope", "team")
+      .eq("scope_key", match.team_id),
   ]);
 
   throwIfError(teamsError, "No pudimos cargar los equipos.");
   throwIfError(rostersError, "No pudimos cargar las plantillas.");
   throwIfError(profilesError, "No pudimos cargar los perfiles.");
   throwIfError(availabilityError, "No pudimos cargar la disponibilidad.");
+  throwIfError(previousMatchError, "No pudimos revisar la convocatoria anterior.");
+  throwIfError(snapshotsError, "No pudimos cargar el rendimiento de la temporada.");
+
+  const previousMatchId = previousMatches?.[0]?.id ?? null;
+  const { data: previousCallups, error: previousCallupsError } = previousMatchId
+    ? await supabase.from("match_callups").select("player_id").eq("match_id", previousMatchId)
+    : { data: [] as Array<{ player_id: string }>, error: null };
+  throwIfError(previousCallupsError, "No pudimos revisar la convocatoria anterior.");
+  const previousPlayerIds = new Set((previousCallups ?? []).map((item) => item.player_id));
+  const statsByPlayer = new Map((snapshots ?? []).map((item) => [item.player_id, item] as const));
 
   const teamsForCallup: TeamForCallup[] = (allTeams ?? []).map((t) => ({
     id: t.id,
@@ -823,12 +938,18 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
       birth != null
         ? (safeInferCategory(birth, currentYear) ?? targetTeam.category_code)
         : targetTeam.category_code;
+    const stats = statsByPlayer.get(p.id);
     return {
       id: p.id,
       full_name: p.full_name,
       category_code: category as PlayerForCallup["category_code"],
       cap_number: p.cap_number,
       current_team_id: currentTeamByPlayer.get(p.id) ?? null,
+      birth_year: p.birth_year,
+      was_previous_callup: previousPlayerIds.has(p.id),
+      goals: stats?.goals ?? 0,
+      attendance_pct: Number(stats?.attendance_pct ?? 0),
+      exclusions: stats?.exclusions ?? 0,
     };
   });
 
