@@ -5,8 +5,9 @@ import type { Route } from "next";
 import { ShoppingBag } from "lucide-react";
 
 import { useShopCart } from "@/hooks/use-shop-cart";
+import { cn } from "@/lib/utils/cn";
 
-export function CartButton() {
+export function CartButton({ className }: { className?: string }) {
   const cart = useShopCart();
   const count = cart.hydrated ? cart.items.length : 0;
 
@@ -14,7 +15,10 @@ export function CartButton() {
     <Link
       href={"/shop/cart" as Route}
       data-cart-button
-      className="border-ink-300 bg-paper-card text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue hover:bg-pool-foam relative inline-flex min-h-12 shrink-0 touch-manipulation items-center justify-center gap-2 rounded-lg border px-3 text-sm font-extrabold shadow-sm transition-[border-color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none sm:px-4"
+      className={cn(
+        "border-ink-300 bg-paper-card text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue hover:bg-pool-foam relative inline-flex min-h-12 shrink-0 touch-manipulation items-center justify-center gap-2 rounded-xl border px-3 text-sm font-extrabold shadow-sm transition-[border-color,background-color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none sm:px-4",
+        className,
+      )}
       aria-label={count > 0 ? `Carrito, ${count} artículos` : "Carrito"}
     >
       <ShoppingBag className="h-5 w-5" aria-hidden="true" />

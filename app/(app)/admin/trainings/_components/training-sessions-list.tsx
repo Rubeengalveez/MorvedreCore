@@ -26,6 +26,7 @@ import {
   formatWeekdayLetter,
 } from "@/lib/utils/format";
 import { cn } from "@/lib/utils/cn";
+import { canEditAttendanceForDay } from "@/lib/domain/attendance";
 
 export interface TrainingSessionRow {
   id: string;
@@ -64,6 +65,7 @@ export function TrainingSessionsList({
     <ul className="flex flex-col gap-2">
       {sorted.map((s) => {
         const past = isPast(s.scheduled_at);
+        const canEditAttendance = canEditAttendanceForDay(s.scheduled_at);
         return (
           <li
             key={s.id}
@@ -107,6 +109,7 @@ export function TrainingSessionsList({
                   blockLabel={blockLabel}
                   roster={applyAttendance(roster, attendanceBySession[s.id])}
                   past={past}
+                  canEditAttendance={canEditAttendance}
                 />
               )}
             </div>
@@ -160,6 +163,7 @@ function SessionActions({
   blockLabel,
   roster,
   past,
+  canEditAttendance,
 }: {
   sessionId: string;
   scheduledAt: string;
@@ -167,24 +171,25 @@ function SessionActions({
   blockLabel: string;
   roster: AttendancePlayer[];
   past: boolean;
+  canEditAttendance: boolean;
 }) {
   return (
     <div className="flex flex-col gap-1">
       <Sheet>
         <SheetTrigger asChild>
           <Button
-            variant={past ? "secondary" : "primary"}
+            variant={past || !canEditAttendance ? "secondary" : "primary"}
             size="sm"
             className="h-10 px-3"
-            aria-label="Pasar lista"
+            aria-label={canEditAttendance ? "Pasar lista" : "Ver plantilla prevista"}
           >
             <MdAssignment className="h-4 w-4" aria-hidden="true" />
-            Lista
+            {canEditAttendance ? "Lista" : "Ver"}
           </Button>
         </SheetTrigger>
         <SheetContent size="lg">
           <SheetHeader>
-            <SheetTitle>Pasar lista</SheetTitle>
+            <SheetTitle>{canEditAttendance ? "Pasar lista" : "Plantilla prevista"}</SheetTitle>
             <SheetDescription>
               {formatShortDate(scheduledAt)} · {formatTime(scheduledAt)} · {blockLabel}
             </SheetDescription>
@@ -194,6 +199,7 @@ function SessionActions({
               sessionId={sessionId}
               sessionLabel={getSessionLabel(scheduledAt, location)}
               players={roster}
+              canEdit={canEditAttendance}
               onClose={() => {
                 const close = document.querySelector<HTMLButtonElement>(
                   'button[aria-label="Cerrar"]',

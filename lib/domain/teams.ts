@@ -28,7 +28,7 @@ export function canRosterPlayer(
   const playerCategory = inferCategory(playerBirthYear, currentYear);
   const playerIdx = categoryIndex(playerCategory);
   const teamIdx = categoryIndex(teamCategory);
-  return teamIdx - playerIdx <= 1;
+  return teamIdx >= playerIdx && teamIdx - playerIdx <= 1;
 }
 
 export function defaultTeamColor(category: CategoryCode): string {

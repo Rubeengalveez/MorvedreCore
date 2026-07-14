@@ -69,6 +69,68 @@ export interface TreasuryDashboard {
   playerOptions: Array<{ id: string; full_name: string }>;
 }
 
+export interface TreasuryProfileOverview {
+  id: string;
+  full_name: string;
+  category_code: string;
+  team_label: string;
+  monthly_fee_cents: number;
+  fee_exempt: boolean;
+  billing_profile_id: string | null;
+}
+
+export async function getTreasuryProfileOverview(seasonId: string | null): Promise<{
+  players: TreasuryProfileOverview[];
+  payerOptions: Array<{ id: string; full_name: string }>;
+}> {
+  const supabase = await createClient();
+  const [profilesRes, settingsRes, rostersRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, is_active")
+      .eq("is_active", true)
+      .order("full_name"),
+    supabase
+      .from("treasury_profile_settings")
+      .select("profile_id, monthly_fee_cents, fee_exempt, billing_profile_id"),
+    seasonId
+      ? supabase
+          .from("team_rosters")
+          .select("player_id, teams!team_rosters_team_id_fkey(label, category_code, season_id)")
+          .is("left_at", null)
+          .eq("teams.season_id", seasonId)
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  const profiles = (profilesRes.data ?? []) as Array<{ id: string; full_name: string }>;
+  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
+  const settings = new Map(
+    (settingsRes.data ?? []).map((setting) => [setting.profile_id, setting]),
+  );
+  const playerById = new Map<string, TreasuryProfileOverview>();
+  for (const row of rostersRes.data ?? []) {
+    const profile = profileMap.get(row.player_id);
+    if (!profile) continue;
+    const team = Array.isArray(row.teams) ? row.teams[0] : row.teams;
+    if (!team || team.season_id !== seasonId) continue;
+    const setting = settings.get(profile.id);
+    if (!playerById.has(profile.id)) {
+      playerById.set(profile.id, {
+        id: profile.id,
+        full_name: profile.full_name,
+        category_code: team.category_code,
+        team_label: team.label,
+        monthly_fee_cents: setting?.monthly_fee_cents ?? 6000,
+        fee_exempt: setting?.fee_exempt ?? false,
+        billing_profile_id: setting?.billing_profile_id ?? null,
+      });
+    }
+  }
+  return {
+    players: [...playerById.values()].sort((a, b) => a.full_name.localeCompare(b.full_name, "es")),
+    payerOptions: profiles,
+  };
+}
+
 function db(client: Awaited<ReturnType<typeof createClient>>) {
   return client as unknown as {
     from: (table: string) => {

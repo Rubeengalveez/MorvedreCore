@@ -1,29 +1,20 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  computeLegends,
-  computeRivalries,
-  type LegendMetric,
-  type LegendStatInput,
-  type MatchupInput,
-} from "@/lib/domain/history";
+import { computeLegends, type LegendMetric, type LegendStatInput } from "@/lib/domain/history";
 import { getCurrentSeason } from "@/server/queries/seasons";
 
 export async function getClubHistory(metric: LegendMetric) {
   const supabase = await createClient();
   const historyPlayersPromise = supabase.from("historical_player_stats").select("*");
-  const historyMatchupsPromise = supabase.from("historical_team_matchups").select("*");
   const profilesPromise = supabase.from("profiles_public").select("id, full_name, photo_url");
   const currentSeasonPromise = getCurrentSeason();
 
-  const [historyPlayersResult, historyMatchupsResult, profilesResult, currentSeason] =
-    await Promise.all([
-      historyPlayersPromise,
-      historyMatchupsPromise,
-      profilesPromise,
-      currentSeasonPromise,
-    ]);
+  const [historyPlayersResult, profilesResult, currentSeason] = await Promise.all([
+    historyPlayersPromise,
+    profilesPromise,
+    currentSeasonPromise,
+  ]);
 
-  if (historyPlayersResult.error || historyMatchupsResult.error || profilesResult.error) {
+  if (historyPlayersResult.error || profilesResult.error) {
     throw new Error("No pudimos cargar el histórico del club.");
   }
 
@@ -42,28 +33,22 @@ export async function getClubHistory(metric: LegendMetric) {
     mvp_count: row.mvp_count,
   }));
 
-  const historicalMatchups: MatchupInput[] = historyMatchupsResult.data ?? [];
-
   if (!currentSeason) {
     return {
       legends: computeLegends(historicalPlayers, metric),
-      rivalries: computeRivalries(historicalMatchups),
       archivedSeasons: new Set(historicalPlayers.map((row) => row.season_id)).size,
       currentSeasonLabel: null,
     };
   }
 
-  const [snapshotsResult, opponentsResult] = await Promise.all([
-    supabase
-      .from("ranking_snapshots")
-      .select("*")
-      .eq("season_id", currentSeason.id)
-      .eq("scope", "season")
-      .eq("scope_key", "all"),
-    supabase.from("opponent_stats").select("*").eq("season_id", currentSeason.id),
-  ]);
+  const snapshotsResult = await supabase
+    .from("ranking_snapshots")
+    .select("*")
+    .eq("season_id", currentSeason.id)
+    .eq("scope", "season")
+    .eq("scope_key", "all");
 
-  if (snapshotsResult.error || opponentsResult.error) {
+  if (snapshotsResult.error) {
     throw new Error("No pudimos completar el histórico con la temporada actual.");
   }
 
@@ -86,7 +71,6 @@ export async function getClubHistory(metric: LegendMetric) {
 
   return {
     legends: computeLegends([...historicalPlayers, ...currentPlayers], metric),
-    rivalries: computeRivalries([...historicalMatchups, ...(opponentsResult.data ?? [])]),
     archivedSeasons: new Set(historicalPlayers.map((row) => row.season_id)).size,
     currentSeasonLabel: currentSeason.label,
   };

@@ -126,6 +126,7 @@ async function loadMatch(id: string): Promise<{
     supabase
       .from("profiles")
       .select("id, full_name, photo_url, birth_year, cap_number")
+      .eq("is_active", true)
       .order("full_name", { ascending: true })
       .limit(1000),
     supabase.from("teams").select("id, label"),

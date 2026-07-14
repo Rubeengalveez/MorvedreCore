@@ -40,8 +40,8 @@ describe("canRosterPlayer", () => {
     expect(canRosterPlayer(BENJAMIN_BIRTH, "cadete", CURRENT_YEAR)).toBe(false);
   });
 
-  it("allows a cadete player in a benjamin team (can drop down)", () => {
-    expect(canRosterPlayer(CADETE_BIRTH, "benjamin", CURRENT_YEAR)).toBe(true);
+  it("rejects a cadete player in a benjamin team", () => {
+    expect(canRosterPlayer(CADETE_BIRTH, "benjamin", CURRENT_YEAR)).toBe(false);
   });
 
   it("allows a cadete player in a juvenil team (N+1)", () => {
@@ -52,17 +52,17 @@ describe("canRosterPlayer", () => {
     expect(canRosterPlayer(CADETE_BIRTH, "absoluto", CURRENT_YEAR)).toBe(false);
   });
 
-  it("allows an alevin player in a benjamin team (N-1)", () => {
-    expect(canRosterPlayer(ALEVIN_BIRTH, "benjamin", CURRENT_YEAR)).toBe(true);
+  it("rejects an alevin player in a benjamin team", () => {
+    expect(canRosterPlayer(ALEVIN_BIRTH, "benjamin", CURRENT_YEAR)).toBe(false);
   });
 
   it("rejects an alevin player in a cadete team (N+2)", () => {
     expect(canRosterPlayer(ALEVIN_BIRTH, "cadete", CURRENT_YEAR)).toBe(false);
   });
 
-  it("allows an infantil player in benjamin, alevin, infantil and cadete teams", () => {
-    expect(canRosterPlayer(INFANTIL_BIRTH, "benjamin", CURRENT_YEAR)).toBe(true);
-    expect(canRosterPlayer(INFANTIL_BIRTH, "alevin", CURRENT_YEAR)).toBe(true);
+  it("allows an infantil player only in infantil and cadete teams", () => {
+    expect(canRosterPlayer(INFANTIL_BIRTH, "benjamin", CURRENT_YEAR)).toBe(false);
+    expect(canRosterPlayer(INFANTIL_BIRTH, "alevin", CURRENT_YEAR)).toBe(false);
     expect(canRosterPlayer(INFANTIL_BIRTH, "infantil", CURRENT_YEAR)).toBe(true);
     expect(canRosterPlayer(INFANTIL_BIRTH, "cadete", CURRENT_YEAR)).toBe(true);
   });
@@ -71,17 +71,17 @@ describe("canRosterPlayer", () => {
     expect(canRosterPlayer(INFANTIL_BIRTH, "juvenil", CURRENT_YEAR)).toBe(false);
   });
 
-  it("allows a juvenil player in a benjamin team (any drop-down)", () => {
-    expect(canRosterPlayer(JUVENIL_BIRTH, "benjamin", CURRENT_YEAR)).toBe(true);
+  it("rejects a juvenil player in a benjamin team", () => {
+    expect(canRosterPlayer(JUVENIL_BIRTH, "benjamin", CURRENT_YEAR)).toBe(false);
   });
 
   it("allows a juvenil player in an absoluto team (N+1)", () => {
     expect(canRosterPlayer(JUVENIL_BIRTH, "absoluto", CURRENT_YEAR)).toBe(true);
   });
 
-  it("allows an absoluto player in any lower competitive team", () => {
+  it("allows an absoluto player only in absoluto", () => {
     expect(canRosterPlayer(ABSOLUTO_BIRTH, "absoluto", CURRENT_YEAR)).toBe(true);
-    expect(canRosterPlayer(ABSOLUTO_BIRTH, "benjamin", CURRENT_YEAR)).toBe(true);
+    expect(canRosterPlayer(ABSOLUTO_BIRTH, "benjamin", CURRENT_YEAR)).toBe(false);
   });
 
   it("allows any player in an escuela team", () => {

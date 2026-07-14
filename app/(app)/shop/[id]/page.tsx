@@ -9,6 +9,7 @@ import { formatCents } from "@/lib/domain/shop";
 import { PageShell } from "@/components/ui/page-shell";
 import { AddToCartButton } from "./_components/add-to-cart-button";
 import { ProductGallery } from "./_components/product-gallery";
+import { FloatingCartButton } from "../_components/floating-cart-button";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -29,6 +30,7 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <PageShell width="lg" className="gap-5 pb-8">
+      <FloatingCartButton />
       <Link
         href={"/shop" as Route}
         className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit touch-manipulation items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"

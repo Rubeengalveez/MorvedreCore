@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail } from "@/lib/email/resend";
 import { insertNotificationsWithPush } from "./notification-dispatch";
-import { requireAdmin, requireSessionProfile } from "./_helpers";
+import { requirePermission, requireSessionProfile } from "./_helpers";
 import {
   createShopOrderSchema,
   decideShopOrderSchema,
@@ -23,6 +23,7 @@ import {
   type ShopOrderStatus,
 } from "@/lib/domain/shop";
 import { validateImageFile } from "@/lib/uploads/images";
+import { normalizeSpanishPhone } from "@/lib/domain/phone";
 
 function toError(e: unknown): string {
   if (e instanceof z.ZodError) return e.issues[0]?.message ?? "Datos inválidos.";
@@ -109,7 +110,7 @@ export async function createShopProduct(input: {
   imageFiles?: File[] | null;
   coverImageIndex?: number;
 }): Promise<{ id: string }> {
-  await requireAdmin();
+  await requirePermission("manage_shop");
   const parsed = upsertShopProductSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const product = parseProduct(parsed.data);
@@ -188,7 +189,7 @@ export async function updateShopProduct(input: {
   imageFiles?: File[] | null;
   coverImageIndex?: number;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_shop");
   const parsed = updateShopProductSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const product = parseProduct(parsed.data);
@@ -242,7 +243,7 @@ export async function updateShopProduct(input: {
 }
 
 export async function deleteShopProduct(input: { product_id: string }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_shop");
   const parsed = deleteShopProductSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
 
@@ -258,7 +259,7 @@ export async function updateShopOrderStatus(input: {
   status: ShopOrderStatus;
   admin_notes?: string | null;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_shop");
   const parsed = updateShopOrderStatusSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   if (!isValidShopOrderStatus(parsed.data.status)) {
@@ -298,6 +299,7 @@ export async function createShopOrder(input: {
     quantity: number;
   }>;
   notes?: string | null;
+  contact_phone?: string | null;
 }): Promise<{ id: string }> {
   const me = await requireSessionProfile();
   const parsed = createShopOrderSchema.safeParse(input);
@@ -357,14 +359,39 @@ export async function createShopOrder(input: {
   if (!cart.ok) throw new Error(cart.error ?? "Carrito inválido.");
 
   const admin = createAdminClient();
+  const { data: requester, error: requesterError } = await admin
+    .from("profiles")
+    .select("phone_e164")
+    .eq("id", me.id)
+    .maybeSingle();
+  if (requesterError || !requester) {
+    throw new Error("No pudimos comprobar tus datos de contacto.");
+  }
+  const contactPhone =
+    requester.phone_e164 ?? normalizeSpanishPhone(parsed.data.contact_phone ?? "");
+  if (!contactPhone) {
+    throw new Error("Añade un teléfono de contacto válido para enviar el pedido.");
+  }
+  if (!requester.phone_e164) {
+    const { error: phoneError } = await admin
+      .from("profiles")
+      .update({ phone_e164: contactPhone })
+      .eq("id", me.id);
+    if (phoneError) throw new Error("No pudimos guardar tu teléfono de contacto.");
+  }
+  const { count: parentCount } = await admin
+    .from("parent_child_links")
+    .select("parent_profile_id", { count: "exact", head: true })
+    .eq("child_profile_id", me.id);
   const { data: order, error: oErr } = await admin
     .from("shop_orders")
     .insert({
       requested_by: me.id,
-      status: "pending_parent",
+      status: (parentCount ?? 0) > 0 ? "pending_parent" : "pending_admin",
       total_cents: cart.total_cents!,
       currency: "EUR",
       notes: parsed.data.notes ?? null,
+      contact_phone_e164: contactPhone,
     })
     .select("id")
     .single();
@@ -391,7 +418,7 @@ export async function createShopOrder(input: {
   }
 
   await notifyParentsOfOrder(order.id, me.id, products);
-  await notifyShopManagerOfOrder(order.id, me.id, cart.lines!, products);
+  await notifyShopManagerOfOrder(order.id, me.id, contactPhone, cart.lines!, products);
 
   revalidatePath("/shop");
   revalidatePath("/shop/orders");
@@ -403,6 +430,7 @@ export async function createShopOrder(input: {
 async function notifyShopManagerOfOrder(
   orderId: string,
   requesterId: string,
+  contactPhone: string,
   lines: Array<{
     product_id: string;
     size: string | null;
@@ -411,8 +439,6 @@ async function notifyShopManagerOfOrder(
   }>,
   products: Array<{ id: string; title: string }>,
 ): Promise<void> {
-  const managerEmail =
-    process.env.SHOP_MANAGER_EMAIL ?? process.env.ADMIN_EMAIL ?? "galvillo9@gmail.com";
   const admin = createAdminClient();
   const { data: requester } = await admin
     .from("profiles")
@@ -426,23 +452,47 @@ async function notifyShopManagerOfOrder(
         line.size ? `talla ${line.size}` : null,
         line.personalization ? `personalización: ${line.personalization}` : null,
       ].filter(Boolean);
-      return `- ${productById.get(line.product_id) ?? "Producto"}${options.length > 0 ? ` (${options.join(", ")})` : ""}`;
+      return `- ${line.quantity} × ${productById.get(line.product_id) ?? "Producto"}${options.length > 0 ? ` (${options.join(", ")})` : ""}`;
     })
     .join("\n");
 
-  await sendEmail({
-    to: managerEmail,
-    subject: `Nueva solicitud de tienda · ${requester?.full_name ?? "Socio/a"}`,
-    text: `Nueva solicitud de material en Morvedre Core.
+  const { data: managerPermissions } = await admin
+    .from("profile_permissions")
+    .select("profile_id")
+    .eq("permission", "manage_shop");
+  const managerIds = Array.from(new Set((managerPermissions ?? []).map((row) => row.profile_id)));
+  const { data: managers } = managerIds.length
+    ? await admin.from("profiles").select("email_contact").in("id", managerIds)
+    : { data: [] as Array<{ email_contact: string | null }> };
+  const recipients = Array.from(
+    new Set(
+      [
+        ...(managers ?? []).map((manager) => manager.email_contact).filter(Boolean),
+        process.env.SHOP_MANAGER_EMAIL,
+        process.env.ADMIN_EMAIL,
+        "galvillo9@gmail.com",
+      ].filter((email): email is string => Boolean(email)),
+    ),
+  );
+
+  await Promise.all(
+    recipients.map((to) =>
+      sendEmail({
+        to,
+        subject: `Nueva solicitud de tienda · ${requester?.full_name ?? "Socio/a"}`,
+        text: `Nueva solicitud de material en Morvedre Core.
 
 Solicitante: ${requester?.full_name ?? requesterId}
+Teléfono: ${contactPhone}
 Pedido: ${orderId}
 
 ${detail}
 
 Puedes gestionarlo desde /admin/shop.
 `,
-  });
+      }),
+    ),
+  );
 }
 
 export async function decideShopOrder(input: {

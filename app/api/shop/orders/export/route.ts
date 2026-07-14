@@ -2,13 +2,15 @@ import { NextResponse } from "next/server";
 import * as XLSX from "xlsx";
 
 import { getShopOrdersForKanban } from "@/server/queries/shop";
-import { hasAdminAccess } from "@/server/actions/admin/_helpers";
+import { requirePermission } from "@/server/actions/admin/_helpers";
 import type { ShopOrderStatus } from "@/lib/domain/shop";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!(await hasAdminAccess())) {
+  try {
+    await requirePermission("manage_shop");
+  } catch {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
@@ -58,6 +60,7 @@ export async function GET() {
         Pedido: order.id,
         Estado: order.status,
         Solicitante: order.requested_by_name ?? order.requested_by,
+        Telefono: order.contact_phone_e164 ?? "",
         Producto: product,
         Talla: size,
         Personalizacion: personalization,

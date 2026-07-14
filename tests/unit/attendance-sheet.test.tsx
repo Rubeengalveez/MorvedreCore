@@ -48,7 +48,7 @@ describe("AttendanceSheet", () => {
   });
 
   it("starts with every unmarked player present and saves automatically", async () => {
-    render(<AttendanceSheet session={session} />);
+    render(<AttendanceSheet session={session} canEdit />);
 
     const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
     expect(within(anaControls).getByRole("button", { name: "Presente" })).toHaveAttribute(
@@ -72,7 +72,7 @@ describe("AttendanceSheet", () => {
   });
 
   it("marks an absence with one tap and saves it without a save button", async () => {
-    render(<AttendanceSheet session={session} />);
+    render(<AttendanceSheet session={session} canEdit />);
 
     await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
     markAttendanceMock.mockClear();
@@ -103,7 +103,7 @@ describe("AttendanceSheet", () => {
         { ...session.players[1]!, attendance: true },
       ],
     };
-    render(<AttendanceSheet session={pastSession} />);
+    render(<AttendanceSheet session={pastSession} canEdit />);
 
     expect(markAttendanceMock).not.toHaveBeenCalled();
     const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
@@ -117,5 +117,44 @@ describe("AttendanceSheet", () => {
         { player_id: session.players[1]!.id, present: true, reason: null },
       ],
     });
+  });
+
+  it("places the save status after the player list", () => {
+    const savedSession: DashboardCoachSession = {
+      ...session,
+      present_count: 2,
+      absent_count: 0,
+      unmarked_count: 0,
+      players: session.players.map((player) => ({ ...player, attendance: true })),
+    };
+    const { container } = render(<AttendanceSheet session={savedSession} canEdit />);
+
+    const playerList = screen.getByRole("list", { name: `Jugadores de ${session.team_label}` });
+    const saveStatus = container.querySelector('[aria-live="polite"]');
+
+    expect(saveStatus).not.toBeNull();
+    expect(playerList.nextElementSibling).toBe(saveStatus);
+  });
+
+  it("keeps the back navigation outside the team card", () => {
+    const { container } = render(<AttendanceSheet session={session} canEdit={false} />);
+
+    const backLink = screen.getByRole("link", { name: "Volver a entrenamientos" });
+    const teamCard = container.querySelector("header");
+
+    expect(teamCard).not.toBeNull();
+    expect(teamCard).not.toContainElement(backLink);
+    expect(teamCard?.previousElementSibling).toContainElement(backLink);
+  });
+
+  it("shows a future session in read-only mode without saving defaults", () => {
+    render(<AttendanceSheet session={session} canEdit={false} />);
+
+    expect(markAttendanceMock).not.toHaveBeenCalled();
+    expect(screen.getByText("Lista todavía no disponible")).toBeVisible();
+    expect(screen.getByText("Ana García")).toBeVisible();
+    expect(screen.getByText("Pablo Pérez")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Presente" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ausente" })).not.toBeInTheDocument();
   });
 });

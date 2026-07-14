@@ -195,6 +195,7 @@ export const updatePlayerSchema = z
     school_enrolled: z.boolean().optional(),
     school_payment_paid: z.boolean().optional(),
     license_active: z.boolean().optional(),
+    is_active: z.boolean().optional(),
     notes: z.preprocess(emptyToNull, z.string().max(2000, "Máximo 2000 caracteres.").nullable()),
   })
   .refine((data) => Object.keys(data).length > 0, {
@@ -231,7 +232,9 @@ export const updateProfileSchema = z.object({
       .nullable(),
   ),
   email_contact: z.preprocess(nullIfEmpty, z.string().email("Email inválido.").nullable()),
-  notes: z.preprocess(nullIfEmpty, z.string().max(1000, "Máximo 1000 caracteres.").nullable()),
+  notes: z
+    .preprocess(nullIfEmpty, z.string().max(1000, "Máximo 1000 caracteres.").nullable())
+    .optional(),
 });
 
 export const linkSchema = z.object({
@@ -374,6 +377,36 @@ export const createTrainingBlockSchema = z
   .refine((data) => data.end_time > data.start_time, {
     message: "La hora de fin debe ser posterior a la hora de inicio.",
     path: ["end_time"],
+  });
+
+const trainingScheduleGroupSchema = z
+  .object({
+    weekdays: z.array(z.number().int().min(1).max(7)).min(1, "Selecciona al menos un día."),
+    start_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora inicio inválida (HH:MM)."),
+    end_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora fin inválida (HH:MM)."),
+  })
+  .refine((data) => data.end_time > data.start_time, {
+    message: "La hora de fin debe ser posterior a la hora de inicio.",
+    path: ["end_time"],
+  });
+
+export const createTrainingScheduleSchema = z
+  .object({
+    team_id: z.string().uuid("Equipo inválido."),
+    label: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
+    start_date: isoDate,
+    end_date: isoDate,
+    location: z.preprocess(
+      emptyToNull,
+      z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
+    ),
+    kind: trainingKindSchema.optional(),
+    replace_existing: z.boolean().optional(),
+    groups: z.array(trainingScheduleGroupSchema).min(1, "Añade al menos un horario.").max(7),
+  })
+  .refine((data) => data.end_date >= data.start_date, {
+    message: "La fecha de fin debe ser igual o posterior a la fecha de inicio.",
+    path: ["end_date"],
   });
 
 export const updateTrainingBlockSchema = z
@@ -678,6 +711,7 @@ export const deleteShopProductSchema = z.object({
 });
 
 export const createShopOrderSchema = z.object({
+  contact_phone: z.string().trim().max(30).nullable().optional(),
   items: z
     .array(
       z.object({

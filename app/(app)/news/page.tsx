@@ -71,7 +71,7 @@ export default async function NewsPage({
           isAdmin ? (
             <Link
               href={"/admin/news" as Route}
-              className="focus-visible:ring-paper/80 inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-4 text-sm font-extrabold transition-colors hover:bg-white/18 focus-visible:ring-2 focus-visible:outline-none"
+              className="border-ink-200 bg-paper-card text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none min-[420px]:w-auto"
             >
               <Settings className="h-4 w-4" aria-hidden="true" /> Gestionar noticias
             </Link>

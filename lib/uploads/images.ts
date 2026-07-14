@@ -37,3 +37,10 @@ export async function validateImageFile(
 
   return { contentType, extension: IMAGE_TYPES[contentType] };
 }
+
+export async function validateAvatarImageFile(file: File): Promise<void> {
+  if (file.type !== "image/jpeg" && file.type !== "image/png") {
+    throw new Error("La foto de perfil debe ser JPG o PNG.");
+  }
+  await validateImageFile(file);
+}

@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  bestRivals,
-  computeLegends,
-  computeRivalries,
-  normalizeOpponent,
-  toughestRivals,
-  type LegendStatInput,
-} from "@/lib/domain/history";
+import { computeLegends, type LegendStatInput } from "@/lib/domain/history";
 
 function stat(overrides: Partial<LegendStatInput>): LegendStatInput {
   return {
@@ -67,83 +60,5 @@ describe("computeLegends", () => {
 
   it("omits players without data for the selected metric", () => {
     expect(computeLegends([stat({ goals: 0 })], "goals")).toEqual([]);
-  });
-});
-
-describe("rivalries", () => {
-  it("normalizes casing and repeated spaces", () => {
-    expect(normalizeOpponent("  Waterpolo   Elche ")).toBe("waterpolo elche");
-  });
-
-  it("combines the same rival across teams and seasons", () => {
-    const result = computeRivalries([
-      {
-        opponent: "Waterpolo Elche",
-        matches_played: 2,
-        wins: 2,
-        draws: 0,
-        losses: 0,
-        goals_for: 20,
-        goals_against: 10,
-        last_match_at: "2025-01-01T00:00:00Z",
-      },
-      {
-        opponent: " WATERPOLO  ELCHE ",
-        matches_played: 1,
-        wins: 0,
-        draws: 1,
-        losses: 0,
-        goals_for: 8,
-        goals_against: 8,
-        last_match_at: "2026-01-01T00:00:00Z",
-      },
-    ]);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      matches_played: 3,
-      wins: 2,
-      draws: 1,
-      goal_diff: 10,
-      win_pct: 66.67,
-    });
-  });
-
-  it("requires two matches and orders best and toughest rivals", () => {
-    const rivalries = computeRivalries([
-      {
-        opponent: "Fácil",
-        matches_played: 4,
-        wins: 4,
-        draws: 0,
-        losses: 0,
-        goals_for: 40,
-        goals_against: 10,
-        last_match_at: null,
-      },
-      {
-        opponent: "Difícil",
-        matches_played: 5,
-        wins: 0,
-        draws: 1,
-        losses: 4,
-        goals_for: 20,
-        goals_against: 45,
-        last_match_at: null,
-      },
-      {
-        opponent: "Una vez",
-        matches_played: 1,
-        wins: 1,
-        draws: 0,
-        losses: 0,
-        goals_for: 8,
-        goals_against: 3,
-        last_match_at: null,
-      },
-    ]);
-
-    expect(bestRivals(rivalries).map((row) => row.opponent)).toEqual(["Fácil", "Difícil"]);
-    expect(toughestRivals(rivalries).map((row) => row.opponent)).toEqual(["Difícil", "Fácil"]);
   });
 });

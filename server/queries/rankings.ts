@@ -68,18 +68,21 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
     .eq("scope_key", scopeKey);
 
   if (error) {
-    return { rows: [], my_position: null, total_players: 0 };
+    throw new Error("No pudimos cargar los datos del ranking.");
   }
 
-  // Si la métrica es racha, cargamos dinámicamente los datos de la tabla 'streaks'
   const streakMap = new Map<string, { current: number; best: number }>();
   if (input.metric === "streak") {
-    const { data: streakRows } = await supabase
+    const { data: streakRows, error: streakError } = await supabase
       .from("streaks")
       .select("subject_id, current_value, best_value")
       .eq("season_id", input.season_id)
       .eq("subject_type", "player")
       .eq("streak_type", input.streak_type ?? "train_consec");
+
+    if (streakError) {
+      throw new Error("No pudimos cargar las rachas del club.");
+    }
 
     if (streakRows) {
       for (const r of streakRows) {
@@ -298,81 +301,4 @@ export async function getRankingsMeta(activeSeasonId?: string): Promise<Rankings
     teams: teamList,
     available_seasons: seasonList,
   };
-}
-
-export interface OpponentHistoryRow {
-  opponent: string;
-  matches_played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goals_for: number;
-  goals_against: number;
-  last_match_at: string | null;
-  team_label: string;
-  team_id: string;
-  win_pct: number;
-  goal_diff: number;
-}
-
-export async function getOpponentHistory(input: {
-  season_id: string;
-  team_id?: string;
-  limit?: number;
-}): Promise<OpponentHistoryRow[]> {
-  const supabase = await createClient();
-  let query = supabase
-    .from("opponent_stats")
-    .select(
-      "opponent, matches_played, wins, draws, losses, goals_for, goals_against, last_match_at, team_id, teams!opponent_stats_team_id_fkey(label, color)",
-    )
-    .eq("season_id", input.season_id)
-    .order("last_match_at", { ascending: false });
-  if (input.team_id) {
-    query = query.eq("team_id", input.team_id);
-  }
-  const { data, error } = await query;
-  if (error) return [];
-
-  const rows = (
-    (data ?? []) as Array<{
-      opponent: string;
-      matches_played: number;
-      wins: number;
-      draws: number;
-      losses: number;
-      goals_for: number;
-      goals_against: number;
-      last_match_at: string | null;
-      team_id: string;
-      teams: unknown;
-    }>
-  ).map((r) => {
-    const t = Array.isArray(r.teams) ? r.teams[0] : r.teams;
-    const team = t as { label?: string } | null;
-    return {
-      opponent: r.opponent,
-      matches_played: r.matches_played,
-      wins: r.wins,
-      draws: r.draws,
-      losses: r.losses,
-      goals_for: r.goals_for,
-      goals_against: r.goals_against,
-      last_match_at: r.last_match_at,
-      team_id: r.team_id,
-      team_label: team?.label ?? "",
-    };
-  });
-
-  const enriched = rows.map((r) => {
-    const winPct = r.matches_played > 0 ? Math.round((r.wins / r.matches_played) * 10000) / 100 : 0;
-    return {
-      ...r,
-      win_pct: winPct,
-      goal_diff: r.goals_for - r.goals_against,
-    };
-  });
-
-  const limit = input.limit ?? 5;
-  return enriched.slice(0, limit);
 }

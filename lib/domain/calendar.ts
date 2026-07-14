@@ -105,6 +105,15 @@ export function formatTimeOfDay(iso: string): string {
   return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+export function formatTimeRangeFromDuration(iso: string, durationMinutes: number): string {
+  const start = new Date(iso);
+  if (Number.isNaN(start.getTime()) || !Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+    return formatTimeOfDay(iso);
+  }
+  const end = new Date(start.getTime() + durationMinutes * 60_000);
+  return `${formatTimeOfDay(iso)}–${formatTimeOfDay(end.toISOString())}`;
+}
+
 export function formatLongDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";

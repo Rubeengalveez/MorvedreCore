@@ -1,10 +1,8 @@
-import { MdAdd } from "react-icons/md";
 import { UsersRound } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
-import { Button } from "@/components/ui/button";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin } from "@/server/actions/admin/_helpers";
+import { requirePermission } from "@/server/actions/admin/_helpers";
 
 import {
   FamilyFormSheet,
@@ -33,7 +31,7 @@ async function loadData(): Promise<{
   parents: PersonOption[];
   children: PersonOption[];
 }> {
-  await requireAdmin();
+  await requirePermission("manage_families");
   const supabase = createAdminClient();
 
   const [{ data: linkData }, { data: profilesData }] = await Promise.all([
@@ -46,6 +44,7 @@ async function loadData(): Promise<{
     supabase
       .from("profiles")
       .select("id, full_name, email_contact, birth_year")
+      .eq("is_active", true)
       .order("full_name", { ascending: true })
       .limit(2000),
   ]);
@@ -80,18 +79,7 @@ export default async function FamiliesPage() {
         title="Familias"
         description="Gestiona los vínculos entre tutores y jugadores."
         icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
-        action={
-          <FamilyFormSheet
-            parents={parents}
-            childrenList={children}
-            trigger={
-              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-                <MdAdd className="h-6 w-6" aria-hidden="true" />
-                <span>Nuevo vínculo</span>
-              </Button>
-            }
-          />
-        }
+        action={<FamilyFormSheet parents={parents} childrenList={children} />}
       />
 
       <FamiliesTable rows={rows} />

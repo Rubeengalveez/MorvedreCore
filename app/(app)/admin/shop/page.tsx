@@ -14,7 +14,6 @@ import {
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { createClient } from "@/lib/supabase/server";
 import { getShopOrdersForKanban } from "@/server/queries/shop";
 import { SHOP_KANBAN_COLUMNS } from "@/lib/domain/shop";
 import type { ShopOrderStatus } from "@/lib/domain/shop";
@@ -38,22 +37,9 @@ const STATUS_ICON: Record<ShopOrderStatus, React.ComponentType<{ className?: str
   cancelled: Bell,
 };
 
-async function isAdmin(profileId: string): Promise<boolean> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("profile_id", profileId)
-    .eq("role", "admin")
-    .is("scope_team_id", null)
-    .maybeSingle();
-  return !!data;
-}
-
 export default async function AdminShopPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  if (!(await isAdmin(ctx.activeProfile.id))) redirect("/dashboard");
 
   const kanbanStatuses: ShopOrderStatus[] = [
     "pending_parent",
@@ -95,6 +81,24 @@ export default async function AdminShopPage() {
           </div>
         }
       />
+
+      <ol className="border-pool-blue/20 bg-pool-foam/45 grid grid-cols-1 gap-2 rounded-2xl border p-3 sm:grid-cols-3">
+        {[
+          ["1", "Revisa", "Abre las nuevas solicitudes."],
+          ["2", "Actualiza", "Marca cuándo se encarga y se recibe."],
+          ["3", "Entrega", "Cierra el pedido al dárselo a la persona."],
+        ].map(([step, title, detail]) => (
+          <li key={step} className="bg-paper-card flex items-center gap-3 rounded-xl p-3 shadow-sm">
+            <span className="bg-pool-deep text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono font-extrabold">
+              {step}
+            </span>
+            <span>
+              <span className="text-pool-deep block text-sm font-extrabold">{title}</span>
+              <span className="text-ink-600 block text-xs leading-snug">{detail}</span>
+            </span>
+          </li>
+        ))}
+      </ol>
 
       <div className="flex flex-col gap-3 pb-3 md:flex-row md:overflow-x-auto">
         {SHOP_KANBAN_COLUMNS.map((col) => {

@@ -17,6 +17,7 @@ export interface DashboardWeekEvent {
   kind: "training" | "match";
   date: string;
   scheduled_at: string;
+  duration_minutes?: number;
   title: string;
   team_label: string;
   team_color: string;
@@ -234,7 +235,7 @@ export async function getUpcomingDashboardEvents(
   const [trainingsRes, matchesRes] = await Promise.all([
     supabase
       .from("training_sessions")
-      .select("id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(label, color)")
+      .select("id, scheduled_at, duration_minutes, cancelled, teams!training_sessions_team_id_fkey(label, color)")
       .in("team_id", teamIds)
       .eq("cancelled", false)
       .gte("scheduled_at", from)
@@ -266,6 +267,7 @@ export async function getUpcomingDashboardEvents(
       kind: "training",
       date,
       scheduled_at: row.scheduled_at,
+      duration_minutes: row.duration_minutes,
       title: "Entrenamiento",
       team_label: team?.label ?? "Equipo",
       team_color: team?.color ?? "#1E5AA8",

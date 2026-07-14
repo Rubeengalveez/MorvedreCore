@@ -39,6 +39,7 @@ export interface TrainingBlockCardProps {
   sessions: TrainingSessionRow[];
   roster: AttendancePlayer[];
   attendanceBySession: AttendanceMap;
+  editAction?: React.ReactNode;
 }
 
 const KIND_LABELS: Record<string, string> = {
@@ -55,6 +56,7 @@ export function TrainingBlockCard({
   sessions,
   roster,
   attendanceBySession,
+  editAction,
 }: TrainingBlockCardProps) {
   const [open, setOpen] = useState(false);
   const [generating, startGenerating] = useTransition();
@@ -143,6 +145,7 @@ export function TrainingBlockCard({
         {open ? (
           <div className="border-ink-300 flex flex-col gap-3 border-t pt-3">
             <div className="flex flex-wrap items-center gap-2">
+              {editAction}
               <Button
                 type="button"
                 variant="secondary"

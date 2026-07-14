@@ -9,6 +9,7 @@ import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getTeamById, getTeamMatches, getTeamRoster, getTeamStaff } from "@/server/queries/teams";
 import { cn } from "@/lib/utils/cn";
+import type { CategoryCode } from "@/lib/domain/categories";
 
 import { TeamPlayersTab } from "./_components/team-players-tab";
 
@@ -108,7 +109,16 @@ export default async function TeamDetailPage({
         ) : null}
 
         {activeTab === "jugadores" ? (
-          <TeamPlayersTab teamId={team.id} roster={roster} teamColor={team.color} staff={staff} />
+          <TeamPlayersTab
+            teamId={team.id}
+            roster={roster}
+            teamColor={team.color}
+            teamCategory={team.category_code as CategoryCode}
+            categoryYear={
+              season ? new Date(season.end_date).getFullYear() : new Date().getFullYear()
+            }
+            staff={staff}
+          />
         ) : null}
 
         {activeTab === "partidos" ? (

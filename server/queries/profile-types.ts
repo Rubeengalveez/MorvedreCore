@@ -9,4 +9,5 @@ export interface ProfileSummary {
   team_color: string | null;
   must_change_password: boolean;
   calendar_token: string;
+  is_active: boolean;
 }

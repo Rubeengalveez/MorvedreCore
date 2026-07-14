@@ -14,6 +14,7 @@ export interface DashboardWeekEvent {
   kind: "training" | "match";
   date: string;
   scheduled_at: string;
+  duration_minutes?: number;
   title: string;
   team_label: string;
   team_color: string;

@@ -30,7 +30,7 @@ export default async function ProfileEditPage() {
   const { data: profile, error } = await admin
     .from("profiles")
     .select(
-      "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, team_color, school_enrolled, school_payment_paid, must_change_password, calendar_token, created_at, updated_at",
+      "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, team_color, school_enrolled, school_payment_paid, must_change_password, calendar_token, is_active, created_at, updated_at",
     )
     .eq("auth_user_id", user.id)
     .maybeSingle();
@@ -47,7 +47,7 @@ export default async function ProfileEditPage() {
       const { data: fallbackProfile, error: fallbackError } = await admin
         .from("profiles")
         .select(
-          "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, team_color, school_enrolled, school_payment_paid, must_change_password, created_at, updated_at",
+          "id, auth_user_id, full_name, photo_url, birth_year, gender, cap_number, license_active, phone_e164, email_contact, notes, team_color, school_enrolled, school_payment_paid, must_change_password, is_active, created_at, updated_at",
         )
         .eq("auth_user_id", user.id)
         .maybeSingle();

@@ -1,10 +1,32 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAttendanceResult,
+  canEditAttendanceForDay,
   diffAttendance,
   markAllPresent,
   type AttendanceRow,
 } from "@/lib/domain/attendance";
+
+describe("canEditAttendanceForDay", () => {
+  const tuesdayMorning = new Date("2026-07-14T08:00:00.000Z");
+
+  it("allows attendance for any time on the current club day", () => {
+    expect(canEditAttendanceForDay("2026-07-14T20:00:00.000Z", tuesdayMorning)).toBe(true);
+  });
+
+  it("allows corrections for previous days", () => {
+    expect(canEditAttendanceForDay("2026-07-13T18:00:00.000Z", tuesdayMorning)).toBe(true);
+  });
+
+  it("blocks attendance for a later club day", () => {
+    expect(canEditAttendanceForDay("2026-07-15T08:00:00.000Z", tuesdayMorning)).toBe(false);
+  });
+
+  it("uses Europe/Madrid when the UTC date is still the same", () => {
+    const lateTuesday = new Date("2026-07-14T21:30:00.000Z");
+    expect(canEditAttendanceForDay("2026-07-14T22:30:00.000Z", lateTuesday)).toBe(false);
+  });
+});
 
 describe("buildAttendanceResult", () => {
   it("marks every player as unmarked when existingAttendance is empty", () => {

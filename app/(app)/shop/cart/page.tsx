@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ShoppingBag } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProducts } from "@/server/queries/shop";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { createClient } from "@/lib/supabase/server";
 import { CartClient } from "../_components/cart-client";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,11 @@ export const metadata = { title: "Carrito — Morvedre Core" };
 export default async function CartPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const products = await getShopProducts();
+  const supabase = await createClient();
+  const [products, { data: ownProfile }] = await Promise.all([
+    getShopProducts(),
+    supabase.from("profiles").select("phone_e164").eq("id", ctx.ownProfile.id).maybeSingle(),
+  ]);
 
   return (
     <PageShell width="lg" className="gap-5 pb-8">
@@ -27,19 +32,13 @@ export default async function CartPage() {
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
         Seguir comprando
       </Link>
-      <header className="border-ink-300 border-b pb-5">
-        <p className="text-pool-blue text-xs font-extrabold tracking-[0.14em] uppercase">
-          Tienda Morvedre
-        </p>
-        <h1 className="font-display text-pool-deep mt-1 text-3xl font-extrabold tracking-tight">
-          Revisa tu solicitud
-        </h1>
-        <p className="text-ink-600 mt-2 max-w-xl text-base leading-relaxed">
-          Cada producto conserva su talla y personalización. Enviar la solicitud no realiza ningún
-          pago.
-        </p>
-      </header>
-      <CartClient products={products} myProfileId={ctx.activeProfile.id} />
+      <PageHeader
+        eyebrow="Tienda Morvedre"
+        title="Revisa tu solicitud"
+        description="Cada producto conserva su talla y personalización. Enviar la solicitud no realiza ningún pago."
+        icon={<ShoppingBag className="h-5 w-5" aria-hidden="true" />}
+      />
+      <CartClient products={products} initialPhone={ownProfile?.phone_e164 ?? null} />
     </PageShell>
   );
 }

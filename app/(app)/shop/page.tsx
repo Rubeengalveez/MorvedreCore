@@ -6,9 +6,9 @@ import { Box, PackageOpen, Search, ShoppingBag } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProducts, getShopCategories } from "@/server/queries/shop";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { formatCents } from "@/lib/domain/shop";
-import { CartButton } from "./_components/cart-button";
+import { FloatingCartButton } from "./_components/floating-cart-button";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -43,20 +43,14 @@ export default async function ShopPage({
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
-      <header className="border-ink-300 flex items-start justify-between gap-3 border-b pb-4">
-        <div className="min-w-0">
-          <p className="text-pool-blue text-xs font-extrabold tracking-[0.14em] uppercase">
-            Vestuario del club
-          </p>
-          <h1 className="font-display text-pool-deep mt-1 text-2xl leading-tight font-extrabold tracking-tight sm:text-3xl">
-            Tienda Morvedre
-          </h1>
-          <p className="text-ink-600 mt-1 max-w-lg text-sm leading-relaxed">
-            Productos bajo pedido, preparados por el club.
-          </p>
-        </div>
-        <CartButton />
-      </header>
+      <FloatingCartButton />
+      <PageHeader
+        eyebrow="Vestuario del club"
+        title="Tienda Morvedre"
+        description="Productos bajo pedido, preparados por el club."
+        icon={<ShoppingBag className="h-5 w-5" aria-hidden="true" />}
+        className="pr-14 sm:pr-36"
+      />
 
       <form
         action="/shop"

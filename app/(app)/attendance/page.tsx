@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import {
+  CalendarClock,
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
@@ -11,12 +12,12 @@ import {
   UsersRound,
 } from "lucide-react";
 
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { getAttendanceDayKey } from "@/lib/domain/attendance";
 import { cn } from "@/lib/utils/cn";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getAttendanceTeams,
-  getClubDayKey,
   getCoachAttendanceSessions,
   getDashboardAudience,
 } from "@/server/queries/dashboard";
@@ -71,31 +72,23 @@ export default async function AttendancePage({
   const attendanceTeams = await getAttendanceTeams(season.id);
 
   const now = new Date();
-  const today = getClubDayKey(now);
+  const today = getAttendanceDayKey(now);
   const requestedDate = (await searchParams).date;
   const selectedDay = validDay(requestedDate, today);
   const sessions = await getCoachAttendanceSessions(attendanceTeams, selectedDay, now);
   const previousDay = addDays(selectedDay, -1);
   const nextDay = addDays(selectedDay, 1);
   const selectedDate = new Date(`${selectedDay}T12:00:00.000Z`);
+  const isFutureDay = selectedDay > today;
 
   return (
     <PageShell width="sm" className="gap-4 pb-8">
-      <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-3">
-        <div className="flex items-center gap-3">
-          <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-            <ClipboardCheck className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <h1 className="font-display text-pool-deep text-xl leading-tight font-extrabold">
-              Asistencia
-            </h1>
-            <p className="text-ink-600 mt-0.5 text-sm font-semibold">
-              Entrenamientos y correcciones
-            </p>
-          </div>
-        </div>
-      </header>
+      <PageHeader
+        eyebrow="Entrenamientos"
+        title="Asistencia"
+        description="Pasa lista y corrige días anteriores."
+        icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
+      />
 
       <section aria-labelledby="attendance-date-heading" className="flex flex-col gap-3">
         <div className="border-ink-200 bg-paper-card rounded-2xl border p-3">
@@ -109,7 +102,7 @@ export default async function AttendancePage({
             </Link>
             <div className="min-w-0 text-center">
               <p className="text-pool-blue text-[11px] font-extrabold tracking-[0.12em] uppercase">
-                {selectedDay === today ? "Hoy" : "Fecha seleccionada"}
+                {selectedDay === today ? "Hoy" : isFutureDay ? "Próximo día" : "Fecha seleccionada"}
               </p>
               <h2
                 id="attendance-date-heading"
@@ -155,6 +148,12 @@ export default async function AttendancePage({
               Volver a hoy
             </Link>
           ) : null}
+          {isFutureDay ? (
+            <div className="border-ink-200 bg-paper-sunk text-ink-700 mt-2 flex gap-2.5 rounded-xl border px-3 py-3 text-sm leading-5 font-semibold">
+              <CalendarClock className="text-ink-500 mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <p>Puedes consultar la plantilla. La asistencia se habilitará ese mismo día.</p>
+            </div>
+          ) : null}
         </div>
 
         {sessions.length > 0 ? (
@@ -165,18 +164,35 @@ export default async function AttendancePage({
                 <Link
                   key={session.id}
                   href={`/attendance/${session.id}` as Route}
-                  className="border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue/60 hover:bg-pool-foam/35 focus-visible:ring-pool-blue flex min-h-28 touch-manipulation items-center gap-3 rounded-2xl border-2 p-4 transition-[background-color,border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+                  className={cn(
+                    "focus-visible:ring-pool-blue flex min-h-28 touch-manipulation items-center gap-3 rounded-2xl border-2 p-4 transition-[background-color,border-color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
+                    isFutureDay
+                      ? "border-ink-200 bg-paper-sunk hover:border-ink-300"
+                      : "border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue/60 hover:bg-pool-foam/35",
+                  )}
                 >
                   <span
                     className="h-16 w-1.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: session.team_color }}
+                    style={{
+                      backgroundColor: isFutureDay ? "var(--ink-300)" : session.team_color,
+                    }}
                     aria-hidden="true"
                   />
                   <span className="min-w-0 flex-1">
-                    <span className="text-pool-deep block text-xl leading-tight font-extrabold">
+                    <span
+                      className={cn(
+                        "block text-xl leading-tight font-extrabold",
+                        isFutureDay ? "text-ink-600" : "text-pool-deep",
+                      )}
+                    >
                       {session.team_label}
                     </span>
-                    <span className="text-ink-600 mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold">
+                    <span
+                      className={cn(
+                        "mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm font-semibold",
+                        isFutureDay ? "text-ink-500" : "text-ink-600",
+                      )}
+                    >
                       <span className="inline-flex items-center gap-1.5">
                         <Clock3 className="h-4 w-4" aria-hidden="true" />
                         {timeFormatter.format(new Date(session.scheduled_at))}
@@ -189,18 +205,34 @@ export default async function AttendancePage({
                     <span
                       className={cn(
                         "mt-3 inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-extrabold",
-                        complete ? "bg-success/12 text-success" : "bg-ball-gold/20 text-pool-deep",
+                        isFutureDay
+                          ? "bg-ink-200 text-ink-600"
+                          : complete
+                            ? "bg-success/12 text-success"
+                            : "bg-ball-gold/20 text-pool-deep",
                       )}
                     >
-                      {complete ? <CheckCircle2 className="h-4 w-4" aria-hidden="true" /> : null}
-                      {complete
-                        ? session.absent_count > 0
-                          ? `${session.present_count} presentes · ${session.absent_count} ausentes`
-                          : "Todo el equipo presente"
-                        : "Sin revisar"}
+                      {isFutureDay ? (
+                        <CalendarClock className="h-4 w-4" aria-hidden="true" />
+                      ) : complete ? (
+                        <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                      ) : null}
+                      {isFutureDay
+                        ? "Solo consulta"
+                        : complete
+                          ? session.absent_count > 0
+                            ? `${session.present_count} presentes · ${session.absent_count} ausentes`
+                            : "Todo el equipo presente"
+                          : "Sin revisar"}
                     </span>
                   </span>
-                  <ChevronRight className="text-pool-blue h-7 w-7 shrink-0" aria-hidden="true" />
+                  <ChevronRight
+                    className={cn(
+                      "h-7 w-7 shrink-0",
+                      isFutureDay ? "text-ink-400" : "text-pool-blue",
+                    )}
+                    aria-hidden="true"
+                  />
                 </Link>
               );
             })}

@@ -7,9 +7,10 @@ import { Select } from "@/components/ui/select";
 
 import { TrainingBlockCard, type TrainingBlockCardProps } from "./training-block-card";
 import { TrainingBlockFormSheet } from "./training-block-form-sheet";
+import { TrainingScheduleFormSheet } from "./training-schedule-form-sheet";
 import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
 import type { AttendancePlayer } from "./attendance-sheet";
-import { MdSports } from "react-icons/md";
+import { MdEdit, MdSports } from "react-icons/md";
 
 type TeamOption = Team & { season_label: string };
 
@@ -84,15 +85,15 @@ export function TrainingsList({
                 : "Crea el primer bloque de entrenamientos para tu equipo."}
             </p>
           </div>
-          <TrainingBlockFormSheet
+          <TrainingScheduleFormSheet
             seasons={seasons}
             teams={teams}
             defaultTeamId={defaultTeamId}
             defaultSeasonId={currentSeasonId}
             trigger={
               <Button size="md">
-                <span className="hidden sm:inline">Nuevo bloque</span>
-                <span className="sm:hidden">Nuevo</span>
+                <span className="hidden sm:inline">Crear horario semanal</span>
+                <span className="sm:hidden">Crear horario</span>
               </Button>
             }
           />
@@ -118,6 +119,21 @@ export function TrainingsList({
               sessions: sessionsByBlock[b.id] ?? [],
               roster: rosterByTeam[b.team_id] ?? [],
               attendanceBySession: attendanceBySession,
+              editAction: (
+                <TrainingBlockFormSheet
+                  seasons={seasons}
+                  teams={teams}
+                  defaultTeamId={b.team_id}
+                  defaultSeasonId={currentSeasonId}
+                  initial={b}
+                  trigger={
+                    <Button type="button" variant="secondary" size="sm">
+                      <MdEdit className="h-4 w-4" aria-hidden="true" />
+                      Editar horario
+                    </Button>
+                  }
+                />
+              ),
             };
             return <TrainingBlockCard key={b.id} {...cardProps} />;
           })}

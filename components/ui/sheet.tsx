@@ -112,7 +112,13 @@ const SheetBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>
 SheetBody.displayName = "SheetBody";
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("border-ink-300 flex flex-col gap-2 border-t p-5", className)} {...props} />
+  <div
+    className={cn(
+      "border-ink-300 flex shrink-0 flex-col gap-2 border-t px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]",
+      className,
+    )}
+    {...props}
+  />
 );
 SheetFooter.displayName = "SheetFooter";
 

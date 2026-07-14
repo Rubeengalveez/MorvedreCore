@@ -2,9 +2,9 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, ShoppingBag, ZoomIn } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingBag, X, ZoomIn } from "lucide-react";
 
-import { Sheet, SheetBody, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetBody, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 
 export interface ProductGalleryImage {
@@ -109,9 +109,14 @@ export function ProductGallery({
       <Sheet open={expanded} onOpenChange={setExpanded}>
         <SheetContent
           size="full"
+          showClose={false}
           className="bg-pool-deep text-paper border-pool-deep gap-2 rounded-none"
         >
           <SheetTitle className="sr-only">{title} ampliado</SheetTitle>
+          <SheetClose className="bg-paper text-pool-deep focus-visible:ring-ball-gold shadow-elev-3 absolute top-[max(1rem,env(safe-area-inset-top))] right-4 z-20 flex h-12 min-w-12 touch-manipulation items-center justify-center gap-2 rounded-full px-3 font-extrabold focus-visible:ring-2 focus-visible:outline-none">
+            <X className="h-5 w-5" aria-hidden="true" />
+            <span className="sr-only sm:not-sr-only">Cerrar</span>
+          </SheetClose>
           <SheetBody className="flex min-h-0 items-center justify-center px-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
             {activeImage ? (
               <div

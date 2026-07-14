@@ -35,7 +35,9 @@ async function loadPlayers(): Promise<PlayerRow[]> {
     supabase.from("seasons").select("id").eq("is_current", true).maybeSingle(),
     supabase
       .from("profiles")
-      .select("id, full_name, birth_year, license_active, photo_url, cap_number")
+      .select(
+        "id, full_name, birth_year, gender, photo_url, cap_number, phone_e164, email_contact, notes, is_active",
+      )
       .order("full_name", { ascending: true })
       .limit(1000),
   ]);

@@ -4,9 +4,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
 import Link from "next/link";
 import type { Route } from "next";
-import { useActionState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
@@ -23,20 +24,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { updateProfile, type UpdateProfileState } from "@/server/actions/profile";
 import type { Tables } from "@/types/database";
+import { AvatarEditor } from "@/components/profile/avatar-editor";
+import { normalizeSpanishPhone } from "@/lib/domain/phone";
 
 const yearPattern = /^\d{4}$/;
 const dorsalPattern = /^\d{1,2}$/;
-const e164Pattern = /^\+[1-9]\d{6,14}$/;
-const urlPattern = /^https?:\/\/.+/;
 const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const profileFormSchema = z.object({
   full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
-  photo_url: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || urlPattern.test(v), "URL inválida."),
   birth_year: z
     .string()
     .trim()
@@ -57,13 +53,12 @@ const profileFormSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((v) => !v || e164Pattern.test(v), "Formato E.164: +34612345678"),
+    .refine((v) => !v || normalizeSpanishPhone(v) != null, "Escribe un teléfono válido."),
   email_contact: z
     .string()
     .trim()
     .optional()
     .refine((v) => !v || emailPattern.test(v), "Email inválido."),
-  notes: z.string().trim().max(1000, "Máximo 1000 caracteres.").optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -83,31 +78,39 @@ export interface ProfileFormProps {
 }
 
 export function ProfileForm({ profile }: ProfileFormProps) {
+  const router = useRouter();
   const [state, formAction] = useActionState<UpdateProfileState, FormData>(updateProfile, null);
   const [, startTransition] = useTransition();
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+
+  useEffect(() => {
+    if (!state?.ok) return;
+    const timeout = window.setTimeout(() => router.push("/profile"), 800);
+    return () => window.clearTimeout(timeout);
+  }, [router, state?.ok]);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
       full_name: profile.full_name,
-      photo_url: profile.photo_url ?? "",
       birth_year: profile.birth_year?.toString() ?? "",
       cap_number: profile.cap_number?.toString() ?? "",
       phone_e164: profile.phone_e164 ?? "",
       email_contact: profile.email_contact ?? "",
-      notes: profile.notes ?? "",
     },
   });
+  const watchedFullName = useWatch({ control: form.control, name: "full_name" });
 
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
     fd.append("full_name", values.full_name);
-    fd.append("photo_url", values.photo_url ?? "");
     fd.append("birth_year", values.birth_year ?? "");
     fd.append("cap_number", values.cap_number ?? "");
-    fd.append("phone_e164", values.phone_e164 ?? "");
+    fd.append("phone_e164", normalizeSpanishPhone(values.phone_e164 ?? "") ?? "");
     fd.append("email_contact", values.email_contact ?? "");
-    fd.append("notes", values.notes ?? "");
+    if (avatarFile) fd.append("avatar_file", avatarFile);
+    fd.append("remove_photo", String(removePhoto));
     startTransition(() => {
       formAction(fd);
     });
@@ -150,31 +153,14 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="photo_url"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="photo_url">URL de la foto</FormLabel>
-              <FormControl>
-                <Input
-                  id="photo_url"
-                  type="url"
-                  inputMode="url"
-                  placeholder="https://..."
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-              <FormDescription>
-                Pega el enlace a tu foto. Podrás subir un archivo más adelante.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+        <AvatarEditor
+          name={watchedFullName || profile.full_name}
+          currentUrl={profile.photo_url}
+          teamColor={profile.team_color ?? "var(--pool-blue)"}
+          onChange={(file, removeCurrent) => {
+            setAvatarFile(file);
+            setRemovePhoto(removeCurrent);
+          }}
         />
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -236,14 +222,14 @@ export function ProfileForm({ profile }: ProfileFormProps) {
           name="phone_e164"
           render={({ field }) => (
             <FormItem>
-              <FormLabel htmlFor="phone_e164">Teléfono (E.164)</FormLabel>
+              <FormLabel htmlFor="phone_e164">Teléfono de contacto</FormLabel>
               <FormControl>
                 <Input
                   id="phone_e164"
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  placeholder="+34612345678"
+                  placeholder="612 345 678"
                   value={field.value ?? ""}
                   onChange={field.onChange}
                   onBlur={field.onBlur}
@@ -252,7 +238,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                 />
               </FormControl>
               <FormDescription>
-                Visible solo para ti, el admin y los entrenadores de tu equipo.
+                Recomendado para que la encargada de tienda pueda localizarte si haces un pedido.
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -279,31 +265,6 @@ export function ProfileForm({ profile }: ProfileFormProps) {
                   ref={field.ref}
                 />
               </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="notes">Notas (privadas)</FormLabel>
-              <FormControl>
-                <textarea
-                  id="notes"
-                  rows={4}
-                  placeholder="Cosas que quieres recordar: dorsal preferido, alergias, observaciones…"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                  className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                />
-              </FormControl>
-              <FormDescription>Solo tú verás este texto. Máx. 1000 caracteres.</FormDescription>
               <FormMessage />
             </FormItem>
           )}

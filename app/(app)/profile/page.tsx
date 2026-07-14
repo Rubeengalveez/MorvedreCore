@@ -128,7 +128,7 @@ export default async function ProfilePage() {
         <Avatar
           name={activeProfile.full_name}
           src={activeProfile.photo_url}
-          size={64}
+          size={80}
           teamColor={teamColor}
         />
         <div className="min-w-0 flex-1">
@@ -274,7 +274,7 @@ export default async function ProfilePage() {
       </details>
 
       <form action={signOut}>
-        <Button type="submit" variant="secondary" size="md" className="w-full">
+        <Button type="submit" variant="danger" size="md" className="w-full">
           <LogOut className="h-4 w-4" aria-hidden="true" />
           Cerrar sesión
         </Button>

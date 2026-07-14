@@ -30,7 +30,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { createPlayer } from "@/server/actions/admin";
+import { createPlayer, updatePlayer } from "@/server/actions/admin";
+import { normalizeSpanishPhone } from "@/lib/domain/phone";
 
 const GENDER_OPTIONS = [
   { value: "prefer_not_to_say", label: "Prefiero no decirlo" },
@@ -41,7 +42,6 @@ const GENDER_OPTIONS = [
 
 const yearPattern = /^\d{4}$/;
 const dorsalPattern = /^\d{1,2}$/;
-const e164Pattern = /^\+[1-9]\d{6,14}$/;
 const urlPattern = /^https?:\/\/.+/;
 const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -68,7 +68,7 @@ const playerFormSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((v) => !v || e164Pattern.test(v), "Formato E.164: +34612345678"),
+    .refine((v) => !v || normalizeSpanishPhone(v) != null, "Escribe un teléfono válido."),
   email_contact: z
     .string()
     .trim()
@@ -80,7 +80,6 @@ const playerFormSchema = z.object({
     .optional()
     .refine((v) => !v || urlPattern.test(v), "URL inválida."),
   must_change_password: z.boolean(),
-  license_active: z.boolean().optional(),
   notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
 });
 
@@ -95,19 +94,38 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
     if (!birthYear || String(birthYear).trim() === "") {
       return { error: "El año de nacimiento es obligatorio." };
     }
-    await createPlayer({
+    const profileId = String(formData.get("profile_id") ?? "");
+    const commonValues = {
       full_name: String(formData.get("full_name") ?? ""),
       gender: String(formData.get("gender") ?? "prefer_not_to_say") as
         "male" | "female" | "other" | "prefer_not_to_say",
       birth_year: Number(birthYear),
-      cap_number: cap && String(cap).trim() !== "" ? Number(cap) : undefined,
-      phone_e164: String(formData.get("phone_e164") ?? "") || undefined,
-      email_contact: String(formData.get("email_contact") ?? "") || undefined,
-      photo_url: String(formData.get("photo_url") ?? "") || undefined,
-      must_change_password: formData.get("must_change_password") === "true",
-      license_active: formData.get("license_active") === "true",
-      notes: String(formData.get("notes") ?? "") || undefined,
-    });
+    };
+    const capNumber = cap && String(cap).trim() !== "" ? Number(cap) : null;
+    const phone = normalizeSpanishPhone(String(formData.get("phone_e164") ?? ""));
+    const email = String(formData.get("email_contact") ?? "").trim();
+    const photoUrl = String(formData.get("photo_url") ?? "").trim();
+    const notes = String(formData.get("notes") ?? "").trim();
+    if (profileId) {
+      await updatePlayer(profileId, {
+        ...commonValues,
+        cap_number: capNumber,
+        phone_e164: phone,
+        email_contact: email || null,
+        photo_url: photoUrl || null,
+        notes: notes || null,
+      });
+    } else {
+      await createPlayer({
+        ...commonValues,
+        cap_number: capNumber ?? undefined,
+        phone_e164: phone ?? undefined,
+        email_contact: email || undefined,
+        photo_url: photoUrl || undefined,
+        notes: notes || undefined,
+        must_change_password: formData.get("must_change_password") === "true",
+      });
+    }
     return { ok: true };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "No pudimos guardar." };
@@ -168,9 +186,20 @@ function Toggle({
 
 export interface PlayerFormSheetProps {
   trigger: React.ReactNode;
+  player?: {
+    id: string;
+    full_name: string;
+    birth_year: number | null;
+    gender: string | null;
+    cap_number: number | null;
+    phone_e164: string | null;
+    email_contact: string | null;
+    photo_url: string | null;
+    notes: string | null;
+  };
 }
 
-export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
+export function PlayerFormSheet({ trigger, player }: PlayerFormSheetProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
@@ -178,16 +207,15 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerFormSchema),
     defaultValues: {
-      full_name: "",
-      birth_year: "",
-      gender: "prefer_not_to_say",
-      cap_number: "",
-      phone_e164: "",
-      email_contact: "",
-      photo_url: "",
+      full_name: player?.full_name ?? "",
+      birth_year: player?.birth_year?.toString() ?? "",
+      gender: (player?.gender as PlayerFormValues["gender"]) ?? "prefer_not_to_say",
+      cap_number: player?.cap_number?.toString() ?? "",
+      phone_e164: player?.phone_e164 ?? "",
+      email_contact: player?.email_contact ?? "",
+      photo_url: player?.photo_url ?? "",
       must_change_password: true,
-      license_active: false,
-      notes: "",
+      notes: player?.notes ?? "",
     },
   });
 
@@ -201,6 +229,7 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
 
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
+    if (player) fd.append("profile_id", player.id);
     fd.append("full_name", values.full_name);
     fd.append("birth_year", values.birth_year ?? "");
     fd.append("gender", values.gender);
@@ -209,7 +238,6 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
     if (values.email_contact) fd.append("email_contact", values.email_contact);
     if (values.photo_url) fd.append("photo_url", values.photo_url);
     fd.append("must_change_password", values.must_change_password ? "true" : "false");
-    fd.append("license_active", values.license_active ? "true" : "false");
     if (values.notes && values.notes.trim() !== "") fd.append("notes", values.notes);
     startTransition(() => {
       formAction(fd);
@@ -221,9 +249,11 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent size="lg">
         <SheetHeader>
-          <SheetTitle>Nuevo jugador</SheetTitle>
+          <SheetTitle>{player ? "Editar jugador" : "Nuevo jugador"}</SheetTitle>
           <SheetDescription>
-            Da de alta a un jugador. El dorsal y el equipo se asignan después.
+            {player
+              ? "Actualiza sus datos sin perder estadísticas ni historial."
+              : "Da de alta a un jugador. El dorsal y el equipo se asignan después."}
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
@@ -380,6 +410,10 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
                         ref={field.ref}
                       />
                     </FormControl>
+                    <p className="text-ink-500 text-xs leading-relaxed">
+                      Recomendado para que la encargada de la tienda pueda contactar si hace un
+                      pedido.
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -408,37 +442,23 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="must_change_password"
-                render={({ field }) => (
-                  <FormItem>
-                    <Toggle
-                      value={field.value}
-                      onChange={field.onChange}
-                      label="Deberá cambiar la contraseña"
-                      description="Recomendado al dar de alta un jugador nuevo."
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="license_active"
-                render={({ field }) => (
-                  <FormItem>
-                    <Toggle
-                      value={field.value ?? false}
-                      onChange={field.onChange}
-                      label="Licencia federativa activa"
-                      description="Marca si el jugador tiene ficha federativa en vigor."
-                    />
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              {!player ? (
+                <FormField
+                  control={form.control}
+                  name="must_change_password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Toggle
+                        value={field.value}
+                        onChange={field.onChange}
+                        label="Deberá cambiar la contraseña"
+                        description="Recomendado al dar de alta un jugador nuevo."
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ) : null}
 
               <FormField
                 control={form.control}
@@ -466,7 +486,7 @@ export function PlayerFormSheet({ trigger }: PlayerFormSheetProps) {
           </Form>
         </SheetBody>
         <SheetFooter>
-          <SubmitButton label="Crear jugador" />
+          <SubmitButton label={player ? "Guardar cambios" : "Crear jugador"} />
         </SheetFooter>
       </SheetContent>
     </Sheet>

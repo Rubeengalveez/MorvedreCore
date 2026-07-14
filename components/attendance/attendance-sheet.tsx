@@ -3,7 +3,15 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCircle2, RefreshCw, UsersRound, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  RefreshCw,
+  UsersRound,
+  X,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
 import { markAttendance } from "@/server/actions/admin";
@@ -33,9 +41,9 @@ const dayFormatter = new Intl.DateTimeFormat("es-ES", {
   month: "long",
 });
 
-function buildValues(session: DashboardCoachSession): AttendanceValues {
+function buildValues(session: DashboardCoachSession, canEdit: boolean): AttendanceValues {
   return Object.fromEntries(
-    session.players.map((player) => [player.id, player.attendance ?? true]),
+    session.players.map((player) => [player.id, player.attendance ?? (canEdit ? true : null)]),
   );
 }
 
@@ -55,8 +63,14 @@ function sameValues(current: AttendanceValues, saved: AttendanceValues): boolean
   return ids.length === Object.keys(saved).length && ids.every((id) => current[id] === saved[id]);
 }
 
-export function AttendanceSheet({ session }: { session: DashboardCoachSession }) {
-  const initialValues = useMemo(() => buildValues(session), [session]);
+export function AttendanceSheet({
+  session,
+  canEdit,
+}: {
+  session: DashboardCoachSession;
+  canEdit: boolean;
+}) {
+  const initialValues = useMemo(() => buildValues(session, canEdit), [canEdit, session]);
   const initialSavedValues = useMemo(() => buildSavedValues(session), [session]);
   const [values, setValues] = useState<AttendanceValues>(initialValues);
   const [savedValues, setSavedValues] = useState<AttendanceValues>(initialSavedValues);
@@ -83,7 +97,7 @@ export function AttendanceSheet({ session }: { session: DashboardCoachSession })
   }, [isDirty]);
 
   function queueSave(nextValues: AttendanceValues) {
-    if (session.players.length === 0) return;
+    if (!canEdit || session.players.length === 0) return;
     const snapshot = { ...nextValues };
     const version = ++requestVersionRef.current;
     const entries = session.players.map((player) => ({
@@ -116,8 +130,8 @@ export function AttendanceSheet({ session }: { session: DashboardCoachSession })
   useEffect(() => {
     if (initialSaveStartedRef.current) return;
     initialSaveStartedRef.current = true;
-    if (isDirty) initialSaveButtonRef.current?.click();
-  }, [isDirty]);
+    if (canEdit && isDirty) initialSaveButtonRef.current?.click();
+  }, [canEdit, isDirty]);
 
   function markPlayer(playerId: string, attendance: boolean) {
     if (values[playerId] === attendance) return;
@@ -139,15 +153,17 @@ export function AttendanceSheet({ session }: { session: DashboardCoachSession })
 
   return (
     <div className="flex flex-col gap-4">
-      <button
-        ref={initialSaveButtonRef}
-        type="button"
-        hidden
-        tabIndex={-1}
-        aria-hidden="true"
-        onClick={() => queueSave(values)}
-      />
-      <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-4">
+      {canEdit ? (
+        <button
+          ref={initialSaveButtonRef}
+          type="button"
+          hidden
+          tabIndex={-1}
+          aria-hidden="true"
+          onClick={() => queueSave(values)}
+        />
+      ) : null}
+      <nav aria-label="Navegación de asistencia" className="-mb-1">
         <Link
           href={`/attendance?date=${sessionDay}` as Route}
           className="text-pool-blue focus-visible:ring-pool-blue -ml-2 inline-flex min-h-12 touch-manipulation items-center gap-2 rounded-xl px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
@@ -155,7 +171,9 @@ export function AttendanceSheet({ session }: { session: DashboardCoachSession })
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
           Volver a entrenamientos
         </Link>
-        <div className="mt-2 flex items-start gap-3">
+      </nav>
+      <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-4">
+        <div className="flex items-start gap-3">
           <span
             className="mt-1 h-12 w-1.5 shrink-0 rounded-full"
             style={{ backgroundColor: session.team_color }}
@@ -177,7 +195,45 @@ export function AttendanceSheet({ session }: { session: DashboardCoachSession })
         </div>
       </header>
 
-      {session.players.length > 0 ? (
+      {session.players.length > 0 && !canEdit ? (
+        <>
+          <section className="border-ink-300 bg-paper-sunk rounded-2xl border px-4 py-4">
+            <div className="flex items-start gap-3">
+              <span className="bg-ink-200 text-ink-600 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+                <CalendarClock className="h-6 w-6" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-pool-deep font-extrabold">Lista todavía no disponible</h2>
+                <p className="text-ink-600 mt-1 text-sm leading-5">
+                  Podrás pasar lista el día del entrenamiento. Hasta entonces puedes consultar la
+                  plantilla.
+                </p>
+              </div>
+            </div>
+          </section>
+          <ol
+            className="flex flex-col gap-2"
+            aria-label={`Plantilla prevista de ${session.team_label}`}
+          >
+            {session.players.map((player, index) => (
+              <li
+                key={player.id}
+                className="border-ink-200 bg-paper-sunk flex min-h-16 items-center gap-3 rounded-xl border px-3 py-2.5"
+              >
+                <span className="bg-ink-200 text-ink-600 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-extrabold tabular-nums">
+                  {index + 1}
+                </span>
+                <span className="text-ink-600 min-w-0 flex-1 text-base leading-tight font-extrabold">
+                  {player.full_name}
+                </span>
+                <span className="bg-ink-200 text-ink-600 rounded-lg px-2 py-1 text-xs font-extrabold">
+                  Pendiente
+                </span>
+              </li>
+            ))}
+          </ol>
+        </>
+      ) : session.players.length > 0 ? (
         <>
           <section
             aria-labelledby="attendance-summary-heading"
@@ -205,51 +261,6 @@ export function AttendanceSheet({ session }: { session: DashboardCoachSession })
               Si ha faltado alguien, pulsa «Ausente» junto a su nombre.
             </p>
           </section>
-
-          <div
-            className="bg-paper/95 shadow-elev-4 sticky bottom-[calc(var(--bottom-nav-height)+0.5rem)] z-10 rounded-2xl border border-white/90 p-3 backdrop-blur-md"
-            aria-live="polite"
-          >
-            <div className="flex items-center justify-center gap-4 text-sm font-extrabold">
-              <span className="text-success inline-flex items-center gap-1.5">
-                <Check className="h-4 w-4" aria-hidden="true" />
-                {counts.present} presentes
-              </span>
-              <span className="text-danger inline-flex items-center gap-1.5">
-                <X className="h-4 w-4" aria-hidden="true" />
-                {counts.absent} ausentes
-              </span>
-            </div>
-            <div className="border-ink-200 mt-2 border-t pt-2">
-              {syncState === "saving" ? (
-                <p className="text-pool-blue flex items-center justify-center gap-2 font-extrabold">
-                  <span
-                    className="border-pool-blue h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none"
-                    aria-hidden="true"
-                  />
-                  Guardando cambios…
-                </p>
-              ) : syncState === "saved" ? (
-                <p className="text-success flex items-center justify-center gap-2 font-extrabold">
-                  <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-                  Guardado automáticamente
-                </p>
-              ) : (
-                <div role="alert" className="text-center">
-                  <p className="text-danger font-extrabold">No se han guardado los cambios</p>
-                  <p className="text-ink-600 mt-1 text-xs">{error}</p>
-                  <button
-                    type="button"
-                    onClick={retrySave}
-                    className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-                  >
-                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                    Reintentar
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
 
           <ol className="flex flex-col gap-3" aria-label={`Jugadores de ${session.team_label}`}>
             {session.players.map((player, index) => {
@@ -308,6 +319,51 @@ export function AttendanceSheet({ session }: { session: DashboardCoachSession })
               );
             })}
           </ol>
+
+          <div
+            className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3"
+            aria-live="polite"
+          >
+            <div className="flex items-center justify-center gap-4 text-sm font-extrabold">
+              <span className="text-success inline-flex items-center gap-1.5">
+                <Check className="h-4 w-4" aria-hidden="true" />
+                {counts.present} presentes
+              </span>
+              <span className="text-danger inline-flex items-center gap-1.5">
+                <X className="h-4 w-4" aria-hidden="true" />
+                {counts.absent} ausentes
+              </span>
+            </div>
+            <div className="border-ink-200 mt-2 border-t pt-2">
+              {syncState === "saving" ? (
+                <p className="text-pool-blue flex items-center justify-center gap-2 font-extrabold">
+                  <span
+                    className="border-pool-blue h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
+                  Guardando cambios…
+                </p>
+              ) : syncState === "saved" ? (
+                <p className="text-success flex items-center justify-center gap-2 font-extrabold">
+                  <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
+                  Guardado automáticamente
+                </p>
+              ) : (
+                <div role="alert" className="text-center">
+                  <p className="text-danger font-extrabold">No se han guardado los cambios</p>
+                  <p className="text-ink-600 mt-1 text-xs">{error}</p>
+                  <button
+                    type="button"
+                    onClick={retrySave}
+                    className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+                  >
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                    Reintentar
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </>
       ) : (
         <section className="border-ink-200 bg-paper-card rounded-2xl border px-4 py-10 text-center">

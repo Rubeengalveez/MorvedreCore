@@ -13,6 +13,17 @@ export interface NotificationItem {
   created_at: string;
 }
 
+function safeNotificationHref(item: NotificationItem): string | null {
+  if (item.related_match_id) return `/matches/${item.related_match_id}`;
+  if (item.kind === "training_cancelled") return "/calendar";
+  if (!item.href?.startsWith("/")) return null;
+  if (item.href.startsWith("/admin/matches/")) {
+    return item.related_match_id ? `/matches/${item.related_match_id}` : "/calendar";
+  }
+  const allowed = ["/news/", "/matches/", "/shop/orders/", "/calendar", "/notifications"];
+  return allowed.some((prefix) => item.href?.startsWith(prefix)) ? item.href : null;
+}
+
 export async function getNotificationsForProfile(
   recipientId: string,
   limit = 50,
@@ -30,7 +41,10 @@ export async function getNotificationsForProfile(
   if (error) {
     throw new Error("No pudimos cargar las notificaciones.");
   }
-  return (data ?? []) as NotificationItem[];
+  return ((data ?? []) as NotificationItem[]).map((item) => ({
+    ...item,
+    href: safeNotificationHref(item),
+  }));
 }
 
 export async function getUnreadNotificationsCount(recipientId: string): Promise<number> {

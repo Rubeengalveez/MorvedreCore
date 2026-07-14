@@ -8,11 +8,8 @@ import { Megafone } from "@/components/brand/pictograms";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { type ProfileSummary } from "@/components/layout/profile-switcher";
 import { Avatar } from "@/components/ui/avatar";
-import {
-  getNotificationsForProfile,
-  getUnreadNotificationsCount,
-  type NotificationItem,
-} from "@/server/queries/notifications";
+import { CATEGORY_COLORS, safeInferCategory } from "@/lib/domain/categories";
+import { getUnreadNotificationsCount } from "@/server/queries/notifications";
 
 const utilityActionClass =
   "touch-manipulation text-paper/90 hover:text-paper focus-visible:ring-paper/80 relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-200 hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none [-webkit-tap-highlight-color:transparent]";
@@ -23,31 +20,43 @@ export interface TopBarProps {
   linkedProfiles: ProfileSummary[];
 }
 
-export async function TopBar({ activeProfile }: TopBarProps) {
+export async function TopBar({ ownProfile, activeProfile }: TopBarProps) {
   const supabase = await createClient();
-  const [unread, items, rolesData] = await Promise.all([
+  const [unread, rolesData, permissionsData] = await Promise.all([
     getUnreadNotificationsCount(activeProfile.id).catch(() => 0),
-    getNotificationsForProfile(activeProfile.id, 20).catch(() => [] as NotificationItem[]),
     supabase
       .from("user_roles")
       .select("role")
-      .eq("profile_id", activeProfile.id)
+      .eq("profile_id", ownProfile.id)
       .then(
         (res: { data: Array<{ role: string }> | null }) => res,
         () => ({ data: [] as Array<{ role: string }> }),
       ),
+    supabase
+      .from("profile_permissions")
+      .select("permission")
+      .eq("profile_id", ownProfile.id)
+      .then(
+        (res: { data: Array<{ permission: string }> | null }) => res,
+        () => ({ data: [] as Array<{ permission: string }> }),
+      ),
   ]);
 
   const userRoles = ((rolesData?.data ?? []) as Array<{ role: string }>).map((r) => r.role);
-  const isPrivileged =
-    userRoles.includes("admin") || userRoles.includes("coach") || userRoles.includes("delegate");
+  const isPrivileged = userRoles.includes("admin") || (permissionsData.data?.length ?? 0) > 0;
 
-  const teamColor = activeProfile.team_color ?? "var(--pool-blue)";
+  const category =
+    activeProfile.birth_year == null
+      ? null
+      : safeInferCategory(activeProfile.birth_year, new Date().getFullYear());
+  const teamColor = category
+    ? CATEGORY_COLORS[category]
+    : (activeProfile.team_color ?? "var(--pool-blue)");
 
   return (
     <header
       data-top-bar
-      className="text-paper shadow-elev-4 sticky top-0 z-30 overflow-hidden rounded-b-[1.75rem] border-b border-white/12 bg-[linear-gradient(135deg,#041a3a_0%,#0a3c7b_54%,#1657a8_100%)]"
+      className="text-paper shadow-elev-4 fixed inset-x-0 top-0 z-40 overflow-hidden rounded-b-[1.75rem] border-b border-white/12 bg-[linear-gradient(135deg,#041a3a_0%,#0a3c7b_54%,#1657a8_100%)]"
     >
       <div className="mx-auto flex min-h-[var(--top-bar-height)] w-full max-w-6xl items-center justify-between gap-2 px-3 pt-[env(safe-area-inset-top)] min-[380px]:px-4 sm:px-6">
         <Link
@@ -94,7 +103,7 @@ export async function TopBar({ activeProfile }: TopBarProps) {
 
           <NotificationsBell
             initialUnread={unread}
-            initialNotifications={items}
+            initialNotifications={[]}
             showFullListHref="/notifications"
             triggerClassName={utilityActionClass}
           />
@@ -111,7 +120,6 @@ export async function TopBar({ activeProfile }: TopBarProps) {
               name={activeProfile.full_name}
               size={36}
               teamColor={teamColor}
-              className="ring-2 ring-white/55"
             />
           </Link>
         </div>

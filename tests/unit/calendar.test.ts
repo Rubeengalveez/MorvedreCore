@@ -8,6 +8,7 @@ import {
   formatLongDate,
   formatShortDate,
   formatTimeOfDay,
+  formatTimeRangeFromDuration,
   getMonthCells,
   getNext30Days,
   isoDateFromDate,
@@ -141,6 +142,16 @@ describe("formatTimeOfDay", () => {
 
   it("returns an em-dash for invalid input", () => {
     expect(formatTimeOfDay("not-a-date")).toBe("—");
+  });
+});
+
+describe("formatTimeRangeFromDuration", () => {
+  it("muestra de forma explícita la hora de inicio y de fin", () => {
+    expect(formatTimeRangeFromDuration("2026-06-15T16:30:00Z", 90)).toBe("18:30–20:00");
+  });
+
+  it("conserva la hora de inicio si la duración no es válida", () => {
+    expect(formatTimeRangeFromDuration("2026-06-15T16:30:00Z", 0)).toBe("18:30");
   });
 });
 

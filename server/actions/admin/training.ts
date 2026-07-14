@@ -8,11 +8,13 @@ import type { Tables } from "@/types/database";
 import {
   cancelTrainingSessionSchema,
   createTrainingBlockSchema,
+  createTrainingScheduleSchema,
   idSchema,
   markAttendanceSchema,
   updateTrainingBlockSchema,
 } from "@/lib/domain/admin-schemas";
 import { generateSessionsFromBlock, type TrainingBlock } from "@/lib/domain/training";
+import { canEditAttendanceForDay } from "@/lib/domain/attendance";
 
 import { requireAttendanceManagerOf, requireCoachOf } from "./_helpers";
 
@@ -85,6 +87,155 @@ export async function createTrainingBlock(input: {
   revalidatePath("/admin");
 
   return data;
+}
+
+export async function createTrainingSchedule(input: {
+  team_id: string;
+  label: string;
+  start_date: string;
+  end_date: string;
+  location?: string | null;
+  kind?: "water" | "dry" | "physical" | "technical" | "mixed";
+  replace_existing?: boolean;
+  groups: Array<{ weekdays: number[]; start_time: string; end_time: string }>;
+}): Promise<{ blocks: number; sessions: number; replaced: number }> {
+  const parsed = createTrainingScheduleSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
+  }
+
+  const admin = await requireCoachOf(parsed.data.team_id);
+  const supabase = await createClient();
+  const blockRows = parsed.data.groups.map((group) => ({
+    team_id: parsed.data.team_id,
+    label: parsed.data.label,
+    weekdays: group.weekdays,
+    start_date: parsed.data.start_date,
+    end_date: parsed.data.end_date,
+    start_time: group.start_time,
+    end_time: group.end_time,
+    location: parsed.data.location ?? null,
+    kind: parsed.data.kind ?? "water",
+    created_by: admin.id,
+  }));
+
+  const { data: blocks, error: blockError } = await supabase
+    .from("training_blocks")
+    .insert(blockRows)
+    .select("*");
+  throwIfError(blockError, "No pudimos crear el horario semanal.");
+  if (!blocks || blocks.length === 0) {
+    throw new Error("No pudimos crear el horario semanal.");
+  }
+
+  let replaced = 0;
+  try {
+    if (parsed.data.replace_existing) {
+      const rangeStart = new Date(`${parsed.data.start_date}T00:00:00+02:00`).toISOString();
+      const rangeEnd = new Date(`${parsed.data.end_date}T23:59:59+02:00`).toISOString();
+      const selectedWeekdays = new Set(parsed.data.groups.flatMap((group) => group.weekdays));
+      const { data: existingSessions, error: existingError } = await supabase
+        .from("training_sessions")
+        .select("id, scheduled_at")
+        .eq("team_id", parsed.data.team_id)
+        .gte("scheduled_at", rangeStart)
+        .lte("scheduled_at", rangeEnd);
+      throwIfError(existingError, "No pudimos comprobar el horario anterior.");
+
+      const weekdayFormatter = new Intl.DateTimeFormat("en-US", {
+        weekday: "short",
+        timeZone: "Europe/Madrid",
+      });
+      const weekdayMap: Record<string, number> = {
+        Mon: 1,
+        Tue: 2,
+        Wed: 3,
+        Thu: 4,
+        Fri: 5,
+        Sat: 6,
+        Sun: 7,
+      };
+      const candidates = (existingSessions ?? [])
+        .filter((session) =>
+          selectedWeekdays.has(weekdayMap[weekdayFormatter.format(new Date(session.scheduled_at))]),
+        )
+        .map((session) => session.id);
+      if (candidates.length > 0) {
+        const { data: attendance, error: attendanceError } = await supabase
+          .from("training_attendance")
+          .select("session_id")
+          .in("session_id", candidates);
+        throwIfError(attendanceError, "No pudimos comprobar las listas ya guardadas.");
+        const protectedIds = new Set((attendance ?? []).map((entry) => entry.session_id));
+        const removableIds = candidates.filter((id) => !protectedIds.has(id));
+        if (removableIds.length > 0) {
+          const { error: removeError } = await supabase
+            .from("training_sessions")
+            .delete()
+            .in("id", removableIds);
+          throwIfError(removeError, "No pudimos sustituir el horario anterior.");
+          replaced = removableIds.length;
+        }
+      }
+    }
+
+    const sessions = blocks.flatMap((block) => generateSessionsFromBlock(blockFromRowSync(block)));
+    const uniqueSessions = Array.from(
+      new Map(
+        sessions.map((session) => [`${session.team_id}:${session.start_datetime}`, session]),
+      ).values(),
+    );
+    const { data: existing, error: existingError } = await supabase
+      .from("training_sessions")
+      .select("scheduled_at")
+      .eq("team_id", parsed.data.team_id)
+      .gte("scheduled_at", new Date(`${parsed.data.start_date}T00:00:00+02:00`).toISOString())
+      .lte("scheduled_at", new Date(`${parsed.data.end_date}T23:59:59+02:00`).toISOString());
+    throwIfError(existingError, "No pudimos comprobar las sesiones existentes.");
+    const existingSet = new Set((existing ?? []).map((session) => session.scheduled_at));
+    const toInsert = uniqueSessions
+      .filter((session) => !existingSet.has(session.start_datetime))
+      .map((session) => ({
+        block_id: session.block_id,
+        team_id: session.team_id,
+        scheduled_at: session.start_datetime,
+        duration_minutes: session.duration_minutes,
+        location: session.location,
+      }));
+    if (toInsert.length > 0) {
+      const { error: sessionError } = await supabase.from("training_sessions").insert(toInsert);
+      throwIfError(sessionError, "No pudimos generar las sesiones del horario.");
+    }
+
+    revalidatePath("/admin/trainings");
+    revalidatePath("/calendar");
+    revalidatePath("/dashboard");
+    return { blocks: blocks.length, sessions: toInsert.length, replaced };
+  } catch (error) {
+    await supabase
+      .from("training_blocks")
+      .delete()
+      .in(
+        "id",
+        blocks.map((block) => block.id),
+      );
+    throw error;
+  }
+}
+
+function blockFromRowSync(row: TrainingBlockRow): TrainingBlock {
+  return {
+    id: row.id,
+    team_id: row.team_id,
+    label: row.label,
+    weekdays: row.weekdays,
+    start_date: row.start_date,
+    end_date: row.end_date,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    location: row.location,
+    kind: row.kind as TrainingBlock["kind"],
+  };
 }
 
 export async function updateTrainingBlock(
@@ -242,6 +393,91 @@ export async function generateSessionsFromBlockAction(
   return { created: toInsert.length };
 }
 
+export async function resyncFutureTrainingSessionsAction(
+  blockId: string,
+): Promise<{ created: number; removed: number }> {
+  const parsedId = idSchema.safeParse({ id: blockId });
+  if (!parsedId.success) {
+    throw new Error("Identificador inválido.");
+  }
+
+  const supabase = await createClient();
+  const { data: row, error } = await supabase
+    .from("training_blocks")
+    .select("*")
+    .eq("id", parsedId.data.id)
+    .maybeSingle();
+
+  throwIfError(error, "No pudimos cargar el bloque.");
+  if (!row) {
+    throw new Error("El bloque no existe.");
+  }
+
+  await requireCoachOf(row.team_id);
+
+  const now = new Date().toISOString();
+  const { data: futureSessions, error: futureError } = await supabase
+    .from("training_sessions")
+    .select("id")
+    .eq("block_id", parsedId.data.id)
+    .gte("scheduled_at", now);
+
+  throwIfError(futureError, "No pudimos comprobar las sesiones futuras.");
+
+  const futureIds = (futureSessions ?? []).map((session) => session.id);
+  let protectedIds = new Set<string>();
+  if (futureIds.length > 0) {
+    const { data: attendance, error: attendanceError } = await supabase
+      .from("training_attendance")
+      .select("session_id")
+      .in("session_id", futureIds);
+    throwIfError(attendanceError, "No pudimos comprobar la asistencia existente.");
+    protectedIds = new Set((attendance ?? []).map((entry) => entry.session_id));
+  }
+
+  const removableIds = futureIds.filter((id) => !protectedIds.has(id));
+  if (removableIds.length > 0) {
+    const { error: deleteError } = await supabase
+      .from("training_sessions")
+      .delete()
+      .in("id", removableIds);
+    throwIfError(deleteError, "No pudimos actualizar las sesiones futuras.");
+  }
+
+  const block = await blockFromRow(row);
+  const generated = generateSessionsFromBlock(block).filter(
+    (session) => session.start_datetime >= now,
+  );
+  const { data: existing, error: existingError } = await supabase
+    .from("training_sessions")
+    .select("scheduled_at")
+    .eq("team_id", block.team_id)
+    .gte("scheduled_at", now);
+  throwIfError(existingError, "No pudimos comprobar las sesiones existentes.");
+
+  const existingSet = new Set((existing ?? []).map((session) => session.scheduled_at));
+  const toInsert = generated
+    .filter((session) => !existingSet.has(session.start_datetime))
+    .map((session) => ({
+      block_id: session.block_id,
+      team_id: session.team_id,
+      scheduled_at: session.start_datetime,
+      duration_minutes: session.duration_minutes,
+      location: session.location,
+    }));
+
+  if (toInsert.length > 0) {
+    const { error: insertError } = await supabase.from("training_sessions").insert(toInsert);
+    throwIfError(insertError, "No pudimos regenerar las sesiones futuras.");
+  }
+
+  revalidatePath("/admin/trainings");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
+
+  return { created: toInsert.length, removed: removableIds.length };
+}
+
 export async function cancelTrainingSession(sessionId: string, reason: string): Promise<void> {
   const parsed = cancelTrainingSessionSchema.safeParse({
     session_id: sessionId,
@@ -386,6 +622,10 @@ export async function markAttendance(input: {
     throw new Error("No puedes pasar lista en un entrenamiento cancelado.");
   }
 
+  if (!canEditAttendanceForDay(session.scheduled_at)) {
+    throw new Error("La asistencia se habilita el día del entrenamiento.");
+  }
+
   const sessionDate = new Intl.DateTimeFormat("en-CA", {
     timeZone: "Europe/Madrid",
     year: "numeric",
@@ -429,6 +669,7 @@ export async function markAttendance(input: {
 
   throwIfError(error, "No pudimos guardar la asistencia. Inténtalo de nuevo.");
 
+  await refreshAttendanceDerivedData(parsed.data.session_id, session.team_id, [...rosterIds]);
   return { updated: upsertRows.length };
 }
 
@@ -454,6 +695,10 @@ export async function markAllPresent(sessionId: string): Promise<{ updated: numb
 
   if (session.cancelled) {
     throw new Error("No puedes pasar lista en un entrenamiento cancelado.");
+  }
+
+  if (!canEditAttendanceForDay(session.scheduled_at)) {
+    throw new Error("La asistencia se habilita el día del entrenamiento.");
   }
 
   const sessionDate = new Intl.DateTimeFormat("en-CA", {
@@ -513,9 +758,33 @@ export async function markAllPresent(sessionId: string): Promise<{ updated: numb
 
   throwIfError(error, "No pudimos marcar la asistencia. Inténtalo de nuevo.");
 
+  await refreshAttendanceDerivedData(parsedId.data.id, session.team_id, playerIds);
   revalidatePath("/admin/trainings");
   revalidatePath(`/admin/trainings/${parsedId.data.id}`);
   revalidatePath("/dashboard");
 
   return { updated: upsertRows.length };
+}
+
+async function refreshAttendanceDerivedData(
+  sessionId: string,
+  teamId: string,
+  playerIds: string[],
+): Promise<void> {
+  const supabase = await createClient();
+  const { data: team } = await supabase
+    .from("teams")
+    .select("season_id")
+    .eq("id", teamId)
+    .maybeSingle();
+  if (!team) return;
+  const [{ recomputeTrainingStreaksForSession }, { recomputeSnapshotForPlayer }] =
+    await Promise.all([import("./streaks"), import("./rankings")]);
+  await recomputeTrainingStreaksForSession(sessionId);
+  await Promise.all(
+    playerIds.map((playerId) => recomputeSnapshotForPlayer(playerId, team.season_id)),
+  );
+  revalidatePath("/rankings");
+  revalidatePath("/profile");
+  revalidatePath(`/team/${teamId}`);
 }

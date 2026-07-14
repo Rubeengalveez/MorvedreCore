@@ -43,7 +43,7 @@ export interface TreasuryShopOrderInput {
 export interface TreasuryDraftLine {
   profile_id: string;
   concept_id: string | null;
-  source_type: "concept" | "shop_order";
+  source_type: "concept" | "shop_order" | "monthly_fee";
   source_id: string | null;
   description: string;
   amount_cents: number;

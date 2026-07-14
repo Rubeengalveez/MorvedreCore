@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { AdminPageShell } from "@/components/admin/admin-page";
+import type { AdminPermission } from "@/lib/domain/permissions";
+import { getAdminAccess } from "@/server/actions/admin/_helpers";
 
 import { StaffClient } from "./_components/staff-client";
 import type { PersonOption, StaffRow, TeamOption } from "./_components/staff-manager";
@@ -23,6 +25,8 @@ async function loadData(): Promise<{
   rows: StaffRow[];
   teams: TeamOption[];
   people: PersonOption[];
+  permissionsByProfile: Record<string, AdminPermission[]>;
+  canGrantPermissions: boolean;
 }> {
   const supabase = await createClient();
 
@@ -31,6 +35,7 @@ async function loadData(): Promise<{
     { data: teamsData },
     { data: profilesData },
     { data: permissionData },
+    access,
   ] = await Promise.all([
     supabase
       .from("team_staff")
@@ -44,12 +49,22 @@ async function loadData(): Promise<{
     supabase
       .from("profiles")
       .select("id, full_name")
+      .eq("is_active", true)
       .order("full_name", { ascending: true })
       .limit(2000),
-    supabase.from("profile_permissions").select("profile_id").eq("permission", "manage_attendance"),
+    supabase.from("profile_permissions").select("profile_id, permission"),
+    getAdminAccess(),
   ]);
 
-  const attendanceManagers = new Set((permissionData ?? []).map((row) => row.profile_id));
+  const attendanceManagers = new Set(
+    (permissionData ?? [])
+      .filter((row) => row.permission === "manage_attendance")
+      .map((row) => row.profile_id),
+  );
+  const permissionsByProfile: Record<string, AdminPermission[]> = {};
+  for (const row of permissionData ?? []) {
+    (permissionsByProfile[row.profile_id] ??= []).push(row.permission as AdminPermission);
+  }
 
   const rows: StaffRow[] = ((staffData ?? []) as StaffQueryRow[]).map((r) => {
     const teamRaw = Array.isArray(r.team) ? r.team[0] : r.team;
@@ -89,15 +104,21 @@ async function loadData(): Promise<{
 
   const people: PersonOption[] = (profilesData ?? []) as PersonOption[];
 
-  return { rows, teams, people };
+  return { rows, teams, people, permissionsByProfile, canGrantPermissions: access.isAdmin };
 }
 
 export default async function StaffPage() {
-  const { rows, teams, people } = await loadData();
+  const { rows, teams, people, permissionsByProfile, canGrantPermissions } = await loadData();
 
   return (
     <AdminPageShell>
-      <StaffClient rows={rows} teams={teams} people={people} />
+      <StaffClient
+        rows={rows}
+        teams={teams}
+        people={people}
+        permissionsByProfile={permissionsByProfile}
+        canGrantPermissions={canGrantPermissions}
+      />
     </AdminPageShell>
   );
 }

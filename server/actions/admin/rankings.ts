@@ -189,6 +189,7 @@ function buildSnapshotsForPlayer(
   statLites: MatchStatLite[],
   sessionLites: TrainingSessionLite[],
   attendanceLites: TrainingAttendanceLite[],
+  trainingTeamIds: string[],
 ): ComputedSnapshot[] {
   const stats = computePlayerStats(
     player.id,
@@ -198,6 +199,8 @@ function buildSnapshotsForPlayer(
     matchLites,
     callupLites,
     statLites,
+    new Date().toISOString(),
+    trainingTeamIds,
   );
 
   const seasonLabel = "all";
@@ -235,10 +238,15 @@ function buildPlayerSnapshots(
   const player = data.players.find((candidate) => candidate.id === playerId);
   if (!player) return [];
 
-  const primaryTeamEntry = data.rosters
+  const rosterTeams = data.rosters
     .filter((roster) => roster.player_id === playerId)
     .map((roster) => data.teams.find((team) => team.id === roster.team_id))
-    .find((team): team is TeamRow => Boolean(team));
+    .filter((team): team is TeamRow => Boolean(team));
+  const playerCategory = inferPlayerCategory(player.birth_year);
+  const ownCategoryTeams = rosterTeams.filter(
+    (team) => team.category_code === playerCategory || team.category_code === "escuela",
+  );
+  const primaryTeamEntry = ownCategoryTeams[0] ?? rosterTeams[0] ?? null;
   const primaryTeam = primaryTeamEntry
     ? {
         id: primaryTeamEntry.id,
@@ -289,6 +297,7 @@ function buildPlayerSnapshots(
     statLites,
     sessionLites,
     attendanceLites,
+    ownCategoryTeams.map((team) => team.id),
   );
 }
 

@@ -2,6 +2,7 @@ import { notFound, redirect } from "next/navigation";
 
 import { AttendanceSheet } from "@/components/attendance/attendance-sheet";
 import { PageShell } from "@/components/ui/page-shell";
+import { canEditAttendanceForDay } from "@/lib/domain/attendance";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getAttendanceTeams,
@@ -40,7 +41,7 @@ export default async function AttendanceSessionPage({
 
   return (
     <PageShell width="sm" className="gap-4 pb-8">
-      <AttendanceSheet session={session} />
+      <AttendanceSheet session={session} canEdit={canEditAttendanceForDay(session.scheduled_at)} />
     </PageShell>
   );
 }

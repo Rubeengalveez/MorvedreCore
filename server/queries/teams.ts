@@ -97,7 +97,8 @@ export async function getTeamRoster(
         full_name,
         photo_url,
         birth_year,
-        cap_number
+        cap_number,
+        is_active
       )
     `,
     )
@@ -118,7 +119,9 @@ export async function getTeamRoster(
         photo_url: string | null;
         birth_year: number | null;
         cap_number: number | null;
+        is_active: boolean;
       };
+      if (!p.is_active) continue;
       result.push({
         player_id: p.id,
         squad_number: row.squad_number,
@@ -275,11 +278,15 @@ export async function getTeamsForProfileInSeason(
 
   const teamIds = Array.from(teamMap.keys());
   if (teamIds.length > 0) {
-    const { data: countRows } = await supabase
+    const { data: countRows, error: countError } = await supabase
       .from("team_rosters")
       .select("team_id")
       .in("team_id", teamIds)
       .is("left_at", null);
+
+    if (countError) {
+      throw new Error("No pudimos calcular los jugadores de tus equipos.");
+    }
 
     const counts = new Map<string, number>();
     for (const row of countRows ?? []) {
@@ -363,7 +370,7 @@ export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListIte
     supabase
       .from("team_rosters")
       .select(
-        "team_id, squad_number, profiles!team_rosters_player_id_fkey(id, full_name, cap_number)",
+        "team_id, squad_number, profiles!team_rosters_player_id_fkey(id, full_name, cap_number, is_active)",
       )
       .in("team_id", teamIds)
       .is("left_at", null),
@@ -383,6 +390,14 @@ export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListIte
       .limit(teamIds.length * 5),
   ]);
 
+  if (rosterRes.error) {
+    throw new Error("No pudimos calcular las plantillas de los equipos.");
+  }
+
+  if (staffRes.error) {
+    throw new Error("No pudimos cargar los entrenadores de los equipos.");
+  }
+
   const counts = new Map<string, number>();
   const featuredByTeam = new Map<
     string,
@@ -393,13 +408,14 @@ export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListIte
     squad_number: number | null;
     profiles: unknown;
   }>) {
-    counts.set(row.team_id, (counts.get(row.team_id) ?? 0) + 1);
     const profile = extractJoined(row.profiles) as {
       id?: string;
       full_name?: string;
       cap_number?: number | null;
+      is_active?: boolean;
     } | null;
-    if (!profile?.id) continue;
+    if (!profile?.id || profile.is_active === false) continue;
+    counts.set(row.team_id, (counts.get(row.team_id) ?? 0) + 1);
     const cap = row.squad_number ?? profile.cap_number ?? null;
     if (cap == null) continue;
     const current = featuredByTeam.get(row.team_id);
@@ -428,6 +444,7 @@ export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListIte
     const { data: topProfiles } = await supabase
       .from("profiles")
       .select("id, full_name, cap_number")
+      .eq("is_active", true)
       .in("id", topScorerPlayerIds);
     const profileMap = new Map<string, { full_name: string; cap_number: number | null }>();
     for (const p of (topProfiles ?? []) as Array<{

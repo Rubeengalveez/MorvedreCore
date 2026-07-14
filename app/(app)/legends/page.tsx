@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft, Shield, Swords, Trophy } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarDays,
+  Star,
+  Target,
+  Trophy,
+  UserCheck,
+  type LucideIcon,
+} from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Medal } from "@/components/ui/medal";
-import { PageShell, SectionHeader } from "@/components/ui/page-shell";
-import {
-  bestRivals,
-  toughestRivals,
-  type LegendMetric,
-  type LegendRow,
-  type RivalryRow,
-} from "@/lib/domain/history";
+import { PageHeader, PageShell, SectionHeader } from "@/components/ui/page-shell";
+import { type LegendMetric, type LegendRow } from "@/lib/domain/history";
 import { cn } from "@/lib/utils/cn";
 import { getClubHistory } from "@/server/queries/history";
 
@@ -22,14 +24,44 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Leyendas del club - Morvedre Core",
-  description: "Rankings históricos y rivalidades del Waterpolo Morvedre.",
+  description: "Clasificaciones históricas de los jugadores del Waterpolo Morvedre.",
 };
 
-const METRICS: { value: LegendMetric; label: string }[] = [
-  { value: "goals", label: "Goles" },
-  { value: "matches_played", label: "Partidos" },
-  { value: "mvp_count", label: "MVP" },
-  { value: "attendance_pct", label: "Asistencia" },
+const METRICS: Array<{
+  value: LegendMetric;
+  label: string;
+  title: string;
+  eyebrow: string;
+  Icon: LucideIcon;
+}> = [
+  {
+    value: "goals",
+    label: "Goles",
+    title: "Máximos goleadores",
+    eyebrow: "Goles acumulados",
+    Icon: Target,
+  },
+  {
+    value: "matches_played",
+    label: "Partidos",
+    title: "Más partidos disputados",
+    eyebrow: "Trayectoria en el club",
+    Icon: CalendarDays,
+  },
+  {
+    value: "mvp_count",
+    label: "MVP",
+    title: "Más veces MVP",
+    eyebrow: "Actuaciones destacadas",
+    Icon: Star,
+  },
+  {
+    value: "attendance_pct",
+    label: "Asistencia",
+    title: "Mayor asistencia",
+    eyebrow: "Compromiso en entrenamientos",
+    Icon: UserCheck,
+  },
 ];
 
 function parseMetric(value?: string): LegendMetric {
@@ -49,6 +81,13 @@ function metricContext(row: LegendRow, metric: LegendMetric): string {
   return `${row.matches_played} partidos · ${row.seasons} temporadas`;
 }
 
+function legendRowTone(rank: number): string {
+  if (rank === 1) return "border-ball-gold/60 bg-ball-gold/10 shadow-elev-2";
+  if (rank === 2) return "border-pool-blue/30 bg-pool-foam/45 shadow-elev-1";
+  if (rank === 3) return "border-action/25 bg-action/5 shadow-elev-1";
+  return "border-ink-200 bg-paper-card shadow-sm";
+}
+
 function LegendList({ rows, metric }: { rows: LegendRow[]; metric: LegendMetric }) {
   if (rows.length === 0) {
     return (
@@ -61,11 +100,14 @@ function LegendList({ rows, metric }: { rows: LegendRow[]; metric: LegendMetric 
   }
 
   return (
-    <ol className="flex flex-col gap-2">
+    <ol className="flex flex-col gap-2.5">
       {rows.map((row) => (
         <li
           key={row.profile_id}
-          className="border-ink-200 bg-paper-card shadow-elev-1 flex min-h-16 items-center gap-3 rounded-lg border px-3 py-2.5 sm:px-4"
+          className={cn(
+            "flex min-h-[4.5rem] items-center gap-3 rounded-xl border px-3 py-3 transition-transform duration-200 motion-reduce:transition-none sm:px-4",
+            legendRowTone(row.rank),
+          )}
         >
           <div className="flex w-9 shrink-0 justify-center">
             {row.rank <= 3 ? (
@@ -74,64 +116,16 @@ function LegendList({ rows, metric }: { rows: LegendRow[]; metric: LegendMetric 
               <span className="text-ink-500 font-mono text-sm font-bold">{row.rank}</span>
             )}
           </div>
-          <Avatar src={row.photo_url} name={row.profile_name} size={42} />
+          <Avatar src={row.photo_url} name={row.profile_name} size={44} />
           <div className="min-w-0 flex-1">
             <p className="text-pool-deep truncate text-sm font-extrabold sm:text-base">
               {row.profile_name}
             </p>
-            <p className="text-ink-500 truncate text-xs">{metricContext(row, metric)}</p>
+            <p className="text-ink-500 mt-0.5 truncate text-xs">{metricContext(row, metric)}</p>
           </div>
-          <p className="text-pool-deep shrink-0 font-mono text-xl font-black tabular-nums">
+          <p className="text-pool-deep shrink-0 font-mono text-xl font-black tabular-nums sm:text-2xl">
             {metricValue(row, metric)}
           </p>
-        </li>
-      ))}
-    </ol>
-  );
-}
-
-function RivalList({ rows, tone }: { rows: RivalryRow[]; tone: "best" | "tough" }) {
-  if (rows.length === 0) {
-    return (
-      <p className="border-ink-200 bg-paper-card text-ink-600 rounded-lg border p-4 text-sm">
-        Necesitamos al menos dos partidos contra un rival para incluirlo.
-      </p>
-    );
-  }
-
-  return (
-    <ol className="flex flex-col gap-2">
-      {rows.map((row, index) => (
-        <li
-          key={row.opponent}
-          className={cn(
-            "bg-paper-card flex items-center gap-3 rounded-lg border px-3 py-3",
-            tone === "best" ? "border-success/25" : "border-goggle-red/25",
-          )}
-        >
-          <span
-            className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono text-sm font-black",
-              tone === "best" ? "bg-success/10 text-success" : "bg-goggle-red/10 text-goggle-red",
-            )}
-          >
-            {index + 1}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-pool-deep truncate font-extrabold">{row.opponent}</p>
-            <p className="text-ink-500 text-xs">
-              {row.wins}V · {row.draws}E · {row.losses}D · {row.matches_played} partidos
-            </p>
-          </div>
-          <div className="shrink-0 text-right">
-            <p className="text-pool-deep font-mono text-base font-black tabular-nums">
-              {row.win_pct.toLocaleString("es-ES")}%
-            </p>
-            <p className="text-ink-500 font-mono text-xs tabular-nums">
-              {row.goal_diff > 0 ? "+" : ""}
-              {row.goal_diff} goles
-            </p>
-          </div>
         </li>
       ))}
     </ol>
@@ -141,128 +135,54 @@ function RivalList({ rows, tone }: { rows: RivalryRow[]; tone: "best" | "tough" 
 export default async function LegendsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ metric?: string; rival?: string }>;
+  searchParams: Promise<{ metric?: string }>;
 }) {
   const params = await searchParams;
   const metric = parseMetric(params.metric);
-  const rivalView = params.rival === "tough" ? "tough" : "best";
   const history = await getClubHistory(metric);
-  const best = bestRivals(history.rivalries);
-  const toughest = toughestRivals(history.rivalries);
+  const activeMetric = METRICS.find((item) => item.value === metric) ?? METRICS[0]!;
+  const seasonLabel = `${history.archivedSeasons} ${history.archivedSeasons === 1 ? "temporada archivada" : "temporadas archivadas"}`;
 
   return (
-    <PageShell width="lg" className="gap-6 pb-8">
-      <header className="border-ink-300 border-b pb-4">
-        <Link
-          href="/rankings"
-          className="text-pool-blue focus-visible:ring-pool-blue inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          Rankings de temporada
-        </Link>
-        <p className="text-pool-blue mt-2 text-xs font-extrabold tracking-[0.12em] uppercase">
-          {history.archivedSeasons} temporadas archivadas
-        </p>
-        <h1 className="font-display text-pool-deep mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">
-          Leyendas del club
-        </h1>
-        <p className="text-ink-600 mt-1 text-sm leading-relaxed">
-          La huella acumulada de quienes han defendido el gorro del Morvedre.
-        </p>
-      </header>
+    <PageShell width="md" className="gap-5 pb-8">
+      <Link
+        href="/rankings"
+        className="text-pool-blue focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-1 rounded-lg px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Rankings de temporada
+      </Link>
 
-      <section aria-labelledby="legends-title" className="flex flex-col gap-3">
-        <SectionHeader
-          title="Top histórico"
-          eyebrow="Todas las temporadas"
-          action={
-            <nav aria-label="Métrica histórica" className="hidden sm:block">
-              <div className="border-ink-200 bg-paper-card flex rounded-full border p-1">
-                {METRICS.map((item) => (
-                  <Link
-                    key={item.value}
-                    href={`/legends?metric=${item.value}` as Route}
-                    aria-current={metric === item.value ? "page" : undefined}
-                    className={cn(
-                      "focus-visible:ring-pool-blue inline-flex min-h-10 items-center rounded-full px-3 text-sm font-bold focus-visible:ring-2 focus-visible:outline-none",
-                      metric === item.value
-                        ? "bg-pool-deep text-paper"
-                        : "text-ink-600 hover:text-pool-deep",
-                    )}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-              </div>
-            </nav>
-          }
-        />
-        <nav aria-label="Métrica histórica" className="scrollbar-hide overflow-x-auto sm:hidden">
-          <div className="border-ink-200 bg-paper-card flex w-max rounded-full border p-1">
-            {METRICS.map((item) => (
-              <Link
-                key={item.value}
-                href={`/legends?metric=${item.value}` as Route}
-                aria-current={metric === item.value ? "page" : undefined}
-                className={cn(
-                  "inline-flex min-h-11 items-center rounded-full px-4 text-sm font-bold",
-                  metric === item.value ? "bg-pool-deep text-paper" : "text-ink-600",
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-        </nav>
-        <h2 id="legends-title" className="sr-only">
-          Clasificación histórica
-        </h2>
+      <PageHeader
+        eyebrow={seasonLabel}
+        title="Leyendas del club"
+        description="La historia la escriben quienes defienden el gorro del Morvedre."
+        icon={<Trophy className="h-5 w-5" aria-hidden="true" />}
+        teamColor="var(--ball-gold)"
+      />
+
+      <nav aria-label="Clasificación histórica" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {METRICS.map(({ value, label, Icon }) => (
+          <Link
+            key={value}
+            href={`/legends?metric=${value}` as Route}
+            aria-current={metric === value ? "page" : undefined}
+            className={cn(
+              "focus-visible:ring-pool-blue flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-extrabold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+              metric === value
+                ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
+                : "border-ink-200 bg-paper-card text-ink-600 hover:border-pool-blue/40 hover:text-pool-deep",
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+            <span>{label}</span>
+          </Link>
+        ))}
+      </nav>
+
+      <section aria-label={activeMetric.title} className="flex flex-col gap-3">
+        <SectionHeader title={activeMetric.title} eyebrow={activeMetric.eyebrow} />
         <LegendList rows={history.legends} metric={metric} />
-      </section>
-
-      <section aria-labelledby="rivalries-title" className="flex flex-col gap-3">
-        <SectionHeader title="Rivalidades" eyebrow="Cara a cara histórico" />
-        <h2 id="rivalries-title" className="sr-only">
-          Mejores y peores rivales
-        </h2>
-        <nav
-          aria-label="Tipo de rivalidad"
-          className="bg-paper-sunk grid grid-cols-2 gap-1 rounded-xl p-1"
-        >
-          <Link
-            href={`/legends?metric=${metric}&rival=best` as Route}
-            aria-current={rivalView === "best" ? "page" : undefined}
-            className={cn(
-              "focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
-              rivalView === "best" ? "bg-paper-card text-success shadow-elev-1" : "text-ink-600",
-            )}
-          >
-            <Shield className="h-4 w-4" aria-hidden="true" />
-            Mejores cruces
-          </Link>
-          <Link
-            href={`/legends?metric=${metric}&rival=tough` as Route}
-            aria-current={rivalView === "tough" ? "page" : undefined}
-            className={cn(
-              "focus-visible:ring-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
-              rivalView === "tough"
-                ? "bg-paper-card text-goggle-red shadow-elev-1"
-                : "text-ink-600",
-            )}
-          >
-            <Swords className="h-4 w-4" aria-hidden="true" />
-            Bestias negras
-          </Link>
-        </nav>
-        <div className="flex flex-col gap-2">
-          <h3 className="text-pool-deep font-display text-lg font-extrabold">
-            {rivalView === "best" ? "Rivales más favorables" : "Rivales más difíciles"}
-          </h3>
-          <RivalList
-            rows={rivalView === "best" ? best : toughest}
-            tone={rivalView === "best" ? "best" : "tough"}
-          />
-        </div>
       </section>
     </PageShell>
   );

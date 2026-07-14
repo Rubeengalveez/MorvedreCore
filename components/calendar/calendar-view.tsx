@@ -150,56 +150,7 @@ export function CalendarView({
   return (
     <div className="flex flex-col gap-4">
       <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-3">
-        <div className="flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={goPrev}
-            aria-label="Anterior"
-            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-
-          <div className="relative min-w-0 flex-1">
-            <div className="bg-paper-sunk flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-3">
-              <span className="font-display text-pool-deep truncate text-base font-extrabold">
-                {navLabel}
-              </span>
-              <ChevronDown className="text-ink-600 h-4 w-4 shrink-0" />
-            </div>
-            <select
-              value={`${yearMonth.year}-${yearMonth.month}`}
-              onChange={(e) => {
-                const [y, m] = e.target.value.split("-").map(Number);
-                if (y != null && m != null) {
-                  const newYm = { year: y, month: m };
-                  setYearMonth(newYm);
-                  updateSelectedDayOnMonthNav(newYm);
-                }
-              }}
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              title="Seleccionar mes"
-              aria-label="Seleccionar mes"
-            >
-              {monthOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            type="button"
-            onClick={goNext}
-            aria-label="Siguiente"
-            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="mt-2 grid grid-cols-[1fr_auto] gap-2">
+        <div className="grid grid-cols-[1fr_auto] gap-2">
           <div
             role="tablist"
             aria-label="Modo de vista"
@@ -251,6 +202,55 @@ export function CalendarView({
             ))}
           </Select>
         ) : null}
+
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={goPrev}
+            aria-label="Anterior"
+            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+
+          <div className="relative min-w-0 flex-1">
+            <div className="bg-paper-sunk flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-3">
+              <span className="font-display text-pool-deep truncate text-base font-extrabold">
+                {navLabel}
+              </span>
+              <ChevronDown className="text-ink-600 h-4 w-4 shrink-0" />
+            </div>
+            <select
+              value={`${yearMonth.year}-${yearMonth.month}`}
+              onChange={(e) => {
+                const [y, m] = e.target.value.split("-").map(Number);
+                if (y != null && m != null) {
+                  const newYm = { year: y, month: m };
+                  setYearMonth(newYm);
+                  updateSelectedDayOnMonthNav(newYm);
+                }
+              }}
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              title="Seleccionar mes"
+              aria-label="Seleccionar mes"
+            >
+              {monthOptions.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            type="button"
+            onClick={goNext}
+            aria-label="Siguiente"
+            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-2 sm:p-3">

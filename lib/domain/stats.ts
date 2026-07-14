@@ -76,6 +76,7 @@ export function computePlayerStats(
   allCallups: CallupLite[],
   allStats: MatchStatLite[],
   throughIso = new Date().toISOString(),
+  teamIdsOverride?: string[],
 ): PlayerStats {
   const seasonMatchById = new Map<string, MatchLite>();
   const teamById = new Map<string, string>();
@@ -89,16 +90,18 @@ export function computePlayerStats(
   const playerCallups = allCallups.filter((c) => c.player_id === playerId);
   const playerSeasonCallups = playerCallups.filter((c) => seasonMatchById.has(c.match_id));
 
-  const matches_played = playerSeasonCallups.filter(
+  const playedCallups = playerSeasonCallups.filter(
     (c) =>
       seasonMatchById.get(c.match_id)?.status === "played" &&
       EFFECTIVE_CALLUP_STATUSES.has(c.status),
-  ).length;
+  );
+  const playedMatchIds = new Set(playedCallups.map((callup) => callup.match_id));
+  const matches_played = playedCallups.length;
 
   const matches_called = playerSeasonCallups.length;
 
   const playerStats = allStats.filter(
-    (s) => s.player_id === playerId && seasonMatchById.has(s.match_id),
+    (s) => s.player_id === playerId && playedMatchIds.has(s.match_id),
   );
   const goals = playerStats.reduce((sum, s) => sum + s.goals, 0);
   const exclusions = playerStats.reduce((sum, s) => sum + s.exclusions, 0);
@@ -107,16 +110,16 @@ export function computePlayerStats(
   const teamIds = playerSeasonCallups
     .map((c) => teamById.get(c.match_id))
     .filter((id): id is string => Boolean(id));
-  const primaryTeamId = modeTeamId(teamIds);
+  const relevantTeamIds = teamIdsOverride?.length
+    ? new Set(teamIdsOverride)
+    : new Set([modeTeamId(teamIds)].filter((id): id is string => Boolean(id)));
 
-  const playerTeamSessions = primaryTeamId
-    ? allSessions.filter(
-        (session) =>
-          session.team_id === primaryTeamId &&
-          !session.cancelled &&
-          session.scheduled_at <= throughIso,
-      )
-    : [];
+  const playerTeamSessions = allSessions.filter(
+    (session) =>
+      relevantTeamIds.has(session.team_id) &&
+      !session.cancelled &&
+      session.scheduled_at <= throughIso,
+  );
   const sessionIds = new Set(playerTeamSessions.map((s) => s.id));
   const playerAttendance = allAttendance.filter(
     (a) => a.player_id === playerId && sessionIds.has(a.session_id),

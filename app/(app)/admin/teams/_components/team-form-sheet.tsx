@@ -74,8 +74,6 @@ const teamFormSchema = z.object({
   gender: z.enum(["male", "female", "mixed"]),
   team_type: z.enum(["competitive", "school"]),
   color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Color inválido (#RRGGBB)."),
-  home_pool: z.string().trim().max(100).optional().or(z.literal("")),
-  notes: z.string().trim().max(1000).optional().or(z.literal("")),
 });
 
 type TeamFormValues = z.infer<typeof teamFormSchema>;
@@ -91,8 +89,6 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       gender: String(formData.get("gender") ?? "") as TeamGender,
       team_type: String(formData.get("team_type") ?? "competitive") as "competitive" | "school",
       color: String(formData.get("color") ?? ""),
-      home_pool: String(formData.get("home_pool") ?? "") || undefined,
-      notes: String(formData.get("notes") ?? "") || undefined,
     });
     return { ok: true };
   } catch (err) {
@@ -130,8 +126,6 @@ export function TeamFormSheet({ seasons, defaultSeasonId, trigger }: TeamFormShe
       gender: CATEGORY_DEFAULT_GENDER.benjamin,
       team_type: "competitive",
       color: defaultTeamColor("benjamin"),
-      home_pool: "",
-      notes: "",
     },
   });
 
@@ -162,8 +156,6 @@ export function TeamFormSheet({ seasons, defaultSeasonId, trigger }: TeamFormShe
     fd.append("gender", values.gender);
     fd.append("team_type", values.team_type);
     fd.append("color", values.color);
-    if (values.home_pool) fd.append("home_pool", values.home_pool);
-    if (values.notes) fd.append("notes", values.notes);
     startTransition(() => {
       formAction(fd);
     });
@@ -364,27 +356,6 @@ export function TeamFormSheet({ seasons, defaultSeasonId, trigger }: TeamFormShe
                   )}
                 />
               </div>
-
-              <FormField
-                control={form.control}
-                name="home_pool"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Piscina habitual</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Piscina del Puerto"
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </form>
           </Form>
         </SheetBody>

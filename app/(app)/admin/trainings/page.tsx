@@ -11,7 +11,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
 
 import { TrainingsList } from "./_components/trainings-list";
-import { TrainingBlockFormSheet } from "./_components/training-block-form-sheet";
+import { TrainingScheduleFormSheet } from "./_components/training-schedule-form-sheet";
 import type { AttendancePlayer } from "./_components/attendance-sheet";
 
 export const dynamic = "force-dynamic";
@@ -156,6 +156,7 @@ async function loadTrainings(): Promise<LoadResult> {
     supabase
       .from("profiles")
       .select("id, full_name, photo_url, cap_number")
+      .eq("is_active", true)
       .order("full_name", { ascending: true })
       .limit(1000),
     supabase.from("training_attendance").select("session_id, player_id, present, reason"),
@@ -319,7 +320,7 @@ export default async function TrainingsPage() {
         icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
         action={
           blocks.length > 0 ? (
-            <TrainingBlockFormSheet
+            <TrainingScheduleFormSheet
               seasons={seasons}
               teams={teams}
               defaultTeamId={defaultTeamId}
@@ -327,7 +328,7 @@ export default async function TrainingsPage() {
               trigger={
                 <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
                   <MdAdd className="h-6 w-6" aria-hidden="true" />
-                  <span>Nuevo bloque</span>
+                  <span>Crear horario</span>
                 </Button>
               }
             />

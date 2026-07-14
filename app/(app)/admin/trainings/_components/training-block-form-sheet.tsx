@@ -35,6 +35,8 @@ import { formatWeekdayLetter } from "@/lib/utils/format";
 import {
   createTrainingBlock,
   generateSessionsFromBlockAction,
+  resyncFutureTrainingSessionsAction,
+  updateTrainingBlock,
   type Season,
   type Team,
   type TrainingBlockRow,
@@ -73,7 +75,7 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
   try {
     const weekdaysRaw = formData.getAll("weekdays").map((v) => Number(v));
     const weekdays = weekdaysRaw.filter((n) => Number.isInteger(n) && n >= 1 && n <= 7);
-    const block = await createTrainingBlock({
+    const input = {
       team_id: String(formData.get("team_id") ?? ""),
       label: String(formData.get("label") ?? ""),
       weekdays,
@@ -84,8 +86,14 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       location: String(formData.get("location") ?? "") || undefined,
       kind: String(formData.get("kind") ?? "water") as
         "water" | "dry" | "physical" | "technical" | "mixed",
-    });
-    const generated = await generateSessionsFromBlockAction(block.id);
+    };
+    const blockId = String(formData.get("block_id") ?? "");
+    const block = blockId
+      ? await updateTrainingBlock(blockId, input)
+      : await createTrainingBlock(input);
+    const generated = blockId
+      ? await resyncFutureTrainingSessionsAction(block.id)
+      : await generateSessionsFromBlockAction(block.id);
     return { ok: true, blockId: block.id, generated: generated.created };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "No pudimos guardar." };
@@ -183,6 +191,7 @@ export function TrainingBlockFormSheet({
 
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
+    if (initial?.id) fd.append("block_id", initial.id);
     fd.append("team_id", values.team_id);
     fd.append("label", values.label);
     values.weekdays.forEach((d) => fd.append("weekdays", String(d)));

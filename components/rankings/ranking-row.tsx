@@ -44,6 +44,7 @@ export function RankingRowItem({
             {row.team_label}
           </p>
         ) : null}
+        {metric !== "streak" ? <RankingMetricContext row={row} metric={metric} /> : null}
       </div>
       <div className="shrink-0 text-right">
         <p className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums">
@@ -53,27 +54,99 @@ export function RankingRowItem({
         <p className="text-ink-500 mt-1 text-xs leading-none font-extrabold tracking-[0.08em] uppercase">
           {metricLabel}
         </p>
-        <p className="text-ink-500 mt-1 max-w-28 text-xs leading-tight">
-          {metricContext(row, metric)}
-        </p>
       </div>
       {showMedal && row.medal ? <span className="sr-only">{row.medal}</span> : null}
     </div>
   );
 }
 
-export function metricContext(row: RankingRow, metric: RankingMetric): string {
+type MetricContextPart = {
+  label: string;
+  value: string;
+  valueFirst: boolean;
+};
+
+function metricContextParts(row: RankingRow, metric: RankingMetric): MetricContextPart[] {
   if (metric === "attendance") {
-    return `${row.trainings_attended}/${row.trainings_total} entrenos`;
+    return [
+      {
+        value: `${row.trainings_attended}/${row.trainings_total}`,
+        label: "entrenos",
+        valueFirst: true,
+      },
+    ];
   }
   if (metric === "mvp") {
     const pct = row.matches_played > 0 ? Math.round((row.mvp_count / row.matches_played) * 100) : 0;
-    return `${row.matches_played} PJ · ${pct}%`;
+    return [
+      { value: String(row.matches_played), label: "partidos", valueFirst: true },
+      { value: `${pct}%`, label: "MVP", valueFirst: false },
+    ];
   }
   if (metric === "goals" || metric === "exclusions") {
     const total = metric === "goals" ? row.goals : row.exclusions;
     const average = row.matches_played > 0 ? total / row.matches_played : 0;
-    return `${row.matches_played} PJ · ${average.toLocaleString("es-ES", { maximumFractionDigits: 1 })}/partido`;
+    return [
+      { value: String(row.matches_played), label: "partidos", valueFirst: true },
+      {
+        value: average.toLocaleString("es-ES", { maximumFractionDigits: 1 }),
+        label: "Media",
+        valueFirst: false,
+      },
+    ];
   }
-  return "Racha consecutiva";
+  return [];
+}
+
+export function RankingMetricContext({
+  row,
+  metric,
+  inverted = false,
+  className,
+}: {
+  row: RankingRow;
+  metric: RankingMetric;
+  inverted?: boolean;
+  className?: string;
+}) {
+  const parts = metricContextParts(row, metric);
+  if (parts.length === 0) return null;
+
+  return (
+    <div
+      className={cn(
+        "mt-1.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-xs leading-tight",
+        inverted ? "text-paper/70" : "text-ink-500",
+        className,
+      )}
+    >
+      {parts.map((part, index) => (
+        <span key={`${part.label}-${part.value}`} className="inline-flex items-center gap-1.5">
+          {index > 0 ? (
+            <span
+              aria-hidden="true"
+              className={cn("h-3 w-px shrink-0", inverted ? "bg-paper/25" : "bg-ink-300")}
+            />
+          ) : null}
+          <span className="whitespace-nowrap">
+            {part.valueFirst ? (
+              <>
+                <strong className={cn("font-extrabold", inverted && "text-paper/90")}>
+                  {part.value}
+                </strong>{" "}
+                {part.label}
+              </>
+            ) : (
+              <>
+                {part.label}{" "}
+                <strong className={cn("font-extrabold", inverted && "text-paper/90")}>
+                  {part.value}
+                </strong>
+              </>
+            )}
+          </span>
+        </span>
+      ))}
+    </div>
+  );
 }

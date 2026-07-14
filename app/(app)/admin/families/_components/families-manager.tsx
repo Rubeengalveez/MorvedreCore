@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Search, Trash2 } from "lucide-react";
+import { Loader2, Plus, Search, Trash2 } from "lucide-react";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { useForm } from "react-hook-form";
@@ -81,10 +81,9 @@ export interface PersonOption {
 export interface FamilyFormSheetProps {
   parents: PersonOption[];
   childrenList: PersonOption[];
-  trigger: React.ReactNode;
 }
 
-export function FamilyFormSheet({ parents, childrenList, trigger }: FamilyFormSheetProps) {
+export function FamilyFormSheet({ parents, childrenList }: FamilyFormSheetProps) {
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
@@ -134,7 +133,10 @@ export function FamilyFormSheet({ parents, childrenList, trigger }: FamilyFormSh
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
+      <SheetTrigger className="bg-pool-blue text-paper shadow-elev-2 hover:bg-pool-deep focus-visible:ring-pool-blue inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-5 font-semibold transition-[background-color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none sm:w-auto">
+        <Plus className="h-5 w-5" aria-hidden="true" />
+        Nuevo vínculo
+      </SheetTrigger>
       <SheetContent size="lg">
         <SheetHeader>
           <SheetTitle>Nuevo vínculo familiar</SheetTitle>

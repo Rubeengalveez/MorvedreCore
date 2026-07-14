@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getAppOrigin } from "@/lib/auth/request-origin";
 
 function getSafeRedirectPath(value: string | null, fallback: string) {
   if (!value) return fallback;
@@ -29,7 +30,8 @@ function classifyCallbackError(error: {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getAppOrigin(request);
   const code = searchParams.get("code");
   const errorParam = searchParams.get("error_description") || searchParams.get("error");
   const nextParam = searchParams.get("next");

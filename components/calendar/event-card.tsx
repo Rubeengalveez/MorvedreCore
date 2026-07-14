@@ -10,6 +10,7 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { cn } from "@/lib/utils/cn";
 import { matchColor, trainingColor } from "@/lib/domain/event-colors";
+import { formatTimeOfDay, formatTimeRangeFromDuration } from "@/lib/domain/calendar";
 import { Gorro, SilbatoActivo } from "@/components/brand/pictograms";
 
 export interface CalendarEventBase {
@@ -20,6 +21,7 @@ export interface CalendarEventBase {
   team_color: string;
   cancelled?: boolean;
   status?: string;
+  duration_minutes?: number;
 }
 
 export interface CalendarEventCardData {
@@ -41,16 +43,6 @@ export interface CalendarEventCardData {
   callup_status?: string | null;
   callup_cap_number?: number | null;
   callup_team_color?: string | null;
-}
-
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
-function formatDuration(startIso: string, durationMinutes: number): string {
-  const end = new Date(new Date(startIso).getTime() + durationMinutes * 60000);
-  return `${formatTime(startIso)}–${String(end.getHours()).padStart(2, "0")}:${String(end.getMinutes()).padStart(2, "0")}`;
 }
 
 export function CalendarEventChip({
@@ -82,7 +74,9 @@ export function CalendarEventChip({
       )}
       style={{ backgroundColor: color }}
     >
-      {formatTime(event.scheduled_at)}
+      {event.duration_minutes
+        ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
+        : formatTimeOfDay(event.scheduled_at)}
       <span className="truncate">{event.title}</span>
     </span>
   );
@@ -246,8 +240,8 @@ export function CalendarEventCard({
         })
       : trainingColor({ cancelled: !!event.cancelled, isPast: !!isPast, unavailable: false });
   const timeStr = event.duration_minutes
-    ? formatDuration(event.scheduled_at, event.duration_minutes)
-    : formatTime(event.scheduled_at);
+    ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
+    : formatTimeOfDay(event.scheduled_at);
   const isCancelled = !!event.cancelled || event.status === "cancelled";
   const isPostponed = event.status === "postponed";
   const baseClass = cn(

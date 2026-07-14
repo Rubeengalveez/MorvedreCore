@@ -235,12 +235,13 @@ function StreakControls({
     const params = new URLSearchParams(query);
     params.set(key, value);
     params.delete("page");
-    return `${path}?${params.toString()}`;
+    return `${path}?${params.toString()}#streaks`;
   }
 
   return (
     <section
-      className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-3"
+      id="streaks"
+      className="border-ink-300 bg-paper-card shadow-elev-1 flex scroll-mt-[calc(var(--top-bar-height)+1rem)] flex-col gap-3 rounded-2xl border p-3"
       data-streak-controls
       aria-labelledby="streak-controls-title"
     >

@@ -6,7 +6,7 @@ import { useTransition } from "react";
 
 import { cn } from "@/lib/utils/cn";
 import { type RankingMetric } from "@/lib/domain/rankings";
-import { Balon, Calendario, Exclusion, SilbatoActivo, Trofeo } from "@/components/brand/pictograms";
+import { Balon, Calendario, Exclusion, Trofeo } from "@/components/brand/pictograms";
 
 const METRICS: ReadonlyArray<{
   id: RankingMetric;
@@ -17,7 +17,6 @@ const METRICS: ReadonlyArray<{
   { id: "exclusions", label: "Excl.", Pictogram: Exclusion },
   { id: "mvp", label: "MVP", Pictogram: Trofeo },
   { id: "attendance", label: "Asist.", Pictogram: Calendario },
-  { id: "streak", label: "Racha", Pictogram: SilbatoActivo },
 ];
 
 export interface MetricTabsProps {

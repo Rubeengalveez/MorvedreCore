@@ -14,10 +14,8 @@ import {
 } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { AppPageHero } from "@/components/ui/app-page-hero";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { PushSettings } from "@/components/push/push-settings";
 import { createClient } from "@/lib/supabase/server";
 import { timeAgo } from "@/lib/domain/calendar";
@@ -28,6 +26,10 @@ import {
   getUnreadNotificationsCount,
   type NotificationItem,
 } from "@/server/queries/notifications";
+import {
+  MarkAllNotificationsButton,
+  NotificationCardAction,
+} from "./_components/notification-actions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -54,7 +56,7 @@ const KIND_META: Record<
   convocatoria: {
     label: "Convocatoria",
     Icon: Trophy,
-    color: "var(--brand-action)",
+    color: "var(--action)",
     tone: "border-brand-action/30 bg-brand-action/5",
   },
   match_reminder: {
@@ -145,7 +147,11 @@ async function loadContextForNotifications(
   return { matchById, photoByProfile };
 }
 
-export default async function NotificationsPage() {
+export default async function NotificationsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ view?: string }>;
+}) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 
@@ -155,21 +161,48 @@ export default async function NotificationsPage() {
   ]);
 
   const { matchById, photoByProfile } = await loadContextForNotifications(items);
+  const view = (await searchParams).view === "unread" ? "unread" : "all";
+  const visibleItems = view === "unread" ? items.filter((item) => item.read_at == null) : items;
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
-      <AppPageHero
-        eyebrow="Buzón del club"
+      <PageHeader
+        eyebrow="Buzón"
         title="Notificaciones"
-        description={
-          unread > 0 ? `${unread} sin leer de ${items.length} avisos.` : "Estás al día con todo."
-        }
-        icon={<Bell className="h-6 w-6" aria-hidden="true" />}
+        description={`${unread > 0 ? `${unread} sin leer` : "Estás al día"} · ${items.length} avisos`}
+        icon={<Bell className="h-5 w-5" aria-hidden="true" />}
+        action={<MarkAllNotificationsButton disabled={unread === 0} />}
       />
 
       <PushSettings publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
 
-      {items.length === 0 ? (
+      <nav
+        aria-label="Filtrar notificaciones"
+        className="border-ink-200 bg-paper-card grid grid-cols-2 rounded-xl border p-1"
+      >
+        <Link
+          href={"/notifications?view=all" as Route}
+          aria-current={view === "all" ? "page" : undefined}
+          className={cn(
+            "flex min-h-11 items-center justify-center rounded-lg text-sm font-extrabold",
+            view === "all" ? "bg-pool-deep text-paper" : "text-ink-600",
+          )}
+        >
+          Todas
+        </Link>
+        <Link
+          href={"/notifications?view=unread" as Route}
+          aria-current={view === "unread" ? "page" : undefined}
+          className={cn(
+            "flex min-h-11 items-center justify-center rounded-lg text-sm font-extrabold",
+            view === "unread" ? "bg-pool-deep text-paper" : "text-ink-600",
+          )}
+        >
+          Sin leer ({unread})
+        </Link>
+      </nav>
+
+      {visibleItems.length === 0 ? (
         <EmptyState
           icon={<Check className="h-6 w-6" aria-hidden="true" />}
           title="Estás al día"
@@ -177,7 +210,7 @@ export default async function NotificationsPage() {
         />
       ) : (
         <ul className="flex flex-col gap-2">
-          {items.map((n) => (
+          {visibleItems.map((n) => (
             <NotificationRow
               key={n.id}
               item={n}
@@ -187,12 +220,6 @@ export default async function NotificationsPage() {
           ))}
         </ul>
       )}
-
-      <div className="flex justify-end">
-        <Button asChild variant="secondary" size="md">
-          <Link href={"/calendar" as Route}>Volver al calendario</Link>
-        </Button>
-      </div>
     </PageShell>
   );
 }
@@ -225,74 +252,75 @@ function NotificationRow({
   const isUnread = item.read_at == null;
 
   return (
-    <li
-      className={cn(
-        "shadow-elev-1 flex items-start gap-3 rounded-2xl border p-4",
-        isUnread ? meta.tone : "border-ink-300 bg-paper",
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-        style={{
-          backgroundColor: `color-mix(in oklab, ${meta.color} 15%, var(--paper))`,
-        }}
+    <li>
+      <NotificationCardAction
+        id={item.id}
+        href={item.href}
+        className={cn(
+          "shadow-elev-1 flex items-start gap-3 rounded-2xl border p-4",
+          isUnread ? meta.tone : "border-ink-300 bg-paper",
+        )}
       >
-        <Icon className="h-4 w-4" style={{ color: meta.color }} />
-      </span>
-      <div className="flex flex-1 flex-col gap-1">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="font-display text-pool-deep text-base font-bold">{item.title}</span>
-          <span
-            className="text-paper rounded-full px-2.5 py-1 text-xs font-extrabold uppercase"
-            style={{ backgroundColor: meta.color }}
-          >
-            {meta.label}
-          </span>
-        </div>
-        {item.kind === "convocatoria" && match ? (
-          <div
-            className="border-ink-300 bg-paper flex items-center gap-2 rounded-md border p-2"
-            style={{ borderLeftWidth: "3px", borderLeftColor: match.team_color }}
-          >
-            <Avatar src={photoUrl} name={item.title} size={28} />
-            <div className="min-w-0 flex-1">
-              <p className="text-pool-deep line-clamp-1 text-sm font-semibold">
-                vs {match.opponent}
-              </p>
-              <p className="text-ink-600 text-sm font-semibold">
-                {formatDayShort(match.scheduled_at)} · {formatClock(match.scheduled_at)}
-              </p>
-            </div>
-            <Button asChild size="sm" variant="primary">
-              <Link href={`/matches/${match.id}` as Route}>Responder</Link>
-            </Button>
-          </div>
-        ) : item.kind === "match_reminder" && match ? (
-          <p className="text-ink-900 text-sm">
-            Mañana tienes partido contra <span className="font-semibold">{match.opponent}</span> a
-            las <span className="font-mono">{formatClock(match.scheduled_at)}</span>.
-          </p>
-        ) : item.kind === "training_cancelled" ? (
-          <p className="text-ink-900 text-sm">
-            El entreno de hoy se canceló. {item.body ? `Motivo: ${item.body}` : null}
-          </p>
-        ) : item.body ? (
-          <p className="text-ink-900 text-sm whitespace-pre-line">{item.body}</p>
-        ) : null}
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="text-ink-600 text-sm">{timeAgo(item.created_at)}</span>
-          {item.href ? (
-            <Link
-              href={item.href as Route}
-              className="text-pool-blue inline-flex items-center gap-0.5 text-xs font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
+        <span
+          aria-hidden="true"
+          className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          style={{
+            backgroundColor: `color-mix(in oklab, ${meta.color} 15%, var(--paper))`,
+          }}
+        >
+          <Icon className="h-4 w-4" style={{ color: meta.color }} />
+        </span>
+        <div className="flex flex-1 flex-col gap-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="font-display text-pool-deep text-base font-bold">{item.title}</span>
+            <span
+              className="text-paper rounded-full px-2.5 py-1 text-xs font-extrabold uppercase"
+              style={{ backgroundColor: meta.color }}
             >
-              Abrir
-              <ChevronRight className="h-3.5 w-3.5" />
-            </Link>
+              {meta.label}
+            </span>
+          </div>
+          {item.kind === "convocatoria" && match ? (
+            <div
+              className="border-ink-300 bg-paper flex items-center gap-2 rounded-md border p-2"
+              style={{ borderLeftWidth: "3px", borderLeftColor: match.team_color }}
+            >
+              <Avatar src={photoUrl} name={item.title} size={28} />
+              <div className="min-w-0 flex-1">
+                <p className="text-pool-deep line-clamp-1 text-sm font-semibold">
+                  vs {match.opponent}
+                </p>
+                <p className="text-ink-600 text-sm font-semibold">
+                  {formatDayShort(match.scheduled_at)} · {formatClock(match.scheduled_at)}
+                </p>
+              </div>
+              <span className="bg-pool-blue text-paper inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-extrabold">
+                Responder
+              </span>
+            </div>
+          ) : item.kind === "match_reminder" && match ? (
+            <p className="text-ink-900 text-sm">
+              Mañana tienes partido contra <span className="font-semibold">{match.opponent}</span> a
+              las <span className="font-mono">{formatClock(match.scheduled_at)}</span>.
+            </p>
+          ) : item.kind === "training_cancelled" ? (
+            <p className="text-ink-900 text-sm">
+              El entreno de hoy se canceló. {item.body ? `Motivo: ${item.body}` : null}
+            </p>
+          ) : item.body ? (
+            <p className="text-ink-900 text-sm whitespace-pre-line">{item.body}</p>
           ) : null}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="text-ink-600 text-sm">{timeAgo(item.created_at)}</span>
+            {item.href ? (
+              <span className="text-pool-blue inline-flex items-center gap-0.5 text-xs font-semibold">
+                Abrir
+                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </span>
+            ) : null}
+          </div>
         </div>
-      </div>
+      </NotificationCardAction>
     </li>
   );
 }

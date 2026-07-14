@@ -50,6 +50,7 @@ async function loadTeam(id: string) {
       supabase
         .from("profiles")
         .select("id, full_name, birth_year")
+        .eq("is_active", true)
         .order("full_name", { ascending: true })
         .limit(500),
     ]);
@@ -149,13 +150,8 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
       <AdminPageHeader
         eyebrow={CATEGORY_LABELS[teamCategory]}
         title={team.label}
-        description={
-          team.home_pool
-            ? `Piscina habitual: ${team.home_pool}`
-            : "Plantilla, personal y datos del equipo."
-        }
+        description="Plantilla, personal y datos del equipo."
         icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
-        className="border-t-4"
       />
 
       <section aria-labelledby="staff-heading" className="flex flex-col gap-3">
@@ -211,8 +207,6 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
           </DetailRow>
           <DetailRow label="Género">{team.gender}</DetailRow>
           <DetailRow label="Tipo">{team.team_type}</DetailRow>
-          <DetailRow label="Piscina">{team.home_pool ?? "—"}</DetailRow>
-          <DetailRow label="Notas">{team.notes ?? "—"}</DetailRow>
         </dl>
       </section>
 

@@ -2,11 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   computeAttendanceStreak,
-  computeOpponentHistory,
   computeRanking,
   findMyPosition,
   isMyPositionOutsideTopN,
-  opponentVerdict,
   paginateRanking,
   RANKINGS_PAGE_SIZE,
   type PlayerStatsInput,
@@ -290,126 +288,6 @@ describe("computeAttendanceStreak", () => {
       ],
     );
     expect(result).toBe(3);
-  });
-});
-
-describe("computeOpponentHistory", () => {
-  const rows = [
-    {
-      opponent: "Elche",
-      category_code: "cadete",
-      team_id: "team-1",
-      team_label: "Cadete A",
-      matches_played: 4,
-      wins: 1,
-      draws: 0,
-      losses: 3,
-      goals_for: 12,
-      goals_against: 18,
-      last_match_at: "2025-12-01T00:00:00Z",
-    },
-    {
-      opponent: "Valencia",
-      category_code: "cadete",
-      team_id: "team-1",
-      team_label: "Cadete A",
-      matches_played: 6,
-      wins: 4,
-      draws: 1,
-      losses: 1,
-      goals_for: 24,
-      goals_against: 14,
-      last_match_at: "2026-02-15T00:00:00Z",
-    },
-    {
-      opponent: "Castellon",
-      category_code: "cadete",
-      team_id: "team-1",
-      team_label: "Cadete A",
-      matches_played: 2,
-      wins: 1,
-      draws: 0,
-      losses: 1,
-      goals_for: 6,
-      goals_against: 7,
-      last_match_at: "2025-10-10T00:00:00Z",
-    },
-  ];
-
-  it("enriches each row with win_pct (rounded) and goal_diff", () => {
-    const result = computeOpponentHistory(rows, "last_match_desc");
-    const elche = result.find((r) => r.opponent === "Elche");
-    const valencia = result.find((r) => r.opponent === "Valencia");
-    expect(elche?.win_pct).toBe(25);
-    expect(elche?.goal_diff).toBe(-6);
-    expect(valencia?.win_pct).toBe(66.67);
-    expect(valencia?.goal_diff).toBe(10);
-  });
-
-  it("sorts by last_match_desc by default", () => {
-    const result = computeOpponentHistory(rows, "last_match_desc");
-    expect(result.map((r) => r.opponent)).toEqual(["Valencia", "Elche", "Castellon"]);
-  });
-
-  it("sorts by matches_played desc when requested", () => {
-    const result = computeOpponentHistory(rows, "matches_desc");
-    expect(result.map((r) => r.opponent)).toEqual(["Valencia", "Elche", "Castellon"]);
-  });
-
-  it("sorts by win_pct desc when requested", () => {
-    const result = computeOpponentHistory(rows, "win_pct_desc");
-    expect(result.map((r) => r.opponent)).toEqual(["Valencia", "Castellon", "Elche"]);
-  });
-
-  it("sorts by goal_diff desc when requested", () => {
-    const result = computeOpponentHistory(rows, "goal_diff_desc");
-    expect(result.map((r) => r.opponent)).toEqual(["Valencia", "Castellon", "Elche"]);
-  });
-
-  it("returns an empty array when no rows are provided", () => {
-    expect(computeOpponentHistory([])).toEqual([]);
-  });
-});
-
-describe("opponentVerdict", () => {
-  it("returns muted 'Sin historial' when no matches have been played", () => {
-    expect(opponentVerdict({ matches_played: 0, win_pct: 0 })).toEqual({
-      label: "Sin historial",
-      tone: "muted",
-    });
-  });
-
-  it("returns success when win_pct is 60 or higher", () => {
-    expect(opponentVerdict({ matches_played: 5, win_pct: 60 })).toEqual({
-      label: "Victima preferida",
-      tone: "success",
-    });
-    expect(opponentVerdict({ matches_played: 5, win_pct: 100 })).toEqual({
-      label: "Victima preferida",
-      tone: "success",
-    });
-  });
-
-  it("returns danger when win_pct is 40 or lower", () => {
-    expect(opponentVerdict({ matches_played: 5, win_pct: 40 })).toEqual({
-      label: "Bestia negra",
-      tone: "danger",
-    });
-    expect(opponentVerdict({ matches_played: 5, win_pct: 0 })).toEqual({
-      label: "Bestia negra",
-      tone: "danger",
-    });
-  });
-
-  it("returns muted 'Equilibrado' between 40 and 60", () => {
-    expect(opponentVerdict({ matches_played: 5, win_pct: 50 })).toEqual({
-      label: "Equilibrado",
-      tone: "muted",
-    });
-    expect(opponentVerdict({ matches_played: 5, win_pct: 41 })).toEqual({
-      label: "Equilibrado",
-      tone: "muted",
-    });
   });
 });
 

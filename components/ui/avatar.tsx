@@ -33,11 +33,8 @@ export function Avatar({ src, name, size = 40, className, style, teamColor }: Av
         alt={name}
         width={size}
         height={size}
-        className={cn(
-          "border-ink-300 inline-block shrink-0 rounded-full border object-cover",
-          className,
-        )}
-        style={{ ...baseStyle, ...style }}
+        className={cn("inline-block shrink-0 rounded-full border-[3px] object-cover", className)}
+        style={{ ...baseStyle, borderColor: bg, ...style }}
       />
     );
   }
@@ -46,13 +43,14 @@ export function Avatar({ src, name, size = 40, className, style, teamColor }: Av
     <span
       aria-hidden="true"
       className={cn(
-        "font-display text-paper inline-flex shrink-0 items-center justify-center rounded-full leading-none font-extrabold",
+        "font-display text-paper inline-flex shrink-0 items-center justify-center rounded-full border-[3px] leading-none font-extrabold",
         className,
       )}
       style={{
         ...baseStyle,
         fontSize: `${fontSize}px`,
         backgroundColor: bg,
+        borderColor: bg,
         ...style,
       }}
     >

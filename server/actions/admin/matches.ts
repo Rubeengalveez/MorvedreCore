@@ -411,7 +411,7 @@ export async function createCallup(input: {
     kind: "convocatoria",
     title: notificationTitle(match.opponent, "called"),
     body: `${dateLabel} · ${targetTeam.label}\nRival: ${match.opponent}`,
-    href: `/admin/matches/${parsed.data.match_id}`,
+    href: `/matches/${parsed.data.match_id}`,
     related_match_id: parsed.data.match_id,
   });
   if (notifyError) {
@@ -883,7 +883,7 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
   ] = await Promise.all([
     supabase.from("teams").select("id, category_code, label"),
     supabase.from("team_rosters").select("team_id, player_id").is("left_at", null),
-    supabase.from("profiles").select("id, full_name, birth_year, cap_number"),
+    supabase.from("profiles").select("id, full_name, birth_year, cap_number").eq("is_active", true),
     supabase
       .from("match_availability")
       .select("player_id, date, available, reason")

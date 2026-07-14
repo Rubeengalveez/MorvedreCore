@@ -577,3 +577,43 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - `Absoluto` no tiene una edad máxima artificial. Cualquier jugador adulto válido se deriva como Absoluto; solo se rechazan años de nacimiento futuros.
 - El acta guarda el borrador completo antes de validarlo, de modo que `Validar y cerrar` nunca bloquea datos antiguos por omitir un guardado previo.
 - El alcance y los criterios verificables quedan en `29-polish-product-redesign-plan.md`.
+
+## 2026-07-14 - Pulido operativo de perfiles, tienda y administración
+
+- Los accesos administrativos pasan a ser capacidades acumulables: asistencia, tienda, equipos, jugadores, familias, tesorería, noticias, partidos, entrenamientos y personal. Ser miembro del staff no concede permisos por sí solo; el administrador los asigna desde Personal.
+- Un perfil puede desactivarse sin eliminarse. Conserva históricos y rankings, pero deja de aparecer en plantillas activas, convocatorias, asistencia y selectores operativos.
+- La foto de perfil se elige como JPEG o PNG, se encuadra y amplía en un recorte cuadrado y el servidor la normaliza. Los objetos se sirven públicamente para los avatares del club, pero el bucket no permite listar archivos.
+- La tienda es bajo demanda. El carrito avisa antes de abandonarlo sin enviar, conserva productos retirados para poder eliminarlos y exige un teléfono de contacto válido al confirmar. El pedido guarda una copia del teléfono usado.
+- Confirmar un pedido adulto lo deja pendiente de gestión de tienda; un pedido de menor vinculado sigue necesitando la aprobación familiar. El gestor recibe el detalle por correo y puede descargar un Excel con persona, contacto, talla y personalización.
+- La cuota mensual por defecto es de 60 euros por jugador. Tesorería administra únicamente excepciones, exenciones y el responsable de cobro familiar; el cierre agrupa automáticamente hijos, tienda y ajustes en el pagador correspondiente.
+- Una plantilla muestra primero a los jugadores de su categoría. Solo admite como refuerzo la categoría inmediatamente inferior y la separa visualmente; Escuela conserva su tratamiento especial.
+- Las rachas de partido solo usan convocatorias efectivamente jugadas. Un acta sin fila estadística se interpreta como cero, por lo que corta la racha correspondiente. La asistencia solo usa sesiones del equipo de origen y excluye entrenamientos cancelados o futuros.
+- Notificaciones es una pantalla completa separada de Noticias. Los enlaces se normalizan a rutas públicas seguras, la lectura es explícita y el icono superior ya no descarga el listado completo.
+- La migración de producto es `20260714013318_product_polish_permissions_profiles.sql`; los ajustes finales de Storage y políticas son `20260714022835_polish_advisor_hardening.sql` y `20260714113000_polish_policy_performance.sql`.
+- La protección de contraseñas filtradas no se puede activar en el plan gratuito de Supabase. `archive_season` continúa como `SECURITY DEFINER` ejecutable por usuarios autenticados porque valida internamente que sean administradores y necesita una transacción atómica.
+- El cierre y sus verificaciones quedan documentados en `32-product-polish-iteration-2-summary.md`.
+
+## 2026-07-14 - Cierre de UX operativa, acceso y PWA
+
+- Las cabeceras de las secciones principales comparten un único patrón compacto: superficie clara, acento lateral, icono, título, contexto y acción adaptable. Perfil conserva una tarjeta de identidad propia porque su contenido principal es la persona, no una sección genérica.
+- El aviso al salir del carrito conserva siempre los artículos y ofrece dos salidas inequívocas: volver para terminar o salir sin enviar. Las hojas inferiores reservan el área segura del dispositivo para que ninguna acción quede cortada.
+- Los horarios de entrenamiento se crean por categoría y periodo mediante grupos semanales. Cada grupo reúne varios días con la misma hora y un horario puede contener varios grupos. Los periodos especiales pueden sustituir sesiones anteriores sin eliminar listas ya registradas.
+- Editar un bloque regenera únicamente sus sesiones futuras no protegidas por asistencia; las sesiones pasadas y las listas existentes permanecen intactas.
+- El alta de partidos se divide en enfrentamiento, fecha/competición y detalles opcionales. La temporada se deriva del equipo elegido y el lugar habitual se propone al marcar partido en casa.
+- El calendario muestra el intervalo horario completo del entrenamiento, no solo inicio y duración: la hora de fin se deriva de `duration_minutes` y aparece como `HH:MM–HH:MM`.
+- OAuth obtiene el origen visible del navegador y nunca usa la dirección interna `0.0.0.0`. En desarrollo acepta localhost, 127.0.0.1 y la IP privada autorizada; en producción usa el origen público configurado.
+- La PWA solo se considera instalable en un contexto seguro. El build de producción genera `sw.js`, sirve un manifiesto válido con identidad estable y funciona bajo HTTPS; una prueba móvil por HTTP de red local seguirá siendo un acceso directo por limitación del navegador.
+- `profiles.is_active` es un dato operativo público para miembros autenticados. Se concede lectura de esa columna para que las plantillas puedan excluir perfiles desactivados y calcular recuentos correctos, sin exponer teléfono, email ni notas privadas.
+
+## 2026-07-14 - Leyendas centradas en el club
+
+- `Rachas` y `Leyendas` tienen el mismo peso visual dentro de Rankings, con identidad propia y objetivos táctiles completos.
+- Leyendas se limita a la historia de los jugadores del Waterpolo Morvedre: goles, partidos, MVP y asistencia.
+- Se retira de la aplicación el cara a cara con otros clubes, incluidos mejores cruces, bestias negras, consultas y cálculos de rivalidades. Los rivales siguen existiendo únicamente como dato necesario de cada partido.
+- Las métricas históricas se eligen desde una navegación superior visible, sin bloques secundarios apilados debajo de la clasificación.
+
+## 2026-07-14 - Asistencia habilitada por día
+
+- Una lista futura puede consultarse para comprobar la plantilla, pero permanece en gris y sin controles de asistencia.
+- La asistencia se habilita al comenzar el día del entrenamiento en `Europe/Madrid`, sin esperar a la hora concreta. Las listas de días anteriores siguen siendo editables para corregir errores.
+- La restricción se aplica en interfaz, Server Actions y base de datos para impedir que una petición directa registre asistencia futura.

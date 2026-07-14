@@ -48,6 +48,11 @@ export default async function TeamPlayerPage({
   const age = player.birth_year != null ? currentYear - player.birth_year : null;
   const number = player.squad_number ?? player.cap_number;
   const rosterHref = `/team/${team.id}?tab=jugadores` as Route;
+  const matchesPlayed = snapshot?.matches_played ?? 0;
+  const goalsPerMatch = matchesPlayed > 0 ? (snapshot?.goals ?? 0) / matchesPlayed : 0;
+  const exclusionsPerMatch = matchesPlayed > 0 ? (snapshot?.exclusions ?? 0) / matchesPlayed : 0;
+  const mvpRate =
+    matchesPlayed > 0 ? Math.round(((snapshot?.mvp_count ?? 0) / matchesPlayed) * 100) : 0;
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
@@ -60,13 +65,13 @@ export default async function TeamPlayerPage({
       </Link>
 
       <header className="border-ink-200 bg-paper-card shadow-elev-2 overflow-hidden rounded-[1.75rem] border">
-        <div className="bg-pool-deep h-16" aria-hidden="true" />
+        <div className="bg-pool-deep h-20" aria-hidden="true" />
         <div className="px-5 pb-6 sm:px-7 sm:pb-7">
-          <div className="-mt-9 flex items-end justify-between gap-4">
+          <div className="-mt-14 flex items-end justify-between gap-4">
             <Avatar
               src={player.photo_url}
               name={player.full_name}
-              size={88}
+              size={112}
               teamColor={team.color}
               className="border-paper-card ring-paper-card border-4 ring-2"
             />
@@ -119,8 +124,23 @@ export default async function TeamPlayerPage({
               title="Competición"
               rows={[
                 { label: "Convocatorias", value: snapshot.matches_called, icon: CalendarCheck },
-                { label: "MVP", value: snapshot.mvp_count, icon: Trophy },
-                { label: "Exclusiones", value: snapshot.exclusions, icon: Shield },
+                {
+                  label: "Goles por partido",
+                  value: goalsPerMatch.toLocaleString("es-ES", { maximumFractionDigits: 2 }),
+                  icon: Goal,
+                },
+                {
+                  label: "Exclusiones por partido",
+                  value: exclusionsPerMatch.toLocaleString("es-ES", {
+                    maximumFractionDigits: 2,
+                  }),
+                  icon: Shield,
+                },
+                {
+                  label: "Partidos como MVP",
+                  value: `${snapshot.mvp_count} · ${mvpRate}%`,
+                  icon: Trophy,
+                },
               ]}
             />
             <StatGroup

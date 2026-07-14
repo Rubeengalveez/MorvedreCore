@@ -219,6 +219,28 @@ describe("computePlayerStats", () => {
     expect(result.matches_called).toBe(1);
   });
 
+  it("ignores goals and exclusions outside played effective callups", () => {
+    const matches: MatchLite[] = [
+      match({ id: "played" }),
+      match({ id: "declined" }),
+      match({ id: "future", status: "scheduled" }),
+    ];
+    const callups: CallupLite[] = [
+      callup({ match_id: "played", status: "confirmed" }),
+      callup({ match_id: "declined", status: "declined" }),
+      callup({ match_id: "future", status: "called" }),
+    ];
+    const stats: MatchStatLite[] = [
+      stat({ match_id: "played", goals: 2, exclusions: 1, mvp: true }),
+      stat({ match_id: "declined", goals: 8, exclusions: 3, mvp: true }),
+      stat({ match_id: "future", goals: 5, exclusions: 2, mvp: true }),
+    ];
+    const result = computePlayerStats("p-1", "season-1", [], [], matches, callups, stats);
+    expect(result.goals).toBe(2);
+    expect(result.exclusions).toBe(1);
+    expect(result.mvp_count).toBe(1);
+  });
+
   it("does not include future sessions in attendance", () => {
     const matches = [match({ id: "m-1", team_id: "team-1" })];
     const callups = [callup({ match_id: "m-1" })];

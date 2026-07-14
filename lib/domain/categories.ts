@@ -20,7 +20,7 @@ export const CATEGORY_COLORS: Record<CategoryCode, string> = {
   cadete: "#1E5AA8",
   juvenil: "#DC2626",
   absoluto: "#0F172A",
-  escuela: "#FFFFFF",
+  escuela: "#16A34A",
 };
 
 export const CATEGORY_DEFAULT_GENDER: Record<CategoryCode, TeamGender> = {

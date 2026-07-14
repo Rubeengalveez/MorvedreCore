@@ -1,6 +1,7 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import type { AdminPermission } from "@/lib/domain/permissions";
 import type { Tables } from "@/types/database";
 
 export type AdminProfile = Pick<Tables<"profiles">, "id">;
@@ -49,6 +50,53 @@ export async function requireAdmin(): Promise<AdminProfile> {
   }
 
   return profile;
+}
+
+export async function getAdminAccess(): Promise<{
+  profile: AdminProfile;
+  isAdmin: boolean;
+  permissions: Set<AdminPermission>;
+}> {
+  const { profile, supabase } = await requireAuthenticatedProfile();
+  const [{ data: adminRole, error: roleError }, { data: permissionRows, error: permissionError }] =
+    await Promise.all([
+      supabase
+        .from("user_roles")
+        .select("role")
+        .eq("profile_id", profile.id)
+        .eq("role", "admin")
+        .is("scope_team_id", null)
+        .maybeSingle(),
+      supabase.from("profile_permissions").select("permission").eq("profile_id", profile.id),
+    ]);
+
+  if (roleError || permissionError) {
+    throw new Error("No pudimos verificar tus permisos. Inténtalo de nuevo.");
+  }
+
+  return {
+    profile,
+    isAdmin: Boolean(adminRole),
+    permissions: new Set((permissionRows ?? []).map((row) => row.permission as AdminPermission)),
+  };
+}
+
+export async function requirePermission(permission: AdminPermission): Promise<AdminProfile> {
+  const access = await getAdminAccess();
+  if (!access.isAdmin && !access.permissions.has(permission)) {
+    throw new Error("No tienes permiso para realizar esta acción.");
+  }
+  return access.profile;
+}
+
+export async function requireAnyPermission(
+  permissions: readonly AdminPermission[],
+): Promise<AdminProfile> {
+  const access = await getAdminAccess();
+  if (!access.isAdmin && !permissions.some((permission) => access.permissions.has(permission))) {
+    throw new Error("No tienes permiso para realizar esta acción.");
+  }
+  return access.profile;
 }
 
 export async function requireSessionProfile(): Promise<AdminProfile> {

@@ -26,7 +26,7 @@ import {
   type TreasuryShopOrderInput,
 } from "@/lib/domain/treasury";
 import { getTreasuryClosure } from "@/server/queries/treasury";
-import { requireAdmin } from "./_helpers";
+import { requirePermission } from "./_helpers";
 
 function toError(e: unknown): string {
   if (e instanceof z.ZodError) {
@@ -63,7 +63,7 @@ export async function upsertTreasuryConcept(input: {
   applies_to: string;
   active?: boolean;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_treasury");
   const parsed = upsertTreasuryConceptSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();
@@ -100,7 +100,7 @@ export async function assignTreasuryConcept(input: {
   ends_on?: string | null;
   active?: boolean;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_treasury");
   const parsed = assignTreasuryConceptSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();
@@ -120,35 +120,71 @@ export async function assignTreasuryConcept(input: {
   revalidatePath("/admin/treasury");
 }
 
+export async function upsertTreasuryProfileSettings(input: {
+  profile_id: string;
+  monthly_fee_eur: number;
+  fee_exempt: boolean;
+  billing_profile_id?: string | null;
+}): Promise<void> {
+  const me = await requirePermission("manage_treasury");
+  const parsed = z
+    .object({
+      profile_id: z.string().uuid(),
+      monthly_fee_eur: z.number().min(0).max(1000),
+      fee_exempt: z.boolean(),
+      billing_profile_id: z.string().uuid().nullable().optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success) throw new Error("Revisa los datos de pago.");
+  const admin = createAdminClient();
+  const { error } = await admin.from("treasury_profile_settings").upsert(
+    {
+      profile_id: parsed.data.profile_id,
+      monthly_fee_cents: eurosToCents(parsed.data.monthly_fee_eur),
+      fee_exempt: parsed.data.fee_exempt,
+      billing_profile_id: parsed.data.billing_profile_id ?? null,
+      updated_by: me.id,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "profile_id" },
+  );
+  if (error) throw new Error("No pudimos guardar la configuración de pago.");
+  revalidatePath("/admin/treasury");
+}
+
 export async function buildTreasuryPeriodClosure(input: {
   season_id: string;
   period_start: string;
   period_end: string;
   sent_to_email?: string | null;
 }): Promise<{ id: string; total_cents: number; line_count: number }> {
-  const me = await requireAdmin();
+  const me = await requirePermission("manage_treasury");
   const parsed = buildTreasuryClosureSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();
   const raw = db(admin);
 
-  const [conceptsRes, assignmentsRes, profilesRes, rostersRes, shopOrdersRes] = await Promise.all([
-    raw.from("treasury_concepts").select("*") as Promise<{
-      data: unknown[] | null;
-      error: Error | null;
-    }>,
-    raw.from("treasury_profile_concepts").select("*") as Promise<{
-      data: unknown[] | null;
-      error: Error | null;
-    }>,
-    admin.from("profiles").select("id, full_name"),
-    admin.from("team_rosters").select("player_id").is("left_at", null),
-    admin
-      .from("shop_orders")
-      .select("id, requested_by, total_cents, requested_at, status")
-      .gte("requested_at", `${parsed.data.period_start}T00:00:00.000Z`)
-      .lte("requested_at", `${parsed.data.period_end}T23:59:59.999Z`),
-  ]);
+  const [conceptsRes, assignmentsRes, profilesRes, rostersRes, shopOrdersRes, settingsRes] =
+    await Promise.all([
+      raw.from("treasury_concepts").select("*") as Promise<{
+        data: unknown[] | null;
+        error: Error | null;
+      }>,
+      raw.from("treasury_profile_concepts").select("*") as Promise<{
+        data: unknown[] | null;
+        error: Error | null;
+      }>,
+      admin.from("profiles").select("id, full_name, is_active").eq("is_active", true),
+      admin.from("team_rosters").select("player_id").is("left_at", null),
+      admin
+        .from("shop_orders")
+        .select("id, requested_by, total_cents, requested_at, status")
+        .gte("requested_at", `${parsed.data.period_start}T00:00:00.000Z`)
+        .lte("requested_at", `${parsed.data.period_end}T23:59:59.999Z`),
+      admin
+        .from("treasury_profile_settings")
+        .select("profile_id, monthly_fee_cents, fee_exempt, billing_profile_id"),
+    ]);
 
   if (conceptsRes.error)
     throw new Error("No pudimos cargar conceptos: " + errorMessage(conceptsRes.error));
@@ -159,21 +195,62 @@ export async function buildTreasuryPeriodClosure(input: {
     ((rostersRes.data ?? []) as Array<{ player_id: string }>).map((r) => r.player_id),
   );
   const profiles = (
-    (profilesRes.data ?? []) as Array<{ id: string; full_name: string }>
+    (profilesRes.data ?? []) as Array<{ id: string; full_name: string; is_active: boolean }>
   ).map<TreasuryProfileInput>((p) => ({
     id: p.id,
     full_name: p.full_name,
     is_player: playerIds.has(p.id),
   }));
 
+  const settings = new Map(
+    (settingsRes.data ?? []).map((setting) => [setting.profile_id, setting]),
+  );
   const draft = buildPeriodClosure({
     periodStart: parsed.data.period_start,
     periodEnd: parsed.data.period_end,
-    concepts: (conceptsRes.data ?? []) as TreasuryConceptInput[],
+    concepts: ((conceptsRes.data ?? []) as TreasuryConceptInput[]).filter(
+      (concept) =>
+        !(
+          concept.kind === "fee" &&
+          concept.periodicity === "monthly" &&
+          concept.applies_to === "all_players"
+        ),
+    ),
     assignments: (assignmentsRes.data ?? []) as TreasuryAssignmentInput[],
     profiles,
     shopOrders: (shopOrdersRes.data ?? []) as TreasuryShopOrderInput[],
   });
+  const profileName = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
+  const feeLines = profiles
+    .filter((profile) => profile.is_player)
+    .flatMap((profile) => {
+      const setting = settings.get(profile.id);
+      if (setting?.fee_exempt) return [];
+      const amount = setting?.monthly_fee_cents ?? 6000;
+      if (amount <= 0) return [];
+      return [
+        {
+          profile_id: profile.id,
+          concept_id: null,
+          source_type: "monthly_fee" as const,
+          source_id: null,
+          description: "Cuota mensual",
+          amount_cents: amount,
+        },
+      ];
+    });
+  const lines = [...feeLines, ...draft.lines].map((line) => {
+    const payerId = settings.get(line.profile_id)?.billing_profile_id ?? line.profile_id;
+    return {
+      ...line,
+      profile_id: payerId,
+      description:
+        payerId === line.profile_id
+          ? line.description
+          : `${line.description} · ${profileName.get(line.profile_id) ?? "Jugador"}`,
+    };
+  });
+  const totalCents = lines.reduce((total, line) => total + line.amount_cents, 0);
 
   const closurePayload = {
     season_id: parsed.data.season_id,
@@ -183,7 +260,7 @@ export async function buildTreasuryPeriodClosure(input: {
     generated_by: me.id,
     sent_to_email: parsed.data.sent_to_email ?? null,
     status: "draft",
-    total_cents: draft.total_cents,
+    total_cents: totalCents,
   };
   const { data: closure, error: closureErr } = await (
     raw
@@ -206,9 +283,9 @@ export async function buildTreasuryPeriodClosure(input: {
     }
   ).eq("closure_id", closure.id);
 
-  if (draft.lines.length > 0) {
+  if (lines.length > 0) {
     const { error: linesErr } = await (raw.from("treasury_lines").insert(
-      draft.lines.map((line) => ({
+      lines.map((line) => ({
         closure_id: closure.id,
         profile_id: line.profile_id,
         concept_id: line.concept_id,
@@ -224,7 +301,7 @@ export async function buildTreasuryPeriodClosure(input: {
   revalidatePath("/admin/treasury");
   revalidatePath(`/admin/treasury/closures/${closure.id}`);
   revalidatePath("/treasury");
-  return { id: closure.id, total_cents: draft.total_cents, line_count: draft.lines.length };
+  return { id: closure.id, total_cents: totalCents, line_count: lines.length };
 }
 
 export async function markTreasuryLinePaid(input: {
@@ -233,7 +310,7 @@ export async function markTreasuryLinePaid(input: {
   paid_at?: string | null;
   payment_method?: string | null;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_treasury");
   const parsed = markTreasuryLinePaidSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();
@@ -258,7 +335,7 @@ export async function sendTreasuryClosureEmail(input: {
   closure_id: string;
   to?: string | null;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_treasury");
   const to = input.to?.trim() || process.env.TREASURY_EMAIL || process.env.ADMIN_EMAIL;
   if (!to) throw new Error("Falta configurar el email de tesoreria.");
 

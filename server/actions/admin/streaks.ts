@@ -59,50 +59,63 @@ interface TeamRosterLite {
   left_at: string | null;
 }
 
+interface MatchCallupLite {
+  match_id: string;
+  player_id: string;
+  status: string;
+}
+
 interface SeasonData {
   matches: MatchRowLite[];
   matchStats: MatchStatLite[];
   sessions: TrainingSessionLite[];
   attendance: TrainingAttendanceLite[];
   rosters: TeamRosterLite[];
+  callups: MatchCallupLite[];
 }
 
 async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promise<SeasonData> {
   const supabase = client || (await createClient());
-  const [matchesRes, statsRes, sessionsRes, attendanceRes, rostersRes] = await Promise.all([
-    supabase
-      .from("matches")
-      .select(
-        "id, season_id, team_id, status, scheduled_at, final_score_us, final_score_them, mvp_player_id",
-      )
-      .eq("season_id", seasonId),
-    supabase
-      .from("match_stats")
-      .select(
-        "match_id, player_id, goals, exclusions, mvp, matches!match_stats_match_id_fkey(season_id)",
-      )
-      .eq("matches.season_id", seasonId),
-    supabase
-      .from("training_sessions")
-      .select(
-        "id, team_id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id)",
-      )
-      .eq("teams.season_id", seasonId),
-    supabase
-      .from("training_attendance")
-      .select(
-        "session_id, player_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id))",
-      ),
-    supabase
-      .from("team_rosters")
-      .select("player_id, team_id, left_at, teams!team_rosters_team_id_fkey(season_id)"),
-  ]);
+  const [matchesRes, statsRes, sessionsRes, attendanceRes, rostersRes, callupsRes] =
+    await Promise.all([
+      supabase
+        .from("matches")
+        .select(
+          "id, season_id, team_id, status, scheduled_at, final_score_us, final_score_them, mvp_player_id",
+        )
+        .eq("season_id", seasonId),
+      supabase
+        .from("match_stats")
+        .select(
+          "match_id, player_id, goals, exclusions, mvp, matches!match_stats_match_id_fkey(season_id)",
+        )
+        .eq("matches.season_id", seasonId),
+      supabase
+        .from("training_sessions")
+        .select(
+          "id, team_id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id)",
+        )
+        .eq("teams.season_id", seasonId),
+      supabase
+        .from("training_attendance")
+        .select(
+          "session_id, player_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id))",
+        ),
+      supabase
+        .from("team_rosters")
+        .select("player_id, team_id, left_at, teams!team_rosters_team_id_fkey(season_id)"),
+      supabase
+        .from("match_callups")
+        .select("match_id, player_id, status, matches!match_callups_match_id_fkey(season_id)")
+        .eq("matches.season_id", seasonId),
+    ]);
   return {
     matches: (matchesRes.data ?? []) as unknown as MatchRowLite[],
     matchStats: (statsRes.data ?? []) as unknown as MatchStatLite[],
     sessions: (sessionsRes.data ?? []) as unknown as TrainingSessionLite[],
     attendance: (attendanceRes.data ?? []) as unknown as TrainingAttendanceLite[],
     rosters: (rostersRes.data ?? []) as unknown as TeamRosterLite[],
+    callups: (callupsRes.data ?? []) as unknown as MatchCallupLite[],
   };
 }
 
@@ -229,27 +242,44 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
   }
 
   // 1) goals_consec y excl_consec y mvp_consec para todos los jugadores del partido
-  const allPlayerIds = Array.from(new Set(statsForMatch.map((s) => s.player_id)));
+  const allPlayerIds = Array.from(
+    new Set(
+      data.callups
+        .filter(
+          (callup) =>
+            callup.match_id === match.id &&
+            (callup.status === "called" || callup.status === "confirmed"),
+        )
+        .map((callup) => callup.player_id),
+    ),
+  );
   const nowIso = new Date().toISOString();
   for (const pid of allPlayerIds) {
-    const playerStats = data.matchStats
-      .filter((s) => s.player_id === pid)
-      .map((s) => {
-        const m = data.matches.find((mm) => mm.id === s.match_id);
-        return {
-          match_id: s.match_id,
-          scheduled_at: m?.scheduled_at ?? "",
-          goals: s.goals,
-          exclusions: s.exclusions,
-        };
-      })
-      .filter((s) => s.scheduled_at);
-
-    const playerMatches = data.matches.filter(
-      (mm) =>
-        statsForMatch.some((s) => s.match_id === mm.id && s.player_id === pid) ||
-        data.matchStats.some((s) => s.match_id === mm.id && s.player_id === pid),
+    const eligibleMatchIds = new Set(
+      data.callups
+        .filter(
+          (callup) =>
+            callup.player_id === pid &&
+            (callup.status === "called" || callup.status === "confirmed") &&
+            data.matches.some(
+              (candidate) => candidate.id === callup.match_id && candidate.status === "played",
+            ),
+        )
+        .map((callup) => callup.match_id),
     );
+    const playerMatches = data.matches.filter((candidate) => eligibleMatchIds.has(candidate.id));
+    const playerStats = playerMatches.map((eligibleMatch) => {
+      const stat = data.matchStats.find(
+        (candidate) => candidate.player_id === pid && candidate.match_id === eligibleMatch.id,
+      );
+      return {
+        match_id: eligibleMatch.id,
+        scheduled_at: eligibleMatch.scheduled_at,
+        goals: stat?.goals ?? 0,
+        exclusions: stat?.exclusions ?? 0,
+      };
+    });
+
     const mvpMatches = playerMatches.map((mm) => ({
       id: mm.id,
       scheduled_at: mm.scheduled_at,
@@ -325,6 +355,49 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
   } catch {
     // Ignorar errores de revalidatePath en ejecuciones fuera de request (scripts CLI)
   }
+}
+
+export async function recomputeTrainingStreaksForSession(sessionId: string): Promise<void> {
+  const supabase = await createClient();
+  const { data: session } = await supabase
+    .from("training_sessions")
+    .select("id, team_id, teams!training_sessions_team_id_fkey(season_id)")
+    .eq("id", sessionId)
+    .maybeSingle();
+  if (!session) return;
+  await requireCoachOf(session.team_id);
+  const team = Array.isArray(session.teams) ? session.teams[0] : session.teams;
+  const seasonId = (team as { season_id?: string } | null)?.season_id;
+  if (!seasonId) return;
+
+  const admin = createAdminClient();
+  const data = await loadSeasonData(seasonId, admin);
+  const playerIds = Array.from(
+    new Set(
+      data.rosters
+        .filter((roster) => roster.team_id === session.team_id && roster.left_at == null)
+        .map((roster) => roster.player_id),
+    ),
+  );
+  const sessions = data.sessions.filter((candidate) => candidate.team_id === session.team_id);
+  const nowIso = new Date().toISOString();
+  for (const playerId of playerIds) {
+    await upsertStreakFromEvents(
+      seasonId,
+      "player",
+      playerId,
+      "train_consec",
+      trainConsecEvents(
+        sessions,
+        data.attendance.filter((entry) => entry.player_id === playerId),
+        nowIso,
+      ),
+      nowIso,
+      admin,
+    );
+  }
+  revalidatePath("/rankings");
+  revalidatePath("/profile");
 }
 
 async function upsertStreakFromEvents(

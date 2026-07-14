@@ -16,7 +16,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { formatLongDate, formatTimeOfDay } from "@/lib/domain/calendar";
+import {
+  formatLongDate,
+  formatTimeOfDay,
+  formatTimeRangeFromDuration,
+} from "@/lib/domain/calendar";
 import { setMyCallupStatus } from "@/server/actions/admin";
 import type { CalendarEventDay } from "@/server/queries/calendar";
 import { cn } from "@/lib/utils/cn";
@@ -121,7 +125,7 @@ export function TrainingRow({
 
         <div className="mt-1 flex items-baseline gap-3 select-none">
           <span className="text-pool-deep shrink-0 font-mono text-xl font-black tracking-tight">
-            {formatTimeOfDay(training.scheduled_at)}
+            {formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes)}
           </span>
           <h4 className="text-ink-950 text-base leading-tight font-extrabold">
             {training.cancelled ? (
@@ -146,7 +150,10 @@ export function TrainingRow({
         ) : null}
 
         <div className="border-ink-200/40 text-ink-600 mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs font-extrabold tracking-wide uppercase select-none">
-          <span>{training.duration_minutes} min</span>
+          <span>
+            {formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes)} ·{" "}
+            {training.duration_minutes} min
+          </span>
           {isCoach && <span className="text-pool-blue">Pasar lista en admin</span>}
         </div>
       </div>

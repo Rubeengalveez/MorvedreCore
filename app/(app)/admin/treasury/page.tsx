@@ -5,7 +5,7 @@ import { Banknote, ChevronRight, FileSpreadsheet } from "lucide-react";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { SectionHeader } from "@/components/ui/page-shell";
 import { getCurrentSeason } from "@/server/queries/seasons";
-import { getTreasuryDashboard } from "@/server/queries/treasury";
+import { getTreasuryDashboard, getTreasuryProfileOverview } from "@/server/queries/treasury";
 import { formatTreasuryCents } from "@/lib/domain/treasury";
 import {
   AssignmentForm,
@@ -13,6 +13,7 @@ import {
   ConceptForm,
   LinesPreview,
 } from "./_components/treasury-forms";
+import { TreasuryProfileManager } from "./_components/treasury-profile-manager";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -22,7 +23,11 @@ export const metadata = {
 };
 
 export default async function AdminTreasuryPage() {
-  const [season, data] = await Promise.all([getCurrentSeason(), getTreasuryDashboard()]);
+  const season = await getCurrentSeason();
+  const [data, profileOverview] = await Promise.all([
+    getTreasuryDashboard(),
+    getTreasuryProfileOverview(season?.id ?? null),
+  ]);
   const latestClosure = data.closures[0] ?? null;
 
   return (
@@ -42,6 +47,11 @@ export default async function AdminTreasuryPage() {
           value={latestClosure ? formatTreasuryCents(latestClosure.total_cents) : "0.00 EUR"}
         />
       </section>
+
+      <TreasuryProfileManager
+        players={profileOverview.players}
+        payerOptions={profileOverview.payerOptions}
+      />
 
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-3">
         <ConceptForm />

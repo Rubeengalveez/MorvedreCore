@@ -33,7 +33,7 @@ type ParentChildProfileRow = {
 };
 
 const PROFILE_SELECT =
-  "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password, calendar_token";
+  "id, full_name, photo_url, birth_year, cap_number, team_color, must_change_password, calendar_token, is_active";
 
 export const getActiveProfileContext = cache(async (): Promise<ActiveProfileContext | null> => {
   const supabase = await createClient();
@@ -66,7 +66,7 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
 
     const child = extractJoined(link?.profiles);
 
-    if (isProfileRow(child)) {
+    if (isProfileRow(child) && child.is_active) {
       active = child;
     }
   }
@@ -81,7 +81,7 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
   const linked: ProfileSummary[] = [];
   for (const row of finalRows ?? []) {
     const child = extractJoined(row.profiles);
-    if (isProfileRow(child)) {
+    if (isProfileRow(child) && child.is_active) {
       linked.push(child);
     }
   }

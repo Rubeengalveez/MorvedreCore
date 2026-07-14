@@ -30,35 +30,6 @@ export type LegendRow = {
   mvp_count: number;
 };
 
-export type MatchupInput = {
-  opponent: string;
-  opponent_key?: string;
-  matches_played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goals_for: number;
-  goals_against: number;
-  last_match_at: string | null;
-};
-
-export type RivalryRow = {
-  opponent: string;
-  matches_played: number;
-  wins: number;
-  draws: number;
-  losses: number;
-  goals_for: number;
-  goals_against: number;
-  goal_diff: number;
-  win_pct: number;
-  last_match_at: string | null;
-};
-
-export function normalizeOpponent(opponent: string): string {
-  return opponent.trim().replace(/\s+/g, " ").toLocaleLowerCase("es-ES");
-}
-
 export function computeLegends(
   rows: LegendStatInput[],
   metric: LegendMetric,
@@ -127,68 +98,4 @@ export function computeLegends(
     previousRank = rank;
     return { ...row, rank };
   });
-}
-
-export function computeRivalries(rows: MatchupInput[]): RivalryRow[] {
-  const rivals = new Map<string, Omit<RivalryRow, "goal_diff" | "win_pct">>();
-
-  for (const row of rows) {
-    const key = row.opponent_key || normalizeOpponent(row.opponent);
-    const current = rivals.get(key) ?? {
-      opponent: row.opponent.trim(),
-      matches_played: 0,
-      wins: 0,
-      draws: 0,
-      losses: 0,
-      goals_for: 0,
-      goals_against: 0,
-      last_match_at: null,
-    };
-    current.matches_played += row.matches_played;
-    current.wins += row.wins;
-    current.draws += row.draws;
-    current.losses += row.losses;
-    current.goals_for += row.goals_for;
-    current.goals_against += row.goals_against;
-    if (
-      !current.last_match_at ||
-      (row.last_match_at && row.last_match_at > current.last_match_at)
-    ) {
-      current.last_match_at = row.last_match_at;
-      current.opponent = row.opponent.trim();
-    }
-    rivals.set(key, current);
-  }
-
-  return [...rivals.values()].map((row) => ({
-    ...row,
-    goal_diff: row.goals_for - row.goals_against,
-    win_pct: row.matches_played > 0 ? Math.round((row.wins * 10000) / row.matches_played) / 100 : 0,
-  }));
-}
-
-export function bestRivals(rows: RivalryRow[], limit = 5): RivalryRow[] {
-  return rows
-    .filter((row) => row.matches_played >= 2)
-    .toSorted(
-      (a, b) =>
-        b.win_pct - a.win_pct ||
-        b.goal_diff - a.goal_diff ||
-        b.matches_played - a.matches_played ||
-        a.opponent.localeCompare(b.opponent, "es"),
-    )
-    .slice(0, limit);
-}
-
-export function toughestRivals(rows: RivalryRow[], limit = 5): RivalryRow[] {
-  return rows
-    .filter((row) => row.matches_played >= 2)
-    .toSorted(
-      (a, b) =>
-        a.win_pct - b.win_pct ||
-        a.goal_diff - b.goal_diff ||
-        b.matches_played - a.matches_played ||
-        a.opponent.localeCompare(b.opponent, "es"),
-    )
-    .slice(0, limit);
 }

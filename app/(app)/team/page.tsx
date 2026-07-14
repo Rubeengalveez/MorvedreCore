@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { UsersRound } from "lucide-react";
 
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { TeamListCard } from "@/components/team/team-list-card";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
@@ -77,22 +77,12 @@ export default async function TeamPage() {
 
   return (
     <PageShell width="md" className="gap-6 pb-6">
-      <header className="border-ink-300 flex items-start justify-between gap-4 border-b pb-4">
-        <div className="min-w-0">
-          <p className="text-pool-blue text-xs font-extrabold tracking-[0.16em] uppercase">
-            Temporada {season.label}
-          </p>
-          <h1 className="font-display text-pool-deep mt-1 text-2xl leading-none font-extrabold tracking-tight text-balance sm:text-3xl">
-            Equipos
-          </h1>
-          <p className="text-ink-600 mt-2 max-w-md text-sm leading-relaxed">
-            De Escuela a Absoluto, con tus equipos señalados.
-          </p>
-        </div>
-        <span className="bg-pool-foam text-pool-deep flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-          <UsersRound className="h-5 w-5" aria-hidden="true" />
-        </span>
-      </header>
+      <PageHeader
+        eyebrow={`Temporada ${season.label}`}
+        title="Equipos"
+        description="De Escuela a Absoluto, con tus equipos señalados."
+        icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
+      />
 
       {allTeams.length === 0 ? (
         <EmptyTeams

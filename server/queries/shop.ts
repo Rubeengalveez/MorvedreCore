@@ -57,6 +57,7 @@ export interface ShopOrder {
   status: ShopOrderStatus;
   total_cents: number;
   currency: string;
+  contact_phone_e164: string | null;
   notes: string | null;
   parent_notes: string | null;
   admin_notes: string | null;
@@ -77,7 +78,7 @@ const LEGACY_PRODUCT_FIELDS =
   "id, title, description, category, price_cents, currency, image_url, sizes, available, max_per_order, created_by, created_at, updated_at";
 
 const ORDER_FIELDS =
-  "id, requested_by, approved_by, managed_by, status, total_cents, currency, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";
+  "id, requested_by, approved_by, managed_by, status, total_cents, currency, contact_phone_e164, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";
 
 const ITEM_FIELDS =
   "id, order_id, product_id, size, personalization, quantity, unit_price_cents, subtotal_cents";
@@ -465,6 +466,7 @@ function assembleOrder(
     status: ShopOrderStatus;
     total_cents: number;
     currency: string;
+    contact_phone_e164: string | null;
     notes: string | null;
     parent_notes: string | null;
     admin_notes: string | null;
@@ -487,6 +489,7 @@ function assembleOrder(
     status: o.status,
     total_cents: o.total_cents,
     currency: o.currency,
+    contact_phone_e164: o.contact_phone_e164,
     notes: o.notes,
     parent_notes: o.parent_notes,
     admin_notes: o.admin_notes,

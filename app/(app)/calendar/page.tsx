@@ -114,13 +114,12 @@ export default async function CalendarPage() {
   }
 
   return (
-    <PageShell width="lg" className="gap-4 pb-8">
+    <PageShell width="lg" className="gap-4 pb-0 sm:pb-0">
       <AppPageHero
         eyebrow="Tu agenda deportiva"
         title="Tu mes"
         description="Entrenamientos, partidos y disponibilidad en una sola vista."
         icon={<Silbato className="h-7 w-7 shrink-0" accent="currentColor" />}
-        className="py-5 sm:py-6"
       />
 
       {teamIds.length === 0 ? (

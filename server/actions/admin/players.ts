@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Tables } from "@/types/database";
+import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/domain/permissions";
 import {
   createPlayerSchema,
   idSchema,
@@ -14,7 +16,7 @@ import {
   updatePlayerSchema,
 } from "@/lib/domain/admin-schemas";
 
-import { requireAdmin } from "./_helpers";
+import { requireAdmin, requirePermission } from "./_helpers";
 import { rosterPlayer, unrosterPlayer } from "./teams";
 
 export type Player = Tables<"profiles">;
@@ -40,7 +42,7 @@ export async function createPlayer(input: {
   license_active?: boolean;
   notes?: string | null;
 }): Promise<Player> {
-  await requireAdmin();
+  await requirePermission("manage_players");
 
   const parsed = createPlayerSchema.safeParse(input);
   if (!parsed.success) {
@@ -63,7 +65,8 @@ export async function createPlayer(input: {
       school_enrolled: parsed.data.school_enrolled ?? false,
       school_payment_paid: parsed.data.school_payment_paid ?? false,
       must_change_password: parsed.data.must_change_password ?? false,
-      license_active: parsed.data.license_active ?? false,
+      license_active: true,
+      is_active: true,
       notes: parsed.data.notes ?? null,
     })
     .select("*")
@@ -95,9 +98,10 @@ export async function updatePlayer(
     school_payment_paid?: boolean;
     license_active?: boolean;
     notes?: string | null;
+    is_active?: boolean;
   },
 ): Promise<Player> {
-  await requireAdmin();
+  await requirePermission("manage_players");
 
   const parsedId = idSchema.safeParse({ id });
   if (!parsedId.success) {
@@ -124,6 +128,7 @@ export async function updatePlayer(
       team_color: parsed.data.team_color,
       school_enrolled: parsed.data.school_enrolled ?? false,
       school_payment_paid: parsed.data.school_payment_paid ?? false,
+      is_active: parsed.data.is_active,
     })
     .eq("id", parsedId.data.id)
     .select("*")
@@ -139,6 +144,27 @@ export async function updatePlayer(
   revalidatePath(`/profile/${parsedId.data.id}`);
 
   return data;
+}
+
+export async function setPlayerActive(input: {
+  profile_id: string;
+  active: boolean;
+}): Promise<void> {
+  await requirePermission("manage_players");
+  const parsed = z.object({ profile_id: z.string().uuid(), active: z.boolean() }).safeParse(input);
+  if (!parsed.success) throw new Error("Jugador inválido.");
+
+  const supabase = createAdminClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ is_active: parsed.data.active })
+    .eq("id", parsed.data.profile_id);
+  throwIfError(error, "No pudimos cambiar el estado del jugador.");
+
+  revalidatePath("/admin/players");
+  revalidatePath("/team");
+  revalidatePath("/calendar");
+  revalidatePath("/attendance");
 }
 
 export async function assignToTeam(input: {
@@ -168,7 +194,7 @@ export async function linkParentChild(input: {
   child_profile_id: string;
   relation: "mother" | "father" | "legal_guardian" | "other";
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_families");
 
   const parsed = linkSchema.safeParse(input);
   if (!parsed.success) {
@@ -203,7 +229,7 @@ export async function unlinkParentChild(input: {
   parent_profile_id: string;
   child_profile_id: string;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_families");
 
   const parsed = unlinkSchema.safeParse(input);
   if (!parsed.success) {
@@ -304,4 +330,45 @@ export async function unassignRole(input: {
 
   revalidatePath("/admin/staff");
   revalidatePath("/admin/players");
+}
+
+const profilePermissionSchema = z.object({
+  profile_id: z.string().uuid(),
+  permission: z.enum(ADMIN_PERMISSIONS).refine((value) => value !== "manage_attendance"),
+  enabled: z.boolean(),
+});
+
+export async function setProfileAdminPermission(input: {
+  profile_id: string;
+  permission: Exclude<AdminPermission, "manage_attendance">;
+  enabled: boolean;
+}): Promise<void> {
+  const admin = await requireAdmin();
+  const parsed = profilePermissionSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error("El permiso seleccionado no es válido.");
+  }
+
+  const supabase = createAdminClient();
+  if (parsed.data.enabled) {
+    const { error } = await supabase.from("profile_permissions").upsert(
+      {
+        profile_id: parsed.data.profile_id,
+        permission: parsed.data.permission,
+        granted_by: admin.id,
+      },
+      { onConflict: "profile_id,permission" },
+    );
+    throwIfError(error, "No pudimos conceder el permiso.");
+  } else {
+    const { error } = await supabase
+      .from("profile_permissions")
+      .delete()
+      .eq("profile_id", parsed.data.profile_id)
+      .eq("permission", parsed.data.permission);
+    throwIfError(error, "No pudimos retirar el permiso.");
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/admin/staff");
 }

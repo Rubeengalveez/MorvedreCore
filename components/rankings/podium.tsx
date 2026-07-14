@@ -2,7 +2,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils/cn";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
-import { metricContext } from "./ranking-row";
+import { RankingMetricContext } from "./ranking-row";
 
 export interface PodiumProps {
   items: RankingRow[];
@@ -115,7 +115,9 @@ function PodiumLeader({
             ) : null}
           </h3>
           <p className="text-paper/70 mt-1 text-sm font-semibold">{categoryLabel(row)}</p>
-          <p className="text-paper/55 mt-1 text-xs">{metricContext(row, metric)}</p>
+          {metric !== "streak" ? (
+            <RankingMetricContext row={row} metric={metric} inverted className="mt-1" />
+          ) : null}
         </div>
 
         <div className="shrink-0 text-right">
@@ -176,7 +178,9 @@ function PodiumRunner({
           ) : null}
         </p>
         <p className="text-ink-600 mt-1 line-clamp-1 text-sm font-semibold">{categoryLabel(row)}</p>
-        <p className="text-ink-500 mt-1 text-xs">{metricContext(row, metric)}</p>
+        {metric !== "streak" ? (
+          <RankingMetricContext row={row} metric={metric} className="mt-1" />
+        ) : null}
       </div>
       <div className="shrink-0 text-right">
         <p className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums">

@@ -21,7 +21,10 @@ export function AppShell({
         activeProfile={activeProfile}
         linkedProfiles={linkedProfiles}
       />
-      <main id="main-content" className="flex-1 pb-[calc(var(--bottom-nav-height)+0.5rem)]">
+      <main
+        id="main-content"
+        className="flex-1 pt-[var(--top-bar-height)] pb-[calc(var(--bottom-nav-height)+0.5rem)]"
+      >
         {children}
       </main>
       <BottomNav showAttendance={showAttendance} />

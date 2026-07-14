@@ -1010,6 +1010,7 @@ export type Database = {
           full_name: string;
           gender: string | null;
           id: string;
+          is_active: boolean;
           license_active: boolean;
           must_change_password: boolean;
           notes: string | null;
@@ -1030,6 +1031,7 @@ export type Database = {
           full_name: string;
           gender?: string | null;
           id?: string;
+          is_active?: boolean;
           license_active?: boolean;
           must_change_password?: boolean;
           notes?: string | null;
@@ -1050,6 +1052,7 @@ export type Database = {
           full_name?: string;
           gender?: string | null;
           id?: string;
+          is_active?: boolean;
           license_active?: boolean;
           must_change_password?: boolean;
           notes?: string | null;
@@ -1282,6 +1285,7 @@ export type Database = {
           approved_at: string | null;
           approved_by: string | null;
           cancelled_at: string | null;
+          contact_phone_e164: string | null;
           currency: string;
           delivered_at: string | null;
           id: string;
@@ -1301,6 +1305,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           cancelled_at?: string | null;
+          contact_phone_e164?: string | null;
           currency?: string;
           delivered_at?: string | null;
           id?: string;
@@ -1320,6 +1325,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           cancelled_at?: string | null;
+          contact_phone_e164?: string | null;
           currency?: string;
           delivered_at?: string | null;
           id?: string;
@@ -2272,6 +2278,79 @@ export type Database = {
           },
         ];
       };
+      treasury_profile_settings: {
+        Row: {
+          billing_profile_id: string | null;
+          fee_exempt: boolean;
+          monthly_fee_cents: number | null;
+          notes: string | null;
+          profile_id: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          billing_profile_id?: string | null;
+          fee_exempt?: boolean;
+          monthly_fee_cents?: number | null;
+          notes?: string | null;
+          profile_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          billing_profile_id?: string | null;
+          fee_exempt?: boolean;
+          monthly_fee_cents?: number | null;
+          notes?: string | null;
+          profile_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "treasury_profile_settings_billing_profile_id_fkey";
+            columns: ["billing_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "treasury_profile_settings_billing_profile_id_fkey";
+            columns: ["billing_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles_public";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "treasury_profile_settings_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "treasury_profile_settings_profile_id_fkey";
+            columns: ["profile_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles_public";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "treasury_profile_settings_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "treasury_profile_settings_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles_public";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       user_roles: {
         Row: {
           granted_at: string;
@@ -2381,6 +2460,10 @@ export type Database = {
       };
       create_monthly_payment_reminders: { Args: never; Returns: number };
       get_auth_user_id_by_email: { Args: { p_email: string }; Returns: string };
+      has_permission: {
+        Args: { required_permission: string };
+        Returns: boolean;
+      };
       is_admin: { Args: never; Returns: boolean };
       is_coach_of: { Args: { p_team_id: string }; Returns: boolean };
       is_delegate_of: { Args: { team_id: string }; Returns: boolean };

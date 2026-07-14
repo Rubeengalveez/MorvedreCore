@@ -16,7 +16,7 @@ import {
   updateTeamSchema,
 } from "@/lib/domain/admin-schemas";
 
-import { requireAdmin } from "./_helpers";
+import { requireAnyPermission, requirePermission } from "./_helpers";
 
 type TeamRow = Tables<"teams">;
 export type Team = Omit<TeamRow, "category_code" | "gender" | "team_type"> & {
@@ -45,7 +45,7 @@ export async function createTeam(input: {
   home_pool?: string;
   notes?: string;
 }): Promise<Team> {
-  await requireAdmin();
+  await requirePermission("manage_teams");
 
   const parsed = createTeamSchema.safeParse(input);
   if (!parsed.success) {
@@ -96,7 +96,7 @@ export async function updateTeam(
     notes?: string | null;
   },
 ): Promise<Team> {
-  await requireAdmin();
+  await requirePermission("manage_teams");
 
   const parsedId = idSchema.safeParse({ id });
   if (!parsedId.success) {
@@ -138,7 +138,7 @@ export async function assignStaff(input: {
   role: "head_coach" | "assistant_coach" | "delegate" | "physical_trainer";
   can_manage_attendance?: boolean;
 }): Promise<void> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission("manage_staff");
 
   const parsed = staffSchema.safeParse(input);
   if (!parsed.success) {
@@ -222,7 +222,7 @@ export async function unassignStaff(input: {
   profile_id: string;
   role: "head_coach" | "assistant_coach" | "delegate" | "physical_trainer";
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_staff");
 
   const parsed = staffSchema.safeParse(input);
   if (!parsed.success) {
@@ -270,7 +270,7 @@ export async function setStaffAttendancePermission(input: {
   profile_id: string;
   enabled: boolean;
 }): Promise<void> {
-  const admin = await requireAdmin();
+  const admin = await requirePermission("manage_staff");
   const parsed = staffAttendancePermissionSchema.safeParse(input);
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
@@ -320,7 +320,7 @@ export async function rosterPlayer(input: {
   squad_number?: number;
   joined_at?: string;
 }): Promise<void> {
-  await requireAdmin();
+  await requireAnyPermission(["manage_teams", "manage_players"]);
 
   const rosterSchema = makeRosterSchema;
   const parsed = rosterSchema.safeParse(input);
@@ -387,7 +387,7 @@ export async function rosterPlayer(input: {
 }
 
 export async function unrosterPlayer(input: { team_id: string; player_id: string }): Promise<void> {
-  await requireAdmin();
+  await requireAnyPermission(["manage_teams", "manage_players"]);
 
   const parsed = unrosterSchema.safeParse(input);
   if (!parsed.success) {

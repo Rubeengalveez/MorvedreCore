@@ -14,11 +14,13 @@ import {
   MdStorefront,
 } from "react-icons/md";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { AdminPermission } from "@/lib/domain/permissions";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { PageShell, SectionHeader } from "@/components/ui/page-shell";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
+import { getAdminAccess } from "@/server/actions/admin/_helpers";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -35,7 +37,7 @@ type Counts = {
 };
 
 async function loadCounts(): Promise<Counts> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const [
     { count: seasonCount },
@@ -67,6 +69,7 @@ interface AdminTile {
   label: string;
   description: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
+  permission: AdminPermission | "admin";
 }
 
 const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
@@ -75,66 +78,77 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     label: "Temporadas",
     description: "Crea y archiva.",
     Icon: MdCalendarMonth,
+    permission: "admin",
   },
   {
     href: "/admin/teams",
     label: "Equipos",
     description: "Configura plantillas.",
     Icon: MdGroups,
+    permission: "manage_teams",
   },
   {
     href: "/admin/players",
     label: "Jugadores",
     description: "Altas y ediciones.",
     Icon: MdPerson,
+    permission: "manage_players",
   },
   {
     href: "/admin/families",
     label: "Familias",
     description: "Tutores vinculados.",
     Icon: MdFamilyRestroom,
+    permission: "manage_families",
   },
   {
     href: "/admin/staff",
     label: "Personal",
     description: "Entrenadores y más.",
     Icon: MdBadge,
+    permission: "manage_staff",
   },
   {
     href: "/admin/trainings",
     label: "Entrenamientos",
     description: "Bloques y asistencia.",
     Icon: MdSports,
+    permission: "manage_trainings",
   },
   {
     href: "/admin/matches",
     label: "Partidos",
     description: "Convocatorias y actas.",
     Icon: MdSportsVolleyball,
+    permission: "manage_matches",
   },
   {
     href: "/admin/treasury",
     label: "Tesoreria",
     description: "Cierres y pagos.",
     Icon: MdEuro,
+    permission: "manage_treasury",
   },
   {
     href: "/admin/players/import",
     label: "Importar",
     description: "Carga desde Excel.",
     Icon: MdUploadFile,
+    permission: "manage_players",
   },
   {
     href: "/admin/news",
     label: "Noticias",
     description: "Publica avisos del club.",
     Icon: MdNewspaper,
+    permission: "manage_news",
   },
   {
     href: "/admin/shop",
     label: "Tienda",
     description: "Gestiona pedidos y productos.",
     Icon: MdStorefront,
+    permission: "manage_shop",
   },
 ];
 
@@ -146,11 +160,18 @@ function buildGreeting(now: Date, firstName: string): string {
 }
 
 export default async function AdminHomePage() {
-  const [counts, ctx] = await Promise.all([loadCounts(), getActiveProfileContext()]);
+  const [counts, ctx, access] = await Promise.all([
+    loadCounts(),
+    getActiveProfileContext(),
+    getAdminAccess(),
+  ]);
   const activeProfileName = ctx?.activeProfile.full_name ?? "Admin";
   const firstName = activeProfileName.split(/\s+/)[0] ?? activeProfileName ?? "Admin";
   const now = new Date();
   const greeting = buildGreeting(now, firstName);
+  const modules = ADMIN_MODULES.filter(
+    (module) => access.isAdmin || access.permissions.has(module.permission as AdminPermission),
+  );
 
   return (
     <div className="relative">
@@ -172,23 +193,25 @@ export default async function AdminHomePage() {
           </div>
         </header>
 
-        <section
-          aria-labelledby="admin-stats-heading"
-          className="grid grid-cols-2 gap-3 sm:grid-cols-4"
-        >
-          <h2 id="admin-stats-heading" className="sr-only">
-            Resumen del club
-          </h2>
-          <Stat label="Temporadas" value={String(counts.seasons)} color="var(--pool-teal)" />
-          <Stat label="Equipos" value={String(counts.teams)} color="var(--pool-blue)" />
-          <Stat label="Jugadores" value={String(counts.players)} color="var(--ball-gold)" />
-          <Stat label="Partidos" value={String(counts.matchesPlayed)} color="var(--goggle-red)" />
-        </section>
+        {access.isAdmin ? (
+          <section
+            aria-labelledby="admin-stats-heading"
+            className="grid grid-cols-2 gap-3 sm:grid-cols-4"
+          >
+            <h2 id="admin-stats-heading" className="sr-only">
+              Resumen del club
+            </h2>
+            <Stat label="Temporadas" value={String(counts.seasons)} color="var(--pool-teal)" />
+            <Stat label="Equipos" value={String(counts.teams)} color="var(--pool-blue)" />
+            <Stat label="Jugadores" value={String(counts.players)} color="var(--ball-gold)" />
+            <Stat label="Partidos" value={String(counts.matchesPlayed)} color="var(--goggle-red)" />
+          </section>
+        ) : null}
 
         <section aria-labelledby="admin-modules-heading" className="flex flex-col gap-2">
           <SectionHeader id="admin-modules-heading" title="Secciones" />
           <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {ADMIN_MODULES.map((m) => {
+            {modules.map((m) => {
               const { Icon } = m;
               return (
                 <li key={m.href} className="h-full">

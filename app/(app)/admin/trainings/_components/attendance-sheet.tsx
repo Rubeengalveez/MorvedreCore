@@ -24,6 +24,7 @@ export interface AttendanceSheetProps {
   sessionId: string;
   sessionLabel: string;
   players: AttendancePlayer[];
+  canEdit: boolean;
   onClose: () => void;
 }
 
@@ -36,6 +37,7 @@ export function AttendanceSheet({
   sessionId,
   sessionLabel,
   players,
+  canEdit,
   onClose,
 }: AttendanceSheetProps) {
   const initial = useMemo<Record<string, RowState>>(() => {
@@ -116,6 +118,33 @@ export function AttendanceSheet({
   }
 
   const presentCount = players.filter((p) => (rows[p.id]?.present ?? p.present) === true).length;
+
+  if (!canEdit) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Alert variant="info" title="Lista todavía no disponible">
+          Podrás pasar lista el día del entrenamiento. Hasta entonces puedes consultar la plantilla.
+        </Alert>
+        <ul className="flex flex-col gap-2" aria-label="Plantilla prevista">
+          {players.map((player) => (
+            <li
+              key={player.id}
+              className="border-ink-200 bg-paper-sunk flex min-h-16 items-center gap-3 rounded-xl border px-3 py-2.5"
+            >
+              <Avatar name={player.full_name} src={player.photo_url} size={40} />
+              <span className="text-ink-600 min-w-0 flex-1 font-extrabold">{player.full_name}</span>
+              <span className="bg-ink-200 text-ink-600 rounded-lg px-2 py-1 text-xs font-extrabold">
+                Pendiente
+              </span>
+            </li>
+          ))}
+        </ul>
+        <Button type="button" size="md" variant="secondary" onClick={onClose}>
+          Cerrar
+        </Button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">

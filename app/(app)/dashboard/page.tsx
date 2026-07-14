@@ -16,7 +16,7 @@ import {
 
 import { PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
-import { formatRelativeUpcoming } from "@/lib/domain/calendar";
+import { formatRelativeUpcoming, formatTimeRangeFromDuration } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getDashboardAudience,
@@ -220,6 +220,9 @@ function NextTurn({ event, now }: { event: DashboardWeekEvent; now: Date }) {
   const date = new Date(event.scheduled_at);
   const isMatch = event.kind === "match";
   const title = isMatch ? event.title.replace(/^Partido contra /, "Contra ") : "Entrenamiento";
+  const timeStr = event.kind === "training" && event.duration_minutes
+    ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
+    : timeFormatter.format(date);
   return (
     <section
       aria-labelledby="next-turn-heading"
@@ -255,7 +258,7 @@ function NextTurn({ event, now }: { event: DashboardWeekEvent; now: Date }) {
             {title}
           </h2>
           <p className="text-ink-600 mt-2 text-sm font-semibold">
-            {event.team_label} · {timeFormatter.format(date)} ·{" "}
+            {event.team_label} · {timeStr} ·{" "}
             {formatRelativeUpcoming(event.scheduled_at, now)}
           </p>
           <Link
@@ -280,6 +283,9 @@ function WeekAgenda({ events }: { events: DashboardWeekEvent[] }) {
         {events.map((event) => {
           const date = new Date(event.scheduled_at);
           const isMatch = event.kind === "match";
+          const timeStr = event.kind === "training" && event.duration_minutes
+            ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
+            : timeFormatter.format(date);
           return (
             <Link
               key={`${event.kind}-${event.id}`}
@@ -304,7 +310,7 @@ function WeekAgenda({ events }: { events: DashboardWeekEvent[] }) {
                   {isMatch ? event.title.replace(/^Partido contra /, "Contra ") : "Entrenamiento"}
                 </span>
                 <span className="text-ink-500 mt-0.5 block truncate text-sm font-semibold">
-                  {event.team_label} · {timeFormatter.format(date)}
+                  {event.team_label} · {timeStr}
                 </span>
               </span>
               <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
