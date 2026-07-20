@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Check, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
@@ -12,10 +12,21 @@ export type RsvpStatus = "called" | "confirmed" | "declined" | "withdrawn" | "no
 export interface RsvpButtonsProps {
   matchId: string;
   currentStatus: RsvpStatus;
+  playerId?: string;
+  playerName?: string;
 }
 
-export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
+const subscribeToHydration = () => () => undefined;
+const getHydratedSnapshot = () => true;
+const getServerHydratedSnapshot = () => false;
+
+export function RsvpButtons({ matchId, currentStatus, playerId, playerName }: RsvpButtonsProps) {
   const router = useRouter();
+  const hydrated = useSyncExternalStore(
+    subscribeToHydration,
+    getHydratedSnapshot,
+    getServerHydratedSnapshot,
+  );
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,7 +34,7 @@ export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
     setError(null);
     setPending(true);
     try {
-      await setMyCallupStatus({ match_id: matchId, status });
+      await setMyCallupStatus({ match_id: matchId, status, player_id: playerId });
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "No pudimos guardar tu respuesta.");
@@ -32,20 +43,24 @@ export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
     }
   }
 
-  const isConfirmed = currentStatus === "confirmed" || currentStatus === "called";
+  const isConfirmed = currentStatus === "confirmed";
   const isDeclined =
     currentStatus === "declined" || currentStatus === "withdrawn" || currentStatus === "no_show";
 
   return (
     <div className="flex w-full flex-col gap-2.5 select-none">
-      <span className="text-eyebrow text-ink-500">¿Confirmas tu asistencia al partido?</span>
+      <span className="text-eyebrow text-ink-500">
+        {playerName
+          ? `¿Confirmas la asistencia de ${playerName}?`
+          : "¿Confirmas tu asistencia al partido?"}
+      </span>
 
       <div className="xs:flex-row flex flex-col gap-2.5">
         <Button
           type="button"
           size="xl"
           variant={isConfirmed ? "success" : "gold"}
-          disabled={pending}
+          disabled={pending || !hydrated}
           onClick={() => send("confirmed")}
           className={cn("flex-1", isConfirmed && "border-success border")}
         >
@@ -61,7 +76,7 @@ export function RsvpButtons({ matchId, currentStatus }: RsvpButtonsProps) {
           type="button"
           size="xl"
           variant={isDeclined ? "danger" : "secondary"}
-          disabled={pending}
+          disabled={pending || !hydrated}
           onClick={() => send("declined")}
           className="flex-1"
         >

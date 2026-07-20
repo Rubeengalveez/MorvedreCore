@@ -14,6 +14,7 @@ export interface DashboardNextEvent {
 
 export interface DashboardWeekEvent {
   id: string;
+  team_id: string;
   kind: "training" | "match";
   date: string;
   scheduled_at: string;
@@ -235,7 +236,9 @@ export async function getUpcomingDashboardEvents(
   const [trainingsRes, matchesRes] = await Promise.all([
     supabase
       .from("training_sessions")
-      .select("id, scheduled_at, duration_minutes, cancelled, teams!training_sessions_team_id_fkey(label, color)")
+      .select(
+        "id, team_id, scheduled_at, duration_minutes, cancelled, teams!training_sessions_team_id_fkey(label, color)",
+      )
       .in("team_id", teamIds)
       .eq("cancelled", false)
       .gte("scheduled_at", from)
@@ -244,7 +247,9 @@ export async function getUpcomingDashboardEvents(
       .limit(limit),
     supabase
       .from("matches")
-      .select("id, opponent, scheduled_at, status, teams!matches_team_id_fkey(label, color)")
+      .select(
+        "id, team_id, opponent, scheduled_at, status, teams!matches_team_id_fkey(label, color)",
+      )
       .in("team_id", teamIds)
       .in("status", ["scheduled", "in_progress"])
       .gte("scheduled_at", from)
@@ -264,6 +269,7 @@ export async function getUpcomingDashboardEvents(
     const date = new Intl.DateTimeFormat("en-CA").format(new Date(row.scheduled_at));
     events.push({
       id: row.id,
+      team_id: row.team_id,
       kind: "training",
       date,
       scheduled_at: row.scheduled_at,
@@ -283,6 +289,7 @@ export async function getUpcomingDashboardEvents(
     const date = new Intl.DateTimeFormat("en-CA").format(new Date(row.scheduled_at));
     events.push({
       id: row.id,
+      team_id: row.team_id,
       kind: "match",
       date,
       scheduled_at: row.scheduled_at,
@@ -541,6 +548,7 @@ export async function getDashboardData(input: {
     const date = tr.scheduled_at.slice(0, 10);
     weekEvents.push({
       id: tr.id,
+      team_id: tr.team_id,
       kind: "training",
       date,
       scheduled_at: tr.scheduled_at,
@@ -569,6 +577,7 @@ export async function getDashboardData(input: {
     const date = mr.scheduled_at.slice(0, 10);
     weekEvents.push({
       id: mr.id,
+      team_id: mr.team_id,
       kind: "match",
       date,
       scheduled_at: mr.scheduled_at,

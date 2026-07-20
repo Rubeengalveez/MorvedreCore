@@ -7,20 +7,10 @@ export type AppShellProps = TopBarProps & {
   showAttendance: boolean;
 };
 
-export function AppShell({
-  ownProfile,
-  activeProfile,
-  linkedProfiles,
-  showAttendance,
-  children,
-}: AppShellProps) {
+export function AppShell({ profile, showAttendance, children }: AppShellProps) {
   return (
     <div className="app-stage bg-paper flex min-h-dvh flex-col">
-      <TopBar
-        ownProfile={ownProfile}
-        activeProfile={activeProfile}
-        linkedProfiles={linkedProfiles}
-      />
+      <TopBar profile={profile} />
       <main
         id="main-content"
         className="flex-1 pt-[var(--top-bar-height)] pb-[calc(var(--bottom-nav-height)+0.5rem)]"

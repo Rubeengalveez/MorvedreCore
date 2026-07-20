@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Tables } from "@/types/database";
 import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/domain/permissions";
+import { canViewPersonalFinances, requiresGuardianApproval } from "@/lib/domain/family";
 import {
   createPlayerSchema,
   idSchema,
@@ -205,8 +206,27 @@ export async function linkParentChild(input: {
     throw new Error("El tutor y el hijo deben ser personas distintas.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.from("parent_child_links").insert({
+  const admin = createAdminClient();
+  const { data: profiles, error: profilesError } = await admin
+    .from("profiles")
+    .select("id, birth_year, is_active")
+    .in("id", [parsed.data.parent_profile_id, parsed.data.child_profile_id]);
+  if (profilesError || profiles?.length !== 2) {
+    throw new Error("El tutor o el hijo no existen.");
+  }
+  const parent = profiles.find((profile) => profile.id === parsed.data.parent_profile_id);
+  const child = profiles.find((profile) => profile.id === parsed.data.child_profile_id);
+  if (!parent?.is_active || !child?.is_active) {
+    throw new Error("Solo puedes vincular perfiles activos.");
+  }
+  if (!canViewPersonalFinances(parent.birth_year)) {
+    throw new Error("La persona tutora debe ser mayor de edad y tener año de nacimiento.");
+  }
+  if (!requiresGuardianApproval(child.birth_year)) {
+    throw new Error("La gestión familiar está reservada a jugadores menores de edad.");
+  }
+
+  const { error } = await admin.from("parent_child_links").insert({
     parent_profile_id: parsed.data.parent_profile_id,
     child_profile_id: parsed.data.child_profile_id,
     relation: parsed.data.relation,
@@ -222,7 +242,67 @@ export async function linkParentChild(input: {
     throw new Error("No pudimos crear el vínculo familiar. Inténtalo de nuevo.");
   }
 
+  const [parentRoleResult, billingSettingsResult] = await Promise.all([
+    admin
+      .from("user_roles")
+      .select("profile_id")
+      .eq("profile_id", parsed.data.parent_profile_id)
+      .eq("role", "parent")
+      .is("scope_team_id", null)
+      .maybeSingle(),
+    admin
+      .from("treasury_profile_settings")
+      .select("profile_id, billing_profile_id")
+      .eq("profile_id", parsed.data.child_profile_id)
+      .maybeSingle(),
+  ]);
+  if (parentRoleResult.error || billingSettingsResult.error) {
+    await admin
+      .from("parent_child_links")
+      .delete()
+      .eq("parent_profile_id", parsed.data.parent_profile_id)
+      .eq("child_profile_id", parsed.data.child_profile_id);
+    throw new Error("No pudimos preparar la cuenta familiar.");
+  }
+  const parentRole = parentRoleResult.data;
+  const billingSettings = billingSettingsResult.data;
+  let setupError: { message: string } | null = null;
+  if (!parentRole) {
+    const { error: roleError } = await admin.from("user_roles").insert({
+      profile_id: parsed.data.parent_profile_id,
+      role: "parent",
+      scope_team_id: null,
+    });
+    setupError = roleError;
+  }
+  if (!setupError && !billingSettings) {
+    const { error: billingError } = await admin.from("treasury_profile_settings").insert({
+      profile_id: parsed.data.child_profile_id,
+      billing_profile_id: parsed.data.parent_profile_id,
+      fee_exempt: false,
+    });
+    setupError = billingError;
+  } else if (!setupError && !billingSettings?.billing_profile_id) {
+    const { error: billingError } = await admin
+      .from("treasury_profile_settings")
+      .update({ billing_profile_id: parsed.data.parent_profile_id })
+      .eq("profile_id", parsed.data.child_profile_id);
+    setupError = billingError;
+  }
+  if (setupError) {
+    await admin
+      .from("parent_child_links")
+      .delete()
+      .eq("parent_profile_id", parsed.data.parent_profile_id)
+      .eq("child_profile_id", parsed.data.child_profile_id);
+    throw new Error("No pudimos completar la configuración familiar.");
+  }
+
   revalidatePath("/admin/families");
+  revalidatePath("/dashboard");
+  revalidatePath("/profile");
+  revalidatePath("/calendar");
+  revalidatePath("/treasury");
 }
 
 export async function unlinkParentChild(input: {
@@ -236,8 +316,26 @@ export async function unlinkParentChild(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase
+  const admin = createAdminClient();
+  const [{ count: otherGuardianCount }, { count: pendingOrderCount }] = await Promise.all([
+    admin
+      .from("parent_child_links")
+      .select("parent_profile_id", { count: "exact", head: true })
+      .eq("child_profile_id", parsed.data.child_profile_id)
+      .neq("parent_profile_id", parsed.data.parent_profile_id),
+    admin
+      .from("shop_orders")
+      .select("id", { count: "exact", head: true })
+      .eq("requested_by", parsed.data.child_profile_id)
+      .eq("status", "pending_parent"),
+  ]);
+  if ((otherGuardianCount ?? 0) === 0 && (pendingOrderCount ?? 0) > 0) {
+    throw new Error(
+      "No puedes dejar a este menor sin tutor mientras tenga compras pendientes de aprobación.",
+    );
+  }
+
+  const { error } = await admin
     .from("parent_child_links")
     .delete()
     .eq("parent_profile_id", parsed.data.parent_profile_id)
@@ -245,7 +343,29 @@ export async function unlinkParentChild(input: {
 
   throwIfError(error, "No pudimos eliminar el vínculo. Inténtalo de nuevo.");
 
+  const { data: settings } = await admin
+    .from("treasury_profile_settings")
+    .select("billing_profile_id")
+    .eq("profile_id", parsed.data.child_profile_id)
+    .maybeSingle();
+  if (settings?.billing_profile_id === parsed.data.parent_profile_id) {
+    const { data: replacement } = await admin
+      .from("parent_child_links")
+      .select("parent_profile_id")
+      .eq("child_profile_id", parsed.data.child_profile_id)
+      .limit(1)
+      .maybeSingle();
+    await admin
+      .from("treasury_profile_settings")
+      .update({ billing_profile_id: replacement?.parent_profile_id ?? null })
+      .eq("profile_id", parsed.data.child_profile_id);
+  }
+
   revalidatePath("/admin/families");
+  revalidatePath("/dashboard");
+  revalidatePath("/profile");
+  revalidatePath("/calendar");
+  revalidatePath("/treasury");
 }
 
 export async function assignRole(input: {

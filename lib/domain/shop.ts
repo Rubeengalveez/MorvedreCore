@@ -8,8 +8,8 @@ export type ShopOrderStatus =
   | "cancelled";
 
 export const SHOP_ORDER_STATUS_LABELS: Record<ShopOrderStatus, string> = {
-  pending_parent: "Esperando padre",
-  pending_admin: "Aprobado por padre",
+  pending_parent: "Pendiente de familia",
+  pending_admin: "Enviado a tienda",
   rejected: "Rechazado",
   ordered: "Pedido al proveedor",
   received: "Recibido",
@@ -39,12 +39,29 @@ export const SHOP_KANBAN_COLUMNS: ReadonlyArray<{
   title: string;
   emoji: string;
 }> = [
-  { id: "pending_parent", title: "Esperando padre", emoji: "🟡" },
-  { id: "pending_admin", title: "Aprobado por padre", emoji: "🟢" },
+  { id: "pending_parent", title: "Pendiente de familia", emoji: "🟡" },
+  { id: "pending_admin", title: "Listo para tienda", emoji: "🟢" },
   { id: "ordered", title: "Pedido al proveedor", emoji: "📦" },
   { id: "received", title: "Recibido", emoji: "📥" },
   { id: "delivered", title: "Entregado", emoji: "✅" },
 ];
+
+const SHOP_MANAGER_TRANSITIONS: Record<ShopOrderStatus, ReadonlyArray<ShopOrderStatus>> = {
+  pending_parent: ["cancelled"],
+  pending_admin: ["ordered", "cancelled"],
+  ordered: ["received", "cancelled"],
+  received: ["delivered", "cancelled"],
+  delivered: [],
+  rejected: [],
+  cancelled: [],
+};
+
+export function canManagerTransitionShopOrder(
+  current: ShopOrderStatus,
+  next: ShopOrderStatus,
+): boolean {
+  return SHOP_MANAGER_TRANSITIONS[current].includes(next);
+}
 
 export const DEFAULT_CURRENCY = "EUR";
 

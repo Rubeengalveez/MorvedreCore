@@ -1,5 +1,3 @@
-export const ACTIVE_COOKIE = "morvedre_active_profile_id";
-
 export interface ProfileSummary {
   id: string;
   full_name: string;

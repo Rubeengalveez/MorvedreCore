@@ -19,6 +19,7 @@ const MODULES = {
   availability: "availability.mjs",
   history: "history.mjs",
   "access-requests": "access-requests.mjs",
+  "family-demo": "family-demo.mjs",
   recompute: "recompute.mjs",
   validate: "validate.mjs",
 };
@@ -38,6 +39,7 @@ const ORDER = [
   "history",
   "access-requests",
   "recompute",
+  "family-demo",
   "validate",
 ];
 

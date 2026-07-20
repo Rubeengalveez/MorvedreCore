@@ -8,6 +8,7 @@ import { getShopOrder } from "@/server/queries/shop";
 import { SHOP_ORDER_STATUS_LABELS, formatCents } from "@/lib/domain/shop";
 import { PageShell } from "@/components/ui/page-shell";
 import { cn } from "@/lib/utils/cn";
+import { ParentDecisionForm } from "../../parents/pending/_components/parent-decision-form";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -23,6 +24,8 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const { id } = await params;
   const order = await getShopOrder(id);
   if (!order) notFound();
+  const isFamilyOrder = ctx.linkedProfiles.some((profile) => profile.id === order.requested_by);
+  const canDecide = isFamilyOrder && order.status === "pending_parent";
   const date = new Intl.DateTimeFormat("es-ES", {
     day: "numeric",
     month: "long",
@@ -32,11 +35,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   return (
     <PageShell width="md" className="gap-5 pb-8">
       <Link
-        href={"/shop/orders" as Route}
+        href={(isFamilyOrder ? "/shop/parents/pending" : "/shop/orders") as Route}
         className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Mis pedidos
+        {isFamilyOrder ? "Compras familiares" : "Mis pedidos"}
       </Link>
 
       <header className="border-ink-200 bg-paper-card shadow-elev-2 rounded-[1.75rem] border p-5 sm:p-6">
@@ -58,6 +61,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </span>
         </div>
       </header>
+
+      {canDecide ? (
+        <section className="border-ball-gold/45 bg-ball-gold/10 rounded-2xl border p-4">
+          <p className="text-pool-deep font-extrabold">Necesita tu aprobación</p>
+          <p className="text-ink-600 mt-1 text-sm leading-relaxed font-semibold">
+            Revisa los datos. Solo después de aprobarlo se enviará este pedido a la tienda.
+          </p>
+          <ParentDecisionForm orderId={order.id} />
+        </section>
+      ) : null}
 
       <section aria-labelledby="order-products-heading">
         <div className="mb-3 flex items-end justify-between px-1">

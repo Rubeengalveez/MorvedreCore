@@ -57,10 +57,6 @@ export async function setAvailability(input: {
 }): Promise<AvailabilityRow> {
   const me = await loadCurrentUserProfile();
 
-  if (!me.isAdmin && me.id !== input.player_id) {
-    throw new Error("Solo puedes modificar tu propia disponibilidad.");
-  }
-
   const parsed = setAvailabilitySchema.safeParse({
     date: input.date,
     available: input.available,
@@ -71,6 +67,19 @@ export async function setAvailability(input: {
   }
 
   const supabase = await createClient();
+  if (!me.isAdmin && me.id !== input.player_id) {
+    const { data: familyLink, error: familyLinkError } = await supabase
+      .from("parent_child_links")
+      .select("child_profile_id")
+      .eq("parent_profile_id", me.id)
+      .eq("child_profile_id", input.player_id)
+      .maybeSingle();
+    throwIfError(familyLinkError, "No pudimos comprobar el vínculo familiar.");
+    if (!familyLink) {
+      throw new Error("Solo puedes modificar tu disponibilidad o la de un menor vinculado.");
+    }
+  }
+
   const { data, error } = await supabase
     .from("match_availability")
     .upsert(

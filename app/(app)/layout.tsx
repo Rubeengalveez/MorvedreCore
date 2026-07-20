@@ -18,16 +18,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const season = await getCurrentSeason();
   const showAttendance = season
-    ? await hasCurrentAttendancePermission(ctx.activeProfile.id, season.id)
+    ? await hasCurrentAttendancePermission(ctx.ownProfile.id, season.id)
     : false;
 
   return (
-    <AppShell
-      ownProfile={ctx.ownProfile}
-      activeProfile={ctx.activeProfile}
-      linkedProfiles={ctx.linkedProfiles}
-      showAttendance={showAttendance}
-    >
+    <AppShell profile={ctx.ownProfile} showAttendance={showAttendance}>
       {children}
     </AppShell>
   );

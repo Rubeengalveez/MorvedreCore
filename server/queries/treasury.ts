@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { canViewPersonalFinances } from "@/lib/domain/family";
 import {
   formatTreasuryCents,
   type TreasuryAppliesTo,
@@ -272,10 +273,30 @@ export async function getTreasuryClosure(id: string): Promise<{
 }
 
 export async function getFamilyTreasury(profileId: string): Promise<{
+  canView: boolean;
   totalPendingCents: number;
   lines: TreasuryLine[];
+  groups: Array<{
+    profileId: string;
+    profileName: string;
+    totalCents: number;
+    lines: TreasuryLine[];
+  }>;
 }> {
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { canView: false, totalPendingCents: 0, lines: [], groups: [] };
+  const { data: own } = await supabase
+    .from("profiles")
+    .select("id, birth_year")
+    .eq("auth_user_id", user.id)
+    .eq("id", profileId)
+    .maybeSingle();
+  if (!own || !canViewPersonalFinances(own.birth_year)) {
+    return { canView: false, totalPendingCents: 0, lines: [], groups: [] };
+  }
   const { data: links } = await supabase
     .from("parent_child_links")
     .select("child_profile_id")
@@ -319,10 +340,28 @@ export async function getFamilyTreasury(profileId: string): Promise<{
     ...line,
     profile_name: profileMap.get(line.profile_id) ?? "Perfil",
   }));
+  const groups = Array.from(
+    lines
+      .reduce((map, line) => {
+        const current = map.get(line.profile_id) ?? {
+          profileId: line.profile_id,
+          profileName: line.profile_name,
+          totalCents: 0,
+          lines: [] as TreasuryLine[],
+        };
+        current.totalCents += line.amount_cents;
+        current.lines.push(line);
+        map.set(line.profile_id, current);
+        return map;
+      }, new Map<string, { profileId: string; profileName: string; totalCents: number; lines: TreasuryLine[] }>())
+      .values(),
+  ).sort((a, b) => a.profileName.localeCompare(b.profileName, "es"));
 
   return {
+    canView: true,
     totalPendingCents: lines.reduce((acc, line) => acc + line.amount_cents, 0),
     lines,
+    groups,
   };
 }
 

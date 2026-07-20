@@ -120,8 +120,10 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   const statsMap = new Map(statsList.map((s) => [s.player_id, s]));
 
-  const myCallup = callups.find((c) => c.player_id === ctx.activeProfile.id);
-  const myStatus: RsvpStatus | null = myCallup ? (myCallup.status as RsvpStatus) : null;
+  const linkedProfileIds = new Set(ctx.linkedProfiles.map((profile) => profile.id));
+  const managedCallups = callups.filter(
+    (callup) => callup.player_id === ctx.ownProfile.id || linkedProfileIds.has(callup.player_id),
+  );
 
   const isPlayed = match.status === "played";
 
@@ -180,20 +182,51 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </section>
         ) : null}
         {/* RSVP (only upcoming matches) */}
-        {myStatus && (match.status === "scheduled" || match.status === "in_progress") && (
-          <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-5">
-            <h2 className="text-ink-900 flex items-center gap-2 text-sm font-black">
-              <UserCheck className="text-pool-blue h-5 w-5" />
-              Confirmar asistencia
-              {myCallup?.cap_number != null && (
-                <span className="text-pool-deep bg-pool-foam ml-auto rounded-lg px-2.5 py-0.5 font-mono text-sm font-bold">
-                  #{myCallup.cap_number}
-                </span>
-              )}
-            </h2>
-            <RsvpButtons matchId={match.id} currentStatus={myStatus} />
-          </section>
-        )}
+        {managedCallups.length > 0 &&
+          (match.status === "scheduled" || match.status === "in_progress") && (
+            <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-4 rounded-2xl border p-5">
+              <h2 className="text-ink-900 flex items-center gap-2 text-sm font-black">
+                <UserCheck className="text-pool-blue h-5 w-5" />
+                {ctx.linkedProfiles.length > 0
+                  ? "Asistencia de tu familia"
+                  : "Confirmar asistencia"}
+              </h2>
+              <div className="flex flex-col gap-4">
+                {managedCallups.map((callup, index) => {
+                  const isLinkedChild = linkedProfileIds.has(callup.player_id);
+                  return (
+                    <div
+                      key={callup.player_id}
+                      className={cn(
+                        "flex flex-col gap-2",
+                        index > 0 && "border-ink-200 border-t pt-4",
+                      )}
+                    >
+                      {isLinkedChild ? (
+                        <div className="flex items-center gap-2">
+                          <Avatar src={callup.photo_url} name={callup.full_name} size={32} />
+                          <span className="text-pool-deep min-w-0 flex-1 truncate text-sm font-extrabold">
+                            {callup.full_name}
+                          </span>
+                          {callup.cap_number != null ? (
+                            <span className="text-pool-deep bg-pool-foam rounded-lg px-2.5 py-0.5 font-mono text-sm font-bold">
+                              #{callup.cap_number}
+                            </span>
+                          ) : null}
+                        </div>
+                      ) : null}
+                      <RsvpButtons
+                        matchId={match.id}
+                        currentStatus={callup.status as RsvpStatus}
+                        playerId={isLinkedChild ? callup.player_id : undefined}
+                        playerName={isLinkedChild ? callup.full_name.split(/\s+/)[0] : undefined}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
         {/* MVP (only played matches) */}
         {isPlayed && mvp && (
@@ -249,7 +282,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {callups.map((c) => {
                 const stats = statsMap.get(c.player_id);
-                const isConfirmed = c.status === "confirmed" || c.status === "called";
+                const isConfirmed = c.status === "confirmed";
                 const isDeclined =
                   c.status === "declined" || c.status === "withdrawn" || c.status === "no_show";
 

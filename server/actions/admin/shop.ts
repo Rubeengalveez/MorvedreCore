@@ -16,6 +16,7 @@ import {
   upsertShopProductSchema,
 } from "@/lib/domain/admin-schemas";
 import {
+  canManagerTransitionShopOrder,
   isValidShopOrderStatus,
   isMissingShopPersonalizationSchema,
   parseProduct,
@@ -24,6 +25,7 @@ import {
 } from "@/lib/domain/shop";
 import { validateImageFile } from "@/lib/uploads/images";
 import { normalizeSpanishPhone } from "@/lib/domain/phone";
+import { requiresGuardianApproval } from "@/lib/domain/family";
 
 function toError(e: unknown): string {
   if (e instanceof z.ZodError) return e.issues[0]?.message ?? "Datos inválidos.";
@@ -268,6 +270,21 @@ export async function updateShopOrderStatus(input: {
 
   const me = await requireSessionProfile();
   const admin = createAdminClient();
+  const { data: currentOrder, error: currentOrderError } = await admin
+    .from("shop_orders")
+    .select("status")
+    .eq("id", parsed.data.order_id)
+    .maybeSingle();
+  if (currentOrderError || !currentOrder) {
+    throw new Error("No pudimos encontrar el pedido.");
+  }
+  if (!canManagerTransitionShopOrder(currentOrder.status, parsed.data.status)) {
+    throw new Error(
+      currentOrder.status === "pending_parent"
+        ? "La familia debe aprobar este pedido antes de que la tienda pueda gestionarlo."
+        : "Ese cambio de estado no está permitido.",
+    );
+  }
 
   const now = new Date().toISOString();
   const updates: Record<string, unknown> = {
@@ -281,11 +298,17 @@ export async function updateShopOrderStatus(input: {
   if (parsed.data.status === "delivered") updates.delivered_at = now;
   if (parsed.data.status === "cancelled") updates.cancelled_at = now;
 
-  const { error } = await admin
+  const { data: updatedOrder, error } = await admin
     .from("shop_orders")
     .update(updates as never)
-    .eq("id", parsed.data.order_id);
+    .eq("id", parsed.data.order_id)
+    .eq("status", currentOrder.status)
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error("No pudimos actualizar el pedido: " + error.message);
+  if (!updatedOrder) {
+    throw new Error("El pedido ha cambiado mientras lo gestionabas. Actualiza la página.");
+  }
   revalidatePath("/admin/shop");
   revalidatePath(`/shop/orders/${parsed.data.order_id}`);
   revalidatePath("/dashboard");
@@ -361,7 +384,7 @@ export async function createShopOrder(input: {
   const admin = createAdminClient();
   const { data: requester, error: requesterError } = await admin
     .from("profiles")
-    .select("phone_e164")
+    .select("phone_e164, birth_year")
     .eq("id", me.id)
     .maybeSingle();
   if (requesterError || !requester) {
@@ -379,15 +402,24 @@ export async function createShopOrder(input: {
       .eq("id", me.id);
     if (phoneError) throw new Error("No pudimos guardar tu teléfono de contacto.");
   }
-  const { count: parentCount } = await admin
-    .from("parent_child_links")
-    .select("parent_profile_id", { count: "exact", head: true })
-    .eq("child_profile_id", me.id);
+  const needsGuardian = requiresGuardianApproval(requester.birth_year);
+  if (needsGuardian) {
+    const { count: guardianCount } = await admin
+      .from("parent_child_links")
+      .select("parent_profile_id", { count: "exact", head: true })
+      .eq("child_profile_id", me.id);
+    if ((guardianCount ?? 0) === 0) {
+      throw new Error(
+        "Necesitas tener un tutor vinculado antes de enviar un pedido. Pide ayuda a un administrador.",
+      );
+    }
+  }
   const { data: order, error: oErr } = await admin
     .from("shop_orders")
     .insert({
       requested_by: me.id,
-      status: (parentCount ?? 0) > 0 ? "pending_parent" : "pending_admin",
+      status: needsGuardian ? "pending_parent" : "pending_admin",
+      guardian_approval_required: needsGuardian,
       total_cents: cart.total_cents!,
       currency: "EUR",
       notes: parsed.data.notes ?? null,
@@ -417,8 +449,11 @@ export async function createShopOrder(input: {
     throw new Error("No pudimos guardar los productos del pedido: " + itemsResult.error.message);
   }
 
-  await notifyParentsOfOrder(order.id, me.id, products);
-  await notifyShopManagerOfOrder(order.id, me.id, contactPhone, cart.lines!, products);
+  if (needsGuardian) {
+    await notifyParentsOfOrder(order.id, me.id, products);
+  } else {
+    await notifyShopManagerOfOrder(order.id, me.id, contactPhone, cart.lines!, products);
+  }
 
   revalidatePath("/shop");
   revalidatePath("/shop/orders");
@@ -508,29 +543,23 @@ export async function decideShopOrder(input: {
   const supabase = await createClient();
   const { data: order } = await supabase
     .from("shop_orders")
-    .select("requested_by, status")
+    .select("requested_by, status, contact_phone_e164")
     .eq("id", parsed.data.order_id)
     .maybeSingle();
   if (!order || order.status !== "pending_parent") {
     throw new Error("El pedido no existe o ya no está pendiente.");
   }
 
-  const [{ data: parentLink }, { data: adminRole }] = await Promise.all([
+  const [{ data: parentLink }, { data: parentProfile }] = await Promise.all([
     supabase
       .from("parent_child_links")
       .select("parent_profile_id")
       .eq("parent_profile_id", me.id)
       .eq("child_profile_id", order.requested_by)
       .maybeSingle(),
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("profile_id", me.id)
-      .eq("role", "admin")
-      .is("scope_team_id", null)
-      .maybeSingle(),
+    supabase.from("profiles").select("birth_year").eq("id", me.id).maybeSingle(),
   ]);
-  if (!parentLink && !adminRole) {
+  if (!parentLink || !parentProfile || requiresGuardianApproval(parentProfile.birth_year)) {
     throw new Error("Solo su familia puede decidir este pedido.");
   }
 
@@ -546,15 +575,42 @@ export async function decideShopOrder(input: {
   };
   if (parsed.data.decision === "reject") updates.cancelled_at = now;
 
-  const { error } = await admin
+  const { data: updatedOrder, error } = await admin
     .from("shop_orders")
     .update(updates as never)
     .eq("id", parsed.data.order_id)
-    .eq("status", "pending_parent");
+    .eq("status", "pending_parent")
+    .select("id")
+    .maybeSingle();
   if (error) throw new Error("No pudimos actualizar el pedido: " + error.message);
+  if (!updatedOrder) throw new Error("Este pedido ya lo ha decidido otra persona de la familia.");
+
+  if (parsed.data.decision === "approve") {
+    const { data: itemRows } = await admin
+      .from("shop_order_items")
+      .select("product_id, size, personalization, quantity")
+      .eq("order_id", parsed.data.order_id);
+    const productIds = Array.from(new Set((itemRows ?? []).map((item) => item.product_id)));
+    const { data: productRows } = productIds.length
+      ? await admin.from("shop_products").select("id, title").in("id", productIds)
+      : { data: [] as Array<{ id: string; title: string }> };
+    await notifyShopManagerOfOrder(
+      parsed.data.order_id,
+      order.requested_by,
+      order.contact_phone_e164 ?? "Sin teléfono",
+      (itemRows ?? []).map((item) => ({
+        product_id: item.product_id,
+        size: item.size,
+        personalization: item.personalization,
+        quantity: item.quantity,
+      })),
+      productRows ?? [],
+    );
+  }
 
   revalidatePath(`/shop/orders/${parsed.data.order_id}`);
   revalidatePath("/shop/parents/pending");
+  revalidatePath("/profile");
   revalidatePath("/admin/shop");
 }
 

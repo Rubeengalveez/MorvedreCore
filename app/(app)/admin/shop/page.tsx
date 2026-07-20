@@ -41,13 +41,7 @@ export default async function AdminShopPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 
-  const kanbanStatuses: ShopOrderStatus[] = [
-    "pending_parent",
-    "pending_admin",
-    "ordered",
-    "received",
-    "delivered",
-  ];
+  const kanbanStatuses: ShopOrderStatus[] = ["pending_admin", "ordered", "received", "delivered"];
   const orders = await getShopOrdersForKanban(kanbanStatuses);
 
   const ordersByStatus = new Map<ShopOrderStatus, ShopOrder[]>();
@@ -101,7 +95,7 @@ export default async function AdminShopPage() {
       </ol>
 
       <div className="flex flex-col gap-3 pb-3 md:flex-row md:overflow-x-auto">
-        {SHOP_KANBAN_COLUMNS.map((col) => {
+        {SHOP_KANBAN_COLUMNS.filter((col) => col.id !== "pending_parent").map((col) => {
           const list = ordersByStatus.get(col.id) ?? [];
           const Icon = STATUS_ICON[col.id];
           return (

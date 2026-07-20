@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Target,
   Trophy,
-  UsersRound,
 } from "lucide-react";
 
 import { PageShell } from "@/components/ui/page-shell";
@@ -27,6 +26,7 @@ import { getCurrentSeason } from "@/server/queries/seasons";
 import { getNewsFeed, type NewsPostWithReactions } from "@/server/queries/news";
 import { getStreaksForPlayer, type ActiveStreakRow } from "@/server/queries/streaks";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
+import { getFamilyOverview, type FamilyOverview } from "@/server/queries/family";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -65,11 +65,17 @@ export default async function DashboardPage() {
   }
 
   const audience = await getDashboardAudience(activeProfile.id, season.id);
+  const family =
+    linkedProfiles.length > 0 ? await getFamilyOverview(ctx.ownProfile.id, season.id) : null;
   const isPlayer = audience.player_team_ids.length > 0;
   const isCoach = audience.staff_teams.length > 0;
   const isAdmin = audience.roles.includes("admin");
   const teamIds = Array.from(
-    new Set([...audience.player_team_ids, ...audience.staff_teams.map((team) => team.id)]),
+    new Set([
+      ...audience.player_team_ids,
+      ...audience.staff_teams.map((team) => team.id),
+      ...(family?.team_ids ?? []),
+    ]),
   );
   const supabase = await createClient();
 
@@ -97,15 +103,19 @@ export default async function DashboardPage() {
   const activeStreaks = streaks.filter((streak) => streak.current_value > 0).slice(0, 3);
   const newsItems = [...newsFeed.pinned, ...newsFeed.recent].slice(0, 2);
   const contextLabel =
-    isPlayer && isCoach
-      ? "Jugador · entrenador"
-      : isCoach
-        ? "Entrenador"
-        : isPlayer
-          ? "Jugador"
-          : isAdmin
-            ? "Gestión del club"
-            : "Club";
+    family && family.members.length > 0
+      ? isPlayer || isCoach
+        ? "Familia · club"
+        : "Familia"
+      : isPlayer && isCoach
+        ? "Jugador · entrenador"
+        : isCoach
+          ? "Entrenador"
+          : isPlayer
+            ? "Jugador"
+            : isAdmin
+              ? "Gestión del club"
+              : "Club";
   return (
     <PageShell width="md" className="gap-6 pb-8">
       <HomeHero firstName={firstName} now={now} contextLabel={contextLabel} />
@@ -126,9 +136,7 @@ export default async function DashboardPage() {
 
           {isPlayer && playerStatsRes.data ? <SeasonPanel stats={playerStatsRes.data} /> : null}
 
-          {!isPlayer && !isCoach && linkedProfiles.length > 0 ? (
-            <FamilyPanel profiles={linkedProfiles} />
-          ) : null}
+          {family && family.members.length > 0 ? <FamilyPanel family={family} /> : null}
         </div>
 
         <aside className="flex min-w-0 flex-col gap-6">
@@ -220,9 +228,10 @@ function NextTurn({ event, now }: { event: DashboardWeekEvent; now: Date }) {
   const date = new Date(event.scheduled_at);
   const isMatch = event.kind === "match";
   const title = isMatch ? event.title.replace(/^Partido contra /, "Contra ") : "Entrenamiento";
-  const timeStr = event.kind === "training" && event.duration_minutes
-    ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
-    : timeFormatter.format(date);
+  const timeStr =
+    event.kind === "training" && event.duration_minutes
+      ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
+      : timeFormatter.format(date);
   return (
     <section
       aria-labelledby="next-turn-heading"
@@ -258,8 +267,7 @@ function NextTurn({ event, now }: { event: DashboardWeekEvent; now: Date }) {
             {title}
           </h2>
           <p className="text-ink-600 mt-2 text-sm font-semibold">
-            {event.team_label} · {timeStr} ·{" "}
-            {formatRelativeUpcoming(event.scheduled_at, now)}
+            {event.team_label} · {timeStr} · {formatRelativeUpcoming(event.scheduled_at, now)}
           </p>
           <Link
             href={isMatch ? (`/matches/${event.id}` as Route) : ("/calendar" as Route)}
@@ -283,9 +291,10 @@ function WeekAgenda({ events }: { events: DashboardWeekEvent[] }) {
         {events.map((event) => {
           const date = new Date(event.scheduled_at);
           const isMatch = event.kind === "match";
-          const timeStr = event.kind === "training" && event.duration_minutes
-            ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
-            : timeFormatter.format(date);
+          const timeStr =
+            event.kind === "training" && event.duration_minutes
+              ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
+              : timeFormatter.format(date);
           return (
             <Link
               key={`${event.kind}-${event.id}`}
@@ -441,29 +450,45 @@ function SeasonPanel({
   );
 }
 
-function FamilyPanel({ profiles }: { profiles: Array<{ id: string; full_name: string }> }) {
+function FamilyPanel({ family }: { family: FamilyOverview }) {
+  const memberCount = family.members.length;
+
   return (
     <section aria-labelledby="family-heading">
-      <SectionHeading eyebrow="Perfiles vinculados" title="Tu familia" />
-      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 rounded-2xl border p-4">
-        <div className="flex items-start gap-3">
-          <span className="bg-pool-foam text-pool-blue flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-            <UsersRound className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <div className="min-w-0">
-            <p className="text-pool-deep text-base font-extrabold">
-              {profiles.length} {profiles.length === 1 ? "perfil vinculado" : "perfiles vinculados"}
-            </p>
-            <p className="text-ink-600 mt-1 text-sm leading-relaxed">
-              Cambia al perfil de cada jugador para ver su agenda, rachas y equipo.
-            </p>
-          </div>
+      <SectionHeading eyebrow="Todo en una vista" title="Tu familia" />
+      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border">
+        <div className="divide-ink-200 divide-y">
+          {family.members.map((member) => (
+            <div key={member.id} className="flex min-h-16 items-center gap-3 px-4 py-3">
+              <span
+                className="h-9 w-1.5 shrink-0 rounded-full"
+                style={{
+                  backgroundColor:
+                    member.team_color ?? member.teams[0]?.color ?? "var(--pool-blue)",
+                }}
+                aria-hidden="true"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="text-pool-deep truncate text-sm font-extrabold">{member.full_name}</p>
+                <p className="text-ink-500 truncate text-xs font-semibold">
+                  {member.teams.map((team) => team.label).join(" · ") || "Sin equipo"}
+                </p>
+              </div>
+              {member.pending_order_count > 0 ? (
+                <span className="bg-ball-gold/20 text-pool-deep rounded-full px-2.5 py-1 text-xs font-extrabold">
+                  {member.pending_order_count}{" "}
+                  {member.pending_order_count === 1 ? "pedido" : "pedidos"}
+                </span>
+              ) : null}
+            </div>
+          ))}
         </div>
         <Link
           href={"/profile" as Route}
-          className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue mt-4 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue m-3 inline-flex min-h-12 w-[calc(100%-1.5rem)] items-center justify-center gap-2 rounded-xl px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
-          Gestionar perfiles <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          {memberCount === 1 ? "Ver perfil y gestiones" : "Ver familia y gestiones"}
+          <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
     </section>

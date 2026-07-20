@@ -369,7 +369,7 @@ function PremiumRsvpSection({
     });
   }
 
-  const isConfirmed = currentStatus === "confirmed" || currentStatus === "called";
+  const isConfirmed = currentStatus === "confirmed";
   const isDeclined =
     currentStatus === "declined" || currentStatus === "withdrawn" || currentStatus === "no_show";
 

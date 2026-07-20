@@ -494,6 +494,7 @@ export async function updateCallup(
 export async function setMyCallupStatus(input: {
   match_id: string;
   status: "confirmed" | "declined" | "withdrawn";
+  player_id?: string;
 }): Promise<CallupRow> {
   const me = await loadCurrentUserProfile();
 
@@ -501,16 +502,32 @@ export async function setMyCallupStatus(input: {
     .object({
       match_id: z.string().uuid("Partido inválido."),
       status: z.enum(["confirmed", "declined", "withdrawn"]),
+      player_id: z.string().uuid("Jugador inválido.").optional(),
     })
     .safeParse({
       match_id: input.match_id,
       status: input.status,
+      player_id: input.player_id,
     });
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
   const supabase = await createClient();
+  const playerId = parsed.data.player_id ?? me.id;
+  if (!me.isAdmin && playerId !== me.id) {
+    const { data: familyLink, error: familyLinkError } = await supabase
+      .from("parent_child_links")
+      .select("child_profile_id")
+      .eq("parent_profile_id", me.id)
+      .eq("child_profile_id", playerId)
+      .maybeSingle();
+    throwIfError(familyLinkError, "No pudimos comprobar el vínculo familiar.");
+    if (!familyLink) {
+      throw new Error("Solo puedes responder por ti o por un menor vinculado a tu familia.");
+    }
+  }
+
   const { data: match, error: matchError } = await supabase
     .from("matches")
     .select("id, status, scheduled_at")
@@ -537,7 +554,7 @@ export async function setMyCallupStatus(input: {
     .from("match_callups")
     .update(update)
     .eq("match_id", parsed.data.match_id)
-    .eq("player_id", me.id)
+    .eq("player_id", playerId)
     .select("*")
     .single();
 

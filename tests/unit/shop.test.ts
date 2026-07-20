@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canManagerTransitionShopOrder,
   formatCents,
   isMissingShopPersonalizationSchema,
   isValidShopOrderStatus,
@@ -238,5 +239,20 @@ describe("isValidShopOrderStatus", () => {
   it("rechaza otros valores", () => {
     expect(isValidShopOrderStatus("foo")).toBe(false);
     expect(isValidShopOrderStatus(null)).toBe(false);
+  });
+});
+
+describe("canManagerTransitionShopOrder", () => {
+  it("impide que la tienda apruebe una solicitud reservada a la familia", () => {
+    expect(canManagerTransitionShopOrder("pending_parent", "pending_admin")).toBe(false);
+    expect(canManagerTransitionShopOrder("pending_parent", "ordered")).toBe(false);
+    expect(canManagerTransitionShopOrder("pending_parent", "cancelled")).toBe(true);
+  });
+
+  it("solo avanza los pedidos operativos en secuencia", () => {
+    expect(canManagerTransitionShopOrder("pending_admin", "ordered")).toBe(true);
+    expect(canManagerTransitionShopOrder("ordered", "received")).toBe(true);
+    expect(canManagerTransitionShopOrder("received", "delivered")).toBe(true);
+    expect(canManagerTransitionShopOrder("pending_admin", "delivered")).toBe(false);
   });
 });

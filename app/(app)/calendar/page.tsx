@@ -54,15 +54,38 @@ export default async function CalendarPage() {
   const supabase = await createClient();
   const [ctx, season] = await Promise.all([getActiveProfileContext(), getCurrentSeason()]);
   if (!ctx) redirect("/login");
-  const { activeProfile } = ctx;
+  const { activeProfile, linkedProfiles, ownProfile } = ctx;
 
-  const calendarTeams: CalendarViewTeam[] = season
-    ? (await getTeamsForProfileInSeason(activeProfile.id, season.id)).map((t) => ({
-        id: t.id,
-        label: t.label,
-        color: t.color,
-      }))
+  const profileTeams = season
+    ? await Promise.all(
+        [ownProfile, ...linkedProfiles].map(async (profile) => ({
+          profile,
+          teams: await getTeamsForProfileInSeason(profile.id, season.id),
+        })),
+      )
     : [];
+  const ownTeamIds = new Set(profileTeams[0]?.teams.map((team) => team.id) ?? []);
+  const teamMap = new Map<string, CalendarViewTeam & { memberNames: string[] }>();
+  for (const { profile, teams } of profileTeams) {
+    for (const team of teams) {
+      const current = teamMap.get(team.id) ?? {
+        id: team.id,
+        label: team.label,
+        color: team.color,
+        memberNames: [],
+      };
+      if (profile.id !== ownProfile.id) {
+        current.memberNames.push(profile.full_name.split(/\s+/)[0] ?? profile.full_name);
+      }
+      teamMap.set(team.id, current);
+    }
+  }
+  const calendarTeams: CalendarViewTeam[] = Array.from(teamMap.values()).map((team) => ({
+    id: team.id,
+    label:
+      team.memberNames.length > 0 ? `${team.label} · ${team.memberNames.join(" y ")}` : team.label,
+    color: team.color,
+  }));
 
   const teamIds = calendarTeams.map((t) => t.id);
   const ym = currentYearMonth();
@@ -118,7 +141,11 @@ export default async function CalendarPage() {
       <AppPageHero
         eyebrow="Tu agenda deportiva"
         title="Tu mes"
-        description="Entrenamientos, partidos y disponibilidad en una sola vista."
+        description={
+          linkedProfiles.length > 0
+            ? "Los entrenamientos y partidos de toda tu familia, juntos."
+            : "Entrenamientos, partidos y disponibilidad en una sola vista."
+        }
         icon={<Silbato className="h-7 w-7 shrink-0" accent="currentColor" />}
       />
 
@@ -138,7 +165,7 @@ export default async function CalendarPage() {
           isAdmin={isAdmin}
           activeProfileId={activeProfile.id}
           userAttendanceBySession={userAttendanceBySession}
-          showAttendance
+          showAttendance={ownTeamIds.size > 0}
         />
       )}
 

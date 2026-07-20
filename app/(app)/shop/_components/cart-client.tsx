@@ -27,9 +27,10 @@ import { Input } from "@/components/ui/input";
 export interface CartClientProps {
   products: ShopProduct[];
   initialPhone: string | null;
+  requiresGuardian: boolean;
 }
 
-export function CartClient({ products, initialPhone }: CartClientProps) {
+export function CartClient({ products, initialPhone, requiresGuardian }: CartClientProps) {
   const router = useRouter();
   const cart = useShopCart();
   const [notes, setNotes] = useState("");
@@ -140,10 +141,12 @@ export function CartClient({ products, initialPhone }: CartClientProps) {
           <Check className="h-7 w-7" aria-hidden="true" />
         </span>
         <h2 className="font-display text-pool-deep mt-4 text-2xl font-extrabold">
-          Solicitud enviada
+          {requiresGuardian ? "Enviado a tu familia" : "Solicitud enviada"}
         </h2>
         <p className="text-ink-600 mt-2 max-w-sm text-base leading-relaxed">
-          Te llevamos al seguimiento del pedido…
+          {requiresGuardian
+            ? "La tienda no lo recibirá hasta que una persona adulta de tu familia lo apruebe."
+            : "Te llevamos al seguimiento del pedido…"}
         </p>
       </div>
     );
@@ -339,8 +342,10 @@ export function CartClient({ products, initialPhone }: CartClientProps) {
                 </span>
               </div>
               <p className="text-paper/70 mt-3 text-sm leading-relaxed">
-                {cart.items.length} {cart.items.length === 1 ? "producto" : "productos"}. Se
-                guardará en Mis pedidos y la encargada recibirá el aviso.
+                {cart.items.length} {cart.items.length === 1 ? "producto" : "productos"}.{" "}
+                {requiresGuardian
+                  ? "Primero lo revisará tu familia; todavía no se enviará a la tienda."
+                  : "Se guardará en Mis pedidos y la encargada recibirá el aviso."}
               </p>
             </>
           ) : (

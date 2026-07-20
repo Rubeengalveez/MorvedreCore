@@ -3,6 +3,7 @@ import { UsersRound } from "lucide-react";
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/server/actions/admin/_helpers";
+import { canViewPersonalFinances, requiresGuardianApproval } from "@/lib/domain/family";
 
 import {
   FamilyFormSheet,
@@ -65,8 +66,8 @@ async function loadData(): Promise<{
 
   return {
     rows,
-    parents: profiles,
-    children: profiles,
+    parents: profiles.filter((profile) => canViewPersonalFinances(profile.birth_year)),
+    children: profiles.filter((profile) => requiresGuardianApproval(profile.birth_year)),
   };
 }
 

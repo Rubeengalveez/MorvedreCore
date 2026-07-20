@@ -125,6 +125,42 @@ async function main() {
     return;
   }
 
+  const currentYear = new Date().getFullYear();
+  const { data: requesterProfiles, error: requesterError } = await admin
+    .from("profiles")
+    .select("id, birth_year")
+    .in("id", playerIds);
+  if (requesterError) throw requesterError;
+
+  const { data: guardianLinks, error: guardianLinksError } = await admin
+    .from("parent_child_links")
+    .select("parent_profile_id, child_profile_id")
+    .in("child_profile_id", playerIds);
+  if (guardianLinksError) throw guardianLinksError;
+
+  const guardiansByChild = new Map();
+  for (const link of guardianLinks ?? []) {
+    const guardians = guardiansByChild.get(link.child_profile_id) ?? [];
+    guardians.push(link.parent_profile_id);
+    guardiansByChild.set(link.child_profile_id, guardians);
+  }
+
+  const adultRequesterIds = (requesterProfiles ?? [])
+    .filter((profile) => profile.birth_year !== null && profile.birth_year <= currentYear - 18)
+    .map((profile) => profile.id);
+  const linkedMinorRequesterIds = (requesterProfiles ?? [])
+    .filter(
+      (profile) =>
+        (profile.birth_year === null || profile.birth_year > currentYear - 18) &&
+        guardiansByChild.has(profile.id),
+    )
+    .map((profile) => profile.id);
+  const eligibleRequesterIds = [...adultRequesterIds, ...linkedMinorRequesterIds];
+
+  if (adultRequesterIds.length === 0 || linkedMinorRequesterIds.length === 0) {
+    throw new Error("El seed de tienda necesita compradores adultos y menores vinculados.");
+  }
+
   const productIds = [];
   console.log("[shop] Creando 12 productos...");
   for (const p of PRODUCTS) {
@@ -184,7 +220,14 @@ async function main() {
   for (const [state, count] of Object.entries(stateDistribution)) {
     for (let i = 0; i < count; i++) {
       const orderId = randomUUID();
-      const playerId = playerIds[Math.floor(rand() * playerIds.length)];
+      const requesterPool =
+        state === "pending_parent" || state === "rejected"
+          ? linkedMinorRequesterIds
+          : state === "pending_admin"
+            ? adultRequesterIds
+            : eligibleRequesterIds;
+      const playerId = requesterPool[Math.floor(rand() * requesterPool.length)];
+      const guardianId = guardiansByChild.get(playerId)?.[0] ?? null;
 
       const numItems = randInt(1, 3);
       const items = [];
@@ -255,6 +298,7 @@ async function main() {
         {
           id: orderId,
           requested_by: playerId,
+          approved_by: guardianId && state !== "pending_parent" ? guardianId : null,
           status: state,
           total_cents: totalCents,
           currency: "EUR",

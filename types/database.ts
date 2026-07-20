@@ -1288,6 +1288,7 @@ export type Database = {
           contact_phone_e164: string | null;
           currency: string;
           delivered_at: string | null;
+          guardian_approval_required: boolean;
           id: string;
           managed_by: string | null;
           notes: string | null;
@@ -1308,6 +1309,7 @@ export type Database = {
           contact_phone_e164?: string | null;
           currency?: string;
           delivered_at?: string | null;
+          guardian_approval_required?: boolean;
           id?: string;
           managed_by?: string | null;
           notes?: string | null;
@@ -1328,6 +1330,7 @@ export type Database = {
           contact_phone_e164?: string | null;
           currency?: string;
           delivered_at?: string | null;
+          guardian_approval_required?: boolean;
           id?: string;
           managed_by?: string | null;
           notes?: string | null;

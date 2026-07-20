@@ -15,7 +15,7 @@ export interface AdminKanbanCardProps {
 }
 
 const NEXT_STATUS: Record<ShopOrderStatus, ShopOrderStatus | null> = {
-  pending_parent: "pending_admin",
+  pending_parent: null,
   pending_admin: "ordered",
   ordered: "received",
   received: "delivered",

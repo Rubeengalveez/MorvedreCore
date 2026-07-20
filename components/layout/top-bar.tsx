@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/brand/logo";
 import { Megafone } from "@/components/brand/pictograms";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
-import { type ProfileSummary } from "@/components/layout/profile-switcher";
+import type { ProfileSummary } from "@/server/queries/profile-types";
 import { Avatar } from "@/components/ui/avatar";
 import { CATEGORY_COLORS, safeInferCategory } from "@/lib/domain/categories";
 import { getUnreadNotificationsCount } from "@/server/queries/notifications";
@@ -15,19 +15,17 @@ const utilityActionClass =
   "touch-manipulation text-paper/90 hover:text-paper focus-visible:ring-paper/80 relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-200 hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none [-webkit-tap-highlight-color:transparent]";
 
 export interface TopBarProps {
-  ownProfile: ProfileSummary;
-  activeProfile: ProfileSummary;
-  linkedProfiles: ProfileSummary[];
+  profile: ProfileSummary;
 }
 
-export async function TopBar({ ownProfile, activeProfile }: TopBarProps) {
+export async function TopBar({ profile }: TopBarProps) {
   const supabase = await createClient();
   const [unread, rolesData, permissionsData] = await Promise.all([
-    getUnreadNotificationsCount(activeProfile.id).catch(() => 0),
+    getUnreadNotificationsCount(profile.id).catch(() => 0),
     supabase
       .from("user_roles")
       .select("role")
-      .eq("profile_id", ownProfile.id)
+      .eq("profile_id", profile.id)
       .then(
         (res: { data: Array<{ role: string }> | null }) => res,
         () => ({ data: [] as Array<{ role: string }> }),
@@ -35,7 +33,7 @@ export async function TopBar({ ownProfile, activeProfile }: TopBarProps) {
     supabase
       .from("profile_permissions")
       .select("permission")
-      .eq("profile_id", ownProfile.id)
+      .eq("profile_id", profile.id)
       .then(
         (res: { data: Array<{ permission: string }> | null }) => res,
         () => ({ data: [] as Array<{ permission: string }> }),
@@ -46,12 +44,12 @@ export async function TopBar({ ownProfile, activeProfile }: TopBarProps) {
   const isPrivileged = userRoles.includes("admin") || (permissionsData.data?.length ?? 0) > 0;
 
   const category =
-    activeProfile.birth_year == null
+    profile.birth_year == null
       ? null
-      : safeInferCategory(activeProfile.birth_year, new Date().getFullYear());
+      : safeInferCategory(profile.birth_year, new Date().getFullYear());
   const teamColor = category
     ? CATEGORY_COLORS[category]
-    : (activeProfile.team_color ?? "var(--pool-blue)");
+    : (profile.team_color ?? "var(--pool-blue)");
 
   return (
     <header
@@ -116,8 +114,8 @@ export async function TopBar({ ownProfile, activeProfile }: TopBarProps) {
             className="focus-visible:ring-paper/80 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-[background-color,transform] duration-200 [-webkit-tap-highlight-color:transparent] hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none"
           >
             <Avatar
-              src={activeProfile.photo_url}
-              name={activeProfile.full_name}
+              src={profile.photo_url}
+              name={profile.full_name}
               size={36}
               teamColor={teamColor}
             />

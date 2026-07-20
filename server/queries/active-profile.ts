@@ -1,11 +1,8 @@
 import { cache } from "react";
-import { cookies } from "next/headers";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { ACTIVE_COOKIE, type ProfileSummary } from "./profile-types";
-
-export { ACTIVE_COOKIE };
+import { type ProfileSummary } from "./profile-types";
 export type { ProfileSummary } from "./profile-types";
 
 export interface ActiveProfileContext {
@@ -52,25 +49,6 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
 
   if (!own) return null;
 
-  const cookieStore = await cookies();
-  const activeId = cookieStore.get(ACTIVE_COOKIE)?.value ?? null;
-
-  let active: ProfileSummary = own;
-  if (activeId && activeId !== own.id) {
-    const { data: link } = await admin
-      .from("parent_child_links")
-      .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`)
-      .eq("parent_profile_id", own.id)
-      .eq("child_profile_id", activeId)
-      .maybeSingle();
-
-    const child = extractJoined(link?.profiles);
-
-    if (isProfileRow(child) && child.is_active) {
-      active = child;
-    }
-  }
-
   const { data: linkRows } = await admin
     .from("parent_child_links")
     .select(`profiles!parent_child_links_child_profile_id_fkey(${PROFILE_SELECT})`)
@@ -86,5 +64,7 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
     }
   }
 
-  return { ownProfile: own, activeProfile: active, linkedProfiles: linked };
+  linked.sort((a, b) => a.full_name.localeCompare(b.full_name, "es"));
+
+  return { ownProfile: own, activeProfile: own, linkedProfiles: linked };
 });

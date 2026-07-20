@@ -617,3 +617,18 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Una lista futura puede consultarse para comprobar la plantilla, pero permanece en gris y sin controles de asistencia.
 - La asistencia se habilita al comenzar el día del entrenamiento en `Europe/Madrid`, sin esperar a la hora concreta. Las listas de días anteriores siguen siendo editables para corregir errores.
 - La restricción se aplica en interfaz, Server Actions y base de datos para impedir que una petición directa registre asistencia futura.
+
+## 2026-07-20 - Experiencia familiar sin cambio de perfil
+
+- La cuenta del tutor conserva siempre su propia identidad. Los hijos vinculados dejan de funcionar como perfiles que se suplantan y se presentan juntos en un panel familiar con equipo, próximo compromiso, estadísticas y gestiones pendientes.
+- El diseño familiar se optimiza para uno y dos hijos: con uno evita huecos y simplifica las acciones; con dos conserva una comparación directa y compacta. Un tercer hijo sigue siendo compatible mediante una cabecera adaptable y tarjetas verticales, sin reducir objetivos táctiles ni ocultar gestiones.
+- Los nombres, la cantidad de menores y las acciones se expresan siempre con texto visible y lenguaje directo. Los accesos familiares mantienen objetivos táctiles de al menos 48 px y no dependen de iconos, gestos o cambios de perfil que puedan resultar ambiguos.
+- El inicio y el calendario de un tutor agregan automáticamente la actividad de todos sus hijos. Los filtros de equipo indican a qué hijo corresponde cada categoría.
+- La mayoría de edad se deriva de `birth_year` para el año en curso. Un año desconocido se trata de forma conservadora como menor en tienda y no habilita información financiera.
+- Un pedido de menor exige al menos un tutor vinculado y queda en `pending_parent`. La tienda no recibe correo ni aviso hasta que un tutor lo aprueba; los pedidos de adultos pasan directamente a `pending_admin`.
+- El tutor puede aprobar o rechazar desde la bandeja familiar o desde el detalle enlazado por la notificación. El menor conserva acceso al estado de su propio pedido.
+- En el detalle de un partido, el tutor responde por cada hijo convocado de forma independiente. No cambia de perfil: la autorización se limita al menor vinculado tanto en Server Action como en RLS.
+- Los menores no pueden leer importes de tesorería, ni siquiera consultando directamente la Data API. Los adultos ven sus importes y los tutores ven el total familiar agrupado por persona.
+- Las migraciones `20260720185541_family_guardian_experience.sql`, `20260720195234_family_function_privileges.sql`, `20260720200228_family_link_integrity.sql`, `20260720203127_family_guardian_sports_management.sql` y `20260720204711_family_callup_column_integrity.sql` registran si cada pedido necesita aprobación, protegen los flujos con triggers, endurecen RLS de tesorería y gestión deportiva familiar, validan que el tutor sea adulto y el hijo menor, y limitan la respuesta familiar a estados de asistencia seguros.
+- Los pedidos que aún esperan a la familia no aparecen en la cola operativa de tienda. El permiso `manage_shop` tampoco puede convertirlos en pedidos aprobados; solo un tutor adulto vinculado puede tomar esa decisión.
+- El seeder `family-demo.mjs` prepara una cuenta tutora con dos hijos de categorías distintas, pedido pendiente, calendario, estadísticas y tesorería. La contraseña se aporta por entorno y nunca se guarda en el repositorio.

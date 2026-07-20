@@ -285,6 +285,7 @@ export interface FamiliesTableProps {
 
 export function FamiliesTable({ rows }: FamiliesTableProps) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
 
@@ -295,12 +296,27 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
       (r) => r.parent_name.toLowerCase().includes(q) || r.child_name.toLowerCase().includes(q),
     );
   }, [rows, search]);
+  const groupedRows = useMemo(() => {
+    const families = new Map<string, { parentName: string; children: FamilyRow[] }>();
+    for (const row of filtered) {
+      const family = families.get(row.parent_id) ?? {
+        parentName: row.parent_name,
+        children: [],
+      };
+      family.children.push(row);
+      families.set(row.parent_id, family);
+    }
+    return Array.from(families.values())
+      .sort((a, b) => a.parentName.localeCompare(b.parentName, "es"))
+      .flatMap((family) => family.children);
+  }, [filtered]);
 
   function handleRemove(row: FamilyRow) {
     if (!window.confirm(`¿Eliminar el vínculo entre ${row.parent_name} y ${row.child_name}?`)) {
       return;
     }
     const key = `${row.parent_id}-${row.child_id}`;
+    setRemoveError(null);
     setPendingKey(key);
     startTransition(async () => {
       try {
@@ -308,6 +324,10 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
           parent_profile_id: row.parent_id,
           child_profile_id: row.child_id,
         });
+      } catch (error) {
+        setRemoveError(
+          error instanceof Error ? error.message : "No pudimos eliminar el vínculo familiar.",
+        );
       } finally {
         setPendingKey(null);
       }
@@ -340,6 +360,14 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
           className="pl-9"
         />
       </div>
+      {removeError ? (
+        <p
+          role="alert"
+          className="border-danger/25 bg-danger/5 text-danger rounded-xl border p-3 text-sm font-semibold"
+        >
+          {removeError}
+        </p>
+      ) : null}
       {filtered.length === 0 ? (
         <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
           <p className="text-ink-600 text-sm">No hay coincidencias.</p>
@@ -347,7 +375,7 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
       ) : (
         <>
           <ul className="flex flex-col gap-2 sm:hidden">
-            {filtered.map((r) => {
+            {groupedRows.map((r) => {
               const key = `${r.parent_id}-${r.child_id}`;
               const isPending = pendingKey === key;
               return (
@@ -395,7 +423,7 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r) => {
+                {groupedRows.map((r) => {
                   const key = `${r.parent_id}-${r.child_id}`;
                   const isPending = pendingKey === key;
                   return (

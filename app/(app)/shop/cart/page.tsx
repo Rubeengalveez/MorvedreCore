@@ -8,6 +8,7 @@ import { getShopProducts } from "@/server/queries/shop";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
 import { CartClient } from "../_components/cart-client";
+import { requiresGuardianApproval } from "@/lib/domain/family";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -20,7 +21,11 @@ export default async function CartPage() {
   const supabase = await createClient();
   const [products, { data: ownProfile }] = await Promise.all([
     getShopProducts(),
-    supabase.from("profiles").select("phone_e164").eq("id", ctx.ownProfile.id).maybeSingle(),
+    supabase
+      .from("profiles")
+      .select("phone_e164, birth_year")
+      .eq("id", ctx.ownProfile.id)
+      .maybeSingle(),
   ]);
 
   return (
@@ -38,7 +43,11 @@ export default async function CartPage() {
         description="Cada producto conserva su talla y personalización. Enviar la solicitud no realiza ningún pago."
         icon={<ShoppingBag className="h-5 w-5" aria-hidden="true" />}
       />
-      <CartClient products={products} initialPhone={ownProfile?.phone_e164 ?? null} />
+      <CartClient
+        products={products}
+        initialPhone={ownProfile?.phone_e164 ?? null}
+        requiresGuardian={requiresGuardianApproval(ownProfile?.birth_year ?? null)}
+      />
     </PageShell>
   );
 }

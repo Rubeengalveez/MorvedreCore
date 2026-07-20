@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { Banknote, CheckCircle2 } from "lucide-react";
+import { Banknote, CheckCircle2, UsersRound } from "lucide-react";
 
 import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -18,14 +18,15 @@ export const metadata = {
 export default async function TreasuryPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const data = await getFamilyTreasury(ctx.activeProfile.id);
+  const data = await getFamilyTreasury(ctx.ownProfile.id);
+  if (!data.canView) redirect("/profile");
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
       <AppPageHero
         eyebrow="Tesorería"
         title="Este mes"
-        description="Tus importes pendientes del club."
+        description="Tus cuotas y las de tu familia, separadas por persona."
         icon={<Banknote className="h-6 w-6" aria-hidden="true" />}
       />
 
@@ -39,29 +40,50 @@ export default async function TreasuryPage() {
         </p>
       </section>
 
-      <section className="flex flex-col gap-2">
-        <SectionHeader title="Detalle" />
-        {data.lines.length > 0 ? (
-          <ul className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 flex flex-col divide-y rounded-2xl border p-3">
-            {data.lines.map((line) => (
-              <li key={line.id} className="flex min-h-14 items-center gap-3 py-2">
-                <span className="bg-pool-foam text-pool-blue flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-                  <Banknote className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-pool-deep line-clamp-1 text-sm font-extrabold">
-                    {line.description}
-                  </p>
-                  <p className="text-ink-600 line-clamp-1 text-xs font-semibold">
-                    {line.profile_name}
-                  </p>
+      <section className="flex flex-col gap-3">
+        <SectionHeader title={data.groups.length > 1 ? "Por persona" : "Detalle"} />
+        {data.groups.length > 0 ? (
+          <div className="flex flex-col gap-3">
+            {data.groups.map((group) => (
+              <section
+                key={group.profileId}
+                aria-labelledby={`treasury-${group.profileId}`}
+                className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border"
+              >
+                <div className="bg-pool-foam/65 border-ink-200 flex min-h-16 items-center gap-3 border-b px-4 py-3">
+                  <span className="bg-paper-card text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
+                    <UsersRound className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <h2
+                      id={`treasury-${group.profileId}`}
+                      className="text-pool-deep truncate font-extrabold"
+                    >
+                      {group.profileName}
+                    </h2>
+                    <p className="text-ink-600 text-xs font-semibold">
+                      {group.lines.length} {group.lines.length === 1 ? "concepto" : "conceptos"}
+                    </p>
+                  </div>
+                  <strong className="text-pool-deep font-mono text-base tabular-nums">
+                    {formatTreasuryCents(group.totalCents)}
+                  </strong>
                 </div>
-                <span className="text-pool-deep font-mono text-sm font-extrabold">
-                  {formatTreasuryCents(line.amount_cents)}
-                </span>
-              </li>
+                <ul className="divide-ink-200 divide-y px-4">
+                  {group.lines.map((line) => (
+                    <li key={line.id} className="flex min-h-14 items-center gap-3 py-2.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-pool-deep text-sm font-bold">{line.description}</p>
+                      </div>
+                      <span className="text-pool-deep font-mono text-sm font-extrabold tabular-nums">
+                        {formatTreasuryCents(line.amount_cents)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         ) : (
           <EmptyState
             icon={<CheckCircle2 className="h-6 w-6" aria-hidden="true" />}
