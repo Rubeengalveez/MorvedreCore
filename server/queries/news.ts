@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isExpired, isValidReaction, tallyReactions, type ReactionTally } from "@/lib/domain/news";
+import { requirePermission } from "@/server/actions/admin/_helpers";
 
 export interface NewsPost {
   id: string;
@@ -205,14 +207,16 @@ export async function getNewsPost(
 }
 
 export async function getNewsForAdmin(): Promise<NewsPost[]> {
-  const supabase = await createClient();
-  const { data } = await supabase
+  await requirePermission("manage_news");
+  const admin = createAdminClient();
+  const { data, error } = await admin
     .from("news_posts")
     .select(
       "id, author_id, title, body_md, image_url, audience, audience_team_id, pinned, published_at, expires_at",
     )
     .order("published_at", { ascending: false })
     .limit(200);
+  if (error) throw new Error("No pudimos cargar las noticias: " + error.message);
 
   const list: NewsPost[] = (
     (data ?? []) as Array<{
@@ -245,10 +249,11 @@ export async function getNewsForAdmin(): Promise<NewsPost[]> {
 
   if (list.length === 0) return list;
   const authorIds = Array.from(new Set(list.map((p) => p.author_id)));
-  const { data: authors } = await supabase
+  const { data: authors, error: authorsError } = await admin
     .from("profiles")
     .select("id, full_name, photo_url")
     .in("id", authorIds);
+  if (authorsError) throw new Error("No pudimos cargar los autores: " + authorsError.message);
   const map = new Map(
     ((authors ?? []) as Array<{ id: string; full_name: string; photo_url: string | null }>).map(
       (a) => [a.id, a],
@@ -261,4 +266,57 @@ export async function getNewsForAdmin(): Promise<NewsPost[]> {
     p.author_photo_url = a.photo_url ?? null;
   }
   return list;
+}
+
+export async function getNewsPostForAdmin(postId: string): Promise<NewsPost | null> {
+  await requirePermission("manage_news");
+  const admin = createAdminClient();
+  const { data: post, error } = await admin
+    .from("news_posts")
+    .select(
+      "id, author_id, title, body_md, image_url, audience, audience_team_id, pinned, published_at, expires_at",
+    )
+    .eq("id", postId)
+    .maybeSingle();
+
+  if (error) throw new Error("No pudimos cargar la noticia: " + error.message);
+  if (!post) return null;
+
+  const [authorResult, teamResult] = await Promise.all([
+    admin.from("profiles").select("full_name, photo_url").eq("id", post.author_id).maybeSingle(),
+    post.audience_team_id
+      ? admin.from("teams").select("label").eq("id", post.audience_team_id).maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+  ]);
+
+  if (authorResult.error) {
+    throw new Error("No pudimos cargar el autor: " + authorResult.error.message);
+  }
+  if (teamResult.error) {
+    throw new Error("No pudimos cargar el equipo: " + teamResult.error.message);
+  }
+
+  return {
+    id: post.id,
+    author_id: post.author_id,
+    author_name: authorResult.data?.full_name ?? "Anónimo",
+    author_photo_url: authorResult.data?.photo_url ?? null,
+    title: post.title,
+    body_md: post.body_md,
+    image_url: post.image_url,
+    audience: post.audience === "team" ? "team" : "club",
+    audience_team_id: post.audience_team_id,
+    audience_team_label: teamResult.data?.label ?? null,
+    pinned: post.pinned,
+    published_at: post.published_at,
+    expires_at: post.expires_at,
+  };
+}
+
+export async function getNewsTeamsForAdmin(): Promise<Array<{ id: string; label: string }>> {
+  await requirePermission("manage_news");
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("teams").select("id, label").order("label");
+  if (error) throw new Error("No pudimos cargar los equipos: " + error.message);
+  return data ?? [];
 }

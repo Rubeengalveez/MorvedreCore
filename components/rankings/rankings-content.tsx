@@ -2,7 +2,11 @@
 
 import { cn } from "@/lib/utils/cn";
 import { type CategoryCode } from "@/lib/domain/categories";
-import { type RankingMetric, type RankingScope, paginateRanking } from "@/lib/domain/rankings";
+import {
+  type RankingMetric,
+  type RankingScope,
+  paginateRankingWithPodium,
+} from "@/lib/domain/rankings";
 import { streakLabel } from "@/lib/domain/streaks";
 import Link from "next/link";
 import type { Route } from "next";
@@ -81,9 +85,7 @@ export function RankingsContent({
   isAdmin = false,
 }: RankingsContentProps) {
   const metricMeta = METRICS.find((m) => m.id === activeMetric) ?? METRICS[0]!;
-  const top3 = ranking.rows.slice(0, 3);
-  const restOfPlayers = ranking.rows.slice(3);
-  const paged = paginateRanking({ ranking: restOfPlayers, page, page_size: 10 });
+  const paged = paginateRankingWithPodium({ ranking: ranking.rows, page, page_size: 10 });
   const hasData = ranking.rows.length > 0;
 
   const baseParams = buildBaseParams({
@@ -135,9 +137,9 @@ export function RankingsContent({
         />
       ) : (
         <>
-          {page === 1 ? (
+          {paged.podium_rows.length > 0 ? (
             <Podium
-              items={top3}
+              items={paged.podium_rows}
               metricLabel={metricMeta.label}
               metricSuffix={metricMeta.suffix}
               metric={activeMetric}
@@ -145,7 +147,7 @@ export function RankingsContent({
             />
           ) : null}
 
-          {paged.rows.length > 0 ? (
+          {paged.list_rows.length > 0 ? (
             <section aria-labelledby="rest-heading" className="flex flex-col gap-2">
               <div className="flex items-baseline justify-between gap-2">
                 <h2 id="rest-heading" className="text-pool-deep text-sm font-extrabold">
@@ -158,7 +160,7 @@ export function RankingsContent({
                 ) : null}
               </div>
               <ul className="flex flex-col gap-1.5">
-                {paged.rows.map((row) => (
+                {paged.list_rows.map((row) => (
                   <li key={row.player_id}>
                     <RankingRowItem
                       row={row}
@@ -177,7 +179,7 @@ export function RankingsContent({
             <Pagination
               page={paged.page}
               totalPages={paged.total_pages}
-              totalPlayers={restOfPlayers.length}
+              totalPlayers={paged.total_players}
               pageSize={paged.page_size}
               baseHref={baseHref}
             />

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { insertNotificationsWithPush } from "./notification-dispatch";
-import { requireAdmin } from "./_helpers";
+import { requirePermission } from "./_helpers";
 import {
   createNewsPostSchema,
   deleteNewsPostSchema,
@@ -21,21 +21,6 @@ function toError(e: unknown): string {
   if (e instanceof z.ZodError) return e.issues[0]?.message ?? "Datos inválidos.";
   if (e instanceof Error) return e.message;
   return "Ha habido un problema.";
-}
-
-async function getMyProfileId(): Promise<string> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("No has iniciado sesión.");
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-  if (!profile) throw new Error("Tu perfil no está configurado.");
-  return profile.id as string;
 }
 
 async function uploadNewsImage(
@@ -63,7 +48,7 @@ export async function createNewsPost(input: {
   expires_at?: string | null;
   imageFile?: File | null;
 }): Promise<{ id: string }> {
-  await requireAdmin();
+  const author = await requirePermission("manage_news");
   const parsed = createNewsPostSchema.safeParse({
     title: input.title,
     body_md: input.body_md,
@@ -86,13 +71,12 @@ export async function createNewsPost(input: {
   }
 
   const supabase = await createClient();
-  const authorId = await getMyProfileId();
   const admin = createAdminClient();
 
   const { data: created, error } = await admin
     .from("news_posts")
     .insert({
-      author_id: authorId,
+      author_id: author.id,
       title: parsed.data.title,
       body_md: parsed.data.body_md,
       image_url: parsed.data.image_url,
@@ -133,7 +117,7 @@ export async function updateNewsPost(input: {
   expires_at?: string | null;
   imageFile?: File | null;
 }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_news");
   const parsed = updateNewsPostSchema.safeParse({
     post_id: input.post_id,
     title: input.title,
@@ -174,7 +158,7 @@ export async function updateNewsPost(input: {
 }
 
 export async function deleteNewsPost(input: { post_id: string }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_news");
   const parsed = deleteNewsPostSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();
@@ -185,7 +169,7 @@ export async function deleteNewsPost(input: { post_id: string }): Promise<void> 
 }
 
 export async function togglePinNews(input: { post_id: string; pinned: boolean }): Promise<void> {
-  await requireAdmin();
+  await requirePermission("manage_news");
   const parsed = togglePinNewsSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();

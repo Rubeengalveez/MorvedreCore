@@ -187,6 +187,11 @@ export interface PaginateRankingOptions {
   page_size?: number;
 }
 
+export interface RankingPageWithPodium extends PagedRanking {
+  podium_rows: RankingRow[];
+  list_rows: RankingRow[];
+}
+
 export function paginateRanking({
   ranking,
   page,
@@ -198,6 +203,13 @@ export function paginateRanking({
   const start = (safePage - 1) * page_size;
   const rows = ranking.slice(start, start + page_size);
   return { page: safePage, page_size, total_players: total, total_pages: totalPages, rows };
+}
+
+export function paginateRankingWithPodium(options: PaginateRankingOptions): RankingPageWithPodium {
+  const paged = paginateRanking(options);
+  const podiumRows = paged.page === 1 ? paged.rows.slice(0, 3) : [];
+  const listRows = paged.page === 1 ? paged.rows.slice(3) : paged.rows;
+  return { ...paged, podium_rows: podiumRows, list_rows: listRows };
 }
 
 export function isMyPositionOutsideTopN(

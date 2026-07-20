@@ -6,6 +6,7 @@ import {
   findMyPosition,
   isMyPositionOutsideTopN,
   paginateRanking,
+  paginateRankingWithPodium,
   RANKINGS_PAGE_SIZE,
   type PlayerStatsInput,
   type RankingMetric,
@@ -331,6 +332,30 @@ describe("paginateRanking", () => {
     expect(page.rows).toHaveLength(0);
     expect(page.total_pages).toBe(1);
     expect(page.page).toBe(1);
+  });
+
+  it("counts the podium inside the first 10 positions", () => {
+    const page = paginateRankingWithPodium({ ranking, page: 1 });
+
+    expect(page.podium_rows.map((row) => row.position)).toEqual([1, 2, 3]);
+    expect(page.list_rows.map((row) => row.position)).toEqual([4, 5, 6, 7, 8, 9, 10]);
+    expect(page.podium_rows.length + page.list_rows.length).toBe(10);
+  });
+
+  it("keeps later pages aligned with the real ranking positions", () => {
+    const extendedPlayers: PlayerStatsInput[] = Array.from({ length: 63 }, (_, i) =>
+      makePlayer({ player_id: `extended-${i}`, full_name: `Jugador ${i}`, goals: 63 - i }),
+    );
+    const extendedRanking = computeRanking(extendedPlayers, {
+      metric: "goals",
+      scope: { kind: "all" },
+    });
+    const sixthPage = paginateRankingWithPodium({ ranking: extendedRanking, page: 6 });
+
+    expect(sixthPage.podium_rows).toHaveLength(0);
+    expect(sixthPage.list_rows.map((row) => row.position)).toEqual([
+      51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
+    ]);
   });
 });
 

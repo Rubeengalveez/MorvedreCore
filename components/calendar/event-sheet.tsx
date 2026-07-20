@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, MapPin, ChevronRight, Check, X } from "lucide-react";
+import { Loader2, MapPin, ChevronRight, Check, X, Clock3 } from "lucide-react";
 import type { Route } from "next";
 
 import { Gorro } from "@/components/brand/pictograms";
@@ -42,6 +42,41 @@ const COMPETITION_LABELS: Record<string, string> = {
   friendly: "Amistoso",
 };
 
+function EventCardHeader({ teamLabel, children }: { teamLabel: string; children: ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-start justify-between gap-3">
+      <span className="text-pool-blue min-w-0 pt-1 text-xs leading-tight font-black tracking-[0.08em] uppercase">
+        {teamLabel}
+      </span>
+      <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{children}</div>
+    </div>
+  );
+}
+
+function EventBadge({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex min-h-7 items-center rounded-lg border px-2.5 text-[11px] leading-none font-black tracking-[0.06em] uppercase",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+function EventMetaRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+  return (
+    <div className="text-ink-600 flex min-w-0 items-start gap-2 text-sm leading-5 font-semibold">
+      <span className="text-ink-400 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
+
 export function EventSheet({
   open,
   onOpenChange,
@@ -64,9 +99,9 @@ export function EventSheet({
               : "No hay eventos programados."}
           </SheetDescription>
         </SheetHeader>
-        <SheetBody className="pb-[max(2rem,env(safe-area-inset-bottom))]">
+        <SheetBody className="pt-3 pb-[max(2rem,env(safe-area-inset-bottom))]">
           {day && (day.trainings.length > 0 || day.matches.length > 0) ? (
-            <ul className="flex flex-col gap-4 pb-4">
+            <ul className="flex flex-col gap-3 pb-4">
               {day.trainings.map((t) => (
                 <li key={t.id}>
                   <TrainingRow training={t} isCoach={isCoach || isAdmin} />
@@ -105,57 +140,74 @@ export function TrainingRow({
   training: NonNullable<CalendarEventDay["trainings"][number]>;
   isCoach: boolean;
 }) {
+  const timeRange = formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes);
+
   return (
-    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 shadow-sm transition-shadow motion-reduce:transition-none sm:p-5">
+    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
         style={{ backgroundColor: training.team_color }}
       />
 
-      <div className="flex flex-col gap-2 pl-1.5">
-        <div className="flex items-center justify-between gap-2 select-none">
-          <span className="text-pool-blue text-xs font-black tracking-wider uppercase">
-            {training.team_label}
-          </span>
-          <span className="border-pool-blue/15 bg-pool-foam text-pool-deep rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
+      <div className="flex flex-col gap-4 py-4 pr-4 pl-5 sm:p-5 sm:pl-6">
+        <EventCardHeader teamLabel={training.team_label}>
+          <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep">
             Entrenamiento
-          </span>
-        </div>
+          </EventBadge>
+        </EventCardHeader>
 
-        <div className="mt-1 flex items-baseline gap-3 select-none">
-          <span className="text-pool-deep shrink-0 font-mono text-xl font-black tracking-tight">
-            {formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes)}
-          </span>
-          <h4 className="text-ink-950 text-base leading-tight font-extrabold">
-            {training.cancelled ? (
-              <span className="text-ink-400 line-through">Sesión de entrenamiento</span>
-            ) : (
-              "Sesión de agua y táctica"
+        <div className="min-w-0">
+          <h3
+            className={cn(
+              "text-pool-deep text-lg leading-tight font-extrabold text-pretty",
+              training.cancelled && "text-ink-500",
             )}
-          </h4>
-        </div>
+          >
+            {training.cancelled ? "Sesión de entrenamiento" : "Sesión de agua y táctica"}
+          </h3>
 
-        {training.location && (
-          <p className="text-ink-600 mt-1 flex items-center gap-1.5 text-sm font-semibold select-none">
-            <MapPin className="text-ink-400 h-4 w-4 shrink-0" />
-            <span>{training.location}</span>
-          </p>
-        )}
+          <div className="mt-3 flex flex-col gap-2.5">
+            <EventMetaRow icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <time className="text-pool-deep font-mono text-base font-black tracking-tight tabular-nums">
+                  {timeRange}
+                </time>
+                <span className="bg-ink-100 text-ink-600 rounded-md px-2 py-0.5 text-xs font-extrabold tabular-nums">
+                  {training.duration_minutes} min
+                </span>
+              </div>
+            </EventMetaRow>
+
+            {training.location ? (
+              <EventMetaRow icon={<MapPin className="h-4 w-4" aria-hidden="true" />}>
+                <span className="text-pretty break-words">{training.location}</span>
+              </EventMetaRow>
+            ) : null}
+          </div>
+        </div>
 
         {training.cancelled ? (
-          <div className="bg-danger/10 border-danger/20 text-danger mt-1 rounded-xl border p-3 text-sm font-bold">
-            Cancelado: {training.cancellation_reason || "Sin motivo especificado"}
+          <div className="bg-danger/10 border-danger/20 text-danger flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold">
+            <X className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+            <p className="min-w-0 break-words">
+              <span className="font-black">Cancelado.</span>{" "}
+              {training.cancellation_reason || "Sin motivo especificado"}
+            </p>
           </div>
         ) : null}
 
-        <div className="border-ink-200/40 text-ink-600 mt-2.5 flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs font-extrabold tracking-wide uppercase select-none">
-          <span>
-            {formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes)} ·{" "}
-            {training.duration_minutes} min
-          </span>
-          {isCoach && <span className="text-pool-blue">Pasar lista en admin</span>}
-        </div>
+        {isCoach && !training.cancelled ? (
+          <div className="border-ink-200 border-t pt-3">
+            <Link
+              href={`/attendance/${training.id}` as Route}
+              className="bg-pool-foam text-pool-blue hover:bg-pool-blue hover:text-paper focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center justify-between rounded-xl px-3.5 text-sm font-extrabold transition-[background-color,color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+            >
+              <span>Pasar lista</span>
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        ) : null}
       </div>
     </article>
   );
@@ -175,48 +227,44 @@ export function MatchRow({
   const router = useRouter();
   const isCalled = match.callup_status != null;
   const href = `/matches/${match.id}` as Route;
+  const homeTeam = match.is_home ? "Morvedre" : match.opponent;
+  const awayTeam = match.is_home ? match.opponent : "Morvedre";
 
   return (
-    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-4 shadow-sm transition-shadow motion-reduce:transition-none sm:p-5">
+    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
         style={{ backgroundColor: match.team_color }}
       />
 
-      <div className="flex flex-col gap-3 pl-1.5">
-        <div className="flex items-center justify-between gap-2 select-none">
-          <span className="text-pool-blue text-xs font-black tracking-wider uppercase">
-            {match.team_label}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span className="border-ink-300 bg-paper text-ink-600 rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
-              {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-            </span>
-            {match.status === "cancelled" ? (
-              <span className="bg-danger/10 border-danger/20 text-danger rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
-                Cancelado
-              </span>
-            ) : match.status === "played" ? (
-              <span className="bg-success/10 border-success/20 text-success rounded-full border px-2.5 py-1 text-xs font-black tracking-wider uppercase">
-                Jugado
-              </span>
-            ) : null}
-          </div>
-        </div>
+      <div className="flex flex-col gap-4 py-4 pr-4 pl-5 sm:p-5 sm:pl-6">
+        <EventCardHeader teamLabel={match.team_label}>
+          <EventBadge className="border-ink-300 bg-paper text-ink-600">
+            {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+          </EventBadge>
+          {match.status === "cancelled" ? (
+            <EventBadge className="bg-danger/10 border-danger/20 text-danger">Cancelado</EventBadge>
+          ) : match.status === "played" ? (
+            <EventBadge className="bg-success/10 border-success/20 text-success">Jugado</EventBadge>
+          ) : null}
+        </EventCardHeader>
 
-        <div className="flex items-center justify-between gap-2 py-2 select-none">
-          <div className="flex max-w-[40%] flex-1 items-center gap-2">
+        <h3 className="sr-only">
+          {homeTeam} contra {awayTeam}
+        </h3>
+
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-1 select-none">
+          <div className="flex min-w-0 items-center gap-1">
             <Gorro
-              className="h-6 w-6 shrink-0"
+              className="h-[18px] w-[18px] shrink-0"
               accent={match.is_home ? match.team_color : "#718096"}
+              aria-hidden="true"
             />
-            <span className="text-ink-950 truncate text-sm font-black">
-              {match.is_home ? "Morvedre" : match.opponent}
-            </span>
+            <span className="text-ink-950 truncate text-[13px] font-black">{homeTeam}</span>
           </div>
 
-          <div className="flex min-w-[70px] shrink-0 justify-center">
+          <div className="flex min-w-12 shrink-0 justify-center">
             {match.status === "played" &&
             match.final_score_us != null &&
             match.final_score_them != null ? (
@@ -225,34 +273,32 @@ export function MatchRow({
                 {match.is_home ? match.final_score_them : match.final_score_us}
               </span>
             ) : (
-              <span className="bg-ink-100 text-pool-deep border-ink-200 rounded-lg border px-2.5 py-1 font-mono text-xs font-black md:text-sm">
+              <span className="bg-ink-100 text-pool-deep border-ink-200 rounded-lg border px-2 py-1 font-mono text-xs font-black md:text-sm">
                 {formatTimeOfDay(match.scheduled_at)}
               </span>
             )}
           </div>
 
-          <div className="flex max-w-[40%] flex-1 items-center justify-end gap-2 text-right">
-            <span className="text-ink-950 truncate text-sm font-black">
-              {match.is_home ? match.opponent : "Morvedre"}
-            </span>
+          <div className="flex min-w-0 items-center justify-end gap-1 text-right">
+            <span className="text-ink-950 truncate text-[13px] font-black">{awayTeam}</span>
             <Gorro
-              className="h-6 w-6 shrink-0"
+              className="h-[18px] w-[18px] shrink-0"
               accent={match.is_home ? "#718096" : match.team_color}
+              aria-hidden="true"
             />
           </div>
         </div>
 
-        {match.pool_name && (
-          <p className="text-ink-600 flex items-center gap-1.5 text-sm font-semibold select-none">
-            <MapPin className="text-ink-400 h-4 w-4 shrink-0" />
-            <span className="truncate">{match.pool_name}</span>
-          </p>
-        )}
-        {match.location && match.location !== match.pool_name && (
-          <p className="text-ink-500 truncate pl-5 text-xs leading-none font-semibold select-none">
-            {match.location}
-          </p>
-        )}
+        {match.pool_name || match.location ? (
+          <EventMetaRow icon={<MapPin className="h-4 w-4" aria-hidden="true" />}>
+            <p className="text-pretty break-words">
+              {match.pool_name || match.location}
+              {match.location && match.location !== match.pool_name ? (
+                <span className="text-ink-500 block text-xs">{match.location}</span>
+              ) : null}
+            </p>
+          </EventMetaRow>
+        ) : null}
 
         {isCalled && match.callup_status && (
           <div className="border-ink-200/40 mt-1.5 border-t pt-3">
@@ -275,7 +321,7 @@ export function MatchRow({
           >
             <Link href={href}>
               <span>Ver convocatoria completa</span>
-              <ChevronRight className="h-3.5 w-3.5" />
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </Button>
           {isCoach && (
@@ -283,11 +329,9 @@ export function MatchRow({
               asChild
               size="sm"
               variant="ghost"
-              className="text-ink-600 hover:text-pool-deep min-h-11 w-full cursor-pointer text-sm font-extrabold"
+              className="text-ink-600 hover:text-pool-deep min-h-12 w-full cursor-pointer text-sm font-extrabold"
             >
-              <Link href={`/admin/matches/${match.id}` as Route}>
-                Editar convocatoria (Entrenador)
-              </Link>
+              <Link href={`/admin/matches/${match.id}` as Route}>Gestionar convocatoria</Link>
             </Button>
           )}
         </div>
@@ -348,9 +392,9 @@ function PremiumRsvpSection({
           )}
         >
           {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin text-current" />
+            <Loader2 className="h-4 w-4 animate-spin text-current" aria-hidden="true" />
           ) : (
-            <Check className="h-4 w-4 shrink-0" />
+            <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
           )}
           <span>{isConfirmed ? "Asistiré" : "Confirmar"}</span>
         </button>
@@ -367,9 +411,9 @@ function PremiumRsvpSection({
           )}
         >
           {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin text-current" />
+            <Loader2 className="h-4 w-4 animate-spin text-current" aria-hidden="true" />
           ) : (
-            <X className="h-4 w-4 shrink-0" />
+            <X className="h-4 w-4 shrink-0" aria-hidden="true" />
           )}
           <span>{isDeclined ? "No puedo ir" : "Denegar"}</span>
         </button>

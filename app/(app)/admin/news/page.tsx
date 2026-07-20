@@ -1,11 +1,8 @@
-import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
 import { Megaphone, Plus, Pin, Clock, ChevronRight } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
-import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { createClient } from "@/lib/supabase/server";
 import { getNewsForAdmin } from "@/server/queries/news";
 import { deleteNewsPost, togglePinNews } from "@/server/actions/admin/news";
 import { ConfirmSubmit } from "@/components/ui/confirm-submit";
@@ -22,20 +19,6 @@ export const metadata = {
 };
 
 export default async function AdminNewsPage() {
-  const ctx = await getActiveProfileContext();
-  if (!ctx) redirect("/login");
-  const { ownProfile } = ctx;
-
-  const supabase = await createClient();
-  const { data: adminRole } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("profile_id", ownProfile.id)
-    .eq("role", "admin")
-    .is("scope_team_id", null)
-    .maybeSingle();
-  if (!adminRole) redirect("/dashboard");
-
   const posts = await getNewsForAdmin();
 
   async function deletePostAction(formData: FormData) {
