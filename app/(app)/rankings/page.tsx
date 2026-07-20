@@ -85,7 +85,7 @@ export default async function RankingsPage({
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const { activeProfile, ownProfile } = ctx;
+  const { activeProfile, ownProfile, linkedProfiles } = ctx;
 
   const sp = await searchParams;
   const scope = parseScope(sp.scope);
@@ -178,6 +178,10 @@ export default async function RankingsPage({
         activeScope={scope}
         activeMetric={metric}
         myPlayerId={activeProfile.id}
+        ownProfileId={ownProfile.id}
+        trackedPlayerIds={Array.from(
+          new Set([ownProfile.id, ...linkedProfiles.map((profile) => profile.id)]),
+        )}
         page={page}
         activeStreakType={streakType}
         activeStreakOrder={streakOrder}

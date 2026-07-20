@@ -173,6 +173,12 @@ export function findMyPosition(ranking: RankingRow[], playerId: string): MyPosit
 
 export const RANKINGS_PAGE_SIZE = 10;
 
+export function rankingPageForPosition(position: number, pageSize = RANKINGS_PAGE_SIZE): number {
+  const safePosition = Math.max(1, Math.floor(position) || 1);
+  const safePageSize = Math.max(1, Math.floor(pageSize) || RANKINGS_PAGE_SIZE);
+  return Math.ceil(safePosition / safePageSize);
+}
+
 export interface PagedRanking {
   page: number;
   page_size: number;

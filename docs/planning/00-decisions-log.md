@@ -632,3 +632,23 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Las migraciones `20260720185541_family_guardian_experience.sql`, `20260720195234_family_function_privileges.sql`, `20260720200228_family_link_integrity.sql`, `20260720203127_family_guardian_sports_management.sql` y `20260720204711_family_callup_column_integrity.sql` registran si cada pedido necesita aprobación, protegen los flujos con triggers, endurecen RLS de tesorería y gestión deportiva familiar, validan que el tutor sea adulto y el hijo menor, y limitan la respuesta familiar a estados de asistencia seguros.
 - Los pedidos que aún esperan a la familia no aparecen en la cola operativa de tienda. El permiso `manage_shop` tampoco puede convertirlos en pedidos aprobados; solo un tutor adulto vinculado puede tomar esa decisión.
 - El seeder `family-demo.mjs` prepara una cuenta tutora con dos hijos de categorías distintas, pedido pendiente, calendario, estadísticas y tesorería. La contraseña se aporta por entorno y nunca se guarda en el repositorio.
+
+## 2026-07-21 - Inicio compacto y rachas legibles
+
+- Inicio se organiza por prioridad temporal: próximo compromiso, rachas, resumen deportivo y actividad próxima. Cada concepto conserva una superficie y un título propios para que la compactación no mezcle su significado.
+- `Rachas activas` conserva una tarjeta y un título propios, pero presenta sus valores como una lista clara y breve, sin números gigantes ni barras de progreso que compitan con el próximo compromiso. `Resumen deportivo` queda en una tarjeta independiente con las métricas de temporada.
+- La racha no se superpone sobre la fotografía de perfil: el avatar queda limpio y completamente visible.
+- Agenda y noticias usan tarjetas distintas con cabecera, icono y acceso propios; comparten únicamente una cuadrícula adaptable en pantallas amplias.
+- Inicio limita el avance de agenda a tres eventos y las noticias a dos. Calendario, Noticias y Rankings conservan el detalle completo mediante accesos visibles de 48 px.
+- La pantalla no introduce estado cliente ni nuevas dependencias. Los datos independientes se siguen consultando en paralelo.
+
+## 2026-07-21 - Identificación sólida del equipo propio
+
+- En el listado de Equipos, las tarjetas donde juegas usan una superficie azul hielo completamente opaca, borde azul y el pequeño encabezado `Tu equipo` sobre el nombre. La distinción no depende de transparencia ni de una cápsula que parezca un botón, y conserva la franja de color de la categoría.
+- Los equipos donde coinciden los roles de jugador y entrenador mantienen la misma superficie sólida y combinan el borde dorado con las dos etiquetas de relación.
+
+## 2026-07-21 - Cierre de Rankings con posición personal
+
+- Los accesos a `Rachas` y `Leyendas` conservan su identidad cromática, pero pasan a ser una navegación horizontal compacta integrada con los filtros del ranking.
+- Cada ranking muestra un acceso directo a la posición de la persona conectada. En cuentas familiares aparecen los hijos que formen parte del filtro actual.
+- El acceso calcula la página con bloques reales de diez personas, incluyendo el podio dentro de la primera página, y enlaza a la fila o puesto del podio mediante un destino resaltado.

@@ -19,13 +19,19 @@ import { Podium } from "./podium";
 import { RankingRowItem } from "./ranking-row";
 import { Pagination } from "./pagination";
 import { EmptyState } from "./empty-state";
+import { RankingPositionJump } from "./ranking-position-jump";
 
-const METRICS: ReadonlyArray<{ id: RankingMetric; label: string; suffix: string }> = [
-  { id: "goals", label: "Goles", suffix: "" },
-  { id: "exclusions", label: "Excl.", suffix: "" },
-  { id: "mvp", label: "MVP", suffix: "" },
-  { id: "attendance", label: "Asist.", suffix: "%" },
-  { id: "streak", label: "Racha", suffix: "" },
+const METRICS: ReadonlyArray<{
+  id: RankingMetric;
+  label: string;
+  positionLabel: string;
+  suffix: string;
+}> = [
+  { id: "goals", label: "Goles", positionLabel: "goles", suffix: "" },
+  { id: "exclusions", label: "Excl.", positionLabel: "expulsiones", suffix: "" },
+  { id: "mvp", label: "MVP", positionLabel: "MVP", suffix: "" },
+  { id: "attendance", label: "Asist.", positionLabel: "asistencia", suffix: "%" },
+  { id: "streak", label: "Racha", positionLabel: "de racha", suffix: "" },
 ];
 
 export interface RankingsContentProps {
@@ -34,6 +40,8 @@ export interface RankingsContentProps {
   activeScope: RankingScope;
   activeMetric: RankingMetric;
   myPlayerId: string;
+  ownProfileId: string;
+  trackedPlayerIds: string[];
   page: number;
   activeStreakType?: "goals_consec" | "excl_consec" | "train_consec" | "mvp_consec";
   activeStreakOrder?: "current" | "best";
@@ -79,6 +87,8 @@ export function RankingsContent({
   activeScope,
   activeMetric,
   myPlayerId,
+  ownProfileId,
+  trackedPlayerIds,
   page,
   activeStreakType = "train_consec",
   activeStreakOrder = "current",
@@ -87,6 +97,10 @@ export function RankingsContent({
   const metricMeta = METRICS.find((m) => m.id === activeMetric) ?? METRICS[0]!;
   const paged = paginateRankingWithPodium({ ranking: ranking.rows, page, page_size: 10 });
   const hasData = ranking.rows.length > 0;
+  const rankingByPlayer = new Map(ranking.rows.map((row) => [row.player_id, row]));
+  const trackedRows = trackedPlayerIds
+    .map((playerId) => rankingByPlayer.get(playerId) ?? null)
+    .filter((row): row is NonNullable<typeof row> => row != null);
 
   const baseParams = buildBaseParams({
     scope: activeScope,
@@ -126,6 +140,18 @@ export function RankingsContent({
           activeStreakType={activeStreakType}
           activeStreakOrder={activeStreakOrder}
           baseHref={baseHref}
+        />
+      ) : null}
+
+      {hasData ? (
+        <RankingPositionJump
+          rows={trackedRows}
+          ownProfileId={ownProfileId}
+          totalPlayers={ranking.total_players}
+          pageSize={paged.page_size}
+          baseHref={baseHref}
+          metricLabel={metricMeta.positionLabel}
+          metricSuffix={metricMeta.suffix}
         />
       ) : null}
 

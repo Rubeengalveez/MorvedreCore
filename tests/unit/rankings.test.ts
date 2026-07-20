@@ -7,6 +7,7 @@ import {
   isMyPositionOutsideTopN,
   paginateRanking,
   paginateRankingWithPodium,
+  rankingPageForPosition,
   RANKINGS_PAGE_SIZE,
   type PlayerStatsInput,
   type RankingMetric,
@@ -356,6 +357,16 @@ describe("paginateRanking", () => {
     expect(sixthPage.list_rows.map((row) => row.position)).toEqual([
       51, 52, 53, 54, 55, 56, 57, 58, 59, 60,
     ]);
+  });
+});
+
+describe("rankingPageForPosition", () => {
+  it("calcula la página real incluyendo el podio dentro de los diez primeros", () => {
+    expect(rankingPageForPosition(1)).toBe(1);
+    expect(rankingPageForPosition(3)).toBe(1);
+    expect(rankingPageForPosition(10)).toBe(1);
+    expect(rankingPageForPosition(11)).toBe(2);
+    expect(rankingPageForPosition(51)).toBe(6);
   });
 });
 

@@ -24,8 +24,9 @@ export function RankingRowItem({
 
   return (
     <div
+      id={`ranking-player-${row.player_id}`}
       className={cn(
-        "border-ink-300 bg-paper-card shadow-elev-1 flex min-h-[66px] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors",
+        "border-ink-300 bg-paper-card shadow-elev-1 target:ring-action flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors target:ring-2 target:ring-offset-2",
         isTop10 && !isMe && "border-pool-blue/25 bg-pool-foam/20",
         isMe && "border-ball-gold/70 bg-ball-gold/10 ring-ball-gold/35 ring-2",
       )}
