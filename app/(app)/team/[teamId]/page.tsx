@@ -1,7 +1,7 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CalendarDays, ChevronRight, MapPin, UserRoundCog } from "lucide-react";
+import { ArrowLeft, CalendarDays, ChevronRight, ExternalLink, MapPin, UserRoundCog } from "lucide-react";
 
 import { PageShell } from "@/components/ui/page-shell";
 import { TeamHero } from "@/components/team/team-hero";
@@ -9,6 +9,7 @@ import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getTeamById, getTeamMatches, getTeamRoster, getTeamStaff } from "@/server/queries/teams";
 import { cn } from "@/lib/utils/cn";
+import { isSafeMapsUrl } from "@/lib/domain/maps";
 import type { CategoryCode } from "@/lib/domain/categories";
 
 import { TeamPlayersTab } from "./_components/team-players-tab";
@@ -326,63 +327,89 @@ function MatchLedgerRow({
     date,
   );
   const location = match.location ?? match.pool_name;
+  const hasMaps = isSafeMapsUrl(match.maps_url);
+  const locationText = location ?? (match.is_home ? "Partido en casa" : "Partido como visitante");
 
   return (
-    <Link
-      href={`/matches/${match.id}` as Route}
-      className="group border-ink-200 bg-paper-card hover:border-pool-blue/35 hover:shadow-elev-2 focus-visible:ring-pool-blue block touch-manipulation overflow-hidden rounded-2xl border shadow-sm transition-[border-color,box-shadow,transform] duration-200 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.995] motion-reduce:transition-none"
-    >
-      <div className="border-ink-200 bg-paper-sunk flex min-h-16 items-center justify-between gap-3 border-b px-4 py-3">
-        <div className="min-w-0">
-          <p className="text-pool-deep truncate text-sm font-extrabold">{displayDate}</p>
-          <p className="text-ink-500 mt-0.5 text-xs font-bold tracking-wide uppercase">
-            {competitionLabel(match.competition_type)}
-          </p>
+    <article className="group border-ink-200 bg-paper-card hover:border-pool-blue/35 hover:shadow-elev-2 overflow-hidden rounded-2xl border shadow-sm transition-[border-color,box-shadow,transform]">
+      <Link
+        href={`/matches/${match.id}` as Route}
+        className="focus-visible:ring-pool-blue block touch-manipulation focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+      >
+        <div className="border-ink-200 bg-paper-sunk flex min-h-16 items-center justify-between gap-3 border-b px-4 py-3">
+          <div className="min-w-0">
+            <p className="text-pool-deep truncate text-sm font-extrabold">{displayDate}</p>
+            <p className="text-ink-500 mt-0.5 text-xs font-bold tracking-wide uppercase">
+              {competitionLabel(match.competition_type)}
+            </p>
+          </div>
+          {isPlayed && outcome ? (
+            <OutcomeLabel outcome={outcome} />
+          ) : (
+            <span className="bg-pool-deep text-paper shrink-0 rounded-xl px-3 py-2 font-mono text-base font-extrabold tabular-nums">
+              {time}
+            </span>
+          )}
         </div>
-        {isPlayed && outcome ? (
-          <OutcomeLabel outcome={outcome} />
+
+        <div className="grid min-h-36 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-5 sm:gap-5 sm:px-5">
+          <MatchTeam
+            label={localTeam}
+            venue="Local"
+            score={localScore}
+            showScore={isPlayed}
+            isOwn={match.is_home}
+            align="left"
+            color={teamColor}
+          />
+          <div className="text-ink-300 flex min-w-9 items-center justify-center font-mono text-xl font-extrabold">
+            {isPlayed ? ":" : "vs"}
+          </div>
+          <MatchTeam
+            label={visitorTeam}
+            venue="Visitante"
+            score={visitorScore}
+            showScore={isPlayed}
+            isOwn={!match.is_home}
+            align="right"
+            color={teamColor}
+          />
+        </div>
+      </Link>
+
+      <div className="border-ink-200 text-ink-500 flex min-h-12 min-w-0 items-center gap-2 border-t text-sm">
+        {hasMaps ? (
+          <a
+            href={match.maps_url ?? "#"}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`Abrir ${locationText} en Google Maps`}
+            className="focus-visible:ring-pool-blue flex min-h-12 min-w-0 flex-1 touch-manipulation items-center gap-2 px-4 py-3 transition-colors hover:text-pool-blue focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          >
+            <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="truncate font-semibold underline decoration-2 underline-offset-4">
+              {locationText}
+            </span>
+            <ExternalLink
+              className="ml-auto h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+              aria-hidden="true"
+            />
+          </a>
         ) : (
-          <span className="bg-pool-deep text-paper shrink-0 rounded-xl px-3 py-2 font-mono text-base font-extrabold tabular-nums">
-            {time}
-          </span>
+          <div className="flex min-h-12 min-w-0 flex-1 items-center gap-2 px-4 py-3">
+            <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <span className="truncate">{locationText}</span>
+          </div>
         )}
+        <Link
+          href={`/matches/${match.id}` as Route}
+          aria-label="Ver detalle del partido"
+          className="focus-visible:ring-pool-blue flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center border-l border-ink-200 transition-colors hover:bg-pool-foam/40 hover:text-pool-blue focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        >
+          <ChevronRight className="h-5 w-5" aria-hidden="true" />
+        </Link>
       </div>
-
-      <div className="grid min-h-36 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-4 py-5 sm:gap-5 sm:px-5">
-        <MatchTeam
-          label={localTeam}
-          venue="Local"
-          score={localScore}
-          showScore={isPlayed}
-          isOwn={match.is_home}
-          align="left"
-          color={teamColor}
-        />
-        <div className="text-ink-300 flex min-w-9 items-center justify-center font-mono text-xl font-extrabold">
-          {isPlayed ? ":" : "vs"}
-        </div>
-        <MatchTeam
-          label={visitorTeam}
-          venue="Visitante"
-          score={visitorScore}
-          showScore={isPlayed}
-          isOwn={!match.is_home}
-          align="right"
-          color={teamColor}
-        />
-      </div>
-
-      <div className="border-ink-200 text-ink-500 flex min-h-12 min-w-0 items-center gap-2 border-t px-4 py-3 text-sm">
-        <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
-        <span className="truncate">
-          {location ?? (match.is_home ? "Partido en casa" : "Partido como visitante")}
-        </span>
-        <ChevronRight
-          className="group-hover:text-pool-blue ml-auto h-5 w-5 shrink-0 transition-colors"
-          aria-hidden="true"
-        />
-      </div>
-    </Link>
+    </article>
   );
 }
 

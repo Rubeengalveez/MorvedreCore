@@ -1,9 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { MapPin } from "lucide-react";
 
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils/cn";
+import { isSafeMapsUrl } from "@/lib/domain/maps";
 import { formatLongDate, formatShortDate, formatTime } from "@/lib/utils/format";
 import type { Season, Team } from "@/server/actions/admin";
 
@@ -17,6 +19,7 @@ export interface MatchRow {
   is_home: boolean;
   location: string | null;
   pool_name: string | null;
+  maps_url: string | null;
   scheduled_at: string;
   status: string;
   final_score_us: number | null;
@@ -179,69 +182,88 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
         </div>
       ) : (
         <ul className="flex flex-col gap-3">
-          {sorted.map((m) => (
-            <li key={m.id}>
-              <a
-                href={`/admin/matches/${m.id}`}
-                className="group border-ink-300 bg-paper hover:border-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex flex-col overflow-hidden rounded-md border transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                style={{
-                  borderLeftWidth: "4px",
-                  borderLeftColor: m.team_color,
-                }}
-              >
-                <div className="flex flex-col gap-2 p-4">
-                  <div className="text-ink-600 flex flex-wrap items-center gap-2 text-xs">
-                    <span className="text-pool-deep font-mono font-semibold">
-                      {formatLongDate(m.scheduled_at).split(",")[0]}
-                    </span>
-                    <span>·</span>
-                    <span className="font-mono font-semibold">{formatTime(m.scheduled_at)}</span>
-                    <span
-                      className={cn(
-                        "ml-auto inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold",
-                        STATUS_BADGE[m.status] ?? "border-ink-300 text-ink-600 border",
+          {sorted.map((m) => {
+            const safeMaps = isSafeMapsUrl(m.maps_url);
+            return (
+              <li key={m.id}>
+                <div
+                  className="group border-ink-300 bg-paper hover:border-pool-blue hover:bg-pool-foam focus-within:border-pool-blue focus-within:bg-pool-foam relative flex flex-col overflow-hidden rounded-md border transition-colors"
+                  style={{
+                    borderLeftWidth: "4px",
+                    borderLeftColor: m.team_color,
+                  }}
+                >
+                  <div className="flex flex-col gap-2 p-4">
+                    <div className="text-ink-600 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="text-pool-deep font-mono font-semibold">
+                        {formatLongDate(m.scheduled_at).split(",")[0]}
+                      </span>
+                      <span>·</span>
+                      <span className="font-mono font-semibold">{formatTime(m.scheduled_at)}</span>
+                      <span
+                        className={cn(
+                          "ml-auto inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold",
+                          STATUS_BADGE[m.status] ?? "border-ink-300 text-ink-600 border",
+                        )}
+                      >
+                        {STATUS_LABELS[m.status] ?? m.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <h3 className="font-display text-pool-deep text-xl leading-tight font-extrabold">
+                        <a
+                          href={`/admin/matches/${m.id}`}
+                          className="focus-visible:ring-pool-blue before:absolute before:inset-0 before:rounded-md before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        >
+                          {m.is_home
+                            ? `${m.team_label} vs ${m.opponent}`
+                            : `${m.opponent} vs ${m.team_label}`}
+                        </a>
+                      </h3>
+                      {m.status === "played" ? (
+                        <span className="text-pool-deep font-mono text-lg font-extrabold">
+                          {scoreLabel(m)}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="border-ink-300 text-ink-600 inline-flex h-6 items-center rounded-full border px-2 text-xs font-semibold">
+                        {COMPETITION_LABELS[m.competition_type] ?? m.competition_type}
+                      </span>
+                      {m.is_home ? (
+                        <span className="bg-pool-foam text-pool-deep inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
+                          Local
+                        </span>
+                      ) : (
+                        <span className="bg-ink-300/40 text-ink-600 inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
+                          Visitante
+                        </span>
                       )}
-                    >
-                      {STATUS_LABELS[m.status] ?? m.status}
-                    </span>
+                      {m.pool_name ? (
+                        <span className="text-ink-600 text-xs">{m.pool_name}</span>
+                      ) : null}
+                      {m.location ? (
+                        <span className="text-ink-600 text-xs">· {m.location}</span>
+                      ) : null}
+                      {safeMaps ? (
+                        <a
+                          href={m.maps_url ?? "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label={`Abrir ${m.location ?? m.pool_name ?? "la ubicación"} en Google Maps`}
+                          className="relative z-10 text-pool-blue hover:text-pool-deep inline-flex h-6 items-center gap-1 rounded-full bg-pool-foam px-2 text-xs font-extrabold transition-colors"
+                        >
+                          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                          Mapa
+                        </a>
+                      ) : null}
+                    </div>
+                    <p className="sr-only">{formatShortDate(m.scheduled_at)}</p>
                   </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-display text-pool-deep text-xl leading-tight font-extrabold">
-                      {m.is_home
-                        ? `${m.team_label} vs ${m.opponent}`
-                        : `${m.opponent} vs ${m.team_label}`}
-                    </h3>
-                    {m.status === "played" ? (
-                      <span className="text-pool-deep font-mono text-lg font-extrabold">
-                        {scoreLabel(m)}
-                      </span>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="border-ink-300 text-ink-600 inline-flex h-6 items-center rounded-full border px-2 text-xs font-semibold">
-                      {COMPETITION_LABELS[m.competition_type] ?? m.competition_type}
-                    </span>
-                    {m.is_home ? (
-                      <span className="bg-pool-foam text-pool-deep inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
-                        Local
-                      </span>
-                    ) : (
-                      <span className="bg-ink-300/40 text-ink-600 inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
-                        Visitante
-                      </span>
-                    )}
-                    {m.pool_name ? (
-                      <span className="text-ink-600 text-xs">{m.pool_name}</span>
-                    ) : null}
-                    {m.location ? (
-                      <span className="text-ink-600 text-xs">· {m.location}</span>
-                    ) : null}
-                  </div>
-                  <p className="sr-only">{formatShortDate(m.scheduled_at)}</p>
                 </div>
-              </a>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

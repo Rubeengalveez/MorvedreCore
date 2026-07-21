@@ -495,6 +495,7 @@ export async function getTeamMatches(
     is_home: boolean;
     competition_type: string;
     location: string | null;
+    maps_url: string | null;
     pool_name: string | null;
     final_score_us: number | null;
     final_score_them: number | null;
@@ -504,7 +505,7 @@ export async function getTeamMatches(
   const { data, error } = await supabase
     .from("matches")
     .select(
-      "id, opponent, scheduled_at, status, is_home, competition_type, location, pool_name, final_score_us, final_score_them",
+      "id, opponent, scheduled_at, status, is_home, competition_type, location, maps_url, pool_name, final_score_us, final_score_them",
     )
     .eq("team_id", teamId)
     .order("scheduled_at", { ascending: false })
@@ -518,6 +519,7 @@ export async function getTeamMatches(
     is_home: boolean;
     competition_type: string;
     location: string | null;
+    maps_url: string | null;
     pool_name: string | null;
     final_score_us: number | null;
     final_score_them: number | null;

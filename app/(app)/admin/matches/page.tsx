@@ -63,7 +63,7 @@ async function loadMatches(): Promise<LoadResult> {
     supabase
       .from("matches")
       .select(
-        "id, season_id, team_id, opponent, competition_type, is_home, location, pool_name, scheduled_at, status, logistics_enabled, notes, final_score_us, final_score_them, created_at, updated_at",
+        "id, season_id, team_id, opponent, competition_type, is_home, location, pool_name, maps_url, scheduled_at, status, logistics_enabled, notes, final_score_us, final_score_them, created_at, updated_at",
       )
       .order("scheduled_at", { ascending: true }),
   ]);
@@ -103,6 +103,7 @@ async function loadMatches(): Promise<LoadResult> {
       is_home: boolean;
       location: string | null;
       pool_name: string | null;
+      maps_url: string | null;
       scheduled_at: string;
       status: string;
       final_score_us: number | null;

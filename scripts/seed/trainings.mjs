@@ -1,6 +1,9 @@
 import { admin, loadBatch, mergeBatch, rand, pad2, isoDate, resetRng } from "./base.mjs";
 import { randomUUID } from "node:crypto";
 
+const HOME_POOL_MAPS_URL =
+  "https://www.google.com/maps/search/?api=1&query=Piscina+Municipal+Puerto+de+Sagunto";
+
 const clubDateTimeFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Madrid",
   year: "numeric",
@@ -115,6 +118,7 @@ async function main() {
             scheduled_at: scheduledAt.toISOString(),
             duration_minutes: 90,
             location: "Piscina Municipal Puerto Sagunto",
+            maps_url: HOME_POOL_MAPS_URL,
             notes: cancelled ? "Sesión cancelada por mantenimiento de la piscina." : null,
             cancelled,
           },

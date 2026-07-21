@@ -1,6 +1,9 @@
 import { admin, loadBatch, mergeBatch, rand, randInt, resetRng } from "./base.mjs";
 import { randomUUID } from "node:crypto";
 
+const HOME_POOL_MAPS_URL =
+  "https://www.google.com/maps/search/?api=1&query=Piscina+Municipal+Puerto+de+Sagunto";
+
 const OPPONENTS = [
   "CN Elche",
   "CN Valencia",
@@ -197,6 +200,7 @@ async function createMatch(opts) {
       is_home: isHome,
       location: isHome ? "Piscina Municipal Puerto Sagunto" : `Piscina ${opponent}`,
       pool_name: isHome ? "Piscina 25m" : null,
+      maps_url: isHome ? HOME_POOL_MAPS_URL : null,
       scheduled_at: scheduledAt.toISOString().slice(0, 19) + "Z",
       status: isPast ? "played" : "scheduled",
       final_score_us: ourScore,
