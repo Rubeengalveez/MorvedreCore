@@ -504,6 +504,46 @@ export async function getDashboardData(input: {
     return { weekEvents: [], teamInfo: null, recentActivity: [], seasonStats: null };
   }
 
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
+  const recentMatchesPromise = Promise.resolve(
+    admin
+      .from("matches")
+      .select(
+        "id, opponent, scheduled_at, status, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
+      )
+      .in("team_id", teamIds)
+      .order("scheduled_at", { ascending: false })
+      .limit(5),
+  );
+  const recentAttendancesPromise = Promise.resolve(
+    admin
+      .from("training_attendance")
+      .select("session_id, present")
+      .eq("player_id", profileId)
+      .eq("present", true)
+      .order("marked_at", { ascending: false })
+      .limit(5),
+  );
+  const seasonStatsPromise = Promise.all([
+    admin.from("match_stats").select("goals").eq("player_id", profileId),
+    admin
+      .from("training_sessions")
+      .select("id, scheduled_at, cancelled")
+      .in("team_id", teamIds)
+      .gte("scheduled_at", monthStart.toISOString())
+      .lt("scheduled_at", monthEnd.toISOString()),
+    admin.from("training_attendance").select("session_id, present").eq("player_id", profileId),
+    admin
+      .from("training_attendance")
+      .select(
+        "session_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled)",
+      )
+      .eq("player_id", profileId)
+      .order("marked_at", { ascending: false })
+      .limit(50),
+  ]);
+
   const [{ data: trainings }, { data: matches }] = await Promise.all([
     admin
       .from("training_sessions")
@@ -660,14 +700,7 @@ export async function getDashboardData(input: {
   }
 
   const recentActivity: DashboardActivity[] = [];
-  const { data: recentMatches } = await admin
-    .from("matches")
-    .select(
-      "id, opponent, scheduled_at, status, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
-    )
-    .in("team_id", teamIds)
-    .order("scheduled_at", { ascending: false })
-    .limit(5);
+  const { data: recentMatches } = await recentMatchesPromise;
   for (const m of recentMatches ?? []) {
     const mr = m as {
       id: string;
@@ -709,13 +742,7 @@ export async function getDashboardData(input: {
     }
   }
 
-  const { data: recentAttendances } = await admin
-    .from("training_attendance")
-    .select("session_id, present")
-    .eq("player_id", profileId)
-    .eq("present", true)
-    .order("marked_at", { ascending: false })
-    .limit(5);
+  const { data: recentAttendances } = await recentAttendancesPromise;
   const sessionIds = (recentAttendances ?? [])
     .map((a) => (a as { session_id: string }).session_id)
     .filter(Boolean);
@@ -756,29 +783,8 @@ export async function getDashboardData(input: {
 
   recentActivity.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1, 0, 0, 0);
-
-  const [matchStatsRes, monthSessionsRes, monthAttendanceRes, allAttendanceRes] = await Promise.all(
-    [
-      admin.from("match_stats").select("goals").eq("player_id", profileId),
-      admin
-        .from("training_sessions")
-        .select("id, scheduled_at, cancelled")
-        .in("team_id", teamIds)
-        .gte("scheduled_at", monthStart.toISOString())
-        .lt("scheduled_at", monthEnd.toISOString()),
-      admin.from("training_attendance").select("session_id, present").eq("player_id", profileId),
-      admin
-        .from("training_attendance")
-        .select(
-          "session_id, present, training_sessions!training_attendance_session_id_fkey(scheduled_at, cancelled)",
-        )
-        .eq("player_id", profileId)
-        .order("marked_at", { ascending: false })
-        .limit(50),
-    ],
-  );
+  const [matchStatsRes, monthSessionsRes, monthAttendanceRes, allAttendanceRes] =
+    await seasonStatsPromise;
 
   const goals = (matchStatsRes.data ?? []).reduce(
     (acc, row) => acc + ((row as { goals: number }).goals ?? 0),

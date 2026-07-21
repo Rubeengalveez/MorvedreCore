@@ -61,6 +61,7 @@ next-env.d.ts
 
 # PWA Service Worker (Serwist) build outputs
 public/sw.js
+public/sw-dev.js
 public/swe-worker-*.js
 
 # Agent workdirs

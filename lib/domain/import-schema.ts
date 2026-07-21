@@ -87,5 +87,3 @@ export function parseImportRow(
   }
   return { status: "ok", data: parsed.data };
 }
-
-export const VALID_RELATION_VALUES = RELATION_VALUES;

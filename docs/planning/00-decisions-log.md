@@ -652,3 +652,11 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Los accesos a `Rachas` y `Leyendas` conservan su identidad cromática, pero pasan a ser una navegación horizontal compacta integrada con los filtros del ranking.
 - Cada ranking muestra un acceso directo a la posición de la persona conectada. En cuentas familiares aparecen los hijos que formen parte del filtro actual.
 - El acceso calcula la página con bloques reales de diez personas, incluyendo el podio dentro de la primera página, y enlaza a la fila o puesto del podio mediante un destino resaltado.
+
+## 2026-07-21 - Limpieza final, dependencias y rendimiento
+
+- Se retiran componentes, utilidades, capturas temporales y un service worker de desarrollo sin consumidores reales. Las entradas especiales de Next.js, Serwist, Vitest y los seeds dinámicos se conservan aunque las herramientas genéricas no puedan resolverlas.
+- El dashboard inicia en paralelo las consultas independientes de actividad y estadísticas para reducir la espera acumulada sin cambiar su contrato público.
+- Se elimina `@tanstack/react-table` porque no participa en ninguna pantalla. Las actualizaciones compatibles de Supabase, formularios, Zod, Tailwind y Prettier se aplican con el lockfile verificado.
+- Las migraciones mayores de Node types, ESLint, TypeScript y Lucide se aplazan: requieren una iteración específica y no aportan una mejora proporcional para este cierre.
+- La auditoría completa queda registrada en `35-final-codebase-cleanup-summary.md`.

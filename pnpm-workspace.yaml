@@ -2,5 +2,9 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 
+minimumReleaseAgeExclude:
+  - brace-expansion@1.1.16 || 5.0.7
+  - js-yaml@4.3.0
+
 overrides:
   "postcss@<8.5.10": 8.5.15

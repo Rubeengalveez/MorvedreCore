@@ -295,52 +295,6 @@ export const reactNewsSchema = z.object({
   reaction: z.enum(["like", "fire", "thanks"]),
 });
 
-export const RELATION_VALUES_XLSX = ["mother", "father", "legal_guardian", "other"] as const;
-
-export const xlsxRowSchema = z.object({
-  nombre_completo: z.string().trim().min(1, "nombre_completo es obligatorio"),
-  ano_nacimiento: z.coerce
-    .number({ message: "ano_nacimiento debe ser numérico" })
-    .int("ano_nacimiento debe ser entero")
-    .gte(1900, "ano_nacimiento debe ser >= 1900")
-    .lte(2100, "ano_nacimiento debe ser <= 2100"),
-  dorsal: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : Number(v)),
-    z.coerce
-      .number({ message: "dorsal debe ser numérico" })
-      .int("dorsal debe ser entero")
-      .min(0, "dorsal debe ser >= 0")
-      .max(99, "dorsal debe ser <= 99")
-      .optional(),
-  ),
-  nombre_equipo: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z.string().trim().optional(),
-  ),
-  email_tutor: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z
-      .string({ message: "email_tutor debe ser texto" })
-      .trim()
-      .email("email_tutor no es un email válido")
-      .optional(),
-  ),
-  nombre_tutor: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z.string().trim().optional(),
-  ),
-  telefono_tutor: z.preprocess(
-    (v) => (v == null || v === "" ? undefined : String(v).trim()),
-    z.string().trim().optional(),
-  ),
-  relacion: z.preprocess((v) => {
-    if (v == null || v === "") return "legal_guardian";
-    const lower = String(v).toLowerCase().trim();
-    if ((RELATION_VALUES_XLSX as readonly string[]).includes(lower)) return lower;
-    return "legal_guardian";
-  }, z.enum(RELATION_VALUES_XLSX)),
-});
-
 export const makeRosterSchema = z.object({
   team_id: z.string().uuid("Equipo inválido."),
   player_id: z.string().uuid("Jugador inválido."),

@@ -8,6 +8,7 @@ export interface RankingRowItemProps {
   metricSuffix: string;
   metric: RankingMetric;
   isMe: boolean;
+  isJumpTarget?: boolean;
   showMedal?: boolean;
 }
 
@@ -17,6 +18,7 @@ export function RankingRowItem({
   metricSuffix,
   metric,
   isMe,
+  isJumpTarget = false,
   showMedal = false,
 }: RankingRowItemProps) {
   const isTop10 = row.position <= 10;
@@ -26,9 +28,10 @@ export function RankingRowItem({
     <div
       id={`ranking-player-${row.player_id}`}
       className={cn(
-        "border-ink-300 bg-paper-card shadow-elev-1 target:ring-action flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors target:ring-2 target:ring-offset-2",
+        "border-ink-300 bg-paper-card shadow-elev-1 flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors",
         isTop10 && !isMe && "border-pool-blue/25 bg-pool-foam/20",
         isMe && "border-ball-gold/70 bg-ball-gold/10 ring-ball-gold/35 ring-2",
+        isJumpTarget && "border-action bg-action/5 ring-action ring-2 ring-offset-2",
       )}
       style={{ borderLeftWidth: "4px", borderLeftColor: row.team_color ?? "var(--pool-blue)" }}
     >

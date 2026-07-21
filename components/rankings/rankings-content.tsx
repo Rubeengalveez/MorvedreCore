@@ -20,6 +20,7 @@ import { RankingRowItem } from "./ranking-row";
 import { Pagination } from "./pagination";
 import { EmptyState } from "./empty-state";
 import { RankingPositionJump } from "./ranking-position-jump";
+import { useRankingAnchor } from "./use-ranking-anchor";
 
 const METRICS: ReadonlyArray<{
   id: RankingMetric;
@@ -97,6 +98,7 @@ export function RankingsContent({
   const metricMeta = METRICS.find((m) => m.id === activeMetric) ?? METRICS[0]!;
   const paged = paginateRankingWithPodium({ ranking: ranking.rows, page, page_size: 10 });
   const hasData = ranking.rows.length > 0;
+  const jumpTargetPlayerId = useRankingAnchor(paged.page);
   const rankingByPlayer = new Map(ranking.rows.map((row) => [row.player_id, row]));
   const trackedRows = trackedPlayerIds
     .map((playerId) => rankingByPlayer.get(playerId) ?? null)
@@ -170,6 +172,7 @@ export function RankingsContent({
               metricSuffix={metricMeta.suffix}
               metric={activeMetric}
               myPlayerId={myPlayerId}
+              jumpTargetPlayerId={jumpTargetPlayerId}
             />
           ) : null}
 
@@ -194,6 +197,7 @@ export function RankingsContent({
                       metricSuffix={metricMeta.suffix}
                       metric={activeMetric}
                       isMe={row.player_id === myPlayerId}
+                      isJumpTarget={row.player_id === jumpTargetPlayerId}
                     />
                   </li>
                 ))}

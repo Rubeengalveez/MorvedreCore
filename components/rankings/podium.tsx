@@ -10,9 +10,17 @@ export interface PodiumProps {
   metricSuffix: string;
   metric: RankingMetric;
   myPlayerId: string;
+  jumpTargetPlayerId?: string | null;
 }
 
-export function Podium({ items, metricLabel, metricSuffix, metric, myPlayerId }: PodiumProps) {
+export function Podium({
+  items,
+  metricLabel,
+  metricSuffix,
+  metric,
+  myPlayerId,
+  jumpTargetPlayerId = null,
+}: PodiumProps) {
   const first = items.find((i) => i.position === 1) ?? null;
   const rest = items.filter((i) => i.position === 2 || i.position === 3);
 
@@ -36,6 +44,7 @@ export function Podium({ items, metricLabel, metricSuffix, metric, myPlayerId }:
           metricSuffix={metricSuffix}
           metric={metric}
           isMe={first.player_id === myPlayerId}
+          isJumpTarget={first.player_id === jumpTargetPlayerId}
         />
       ) : null}
 
@@ -49,6 +58,7 @@ export function Podium({ items, metricLabel, metricSuffix, metric, myPlayerId }:
               metricSuffix={metricSuffix}
               metric={metric}
               isMe={row.player_id === myPlayerId}
+              isJumpTarget={row.player_id === jumpTargetPlayerId}
             />
           ))}
         </div>
@@ -69,12 +79,14 @@ function PodiumLeader({
   metricSuffix,
   metric,
   isMe,
+  isJumpTarget,
 }: {
   row: RankingRow;
   metricLabel: string;
   metricSuffix: string;
   metric: RankingMetric;
   isMe: boolean;
+  isJumpTarget: boolean;
 }) {
   const teamColor = row.team_color ?? "var(--pool-blue)";
 
@@ -83,8 +95,9 @@ function PodiumLeader({
       id={`ranking-player-${row.player_id}`}
       data-podium-first
       className={cn(
-        "bg-pool-deep text-paper shadow-elev-3 target:ring-action relative scroll-mt-[calc(var(--top-bar-height)+1rem)] overflow-hidden rounded-md p-3.5 target:ring-2 target:ring-offset-2",
+        "bg-pool-deep text-paper shadow-elev-3 relative scroll-mt-[calc(var(--top-bar-height)+1rem)] overflow-hidden rounded-md p-3.5",
         isMe && "ring-ball-gold ring-2",
+        isJumpTarget && "ring-action ring-2 ring-offset-2",
       )}
     >
       <div
@@ -144,12 +157,14 @@ function PodiumRunner({
   metricSuffix,
   metric,
   isMe,
+  isJumpTarget,
 }: {
   row: RankingRow;
   metricLabel: string;
   metricSuffix: string;
   metric: RankingMetric;
   isMe: boolean;
+  isJumpTarget: boolean;
 }) {
   const teamColor = row.team_color ?? "var(--pool-blue)";
 
@@ -158,8 +173,9 @@ function PodiumRunner({
       id={`ranking-player-${row.player_id}`}
       data-podium-step={row.position}
       className={cn(
-        "border-ink-300 bg-paper-card shadow-elev-1 target:ring-action flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 target:ring-2 target:ring-offset-2",
+        "border-ink-300 bg-paper-card shadow-elev-1 flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5",
         isMe && "border-ball-gold/70 bg-ball-gold/10 ring-ball-gold/35 ring-2",
+        isJumpTarget && "border-action bg-action/5 ring-action ring-2 ring-offset-2",
       )}
       style={{ borderLeftWidth: "4px", borderLeftColor: teamColor }}
     >
