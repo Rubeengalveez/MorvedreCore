@@ -8,7 +8,6 @@ import { rankingPageForPosition, type RankingRow } from "@/lib/domain/rankings";
 export interface RankingPositionJumpProps {
   rows: RankingRow[];
   ownProfileId: string;
-  totalPlayers: number;
   pageSize: number;
   baseHref: string;
   metricLabel: string;
@@ -24,7 +23,6 @@ function positionHref(baseHref: string, row: RankingRow, pageSize: number): Rout
 export function RankingPositionJump({
   rows,
   ownProfileId,
-  totalPlayers,
   pageSize,
   baseHref,
   metricLabel,
@@ -54,7 +52,7 @@ export function RankingPositionJump({
               <span className="text-pool-deep block truncate text-sm font-extrabold">{label}</span>
               <span className="text-ink-500 mt-0.5 block truncate text-xs font-semibold">
                 {row.primary_value}
-                {metricSuffix} {metricLabel} · de {totalPlayers}
+                {metricSuffix} {metricLabel}
               </span>
             </span>
             <span className="text-pool-blue hidden text-xs font-extrabold min-[380px]:inline">

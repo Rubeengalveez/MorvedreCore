@@ -29,7 +29,7 @@ const METRICS: ReadonlyArray<{
   suffix: string;
 }> = [
   { id: "goals", label: "Goles", positionLabel: "goles", suffix: "" },
-  { id: "exclusions", label: "Excl.", positionLabel: "expulsiones", suffix: "" },
+  { id: "exclusions", label: "Exp.", positionLabel: "expulsiones", suffix: "" },
   { id: "mvp", label: "MVP", positionLabel: "MVP", suffix: "" },
   { id: "attendance", label: "Asist.", positionLabel: "asistencia", suffix: "%" },
   { id: "streak", label: "Racha", positionLabel: "de racha", suffix: "" },
@@ -149,7 +149,6 @@ export function RankingsContent({
         <RankingPositionJump
           rows={trackedRows}
           ownProfileId={ownProfileId}
-          totalPlayers={ranking.total_players}
           pageSize={paged.page_size}
           baseHref={baseHref}
           metricLabel={metricMeta.positionLabel}
@@ -250,7 +249,7 @@ function StreakControls({
     },
     {
       id: "excl_consec",
-      label: "Exclusiones",
+      label: "Expulsiones",
       short: "Tendencia a corregir",
       icon: ShieldAlert,
     },
@@ -279,7 +278,7 @@ function StreakControls({
     >
       <div className="flex items-end justify-between gap-3">
         <div>
-          <p className="text-action text-[11px] font-extrabold tracking-[0.12em] uppercase">
+          <p className="text-action text-xs font-extrabold tracking-[0.08em] uppercase">
             En directo
           </p>
           <h2 id="streak-controls-title" className="text-pool-deep text-lg font-extrabold">
@@ -318,7 +317,7 @@ function StreakControls({
                 <span className="block text-sm font-extrabold">{option.label}</span>
                 <span
                   className={cn(
-                    "mt-0.5 block text-[11px] leading-snug",
+                    "mt-0.5 block text-xs leading-snug",
                     isActive ? "text-paper/75" : "text-ink-500",
                   )}
                 >
