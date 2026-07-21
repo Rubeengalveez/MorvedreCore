@@ -16,7 +16,7 @@ Esta revisión cierra la iteración de Rankings y audita estructura, código mue
 ## Limpieza aplicada
 
 - Se eliminaron once componentes y utilidades huérfanos de rediseños anteriores.
-- Se retiraron doce capturas temporales de la raíz, logs locales, resultados regenerables y el service worker ficticio de desarrollo.
+- Se retiraron doce capturas temporales de la raíz, una copia local de un adjunto, logs, resultados regenerables y el service worker ficticio de desarrollo.
 - Se eliminó un esquema de importación antiguo que duplicaba la implementación activa.
 - `public/sw-dev.js` queda ignorado; el service worker de producción sigue generándose desde `app/sw.ts` mediante Serwist.
 - Se conserva el material de prueba que sí documenta asistencia, autenticación y experiencia familiar.
