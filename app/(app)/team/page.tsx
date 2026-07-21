@@ -8,6 +8,7 @@ import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getAllTeamsInSeason } from "@/server/queries/teams";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { firstName } from "@/lib/domain/family";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -45,28 +46,51 @@ export default async function TeamPage() {
   }
 
   const supabase = await createClient();
-  const [allTeams, rosterResult, staffResult] = await Promise.all([
+  const familyProfiles = [ctx.ownProfile, ...ctx.linkedProfiles];
+  const familyProfileIds = familyProfiles.map((profile) => profile.id);
+
+  const [allTeams, staffResult, rostersResult] = await Promise.all([
     getAllTeamsInSeason(season.id),
-    supabase
-      .from("team_rosters")
-      .select("team_id, teams!team_rosters_team_id_fkey(season_id)")
-      .eq("player_id", ctx.activeProfile.id)
-      .is("left_at", null),
     supabase
       .from("team_staff")
       .select("team_id, teams!team_staff_team_id_fkey(season_id)")
       .eq("profile_id", ctx.activeProfile.id)
       .eq("role", "head_coach"),
+    familyProfileIds.length > 0
+      ? supabase
+          .from("team_rosters")
+          .select("team_id, player_id, teams!team_rosters_team_id_fkey(season_id)")
+          .in("player_id", familyProfileIds)
+          .is("left_at", null)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
-  const playerTeamIds = new Set(
-    (rosterResult.data ?? [])
-      .filter((item) => item.teams?.season_id === season.id)
-      .map((item) => item.team_id),
-  );
+  const linkedIds = new Set(ctx.linkedProfiles.map((profile) => profile.id));
+  const playerTeamIds = new Set<string>();
+  const familyPlayersByTeam = new Map<string, string[]>();
+  for (const row of rostersResult.data ?? []) {
+    const joined = Array.isArray(row.teams) ? row.teams[0] : row.teams;
+    if (joined?.season_id !== season.id) continue;
+    if (row.player_id === ctx.ownProfile.id) {
+      playerTeamIds.add(row.team_id);
+      continue;
+    }
+    if (!linkedIds.has(row.player_id)) continue;
+    const profile = familyProfiles.find((item) => item.id === row.player_id);
+    if (!profile) continue;
+    const list = familyPlayersByTeam.get(row.team_id) ?? [];
+    list.push(firstName(profile.full_name));
+    familyPlayersByTeam.set(row.team_id, list);
+  }
+  for (const list of familyPlayersByTeam.values()) {
+    list.sort((a, b) => a.localeCompare(b, "es"));
+  }
   const coachTeamIds = new Set(
     (staffResult.data ?? [])
-      .filter((item) => item.teams?.season_id === season.id)
+      .filter((item) => {
+        const joined = Array.isArray(item.teams) ? item.teams[0] : item.teams;
+        return joined?.season_id === season.id;
+      })
       .map((item) => item.team_id),
   );
   const categories = CATEGORY_ORDER.map((code) => ({
@@ -125,6 +149,7 @@ export default async function TeamPage() {
                             ? "player"
                             : null
                     }
+                    familyPlayerNames={familyPlayersByTeam.get(team.id) ?? []}
                   />
                 ))}
               </div>

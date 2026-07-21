@@ -8,6 +8,7 @@ import type { TeamListItem } from "@/server/queries/teams";
 export interface TeamListCardProps {
   team: TeamListItem;
   relationship?: "player" | "coach" | "both" | null;
+  familyPlayerNames?: string[];
 }
 
 const GENDER_LABELS: Record<string, string> = {
@@ -16,8 +17,20 @@ const GENDER_LABELS: Record<string, string> = {
   mixed: "Mixto",
 };
 
-export function TeamListCard({ team, relationship = null }: TeamListCardProps) {
+function formatFamilyPlayers(names: string[]): string {
+  if (names.length === 0) return "";
+  if (names.length === 1) return names[0] ?? "";
+  if (names.length === 2) return `${names[0]} y ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} y ${names[names.length - 1]}`;
+}
+
+export function TeamListCard({
+  team,
+  relationship = null,
+  familyPlayerNames = [],
+}: TeamListCardProps) {
   const href = `/team/${team.id}` as Route;
+  const showsFamily = familyPlayerNames.length > 0;
 
   return (
     <Link
@@ -31,6 +44,10 @@ export function TeamListCard({ team, relationship = null }: TeamListCardProps) {
         relationship === "coach" && "border-pool-deep/45 shadow-elev-2",
         relationship === "both" &&
           "border-ball-gold bg-pool-ice shadow-elev-2 ring-ball-gold/20 ring-1",
+        showsFamily &&
+          relationship !== "player" &&
+          relationship !== "both" &&
+          "border-pool-blue/30 bg-pool-ice/40 shadow-sm",
       )}
     >
       <span
@@ -40,16 +57,21 @@ export function TeamListCard({ team, relationship = null }: TeamListCardProps) {
       />
 
       <div className="min-w-0 flex-1 pl-1">
-        {relationship ? (
+        {relationship || showsFamily ? (
           <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {relationship === "player" || relationship === "both" ? (
-              <span className="text-pool-blue inline-flex items-center gap-1.5 text-[10px] leading-none font-extrabold tracking-[0.11em] uppercase">
+              <span className="text-pool-blue inline-flex items-center gap-1.5 text-xs leading-tight font-extrabold tracking-[0.07em] uppercase">
                 <span className="bg-pool-blue h-1.5 w-1.5 rounded-full" aria-hidden="true" />
                 Tu equipo
               </span>
+            ) : showsFamily ? (
+              <span className="text-pool-blue inline-flex items-center gap-1.5 text-xs leading-tight font-extrabold tracking-[0.07em] uppercase">
+                <span className="bg-pool-blue h-1.5 w-1.5 rounded-full" aria-hidden="true" />
+                Aquí juega {formatFamilyPlayers(familyPlayerNames)}
+              </span>
             ) : null}
             {relationship === "coach" || relationship === "both" ? (
-              <span className="bg-pool-deep text-paper rounded-full px-2 py-0.5 text-[10px] leading-tight font-extrabold">
+              <span className="bg-pool-deep text-paper rounded-full px-2 py-0.5 text-xs leading-tight font-extrabold">
                 Entrenador titular
               </span>
             ) : null}
