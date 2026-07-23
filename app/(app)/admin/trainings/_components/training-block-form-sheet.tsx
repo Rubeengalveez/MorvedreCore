@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 import { formatWeekdayLetter } from "@/lib/utils/format";
+import { mapsUrlInputSchema } from "@/lib/domain/maps";
 import {
   createTrainingBlock,
   generateSessionsFromBlockAction,
@@ -61,6 +62,7 @@ const formSchema = z.object({
   start_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora de inicio inválida."),
   end_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora de fin inválida."),
   location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
+  maps_url: mapsUrlInputSchema.optional(),
   kind: z.enum(["water", "dry", "physical", "technical", "mixed"]),
 });
 
@@ -83,7 +85,8 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       end_date: String(formData.get("end_date") ?? ""),
       start_time: String(formData.get("start_time") ?? ""),
       end_time: String(formData.get("end_time") ?? ""),
-      location: String(formData.get("location") ?? "") || undefined,
+      location: String(formData.get("location") ?? "") || null,
+      maps_url: String(formData.get("maps_url") ?? "") || null,
       kind: String(formData.get("kind") ?? "water") as
         "water" | "dry" | "physical" | "technical" | "mixed",
     };
@@ -177,6 +180,7 @@ export function TrainingBlockFormSheet({
       start_time: initial?.start_time?.slice(0, 5) ?? "",
       end_time: initial?.end_time?.slice(0, 5) ?? "",
       location: initial?.location ?? "",
+      maps_url: initial?.maps_url ?? "",
       kind: (initial?.kind as FormValues["kind"]) ?? "water",
     },
   });
@@ -199,9 +203,8 @@ export function TrainingBlockFormSheet({
     fd.append("end_date", values.end_date);
     fd.append("start_time", values.start_time);
     fd.append("end_time", values.end_time);
-    if (values.location && values.location.trim() !== "") {
-      fd.append("location", values.location);
-    }
+    fd.append("location", values.location ?? "");
+    fd.append("maps_url", values.maps_url ?? "");
     fd.append("kind", values.kind);
     startTransition(() => {
       formAction(fd);
@@ -411,6 +414,34 @@ export function TrainingBlockFormSheet({
                         ref={field.ref}
                       />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="maps_url"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="url"
+                        inputMode="url"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        placeholder="https://maps.app.goo.gl/..."
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Se copiará a todos los entrenamientos que genere este bloque.
+                    </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

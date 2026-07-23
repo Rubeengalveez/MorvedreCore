@@ -154,7 +154,7 @@ export function CalendarView({
           <div
             role="tablist"
             aria-label="Modo de vista"
-            className="bg-paper-sunk grid min-h-12 grid-cols-3 rounded-xl p-1"
+            className="bg-paper-sunk grid min-h-12 grid-cols-3 gap-1 rounded-xl p-1"
           >
             {[
               { id: "month" as const, Icon: Grid3x3, label: "Mes" },
@@ -169,10 +169,12 @@ export function CalendarView({
                 onClick={() => setViewMode(id)}
                 className={cn(
                   "focus-visible:ring-pool-blue inline-flex min-h-10 touch-manipulation items-center justify-center gap-1 rounded-lg px-1 text-xs font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
-                  viewMode === id ? "bg-pool-deep text-paper shadow-elev-1" : "text-ink-600",
+                  viewMode === id
+                    ? "bg-pool-deep text-paper shadow-elev-1"
+                    : "bg-paper-card/70 text-ink-600",
                 )}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="hidden h-4 w-4 min-[390px]:block" aria-hidden="true" />
                 <span>{label}</span>
               </button>
             ))}
@@ -181,7 +183,7 @@ export function CalendarView({
             variant="secondary"
             size="sm"
             onClick={goToday}
-            className="min-h-12 rounded-xl px-4 text-sm font-extrabold"
+            className="min-h-12 rounded-xl px-3 text-sm font-extrabold"
           >
             Hoy
           </Button>

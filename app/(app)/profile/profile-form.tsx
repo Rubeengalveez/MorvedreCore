@@ -75,9 +75,10 @@ function SubmitButton() {
 
 export interface ProfileFormProps {
   profile: Tables<"profiles">;
+  isPlayer: boolean;
 }
 
-export function ProfileForm({ profile }: ProfileFormProps) {
+export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
   const router = useRouter();
   const [state, formAction] = useActionState<UpdateProfileState, FormData>(updateProfile, null);
   const [, startTransition] = useTransition();
@@ -95,7 +96,7 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     defaultValues: {
       full_name: profile.full_name,
       birth_year: profile.birth_year?.toString() ?? "",
-      cap_number: profile.cap_number?.toString() ?? "",
+      cap_number: isPlayer ? (profile.cap_number?.toString() ?? "") : "",
       phone_e164: profile.phone_e164 ?? "",
       email_contact: profile.email_contact ?? "",
     },
@@ -106,7 +107,9 @@ export function ProfileForm({ profile }: ProfileFormProps) {
     const fd = new FormData();
     fd.append("full_name", values.full_name);
     fd.append("birth_year", values.birth_year ?? "");
-    fd.append("cap_number", values.cap_number ?? "");
+    if (isPlayer) {
+      fd.append("cap_number", values.cap_number ?? "");
+    }
     fd.append("phone_e164", normalizeSpanishPhone(values.phone_e164 ?? "") ?? "");
     fd.append("email_contact", values.email_contact ?? "");
     if (avatarFile) fd.append("avatar_file", avatarFile);

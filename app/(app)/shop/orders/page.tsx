@@ -85,7 +85,7 @@ function StatusBadge({ status }: { status: keyof typeof SHOP_ORDER_STATUS_LABELS
   return (
     <span
       className={cn(
-        "rounded-full px-2.5 py-1 text-[11px] font-extrabold tracking-wide uppercase",
+        "rounded-full px-2.5 py-1 text-xs font-extrabold tracking-wide uppercase",
         status === "delivered" && "bg-success/10 text-success",
         status === "rejected" || status === "cancelled"
           ? "bg-goggle-red/10 text-goggle-red"

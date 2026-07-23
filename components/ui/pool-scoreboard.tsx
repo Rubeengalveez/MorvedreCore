@@ -157,7 +157,7 @@ function TeamScore({
         align === "left" ? "items-start text-left" : "items-end text-right",
       )}
     >
-      <span className="text-ink-500 text-[11px] font-bold tracking-wide uppercase">{venue}</span>
+      <span className="text-ink-600 text-xs font-bold tracking-wide uppercase">{venue}</span>
       <span
         className="flex max-w-full items-center gap-1.5 text-sm font-extrabold sm:text-base"
         style={{ color }}
@@ -193,7 +193,7 @@ function MatchCenter({
   if (mode === "preview") {
     return (
       <div className="text-pool-deep flex min-w-14 flex-col items-center px-3 text-center">
-        <span className="text-ink-500 text-[11px] font-bold tracking-wide uppercase">Hora</span>
+        <span className="text-ink-600 text-xs font-bold tracking-wide uppercase">Hora</span>
         <span className="font-mono text-xl font-extrabold tabular-nums">
           {formatTime(scheduledAt)}
         </span>
@@ -204,9 +204,9 @@ function MatchCenter({
   if (mode === "live") {
     return (
       <div className="text-goggle-red flex min-w-14 flex-col items-center px-3 text-center">
-        <span className="text-[11px] font-extrabold tracking-wide uppercase">En vivo</span>
+        <span className="text-xs font-extrabold tracking-wide uppercase">En vivo</span>
         <span className="font-mono text-lg font-extrabold tabular-nums">{clock ?? "00:00"}</span>
-        <span className="text-ink-500 text-[10px] font-bold">{period ?? 1}º periodo</span>
+        <span className="text-ink-600 text-xs font-bold">{period ?? 1}º periodo</span>
       </div>
     );
   }

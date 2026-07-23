@@ -137,7 +137,7 @@ export function ActaManager({ match, entries }: ActaManagerProps) {
       <section className="bg-pool-deep text-paper shadow-elev-3 rounded-2xl p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-paper/60 text-xs font-extrabold tracking-[0.12em] uppercase">
+            <p className="text-paper/80 text-xs font-extrabold tracking-[0.08em] uppercase">
               Resultado
             </p>
             <h3 className="font-display mt-1 text-xl font-extrabold">Marcador final</h3>

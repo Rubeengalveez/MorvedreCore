@@ -159,7 +159,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
           <div className="border-ink-200 w-full border-t" />
         </div>
         <div className="relative flex justify-center text-xs">
-          <span className="bg-paper-card text-ink-400 px-2">o</span>
+          <span className="bg-paper-card text-ink-600 px-2">o</span>
         </div>
       </div>
 

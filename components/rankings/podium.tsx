@@ -142,7 +142,7 @@ function PodiumLeader({
             {row.primary_value}
             <span className="text-2xl">{metricSuffix}</span>
           </p>
-          <p className="text-paper/55 mt-1 text-xs font-extrabold tracking-[0.08em] uppercase">
+          <p className="text-paper/75 mt-1 text-xs font-extrabold tracking-[0.08em] uppercase">
             {metricLabel}
           </p>
         </div>

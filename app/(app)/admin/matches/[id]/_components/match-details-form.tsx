@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -20,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
+import { mapsUrlInputSchema } from "@/lib/domain/maps";
 import { updateMatch, type MatchRow, type Team } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
@@ -43,6 +45,7 @@ const formSchema = z.object({
   status: z.enum(["scheduled", "in_progress", "played", "cancelled", "postponed"]),
   is_home: z.boolean(),
   location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
+  maps_url: mapsUrlInputSchema.optional(),
   pool_name: z.string().trim().max(100, "Máximo 100 caracteres.").optional(),
   scheduled_at_local: z.string().min(1, "Fecha y hora obligatorias."),
   logistics_enabled: z.boolean(),
@@ -118,6 +121,7 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
       status: match.status as FormValues["status"],
       is_home: match.is_home,
       location: match.location ?? "",
+      maps_url: match.maps_url ?? "",
       pool_name: match.pool_name ?? "",
       scheduled_at_local: formatDateTimeLocal(new Date(match.scheduled_at)),
       logistics_enabled: match.logistics_enabled,
@@ -141,6 +145,7 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
           status: values.status,
           is_home: values.is_home,
           location: values.location && values.location.trim() !== "" ? values.location : null,
+          maps_url: values.maps_url && values.maps_url.trim() !== "" ? values.maps_url : null,
           pool_name: values.pool_name && values.pool_name.trim() !== "" ? values.pool_name : null,
           scheduled_at: dt.toISOString(),
           logistics_enabled: values.logistics_enabled,
@@ -342,6 +347,34 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="maps_url"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
+                <FormControl>
+                  <Input
+                    type="url"
+                    inputMode="url"
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    placeholder="https://maps.app.goo.gl/..."
+                    value={field.value ?? ""}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    ref={field.ref}
+                  />
+                </FormControl>
+                <FormDescription>
+                  En Google Maps, toca Compartir y copia aquí el enlace de la piscina.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
         </section>
 
         <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">

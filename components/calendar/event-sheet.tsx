@@ -3,11 +3,12 @@
 import { useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, MapPin, ChevronRight, Check, X, Clock3 } from "lucide-react";
+import { Loader2, ChevronRight, Check, X, Clock3 } from "lucide-react";
 import type { Route } from "next";
 
 import { Gorro } from "@/components/brand/pictograms";
 import { Button } from "@/components/ui/button";
+import { MapLocationLink } from "@/components/ui/map-location-link";
 import {
   Sheet,
   SheetBody,
@@ -57,7 +58,7 @@ function EventBadge({ children, className }: { children: ReactNode; className?: 
   return (
     <span
       className={cn(
-        "inline-flex min-h-7 items-center rounded-lg border px-2.5 text-[11px] leading-none font-black tracking-[0.06em] uppercase",
+        "inline-flex min-h-8 items-center rounded-lg border px-2.5 text-xs leading-tight font-black tracking-[0.05em] uppercase",
         className,
       )}
     >
@@ -179,10 +180,8 @@ export function TrainingRow({
               </div>
             </EventMetaRow>
 
-            {training.location ? (
-              <EventMetaRow icon={<MapPin className="h-4 w-4" aria-hidden="true" />}>
-                <span className="text-pretty break-words">{training.location}</span>
-              </EventMetaRow>
+            {training.location || training.maps_url ? (
+              <MapLocationLink name={training.location} mapsUrl={training.maps_url} />
             ) : null}
           </div>
         </div>
@@ -261,7 +260,7 @@ export function MatchRow({
               accent={match.is_home ? match.team_color : "#718096"}
               aria-hidden="true"
             />
-            <span className="text-ink-950 truncate text-[13px] font-black">{homeTeam}</span>
+            <span className="text-ink-950 truncate text-xs font-black">{homeTeam}</span>
           </div>
 
           <div className="flex min-w-12 shrink-0 justify-center">
@@ -280,7 +279,7 @@ export function MatchRow({
           </div>
 
           <div className="flex min-w-0 items-center justify-end gap-1 text-right">
-            <span className="text-ink-950 truncate text-[13px] font-black">{awayTeam}</span>
+            <span className="text-ink-950 truncate text-xs font-black">{awayTeam}</span>
             <Gorro
               className="h-[18px] w-[18px] shrink-0"
               accent={match.is_home ? "#718096" : match.team_color}
@@ -289,15 +288,12 @@ export function MatchRow({
           </div>
         </div>
 
-        {match.pool_name || match.location ? (
-          <EventMetaRow icon={<MapPin className="h-4 w-4" aria-hidden="true" />}>
-            <p className="text-pretty break-words">
-              {match.pool_name || match.location}
-              {match.location && match.location !== match.pool_name ? (
-                <span className="text-ink-500 block text-xs">{match.location}</span>
-              ) : null}
-            </p>
-          </EventMetaRow>
+        {match.pool_name || match.location || match.maps_url ? (
+          <MapLocationLink
+            name={match.pool_name || match.location}
+            address={match.location}
+            mapsUrl={match.maps_url}
+          />
         ) : null}
 
         {isCalled && match.callup_status && (

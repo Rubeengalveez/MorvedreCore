@@ -127,6 +127,7 @@ export async function createMatch(input: {
   competition_type?: "league" | "cup" | "tournament" | "friendly";
   is_home?: boolean;
   location?: string | null;
+  maps_url?: string | null;
   pool_name?: string | null;
   scheduled_at: string;
   logistics_enabled?: boolean;
@@ -149,6 +150,7 @@ export async function createMatch(input: {
       competition_type: parsed.data.competition_type ?? "league",
       is_home: parsed.data.is_home ?? true,
       location: parsed.data.location ?? null,
+      maps_url: parsed.data.maps_url ?? null,
       pool_name: parsed.data.pool_name ?? null,
       scheduled_at: parsed.data.scheduled_at,
       logistics_enabled: parsed.data.logistics_enabled ?? false,
@@ -177,6 +179,7 @@ export async function updateMatch(
     competition_type: "league" | "cup" | "tournament" | "friendly";
     is_home: boolean;
     location: string | null;
+    maps_url: string | null;
     pool_name: string | null;
     scheduled_at: string;
     status: "scheduled" | "in_progress" | "played" | "cancelled" | "postponed";

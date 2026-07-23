@@ -101,6 +101,10 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
       setError(cartSummary.error ?? "Revisa los productos del carrito.");
       return;
     }
+    if (requiresGuardian) {
+      submitCheckout(null);
+      return;
+    }
     const normalizedPhone = initialPhone ?? normalizeSpanishPhone(phone);
     if (!normalizedPhone) {
       setPhoneOpen(true);
@@ -109,7 +113,7 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
     submitCheckout(normalizedPhone);
   }
 
-  function submitCheckout(contactPhone: string) {
+  function submitCheckout(contactPhone: string | null) {
     startTransition(async () => {
       try {
         const result = await createShopOrder({
@@ -330,7 +334,7 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
         </div>
 
         <aside className="border-pool-deep bg-pool-deep text-paper shadow-elev-2 rounded-xl border p-5 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
-          <p className="text-paper/65 text-xs font-extrabold tracking-[0.12em] uppercase">
+          <p className="text-paper/80 text-xs font-extrabold tracking-[0.08em] uppercase">
             Resumen
           </p>
           {cartSummary.ok ? (

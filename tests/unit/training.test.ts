@@ -20,6 +20,7 @@ function makeBlock(overrides: Partial<TrainingBlock> = {}): TrainingBlock {
     start_time: "17:00",
     end_time: "18:30",
     location: "Piscina Municipal",
+    maps_url: "https://maps.app.goo.gl/piscina-municipal",
     kind: "water",
     ...overrides,
   };
@@ -147,13 +148,14 @@ describe("generateSessionsFromBlock", () => {
     expect(generateSessionsFromBlock(block)).toEqual([]);
   });
 
-  it("includes block_id, team_id, location, and kind in every session", () => {
+  it("includes the block identity, location, map and kind in every session", () => {
     const block = makeBlock({ weekdays: [1] });
     const [session] = generateSessionsFromBlock(block);
     expect(session).toBeDefined();
     expect(session!.block_id).toBe("block-1");
     expect(session!.team_id).toBe("team-1");
     expect(session!.location).toBe("Piscina Municipal");
+    expect(session!.maps_url).toBe("https://maps.app.goo.gl/piscina-municipal");
     expect(session!.kind).toBe("water");
   });
 

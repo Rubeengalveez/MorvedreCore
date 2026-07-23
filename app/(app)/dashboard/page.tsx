@@ -199,7 +199,7 @@ function HomeHero({
     <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-3.5 sm:px-5 sm:py-4">
       <div className="flex items-center gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-pool-blue text-[11px] font-extrabold tracking-[0.14em] uppercase">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.08em] uppercase">
             {contextLabel}
           </p>
           <h1 className="font-display text-pool-deep mt-0.5 truncate text-[1.35rem] leading-tight font-extrabold tracking-tight">
@@ -219,7 +219,7 @@ function HomeHero({
           <span className="font-mono text-lg leading-none font-extrabold tabular-nums">
             {dayFormatter.format(now)}
           </span>
-          <span className="text-pool-blue mt-0.5 text-[9px] font-extrabold tracking-[0.1em] uppercase">
+          <span className="text-pool-blue mt-0.5 text-xs leading-tight font-extrabold tracking-[0.05em] uppercase">
             {monthFormatter.format(now).replace(".", "")}
           </span>
         </time>
@@ -259,7 +259,7 @@ function NextTurn({ event, now }: { event: DashboardWeekEvent; now: Date }) {
               Lo siguiente
             </p>
             {event.is_today || event.is_tomorrow ? (
-              <span className="bg-pool-deep text-paper rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase">
+              <span className="bg-pool-deep text-paper rounded-full px-2.5 py-1 text-xs font-extrabold uppercase">
                 {event.is_today ? "Hoy" : "Mañana"}
               </span>
             ) : null}
@@ -401,7 +401,7 @@ function AgendaDigestRow({ event }: { event: DashboardWeekEvent }) {
         dateTime={event.scheduled_at}
         className="bg-pool-foam flex h-10 w-10 shrink-0 flex-col items-center justify-center rounded-xl"
       >
-        <span className="text-pool-blue text-[9px] leading-none font-extrabold uppercase">
+        <span className="text-pool-blue text-xs leading-tight font-extrabold uppercase">
           {weekdayFormatter.format(date).replace(".", "")}
         </span>
         <span className="text-pool-deep mt-1 font-mono text-base leading-none font-extrabold tabular-nums">
@@ -457,7 +457,7 @@ function PlayerStreaks({ streaks }: { streaks: ActiveStreakRow[] }) {
                 <strong className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums">
                   {streak.current_value}
                 </strong>
-                <p className="text-ink-400 mt-0.5 text-[10px] font-bold uppercase">ahora</p>
+                <p className="text-ink-600 mt-0.5 text-xs font-bold uppercase">ahora</p>
               </div>
             </div>
           ))}
@@ -496,7 +496,7 @@ function SeasonSnapshot({ stats }: { stats: PlayerSeasonStats }) {
           <Target className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-pool-blue text-[10px] font-extrabold tracking-[0.1em] uppercase">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.06em] uppercase">
             Esta temporada
           </p>
           <h2 id="season-summary-heading" className="text-pool-deep text-base font-extrabold">
@@ -524,7 +524,7 @@ function SeasonSnapshot({ stats }: { stats: PlayerSeasonStats }) {
                 <p className="text-pool-deep font-mono text-lg leading-none font-extrabold tabular-nums">
                   {item.value}
                 </p>
-                <p className="text-ink-500 mt-1 truncate text-[11px] font-bold">{item.label}</p>
+                <p className="text-ink-600 mt-1 truncate text-xs font-bold">{item.label}</p>
               </div>
             </div>
           );
@@ -652,7 +652,7 @@ function streakLabel(type: ActiveStreakRow["type"]): string {
     case "goals_consec":
       return "partidos marcando";
     case "excl_consec":
-      return "partidos con exclusión";
+      return "partidos con expulsión";
     case "train_consec":
       return "entrenos seguidos";
     case "mvp_consec":

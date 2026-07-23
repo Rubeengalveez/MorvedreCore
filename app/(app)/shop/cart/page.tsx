@@ -3,10 +3,9 @@ import Link from "next/link";
 import type { Route } from "next";
 import { ArrowLeft, ShoppingBag } from "lucide-react";
 
-import { getActiveProfileContext } from "@/server/queries/active-profile";
+import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getShopProducts } from "@/server/queries/shop";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
-import { createClient } from "@/lib/supabase/server";
 import { CartClient } from "../_components/cart-client";
 import { requiresGuardianApproval } from "@/lib/domain/family";
 
@@ -18,15 +17,7 @@ export const metadata = { title: "Carrito — Morvedre Core" };
 export default async function CartPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const supabase = await createClient();
-  const [products, { data: ownProfile }] = await Promise.all([
-    getShopProducts(),
-    supabase
-      .from("profiles")
-      .select("phone_e164, birth_year")
-      .eq("id", ctx.ownProfile.id)
-      .maybeSingle(),
-  ]);
+  const [products, initialPhone] = await Promise.all([getShopProducts(), getOwnProfilePhone()]);
 
   return (
     <PageShell width="lg" className="gap-5 pb-8">
@@ -45,8 +36,8 @@ export default async function CartPage() {
       />
       <CartClient
         products={products}
-        initialPhone={ownProfile?.phone_e164 ?? null}
-        requiresGuardian={requiresGuardianApproval(ownProfile?.birth_year ?? null)}
+        initialPhone={initialPhone}
+        requiresGuardian={requiresGuardianApproval(ctx.ownProfile.birth_year)}
       />
     </PageShell>
   );

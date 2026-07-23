@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 
 import { canDepartBeforeMatch } from "@/lib/domain/travel";
 import {
+  addTravelCompanionSchema,
+  cancelTravelCompanionSchema,
   cancelTravelOfferSchema,
   cancelTravelReservationSchema,
   configureMatchTravelSchema,
@@ -104,9 +106,6 @@ export async function reserveTravelSeat(input: unknown): Promise<TravelActionSta
   try {
     const ctx = await getActiveProfileContext();
     if (!ctx) throw new Error("No has iniciado sesión.");
-    if (parsed.data.player_id !== ctx.activeProfile.id) {
-      throw new Error("Cambia al perfil correcto antes de reservar.");
-    }
     const supabase = await createClient();
     const { data: offer } = await supabase
       .from("travel_offers")
@@ -120,7 +119,13 @@ export async function reserveTravelSeat(input: unknown): Promise<TravelActionSta
     });
     if (error?.message.includes("OFFER_FULL")) throw new Error("Ese coche acaba de llenarse.");
     if (error?.message.includes("PLAYER_ALREADY_RESERVED")) {
-      throw new Error("Ya tienes una plaza en este desplazamiento.");
+      throw new Error("Ya tiene una plaza reservada en este desplazamiento.");
+    }
+    if (error?.message.includes("PLAYER_NOT_ALLOWED")) {
+      throw new Error("No puedes reservar para esta persona.");
+    }
+    if (error?.message.includes("OFFER_NOT_AVAILABLE")) {
+      throw new Error("Ese coche ya no está disponible.");
     }
     if (error) throw new Error("No pudimos reservar la plaza.");
     revalidateTravel((offer as { match_id: string }).match_id);
@@ -136,9 +141,6 @@ export async function cancelTravelReservation(input: unknown): Promise<TravelAct
   try {
     const ctx = await getActiveProfileContext();
     if (!ctx) throw new Error("No has iniciado sesión.");
-    if (parsed.data.player_id !== ctx.activeProfile.id) {
-      throw new Error("Cambia al perfil correcto antes de cancelar.");
-    }
     const supabase = await createClient();
     const { data: offer } = await supabase
       .from("travel_offers")
@@ -157,6 +159,73 @@ export async function cancelTravelReservation(input: unknown): Promise<TravelAct
     return { ok: true, message: "Plaza liberada." };
   } catch (error) {
     return failure(error, "No pudimos cancelar la plaza.");
+  }
+}
+
+export async function addTravelCompanion(input: unknown): Promise<TravelActionState> {
+  const parsed = addTravelCompanionSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa los datos." };
+  }
+  try {
+    const ctx = await getActiveProfileContext();
+    if (!ctx) throw new Error("No has iniciado sesión.");
+    const supabase = await createClient();
+    const { data: offer } = await supabase
+      .from("travel_offers")
+      .select("match_id")
+      .eq("id", parsed.data.offer_id)
+      .maybeSingle();
+    if (!offer) throw new Error("Ese coche ya no está disponible.");
+    const { error } = await supabase.from("travel_companions").insert({
+      offer_id: parsed.data.offer_id,
+      reservation_offer_id: parsed.data.offer_id,
+      reservation_player_id: parsed.data.player_id,
+      full_name: parsed.data.full_name,
+    });
+    if (error?.message.includes("OFFER_FULL")) throw new Error("Ese coche acaba de llenarse.");
+    if (error?.message.includes("OFFER_NOT_AVAILABLE")) {
+      throw new Error("Ese coche ya no está disponible.");
+    }
+    if (error?.code === "23505") {
+      throw new Error("Ya hay un acompañante con ese nombre en esta plaza.");
+    }
+    if (error) throw new Error("No pudimos añadir al acompañante.");
+    revalidateTravel((offer as { match_id: string }).match_id);
+    return { ok: true, message: "Acompañante añadido." };
+  } catch (error) {
+    return failure(error, "No pudimos añadir al acompañante.");
+  }
+}
+
+export async function cancelTravelCompanion(input: unknown): Promise<TravelActionState> {
+  const parsed = cancelTravelCompanionSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Acompañante no válido." };
+  try {
+    const ctx = await getActiveProfileContext();
+    if (!ctx) throw new Error("No has iniciado sesión.");
+    const supabase = await createClient();
+    const { data: companion, error: companionError } = await supabase
+      .from("travel_companions")
+      .select("offer_id, travel_offers(match_id)")
+      .eq("id", parsed.data.companion_id)
+      .maybeSingle();
+    if (companionError || !companion) throw new Error("No encontramos al acompañante.");
+    const matchId = (companion as { travel_offers: { match_id: string } | { match_id: string }[] | null })
+      .travel_offers;
+    const matchIdStr = Array.isArray(matchId) ? matchId[0]?.match_id : matchId?.match_id;
+    if (!matchIdStr) throw new Error("No pudimos identificar el partido.");
+
+    const { error } = await supabase
+      .from("travel_companions")
+      .update({ cancelled_at: new Date().toISOString() })
+      .eq("id", parsed.data.companion_id)
+      .is("cancelled_at", null);
+    if (error) throw new Error("No pudimos cancelar al acompañante.");
+    revalidateTravel(matchIdStr);
+    return { ok: true, message: "Acompañante cancelado." };
+  } catch (error) {
+    return failure(error, "No pudimos cancelar al acompañante.");
   }
 }
 

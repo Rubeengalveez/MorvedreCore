@@ -20,8 +20,10 @@ describe("treasury domain", () => {
   });
 
   it("formatea importes positivos y negativos", () => {
-    expect(formatTreasuryCents(6000)).toBe("60.00 EUR");
-    expect(formatTreasuryCents(-500)).toBe("-5.00 EUR");
+    expect(formatTreasuryCents(6000)).toContain("60,00");
+    expect(formatTreasuryCents(6000)).toContain("€");
+    expect(formatTreasuryCents(-500)).toContain("5,00");
+    expect(formatTreasuryCents(-500)).toContain("-");
   });
 
   it("calcula etiqueta mensual", () => {

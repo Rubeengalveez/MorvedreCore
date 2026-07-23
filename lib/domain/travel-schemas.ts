@@ -20,6 +20,16 @@ export const reserveTravelSeatSchema = z.object({
 
 export const cancelTravelReservationSchema = reserveTravelSeatSchema;
 
+export const addTravelCompanionSchema = z.object({
+  offer_id: uuid,
+  player_id: uuid,
+  full_name: z.string().trim().min(1, "Indica el nombre del acompañante.").max(80),
+});
+
+export const cancelTravelCompanionSchema = z.object({
+  companion_id: uuid,
+});
+
 export const cancelTravelOfferSchema = z.object({
   offer_id: uuid,
 });

@@ -8,7 +8,7 @@ const CONCEPTS = [
     label: "Cuota mensual",
     kind: "fee",
     periodicity: "monthly",
-    amount: 3500,
+    amount: 6000,
     applies: "all_players",
   },
   {
@@ -33,14 +33,6 @@ const CONCEPTS = [
     kind: "tournament",
     periodicity: "one_off",
     amount: 2500,
-    applies: "specific_profile",
-  },
-  {
-    code: "DESCUENTO_HERMANOS",
-    label: "Descuento por hermanos",
-    kind: "discount",
-    periodicity: "monthly",
-    amount: -500,
     applies: "specific_profile",
   },
 ];
@@ -100,22 +92,11 @@ async function main() {
       id: randomUUID(),
       profile_id: playerId,
       concept_id: conceptByCode.get(school ? "ESCUELA_TEMPORADA" : "CUOTA_MENSUAL"),
-      amount_cents: school ? 10000 : 3500,
+      amount_cents: school ? 10000 : 6000,
       starts_on: "2025-09-01",
       ends_on: "2026-07-31",
       active: true,
     });
-    if (!school && rand() < 0.22) {
-      assignments.push({
-        id: randomUUID(),
-        profile_id: playerId,
-        concept_id: conceptByCode.get("DESCUENTO_HERMANOS"),
-        amount_cents: -500,
-        starts_on: "2025-09-01",
-        ends_on: "2026-07-31",
-        active: true,
-      });
-    }
     if (rand() < 0.35) {
       assignments.push({
         id: randomUUID(),
@@ -153,7 +134,7 @@ async function main() {
         source_type: "concept",
         source_id: null,
         description: school ? "Escuela · temporada 2025/2026" : `Cuota · ${period.label}`,
-        amount_cents: school ? 10000 : 3500,
+        amount_cents: school ? 10000 : 6000,
         paid,
         paid_at: paid ? period.end : null,
         payment_method: paid ? randPick(paymentMethods) : null,

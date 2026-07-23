@@ -7,6 +7,15 @@ export type ShopOrderStatus =
   | "delivered"
   | "cancelled";
 
+export function resolveShopContactPhone(input: {
+  storedPhone: string | null;
+  submittedPhone: string | null;
+  deferToGuardian: boolean;
+}): string | null {
+  if (input.deferToGuardian) return null;
+  return input.storedPhone ?? input.submittedPhone;
+}
+
 export const SHOP_ORDER_STATUS_LABELS: Record<ShopOrderStatus, string> = {
   pending_parent: "Pendiente de familia",
   pending_admin: "Enviado a tienda",

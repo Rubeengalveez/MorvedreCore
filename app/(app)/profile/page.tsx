@@ -2,7 +2,6 @@ import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import {
-  Bell,
   Banknote,
   CalendarDays,
   ChevronRight,
@@ -178,7 +177,7 @@ export default async function ProfilePage() {
             <Banknote className="h-6 w-6" aria-hidden="true" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="text-pool-blue block text-[10px] font-extrabold tracking-[0.12em] uppercase">
+            <span className="text-pool-blue block text-xs font-extrabold tracking-[0.08em] uppercase">
               Cuotas y pagos
             </span>
             <span className="text-pool-deep mt-0.5 block text-sm font-extrabold">
@@ -279,7 +278,6 @@ export default async function ProfilePage() {
         <SectionTitle id="profile-settings-title" eyebrow="Cuenta" title="Datos y preferencias" />
         <div className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 divide-y overflow-hidden rounded-2xl border">
           <SettingsLink href="/profile/edit" label="Editar datos del perfil" icon={UserRoundPen} />
-          <SettingsLink href="/notifications" label="Notificaciones" icon={Bell} />
           <SettingsLink href="/change-password" label="Cambiar contraseña" icon={KeyRound} />
           {isAdmin ? (
             <SettingsLink href="/admin" label="Panel de administración" icon={ShieldCheck} />

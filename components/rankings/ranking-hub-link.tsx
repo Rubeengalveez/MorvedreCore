@@ -44,7 +44,7 @@ export function RankingHubLink({
         <span className="text-pool-deep font-display block text-sm leading-tight font-extrabold min-[390px]:text-base">
           {title}
         </span>
-        <span className="text-ink-600 mt-0.5 hidden text-[11px] leading-snug min-[390px]:block">
+        <span className="text-ink-600 mt-0.5 hidden text-xs leading-snug min-[390px]:block">
           {description}
         </span>
       </span>

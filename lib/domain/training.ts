@@ -10,6 +10,7 @@ export interface TrainingBlock {
   start_time: string;
   end_time: string;
   location: string | null;
+  maps_url?: string | null;
   kind: TrainingKind;
 }
 
@@ -21,6 +22,7 @@ export interface GeneratedSession {
   end_datetime: string;
   duration_minutes: number;
   location: string | null;
+  maps_url?: string | null;
   kind: TrainingKind;
 }
 
@@ -31,6 +33,7 @@ export interface TrainingSession {
   scheduled_at: string;
   duration_minutes: number;
   location: string | null;
+  maps_url?: string | null;
   cancelled: boolean;
 }
 
@@ -155,6 +158,7 @@ export function generateSessionsFromBlock(
       end_datetime: endDt.toISOString(),
       duration_minutes: duration,
       location: block.location,
+      maps_url: block.maps_url ?? null,
       kind: block.kind,
     });
   }

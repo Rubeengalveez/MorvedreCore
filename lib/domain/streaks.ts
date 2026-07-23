@@ -30,7 +30,7 @@ export interface StreakRecord {
 
 const STREAK_LABELS: Record<StreakType, string> = {
   goals_consec: "Partidos seguidos marcando gol",
-  excl_consec: "Partidos seguidos con al menos 1 exclusión",
+  excl_consec: "Partidos seguidos con al menos 1 expulsión",
   train_consec: "Días seguidos yendo a entrenar",
   mvp_consec: "Partidos seguidos siendo MVP",
   wins_consec: "Partidos ganados seguidos",

@@ -70,7 +70,7 @@ export async function TopBar({ profile }: TopBarProps) {
             <span className="truncate text-[1.05rem] font-extrabold tracking-tight min-[430px]:text-lg">
               Morvedre
             </span>
-            <span className="text-paper/75 mt-1 w-fit rounded-full bg-white/12 px-1.5 py-0.5 text-[8px] font-bold tracking-[0.16em] uppercase min-[430px]:text-[9px]">
+            <span className="text-paper/80 mt-0.5 w-fit rounded-full bg-white/12 px-1.5 py-0.5 text-xs leading-tight font-bold tracking-[0.06em] uppercase">
               Core
             </span>
           </span>

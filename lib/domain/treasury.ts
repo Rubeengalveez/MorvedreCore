@@ -83,9 +83,10 @@ export function centsToEuros(value: number): number {
 }
 
 export function formatTreasuryCents(value: number): string {
-  const sign = value < 0 ? "-" : "";
-  const abs = Math.abs(value);
-  return `${sign}${(abs / 100).toFixed(2)} EUR`;
+  return new Intl.NumberFormat("es-ES", {
+    style: "currency",
+    currency: "EUR",
+  }).format(value / 100);
 }
 
 export function monthLabel(periodStart: string): string {

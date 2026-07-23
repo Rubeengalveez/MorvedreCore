@@ -2,9 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CarFront, LoaderCircle, Plus, Settings2, X } from "lucide-react";
+import { CarFront, LoaderCircle, Plus, Settings2, UserPlus, X } from "lucide-react";
 
 import {
+  addTravelCompanion,
+  cancelTravelCompanion,
   cancelTravelOffer,
   cancelTravelReservation,
   configureMatchTravel,
@@ -244,13 +246,21 @@ export function TravelControls({
 export function TravelReservationButton({
   offerId,
   playerId,
+  playerName,
   reserved,
   disabled,
+  reserveLabel = "Reservar plaza",
+  cancelLabel = "Liberar mi plaza",
+  onAction,
 }: {
   offerId: string;
   playerId: string;
+  playerName?: string;
   reserved: boolean;
   disabled: boolean;
+  reserveLabel?: string;
+  cancelLabel?: string;
+  onAction?: (result: TravelActionState) => void;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -261,9 +271,12 @@ export function TravelReservationButton({
       const result = reserved
         ? await cancelTravelReservation({ offer_id: offerId, player_id: playerId })
         : await reserveTravelSeat({ offer_id: offerId, player_id: playerId });
-      if (!result.ok) setError(result.error);
-      else {
+      if (!result.ok) {
+        setError(result.error);
+        onAction?.(result);
+      } else {
         setError(null);
+        onAction?.(result);
         router.refresh();
       }
     });
@@ -279,16 +292,162 @@ export function TravelReservationButton({
         className="w-full"
       >
         {pending ? <LoaderCircle className="h-5 w-5 animate-spin" /> : null}
-        {reserved ? "Liberar mi plaza" : "Reservar plaza"}
+        {reserved ? cancelLabel : reserveLabel}
+        {playerName && !reserved ? `: ${playerName}` : ""}
       </Button>
       {error ? <p className="text-danger text-sm font-semibold">{error}</p> : null}
     </div>
   );
 }
 
+export function AddCompanionForm({
+  offerId,
+  playerId,
+  defaultName,
+}: {
+  offerId: string;
+  playerId: string;
+  defaultName: string;
+}) {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [name, setName] = useState(defaultName);
+
+  function handleSubmit() {
+    if (!name.trim()) return;
+    startTransition(async () => {
+      const result = await addTravelCompanion({
+        offer_id: offerId,
+        player_id: playerId,
+        full_name: name.trim(),
+      });
+      if (!result.ok) {
+        setError(result.error);
+      } else {
+        setError(null);
+        setOpen(false);
+        router.refresh();
+      }
+    });
+  }
+
+  if (!open) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen(true)}
+        className="self-start"
+      >
+        <UserPlus className="h-4 w-4" />
+        Añadir acompañante
+      </Button>
+    );
+  }
+
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <Input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Nombre del acompañante"
+          maxLength={80}
+          className="flex-1"
+          autoFocus
+        />
+        <Button
+          type="button"
+          size="sm"
+          onClick={handleSubmit}
+          disabled={pending || !name.trim()}
+        >
+          {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+          Añadir
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            setOpen(false);
+            setError(null);
+          }}
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      {error ? <p className="text-danger text-sm font-semibold">{error}</p> : null}
+    </div>
+  );
+}
+
+export function CancelCompanionButton({ companionId }: { companionId: string }) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        startTransition(async () => {
+          const result = await cancelTravelCompanion({ companion_id: companionId });
+          if (result.ok) router.refresh();
+        });
+      }}
+      disabled={pending}
+      className="text-danger hover:bg-danger-50 focus-visible:ring-danger inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+    >
+      {pending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
+      Quitar
+    </button>
+  );
+}
+
 export function CancelTravelOfferButton({ offerId }: { offerId: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [confirming, setConfirming] = useState(false);
+
+  if (confirming) {
+    return (
+      <div className="bg-danger-50 border-danger-200 flex flex-col gap-2 rounded-xl border p-3">
+        <p className="text-danger text-sm font-bold">
+          ¿Cancelar este coche? Se liberarán todas las plazas reservadas.
+        </p>
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="danger"
+            size="sm"
+            className="flex-1"
+            disabled={pending}
+            onClick={() => {
+              startTransition(async () => {
+                const result = await cancelTravelOffer({ offer_id: offerId });
+                if (result.ok) router.refresh();
+              });
+            }}
+          >
+            {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+            Sí, cancelar
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            disabled={pending}
+            onClick={() => setConfirming(false)}
+          >
+            Volver
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Button
@@ -296,16 +455,10 @@ export function CancelTravelOfferButton({ offerId }: { offerId: string }) {
       variant="ghost"
       size="sm"
       disabled={pending}
-      onClick={() => {
-        if (!window.confirm("¿Cancelar este coche y todas sus plazas?")) return;
-        startTransition(async () => {
-          const result = await cancelTravelOffer({ offer_id: offerId });
-          if (result.ok) router.refresh();
-        });
-      }}
+      onClick={() => setConfirming(true)}
     >
-      {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
-      Cancelar
+      <X className="h-4 w-4" />
+      Cancelar coche
     </Button>
   );
 }

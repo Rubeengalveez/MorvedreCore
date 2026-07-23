@@ -130,7 +130,7 @@ export default async function TeamPlayerPage({
                   icon: Goal,
                 },
                 {
-                  label: "Exclusiones por partido",
+                  label: "Expulsiones por partido",
                   value: exclusionsPerMatch.toLocaleString("es-ES", {
                     maximumFractionDigits: 2,
                   }),

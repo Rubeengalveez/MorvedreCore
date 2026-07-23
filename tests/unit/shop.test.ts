@@ -6,9 +6,42 @@ import {
   isValidShopOrderStatus,
   parseCartItem,
   parseProduct,
+  resolveShopContactPhone,
   SHOP_LIMITS,
   summarizeCart,
 } from "@/lib/domain/shop";
+
+describe("resolveShopContactPhone", () => {
+  it("reuses the phone already saved by an adult", () => {
+    expect(
+      resolveShopContactPhone({
+        storedPhone: "+34611111111",
+        submittedPhone: "+34622222222",
+        deferToGuardian: false,
+      }),
+    ).toBe("+34611111111");
+  });
+
+  it("uses the newly submitted phone when the adult profile has none", () => {
+    expect(
+      resolveShopContactPhone({
+        storedPhone: null,
+        submittedPhone: "+34622222222",
+        deferToGuardian: false,
+      }),
+    ).toBe("+34622222222");
+  });
+
+  it("never assigns a minor phone before guardian approval", () => {
+    expect(
+      resolveShopContactPhone({
+        storedPhone: "+34633333333",
+        submittedPhone: "+34644444444",
+        deferToGuardian: true,
+      }),
+    ).toBeNull();
+  });
+});
 
 describe("isMissingShopPersonalizationSchema", () => {
   it("recognizes missing product personalization columns", () => {

@@ -58,7 +58,7 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
               aria-current={isActive ? "page" : undefined}
               aria-label={item.label}
               className={cn(
-                "focus-visible:ring-pool-blue group relative flex h-full min-w-0 touch-manipulation flex-col items-center justify-center gap-1 rounded-[1rem] px-1 text-[10px] transition-[background-color,color,transform,box-shadow] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset active:scale-[0.96] motion-reduce:transition-none sm:text-[11px]",
+                "focus-visible:ring-pool-blue group relative flex h-full min-w-0 touch-manipulation flex-col items-center justify-center gap-1 rounded-[1rem] px-1 text-xs transition-[background-color,color,transform,box-shadow] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset active:scale-[0.96] motion-reduce:transition-none",
                 isActive
                   ? "bg-pool-deep text-paper shadow-[0_5px_14px_rgba(6,32,72,0.24)]"
                   : "text-ink-600 hover:bg-pool-foam/80 hover:text-pool-deep",
@@ -72,18 +72,18 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
               />
               <span
                 className={cn(
-                  "max-w-full truncate leading-none",
+                  "max-w-full truncate text-[11px] leading-tight sm:text-xs",
                   isActive ? "font-extrabold" : "font-semibold",
                 )}
               >
                 {item.label === "Calendario" ? (
                   <>
-                    <span className={showAttendance ? "min-[420px]:hidden" : "min-[390px]:hidden"}>
+                    <span className={showAttendance ? "min-[480px]:hidden" : "min-[420px]:hidden"}>
                       Agenda
                     </span>
                     <span
                       className={
-                        showAttendance ? "hidden min-[420px]:inline" : "hidden min-[390px]:inline"
+                        showAttendance ? "hidden min-[480px]:inline" : "hidden min-[420px]:inline"
                       }
                     >
                       Calendario
@@ -91,13 +91,21 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
                   </>
                 ) : item.label === "Asistencia" ? (
                   <>
-                    <span className="min-[420px]:hidden">Lista</span>
-                    <span className="hidden min-[420px]:inline">Asistencia</span>
+                    <span className="min-[480px]:hidden">Lista</span>
+                    <span className="hidden min-[480px]:inline">Asistencia</span>
                   </>
-                ) : item.label === "Rankings" && showAttendance ? (
+                ) : item.label === "Rankings" ? (
                   <>
-                    <span className="min-[360px]:hidden">Ránk.</span>
-                    <span className="hidden min-[360px]:inline">Rankings</span>
+                    <span className={showAttendance ? "min-[520px]:hidden" : "min-[420px]:hidden"}>
+                      Rank.
+                    </span>
+                    <span
+                      className={
+                        showAttendance ? "hidden min-[520px]:inline" : "hidden min-[420px]:inline"
+                      }
+                    >
+                      Rankings
+                    </span>
                   </>
                 ) : (
                   item.label

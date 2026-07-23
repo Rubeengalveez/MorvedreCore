@@ -32,7 +32,7 @@ export function TeamHero({
   return (
     <header className="border-ink-200 bg-paper-card shadow-elev-2 relative overflow-hidden rounded-[1.75rem] border">
       <div className="bg-pool-deep text-paper px-5 py-6 sm:px-7 sm:py-7">
-        <div className="text-paper/65 flex items-center gap-2 text-xs font-extrabold tracking-[0.12em] uppercase">
+        <div className="text-paper/80 flex items-center gap-2 text-xs font-extrabold tracking-[0.08em] uppercase">
           <span
             aria-hidden="true"
             className="h-2 w-2 rounded-full"

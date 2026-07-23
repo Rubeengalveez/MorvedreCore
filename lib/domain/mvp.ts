@@ -22,17 +22,19 @@ export function computeMvp(candidates: MvpCandidate[]): MvpResult {
   if (topByGoals.length === 1) {
     return { player_ids: [topByGoals[0]!.player_id], is_tie: false, reason: "most_goals" };
   }
-  const minExcl = topByGoals.reduce((m, c) => Math.min(m, c.exclusions), Infinity);
-  const topByGoalsAndFewerExcl = topByGoals.filter((c) => c.exclusions === minExcl);
-  if (topByGoalsAndFewerExcl.length === 1) {
+  const minExpulsions = topByGoals.reduce((m, c) => Math.min(m, c.exclusions), Infinity);
+  const topByGoalsAndFewerExpulsions = topByGoals.filter(
+    (candidate) => candidate.exclusions === minExpulsions,
+  );
+  if (topByGoalsAndFewerExpulsions.length === 1) {
     return {
-      player_ids: [topByGoalsAndFewerExcl[0]!.player_id],
+      player_ids: [topByGoalsAndFewerExpulsions[0]!.player_id],
       is_tie: false,
       reason: "fewer_exclusions_after_tie",
     };
   }
   return {
-    player_ids: topByGoalsAndFewerExcl.map((c) => c.player_id),
+    player_ids: topByGoalsAndFewerExpulsions.map((candidate) => candidate.player_id),
     is_tie: true,
     reason: "tie_after_exclusions",
   };

@@ -72,6 +72,7 @@ export function TrainingScheduleFormSheet({
   const [startDate, setStartDate] = useState(currentSeason?.start_date ?? "");
   const [endDate, setEndDate] = useState(currentSeason?.end_date ?? "");
   const [location, setLocation] = useState("");
+  const [mapsUrl, setMapsUrl] = useState("");
   const [kind, setKind] = useState<"water" | "dry" | "physical" | "technical" | "mixed">("water");
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [groups, setGroups] = useState<ScheduleGroup[]>([freshGroup(1)]);
@@ -102,6 +103,7 @@ export function TrainingScheduleFormSheet({
           start_date: startDate,
           end_date: endDate,
           location: location.trim() || null,
+          maps_url: mapsUrl.trim() || null,
           kind,
           replace_existing: replaceExisting,
           groups: groups.map((group) => ({
@@ -111,6 +113,7 @@ export function TrainingScheduleFormSheet({
           })),
         });
         setOpen(false);
+        setMapsUrl("");
         setGroups([freshGroup(Date.now())]);
         setError(null);
       } catch (caught) {
@@ -325,6 +328,27 @@ export function TrainingScheduleFormSheet({
                   </Select>
                 </label>
               </div>
+              <label className="mt-4 block">
+                <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">
+                  Enlace de Google Maps (opcional)
+                </span>
+                <Input
+                  type="url"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  value={mapsUrl}
+                  onChange={(event) => setMapsUrl(event.target.value)}
+                  placeholder="https://maps.app.goo.gl/..."
+                  aria-describedby="training-schedule-maps-help"
+                />
+                <span
+                  id="training-schedule-maps-help"
+                  className="text-ink-600 mt-1.5 block text-sm leading-relaxed"
+                >
+                  Se añadirá a todos los entrenamientos de este horario.
+                </span>
+              </label>
               <label className="border-ink-200 bg-paper mt-4 flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3">
                 <input
                   type="checkbox"

@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -30,6 +31,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
+import { mapsUrlInputSchema } from "@/lib/domain/maps";
 import { createMatch, type Season, type Team } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
@@ -45,6 +47,7 @@ const formSchema = z.object({
   competition_type: z.enum(["league", "cup", "tournament", "friendly"]),
   is_home: z.boolean(),
   location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
+  maps_url: mapsUrlInputSchema.optional(),
   pool_name: z.string().trim().max(100, "Máximo 100 caracteres.").optional(),
   scheduled_at_local: z.string().min(1, "Fecha y hora obligatorias."),
   logistics_enabled: z.boolean(),
@@ -76,6 +79,7 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
         "league" | "cup" | "tournament" | "friendly",
       is_home: formData.get("is_home") === "true",
       location: String(formData.get("location") ?? "") || undefined,
+      maps_url: String(formData.get("maps_url") ?? "") || undefined,
       pool_name: String(formData.get("pool_name") ?? "") || undefined,
       scheduled_at: dt.toISOString(),
       logistics_enabled: formData.get("logistics_enabled") === "true",
@@ -125,6 +129,7 @@ export function MatchFormSheet({
       competition_type: "league",
       is_home: true,
       location: defaultTeam?.home_pool ?? "",
+      maps_url: "",
       pool_name: "",
       scheduled_at_local: formatDateTimeLocal(new Date()),
       logistics_enabled: false,
@@ -156,6 +161,9 @@ export function MatchFormSheet({
     fd.append("is_home", values.is_home ? "true" : "false");
     if (values.location && values.location.trim() !== "") {
       fd.append("location", values.location);
+    }
+    if (values.maps_url && values.maps_url.trim() !== "") {
+      fd.append("maps_url", values.maps_url);
     }
     if (values.pool_name && values.pool_name.trim() !== "") {
       fd.append("pool_name", values.pool_name);
@@ -413,6 +421,34 @@ export function MatchFormSheet({
                       )}
                     />
                   </div>
+
+                  <FormField
+                    control={form.control}
+                    name="maps_url"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="url"
+                            inputMode="url"
+                            autoCapitalize="none"
+                            autoCorrect="off"
+                            placeholder="https://maps.app.goo.gl/..."
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          En Google Maps, toca Compartir y copia aquí el enlace de la piscina.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}

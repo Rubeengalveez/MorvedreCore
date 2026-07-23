@@ -38,6 +38,7 @@ async function blockFromRow(row: TrainingBlockRow): Promise<TrainingBlock> {
     start_time: row.start_time,
     end_time: row.end_time,
     location: row.location,
+    maps_url: row.maps_url,
     kind: row.kind as TrainingBlock["kind"],
   };
 }
@@ -51,6 +52,7 @@ export async function createTrainingBlock(input: {
   start_time: string;
   end_time: string;
   location?: string | null;
+  maps_url?: string | null;
   kind?: "water" | "dry" | "physical" | "technical" | "mixed";
 }): Promise<TrainingBlockRow> {
   const parsed = createTrainingBlockSchema.safeParse(input);
@@ -72,6 +74,7 @@ export async function createTrainingBlock(input: {
       start_time: parsed.data.start_time,
       end_time: parsed.data.end_time,
       location: parsed.data.location ?? null,
+      maps_url: parsed.data.maps_url ?? null,
       kind: parsed.data.kind ?? "water",
       created_by: admin.id,
     })
@@ -95,6 +98,7 @@ export async function createTrainingSchedule(input: {
   start_date: string;
   end_date: string;
   location?: string | null;
+  maps_url?: string | null;
   kind?: "water" | "dry" | "physical" | "technical" | "mixed";
   replace_existing?: boolean;
   groups: Array<{ weekdays: number[]; start_time: string; end_time: string }>;
@@ -115,6 +119,7 @@ export async function createTrainingSchedule(input: {
     start_time: group.start_time,
     end_time: group.end_time,
     location: parsed.data.location ?? null,
+    maps_url: parsed.data.maps_url ?? null,
     kind: parsed.data.kind ?? "water",
     created_by: admin.id,
   }));
@@ -201,6 +206,7 @@ export async function createTrainingSchedule(input: {
         scheduled_at: session.start_datetime,
         duration_minutes: session.duration_minutes,
         location: session.location,
+        maps_url: session.maps_url,
       }));
     if (toInsert.length > 0) {
       const { error: sessionError } = await supabase.from("training_sessions").insert(toInsert);
@@ -234,6 +240,7 @@ function blockFromRowSync(row: TrainingBlockRow): TrainingBlock {
     start_time: row.start_time,
     end_time: row.end_time,
     location: row.location,
+    maps_url: row.maps_url,
     kind: row.kind as TrainingBlock["kind"],
   };
 }
@@ -249,6 +256,7 @@ export async function updateTrainingBlock(
     start_time: string;
     end_time: string;
     location: string | null;
+    maps_url: string | null;
     kind: "water" | "dry" | "physical" | "technical" | "mixed";
   }>,
 ): Promise<TrainingBlockRow> {
@@ -291,6 +299,7 @@ export async function updateTrainingBlock(
       start_date: parsed.data.start_date,
       end_date: parsed.data.end_date,
       location: parsed.data.location ?? null,
+      maps_url: parsed.data.maps_url,
       kind: parsed.data.kind,
     })
     .eq("id", parsedId.data.id)
@@ -379,6 +388,7 @@ export async function generateSessionsFromBlockAction(
       scheduled_at: s.start_datetime,
       duration_minutes: s.duration_minutes,
       location: s.location,
+      maps_url: s.maps_url,
     }));
 
   if (toInsert.length > 0) {
@@ -464,6 +474,7 @@ export async function resyncFutureTrainingSessionsAction(
       scheduled_at: session.start_datetime,
       duration_minutes: session.duration_minutes,
       location: session.location,
+      maps_url: session.maps_url,
     }));
 
   if (toInsert.length > 0) {

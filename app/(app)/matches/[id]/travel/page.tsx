@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CarFront, ChevronLeft, Clock3, MapPin, Users } from "lucide-react";
+import { CarFront, ChevronLeft, Clock3, MapPin, UserPlus, Users } from "lucide-react";
 
 import {
+  AddCompanionForm,
+  CancelCompanionButton,
   CancelTravelOfferButton,
   TravelControls,
   TravelReservationButton,
@@ -67,11 +69,11 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
         </div>
         <div className="border-ink-200 bg-paper-sunk grid grid-cols-2 border-t">
           <div className="border-ink-200 border-r p-3.5">
-            <p className="text-ink-500 text-[11px] font-bold">PUNTO DE ENCUENTRO</p>
+            <p className="text-ink-600 text-xs font-bold tracking-[0.04em]">PUNTO DE ENCUENTRO</p>
             <p className="text-pool-deep mt-1 text-sm font-bold">{meetingPoint}</p>
           </div>
           <div className="p-3.5">
-            <p className="text-ink-500 text-[11px] font-bold">COMPENSACIÓN</p>
+            <p className="text-ink-600 text-xs font-bold tracking-[0.04em]">COMPENSACIÓN</p>
             <p className="text-pool-deep mt-1 text-sm font-bold">
               {formatTravelCompensation(travel.travel_compensation_cents)} por coche
             </p>
@@ -126,10 +128,10 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
                 .filter((offer) => !offer.cancelled)
                 .map((offer) => {
                   const seatsLeft = availableTravelSeats(offer);
-                  const myReservation = offer.passengers.some(
-                    (passenger) => passenger.player_id === ctx.activeProfile.id,
-                  );
                   const mayCancel = offer.driver_id === ctx.ownProfile.id || travel.is_manager;
+                  const reservedPlayerIds = new Set(
+                    offer.passengers.map((passenger) => passenger.player_id),
+                  );
 
                   return (
                     <article
@@ -168,25 +170,102 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
                       ) : null}
 
                       {offer.passengers.length > 0 ? (
-                        <div className="flex flex-wrap gap-2 px-4 pt-3">
-                          {offer.passengers.map((passenger) => (
-                            <span
-                              key={passenger.player_id}
-                              className="bg-ink-100 text-ink-700 rounded-full px-3 py-1.5 text-sm font-bold"
-                            >
-                              {passenger.full_name}
-                            </span>
-                          ))}
-                        </div>
+                        <ul className="flex flex-col gap-2 px-4 pt-3">
+                          {offer.passengers.map((passenger) => {
+                            const isMyChild = travel.is_parent
+                              ? travel.children.some((child) => child.id === passenger.player_id)
+                              : false;
+                            const showCompanionControls = isMyChild;
+                            return (
+                              <li
+                                key={passenger.player_id}
+                                className="bg-paper-sunk border-ink-200 flex flex-col gap-2 rounded-xl border px-3 py-2.5"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <div className="bg-pool-foam text-pool-deep flex h-7 w-7 shrink-0 items-center justify-center rounded-lg">
+                                    <Users className="h-4 w-4" aria-hidden="true" />
+                                  </div>
+                                  <span className="text-ink-900 text-sm font-extrabold">
+                                    {passenger.full_name}
+                                  </span>
+                                </div>
+
+                                {passenger.companions.length > 0 ? (
+                                  <div className="flex flex-col gap-1.5 pl-9">
+                                    <p className="text-ink-500 text-xs font-bold tracking-wide">
+                                      ACOMPAÑANTES
+                                    </p>
+                                    <ul className="flex flex-col gap-1.5">
+                                      {passenger.companions.map((companion) => (
+                                        <li
+                                          key={companion.id}
+                                          className="flex items-center justify-between gap-2"
+                                        >
+                                          <span className="text-ink-700 flex items-center gap-1.5 text-sm font-semibold">
+                                            <UserPlus className="text-pool-blue h-3.5 w-3.5" aria-hidden="true" />
+                                            {companion.full_name}
+                                          </span>
+                                          {showCompanionControls ? (
+                                            <CancelCompanionButton companionId={companion.id} />
+                                          ) : null}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                ) : null}
+
+                                {showCompanionControls ? (
+                                  <div className="pl-9">
+                                    <AddCompanionForm
+                                      offerId={offer.id}
+                                      playerId={passenger.player_id}
+                                      defaultName={ctx.ownProfile.full_name}
+                                    />
+                                  </div>
+                                ) : null}
+                              </li>
+                            );
+                          })}
+                        </ul>
                       ) : null}
 
                       <div className="flex flex-col gap-2 p-4">
-                        <TravelReservationButton
-                          offerId={offer.id}
-                          playerId={ctx.activeProfile.id}
-                          reserved={myReservation}
-                          disabled={!myReservation && seatsLeft === 0}
-                        />
+                        {travel.is_parent ? (
+                          <div className="flex flex-col gap-2">
+                            {travel.children
+                              .filter((child) => !reservedPlayerIds.has(child.id))
+                              .map((child) => (
+                                <TravelReservationButton
+                                  key={child.id}
+                                  offerId={offer.id}
+                                  playerId={child.id}
+                                  playerName={child.full_name}
+                                  reserved={false}
+                                  disabled={seatsLeft === 0}
+                                  reserveLabel="Inscribir a"
+                                />
+                              ))}
+                            {travel.children.every((child) => reservedPlayerIds.has(child.id)) ? (
+                              <p className="text-ink-500 text-center text-sm font-semibold">
+                                Todos tus hijos ya están inscritos.
+                              </p>
+                            ) : null}
+                          </div>
+                        ) : (
+                          (() => {
+                            const myReservation = offer.passengers.some(
+                              (passenger) => passenger.player_id === ctx.activeProfile.id,
+                            );
+                            return (
+                              <TravelReservationButton
+                                offerId={offer.id}
+                                playerId={ctx.activeProfile.id}
+                                reserved={myReservation}
+                                disabled={!myReservation && seatsLeft === 0}
+                              />
+                            );
+                          })()
+                        )}
                         {mayCancel ? <CancelTravelOfferButton offerId={offer.id} /> : null}
                       </div>
                     </article>

@@ -131,7 +131,7 @@ function SwitchRow({
       </span>
       <span className="min-w-0 flex-1">
         <span className="text-pool-deep block text-sm leading-tight font-extrabold">{title}</span>
-        <span className="text-ink-600 mt-0.5 block text-xs leading-4 text-pretty">
+        <span className="text-ink-600 mt-0.5 block text-xs leading-5 text-pretty">
           {description}
         </span>
       </span>
@@ -278,7 +278,7 @@ export function NewsEditor({
                 <label htmlFor="news-body" className="text-pool-deep text-sm font-extrabold">
                   Mensaje
                 </label>
-                <p className="text-ink-600 mt-0.5 text-xs leading-4">
+                <p className="text-ink-600 mt-0.5 text-xs leading-5">
                   Puedes usar listas, títulos y enlaces.
                 </p>
               </div>
@@ -454,7 +454,7 @@ export function NewsEditor({
                 <span className="text-pool-deep block truncate text-sm font-extrabold">
                   {imageFile?.name ?? (imageUrl ? "Cambiar la imagen actual" : "Elegir una imagen")}
                 </span>
-                <span className="text-ink-600 mt-0.5 block text-xs leading-4">
+                <span className="text-ink-600 mt-0.5 block text-xs leading-5">
                   JPG, PNG o WebP · máximo 5 MB
                 </span>
               </span>

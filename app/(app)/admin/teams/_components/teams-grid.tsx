@@ -123,7 +123,7 @@ export function TeamsGrid({ seasons, teamsBySeason, defaultSeasonId }: TeamsGrid
                     </span>
                   </div>
                   <div className="border-ink-300 text-ink-600 border-t pt-3 text-xs">
-                    <Eyebrow as="span" className="text-ink-400">
+                    <Eyebrow as="span" className="text-ink-600">
                       Entrenador
                     </Eyebrow>
                     <p

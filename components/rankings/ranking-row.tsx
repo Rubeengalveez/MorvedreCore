@@ -1,5 +1,6 @@
 import { PositionChip } from "@/components/ui/position-chip";
 import { cn } from "@/lib/utils/cn";
+import { hexToRgba } from "@/lib/utils/color";
 import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
 
 export interface RankingRowItemProps {
@@ -12,6 +13,8 @@ export interface RankingRowItemProps {
   showMedal?: boolean;
 }
 
+const ME_TINT = "rgba(244, 196, 48, 0.14)";
+
 export function RankingRowItem({
   row,
   metricLabel,
@@ -23,17 +26,23 @@ export function RankingRowItem({
 }: RankingRowItemProps) {
   const isTop10 = row.position <= 10;
   const tone = isMe ? "me" : isTop10 ? "top" : "default";
+  const teamColor = row.team_color ?? "#1E5AA8";
+  const baseAlpha = isJumpTarget ? 0.18 : isTop10 ? 0.14 : 0.07;
+  const backgroundColor = isMe ? ME_TINT : hexToRgba(teamColor, baseAlpha);
 
   return (
     <div
       id={`ranking-player-${row.player_id}`}
       className={cn(
-        "border-ink-300 bg-paper-card shadow-elev-1 flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors",
-        isTop10 && !isMe && "border-pool-blue/25 bg-pool-foam/20",
-        isMe && "border-ball-gold/70 bg-ball-gold/10 ring-ball-gold/35 ring-2",
-        isJumpTarget && "border-action bg-action/5 ring-action ring-2 ring-offset-2",
+        "border-ink-300 shadow-elev-1 flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors",
+        isMe && "border-ball-gold/70 ring-ball-gold/35 ring-2",
+        isJumpTarget && "border-action ring-action ring-2 ring-offset-2",
       )}
-      style={{ borderLeftWidth: "4px", borderLeftColor: row.team_color ?? "var(--pool-blue)" }}
+      style={{
+        backgroundColor,
+        borderLeftWidth: "4px",
+        borderLeftColor: teamColor,
+      }}
     >
       <PositionChip position={row.position} tone={tone} size="md" />
       <div className="min-w-0 flex-1">
@@ -44,7 +53,7 @@ export function RankingRowItem({
           ) : null}
         </p>
         {row.team_label ? (
-          <p className="text-ink-600 mt-1 line-clamp-1 text-sm leading-none font-semibold">
+          <p className="text-ink-700 mt-1 line-clamp-1 text-sm leading-none font-semibold">
             {row.team_label}
           </p>
         ) : null}
@@ -55,7 +64,7 @@ export function RankingRowItem({
           {row.primary_value}
           {metricSuffix}
         </p>
-        <p className="text-ink-500 mt-1 text-xs leading-none font-extrabold tracking-[0.08em] uppercase">
+        <p className="text-ink-700 mt-1 text-xs leading-none font-extrabold tracking-[0.08em] uppercase">
           {metricLabel}
         </p>
       </div>
@@ -119,8 +128,8 @@ export function RankingMetricContext({
   return (
     <div
       className={cn(
-        "mt-1.5 flex min-w-0 items-center gap-1.5 overflow-hidden text-xs leading-tight",
-        inverted ? "text-paper/70" : "text-ink-500",
+        "mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-tight",
+        inverted ? "text-paper/70" : "text-ink-700",
         className,
       )}
     >
@@ -129,7 +138,7 @@ export function RankingMetricContext({
           {index > 0 ? (
             <span
               aria-hidden="true"
-              className={cn("h-3 w-px shrink-0", inverted ? "bg-paper/25" : "bg-ink-300")}
+              className={cn("h-3 w-px shrink-0", inverted ? "bg-paper/25" : "bg-ink-400")}
             />
           ) : null}
           <span className="whitespace-nowrap">

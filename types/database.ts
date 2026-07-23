@@ -543,6 +543,7 @@ export type Database = {
           is_home: boolean;
           location: string | null;
           logistics_enabled: boolean;
+          maps_url: string | null;
           mvp_player_id: string | null;
           notes: string | null;
           opponent: string;
@@ -564,6 +565,7 @@ export type Database = {
           is_home?: boolean;
           location?: string | null;
           logistics_enabled?: boolean;
+          maps_url?: string | null;
           mvp_player_id?: string | null;
           notes?: string | null;
           opponent: string;
@@ -585,6 +587,7 @@ export type Database = {
           is_home?: boolean;
           location?: string | null;
           logistics_enabled?: boolean;
+          maps_url?: string | null;
           mvp_player_id?: string | null;
           notes?: string | null;
           opponent?: string;
@@ -1784,6 +1787,7 @@ export type Database = {
           kind: string;
           label: string;
           location: string | null;
+          maps_url: string | null;
           start_date: string;
           start_time: string;
           team_id: string;
@@ -1800,6 +1804,7 @@ export type Database = {
           kind?: string;
           label: string;
           location?: string | null;
+          maps_url?: string | null;
           start_date: string;
           start_time: string;
           team_id: string;
@@ -1816,6 +1821,7 @@ export type Database = {
           kind?: string;
           label?: string;
           location?: string | null;
+          maps_url?: string | null;
           start_date?: string;
           start_time?: string;
           team_id?: string;
@@ -1858,6 +1864,7 @@ export type Database = {
           end_at: string | null;
           id: string;
           location: string | null;
+          maps_url: string | null;
           notes: string | null;
           scheduled_at: string;
           team_id: string;
@@ -1874,6 +1881,7 @@ export type Database = {
           end_at?: string | null;
           id?: string;
           location?: string | null;
+          maps_url?: string | null;
           notes?: string | null;
           scheduled_at: string;
           team_id: string;
@@ -1890,6 +1898,7 @@ export type Database = {
           end_at?: string | null;
           id?: string;
           location?: string | null;
+          maps_url?: string | null;
           notes?: string | null;
           scheduled_at?: string;
           team_id?: string;
@@ -2043,6 +2052,51 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "profiles_public";
             referencedColumns: ["id"];
+          },
+        ];
+      };
+      travel_companions: {
+        Row: {
+          cancelled_at: string | null;
+          created_at: string;
+          full_name: string;
+          id: string;
+          offer_id: string;
+          reservation_offer_id: string;
+          reservation_player_id: string;
+        };
+        Insert: {
+          cancelled_at?: string | null;
+          created_at?: string;
+          full_name: string;
+          id?: string;
+          offer_id: string;
+          reservation_offer_id: string;
+          reservation_player_id: string;
+        };
+        Update: {
+          cancelled_at?: string | null;
+          created_at?: string;
+          full_name?: string;
+          id?: string;
+          offer_id?: string;
+          reservation_offer_id?: string;
+          reservation_player_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "travel_companions_offer_id_fkey";
+            columns: ["offer_id"];
+            isOneToOne: false;
+            referencedRelation: "travel_offers";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "travel_companions_reservation_fkey";
+            columns: ["reservation_offer_id", "reservation_player_id"];
+            isOneToOne: false;
+            referencedRelation: "travel_reservations";
+            referencedColumns: ["offer_id", "player_id"];
           },
         ];
       };

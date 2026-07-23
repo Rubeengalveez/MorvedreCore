@@ -68,3 +68,17 @@ export const getActiveProfileContext = cache(async (): Promise<ActiveProfileCont
 
   return { ownProfile: own, activeProfile: own, linkedProfiles: linked };
 });
+
+export const getOwnProfilePhone = cache(async (): Promise<string | null> => {
+  const ctx = await getActiveProfileContext();
+  if (!ctx) return null;
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("profiles")
+    .select("phone_e164")
+    .eq("id", ctx.ownProfile.id)
+    .maybeSingle();
+
+  return data?.phone_e164 ?? null;
+});

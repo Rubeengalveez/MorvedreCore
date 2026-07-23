@@ -64,7 +64,7 @@ export function Pagination({
         <ul className="flex flex-1 items-center justify-center gap-1">
           {items.map((item, i) =>
             item === "ellipsis" ? (
-              <li key={`ellipsis-${i}`} aria-hidden="true" className="text-ink-400 px-1 text-xs">
+              <li key={`ellipsis-${i}`} aria-hidden="true" className="text-ink-600 px-1 text-xs">
                 …
               </li>
             ) : (
@@ -111,7 +111,7 @@ function PaginationButton({
     "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-12 touch-manipulation items-center gap-1 rounded-xl border px-3 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
     href
       ? "border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam"
-      : "pointer-events-none border-ink-200 bg-paper-sunk text-ink-400",
+      : "pointer-events-none border-ink-200 bg-paper-sunk text-ink-500",
   );
   if (!href) {
     return (

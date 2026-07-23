@@ -11,12 +11,17 @@
   --goggle-red: #d63b2f;
   --action: #ff6b35;
 
+  --ink-950: #020617;
   --ink-900: #0f172a;
+  --ink-800: #1e293b;
   --ink-700: #334155;
   --ink-600: #475569;
+  --ink-500: #526176;
   --ink-400: #94a3b8;
   --ink-300: #cbd5e1;
   --ink-200: #e2e8f0;
+  --ink-100: #f1f5f9;
+  --ink-50: #f8fafc;
 
   --paper: #fafcfe;
   --paper-card: #ffffff;
@@ -46,7 +51,7 @@
   --tracking-tight: -0.02em;
   --tracking-flat: 0em;
   --tracking-wide: 0.04em;
-  --tracking-eyebrow: 0.12em;
+  --tracking-eyebrow: 0.08em;
 
   --brand-deep: var(--pool-deep);
   --brand-blue: var(--pool-blue);
@@ -65,18 +70,21 @@
   --bottom-nav-height: calc(80px + env(safe-area-inset-bottom));
 
   /* Scale core font size tokens */
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
+  --type-xs: 0.8125rem;
+  --type-sm: 0.9375rem;
+  --type-base: 1rem;
   --text-fluid-title: clamp(1.5rem, 1.18rem + 1.55vw, 2.05rem);
   --text-fluid-section: clamp(1.05rem, 0.94rem + 0.55vw, 1.25rem);
   --space-page-x: clamp(1rem, 0.72rem + 1.2vw, 1.5rem);
 }
 
 @theme inline {
-  --text-xs: var(--text-xs);
-  --text-sm: var(--text-sm);
-  --text-base: var(--text-base);
+  --text-xs: var(--type-xs);
+  --text-xs--line-height: 1.125rem;
+  --text-sm: var(--type-sm);
+  --text-sm--line-height: 1.375rem;
+  --text-base: var(--type-base);
+  --text-base--line-height: 1.5rem;
   --text-fluid-title: var(--text-fluid-title);
   --text-fluid-section: var(--text-fluid-section);
 
@@ -93,12 +101,17 @@
   --color-paper-card: var(--paper-card);
   --color-paper-sunk: var(--paper-sunk);
 
+  --color-ink-50: var(--ink-50);
+  --color-ink-100: var(--ink-100);
   --color-ink-200: var(--ink-200);
   --color-ink-300: var(--ink-300);
   --color-ink-400: var(--ink-400);
+  --color-ink-500: var(--ink-500);
   --color-ink-600: var(--ink-600);
   --color-ink-700: var(--ink-700);
+  --color-ink-800: var(--ink-800);
   --color-ink-900: var(--ink-900);
+  --color-ink-950: var(--ink-950);
 
   --color-action: var(--action);
   --color-success: var(--success);
@@ -176,8 +189,8 @@
 @utility text-eyebrow {
   font-family: var(--font-inter);
   font-weight: 700;
-  font-size: 12px;
-  line-height: 1.2;
+  font-size: 13px;
+  line-height: 1.25;
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
 }

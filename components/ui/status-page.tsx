@@ -21,7 +21,7 @@ export function StatusPage({
       <section className="border-ink-200 bg-paper-card shadow-elev-3 w-full max-w-md overflow-hidden rounded-[1.75rem] border">
         <div className="bg-pool-deep text-paper px-5 py-6 sm:px-7">
           <Logo size={48} />
-          <p className="text-paper/65 mt-5 text-xs font-extrabold tracking-[0.14em] uppercase">
+          <p className="text-paper/80 mt-5 text-xs font-extrabold tracking-[0.08em] uppercase">
             {eyebrow}
           </p>
           <h1 className="font-display mt-2 text-3xl leading-tight font-extrabold text-balance">

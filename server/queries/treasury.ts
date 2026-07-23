@@ -1,3 +1,4 @@
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { canViewPersonalFinances } from "@/lib/domain/family";
 import {
@@ -272,22 +273,63 @@ export async function getTreasuryClosure(id: string): Promise<{
   };
 }
 
-export async function getFamilyTreasury(profileId: string): Promise<{
+export interface FamilyTreasuryChild {
+  profile_id: string;
+  profile_name: string;
+  photo_url: string | null;
+  team_label: string | null;
+  team_color: string | null;
+  monthly_fee_cents: number;
+}
+
+export interface FamilyTreasuryOrder {
+  id: string;
+  description: string;
+  amount_cents: number;
+}
+
+export interface FamilyTreasuryDebt {
+  id: string;
+  profile_name: string;
+  description: string;
+  amount_cents: number;
+}
+
+export interface FamilyTreasury {
   canView: boolean;
   totalPendingCents: number;
-  lines: TreasuryLine[];
-  groups: Array<{
-    profileId: string;
-    profileName: string;
-    totalCents: number;
-    lines: TreasuryLine[];
-  }>;
-}> {
+  currentPeriod: { label: string; start: string } | null;
+  children: FamilyTreasuryChild[];
+  monthlyFeeTotalCents: number;
+  siblingDiscountCents: number;
+  discountedFeesCents: number;
+  shopOrdersTotalCents: number;
+  shopOrders: FamilyTreasuryOrder[];
+  olderDebtTotalCents: number;
+  olderDebts: FamilyTreasuryDebt[];
+}
+
+const SIBLING_DISCOUNT_RATE = 0.2;
+
+export async function getFamilyTreasury(profileId: string): Promise<FamilyTreasury> {
+  const empty: FamilyTreasury = {
+    canView: false,
+    totalPendingCents: 0,
+    currentPeriod: null,
+    children: [],
+    monthlyFeeTotalCents: 0,
+    siblingDiscountCents: 0,
+    discountedFeesCents: 0,
+    shopOrdersTotalCents: 0,
+    shopOrders: [],
+    olderDebtTotalCents: 0,
+    olderDebts: [],
+  };
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { canView: false, totalPendingCents: 0, lines: [], groups: [] };
+  if (!user) return empty;
   const { data: own } = await supabase
     .from("profiles")
     .select("id, birth_year")
@@ -295,73 +337,187 @@ export async function getFamilyTreasury(profileId: string): Promise<{
     .eq("id", profileId)
     .maybeSingle();
   if (!own || !canViewPersonalFinances(own.birth_year)) {
-    return { canView: false, totalPendingCents: 0, lines: [], groups: [] };
+    return empty;
   }
   const { data: links } = await supabase
     .from("parent_child_links")
     .select("child_profile_id")
     .eq("parent_profile_id", profileId);
-  const profileIds = [
-    profileId,
-    ...((links ?? []) as Array<{ child_profile_id: string }>).map((l) => l.child_profile_id),
-  ];
-  const raw = db(supabase);
-  const { data: lineRows } = await (
-    raw.from("treasury_lines").select("*") as {
-      in: (
-        column: string,
-        values: string[],
-      ) => {
-        eq: (
-          column: string,
-          value: boolean,
-        ) => {
+  const childIds = ((links ?? []) as Array<{ child_profile_id: string }>).map(
+    (l) => l.child_profile_id,
+  );
+  const allIds = [profileId, ...childIds];
+
+  const admin = createAdminClient();
+
+  const [profileRowsRes, latestClosureRes, teamRowsRes, orderRowsRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, photo_url, team_color")
+      .in("id", allIds),
+    admin
+      .from("treasury_period_closures")
+      .select("id, period_label, period_start")
+      .order("period_start", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("team_rosters")
+      .select("player_id, teams!team_rosters_team_id_fkey(label, color, season_id)")
+      .in("player_id", allIds)
+      .is("left_at", null),
+    (db(supabase).from("shop_orders").select("*") as {
+      in: (column: string, values: string[]) => {
+        in: (column: string, values: string[]) => {
           order: (
             column: string,
             options?: { ascending?: boolean },
           ) => Promise<{ data: unknown[] | null }>;
         };
       };
-    }
-  )
-    .in("profile_id", profileIds)
-    .eq("paid", false)
-    .order("created_at", { ascending: false });
+    })
+      .in("requested_by", allIds)
+      .in("status", ["pending_admin", "ordered", "received", "delivered"])
+      .order("requested_at", { ascending: false }),
+  ]);
 
-  const linesRaw = (lineRows ?? []) as Array<Omit<TreasuryLine, "profile_name">>;
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name")
-    .in("id", Array.from(new Set(linesRaw.map((line) => line.profile_id))));
   const profileMap = new Map(
-    ((profiles ?? []) as Array<{ id: string; full_name: string }>).map((p) => [p.id, p.full_name]),
+    ((profileRowsRes.data ?? []) as Array<{
+      id: string;
+      full_name: string;
+      photo_url: string | null;
+      team_color: string | null;
+    }>).map((p) => [p.id, p]),
   );
-  const lines: TreasuryLine[] = linesRaw.map((line) => ({
-    ...line,
-    profile_name: profileMap.get(line.profile_id) ?? "Perfil",
-  }));
-  const groups = Array.from(
-    lines
-      .reduce((map, line) => {
-        const current = map.get(line.profile_id) ?? {
-          profileId: line.profile_id,
-          profileName: line.profile_name,
-          totalCents: 0,
-          lines: [] as TreasuryLine[],
-        };
-        current.totalCents += line.amount_cents;
-        current.lines.push(line);
-        map.set(line.profile_id, current);
-        return map;
-      }, new Map<string, { profileId: string; profileName: string; totalCents: number; lines: TreasuryLine[] }>())
-      .values(),
-  ).sort((a, b) => a.profileName.localeCompare(b.profileName, "es"));
+  const teamByPlayer = new Map<string, { label: string; color: string }>();
+  for (const row of (teamRowsRes.data ?? []) as Array<{
+    player_id: string;
+    teams:
+      | { label: string; color: string; season_id: string }
+      | { label: string; color: string; season_id: string }[]
+      | null;
+  }>) {
+    const team = Array.isArray(row.teams) ? row.teams[0] : row.teams;
+    if (team) teamByPlayer.set(row.player_id, { label: team.label, color: team.color });
+  }
+
+  const latestClosure = latestClosureRes.data as {
+    id: string;
+    period_label: string;
+    period_start: string;
+  } | null;
+
+  const children: FamilyTreasuryChild[] = [];
+  for (const id of childIds.length > 0 ? childIds : [profileId]) {
+    const profile = profileMap.get(id);
+    if (!profile) continue;
+    const team = teamByPlayer.get(id);
+    children.push({
+      profile_id: id,
+      profile_name: profile.full_name,
+      photo_url: profile.photo_url ?? null,
+      team_label: team?.label ?? null,
+      team_color: team?.color ?? profile.team_color ?? null,
+      monthly_fee_cents: 0,
+    });
+  }
+
+  if (latestClosure) {
+    const { data: currentLines } = await admin
+      .from("treasury_lines")
+      .select("profile_id, amount_cents, concept_id, treasury_concepts(kind)")
+      .eq("closure_id", latestClosure.id)
+      .in("profile_id", allIds);
+
+    const feeLinesByChild = new Map<string, number>();
+    for (const raw of (currentLines ?? []) as Array<{
+      profile_id: string;
+      amount_cents: number;
+      concept_id: string | null;
+      treasury_concepts: { kind: string } | null;
+    }>) {
+      const kind = raw.treasury_concepts?.kind;
+      if (kind !== "fee") continue;
+      feeLinesByChild.set(
+        raw.profile_id,
+        (feeLinesByChild.get(raw.profile_id) ?? 0) + raw.amount_cents,
+      );
+    }
+
+    for (const child of children) {
+      child.monthly_fee_cents = feeLinesByChild.get(child.profile_id) ?? 0;
+    }
+  }
+
+  const monthlyFeeTotalCents = children.reduce((sum, c) => sum + c.monthly_fee_cents, 0);
+  const childrenWithFees = children.filter((c) => c.monthly_fee_cents > 0).length;
+  const siblingDiscountCents =
+    childrenWithFees >= 2 ? Math.round(-monthlyFeeTotalCents * SIBLING_DISCOUNT_RATE) : 0;
+  const discountedFeesCents = monthlyFeeTotalCents + siblingDiscountCents;
+
+  const shopOrders: FamilyTreasuryOrder[] = [];
+  let shopOrdersTotalCents = 0;
+  for (const order of (orderRowsRes.data ?? []) as Array<{
+    id: string;
+    total_cents: number;
+    requested_at: string;
+    notes: string | null;
+  }>) {
+    const date = new Date(order.requested_at);
+    const formatted = date.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+    shopOrders.push({
+      id: order.id,
+      description: `Pedido de tienda · ${formatted}`,
+      amount_cents: order.total_cents,
+    });
+    shopOrdersTotalCents += order.total_cents;
+  }
+
+  const olderDebts: FamilyTreasuryDebt[] = [];
+  let olderDebtTotalCents = 0;
+  if (latestClosure) {
+    const { data: olderLines } = await admin
+      .from("treasury_lines")
+      .select("id, profile_id, description, amount_cents, treasury_concepts(kind)")
+      .eq("paid", false)
+      .in("profile_id", allIds)
+      .neq("closure_id", latestClosure.id);
+
+    for (const raw of (olderLines ?? []) as Array<{
+      id: string;
+      profile_id: string;
+      description: string;
+      amount_cents: number;
+      treasury_concepts: { kind: string } | null;
+    }>) {
+      if (raw.treasury_concepts?.kind !== "fee") continue;
+      const profile = profileMap.get(raw.profile_id);
+      olderDebts.push({
+        id: raw.id,
+        profile_name: profile?.full_name ?? "Familiar",
+        description: raw.description,
+        amount_cents: raw.amount_cents,
+      });
+      olderDebtTotalCents += raw.amount_cents;
+    }
+  }
+
+  const totalPendingCents = discountedFeesCents + shopOrdersTotalCents + olderDebtTotalCents;
 
   return {
     canView: true,
-    totalPendingCents: lines.reduce((acc, line) => acc + line.amount_cents, 0),
-    lines,
-    groups,
+    totalPendingCents,
+    currentPeriod: latestClosure
+      ? { label: latestClosure.period_label, start: latestClosure.period_start }
+      : null,
+    children: children.filter((c) => c.monthly_fee_cents > 0),
+    monthlyFeeTotalCents,
+    siblingDiscountCents,
+    discountedFeesCents,
+    shopOrdersTotalCents,
+    shopOrders,
+    olderDebtTotalCents,
+    olderDebts,
   };
 }
 

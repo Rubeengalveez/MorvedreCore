@@ -9,6 +9,7 @@ export interface CalendarTraining {
   scheduled_at: string;
   duration_minutes: number;
   location: string | null;
+  maps_url: string | null;
   cancelled: boolean;
   cancellation_reason: string | null;
 }
@@ -24,6 +25,7 @@ export interface CalendarMatch {
   status: string;
   scheduled_at: string;
   location: string | null;
+  maps_url: string | null;
   pool_name: string | null;
   final_score_us: number | null;
   final_score_them: number | null;
@@ -72,7 +74,7 @@ export async function getCalendarData(input: {
     supabase
       .from("training_sessions")
       .select(
-        "id, team_id, scheduled_at, duration_minutes, location, cancelled, cancellation_reason, training_blocks(label), teams!training_sessions_team_id_fkey(label, color)",
+        "id, team_id, scheduled_at, duration_minutes, location, maps_url, cancelled, cancellation_reason, training_blocks(label), teams!training_sessions_team_id_fkey(label, color)",
       )
       .in("team_id", teamIds)
       .gte("scheduled_at", startIso)
@@ -81,7 +83,7 @@ export async function getCalendarData(input: {
     supabase
       .from("matches")
       .select(
-        "id, team_id, opponent, is_home, competition_type, status, scheduled_at, location, pool_name, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
+        "id, team_id, opponent, is_home, competition_type, status, scheduled_at, location, maps_url, pool_name, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
       )
       .in("team_id", teamIds)
       .gte("scheduled_at", startIso)
@@ -96,6 +98,7 @@ export async function getCalendarData(input: {
       scheduled_at: string;
       duration_minutes: number;
       location: string | null;
+      maps_url: string | null;
       cancelled: boolean;
       cancellation_reason: string | null;
       training_blocks: unknown;
@@ -112,6 +115,7 @@ export async function getCalendarData(input: {
       scheduled_at: r.scheduled_at,
       duration_minutes: r.duration_minutes,
       location: r.location,
+      maps_url: r.maps_url,
       cancelled: r.cancelled,
       cancellation_reason: r.cancellation_reason,
     };
@@ -131,6 +135,7 @@ export async function getCalendarData(input: {
       status: string;
       scheduled_at: string;
       location: string | null;
+      maps_url: string | null;
       pool_name: string | null;
       final_score_us: number | null;
       final_score_them: number | null;
@@ -148,6 +153,7 @@ export async function getCalendarData(input: {
       status: r.status,
       scheduled_at: r.scheduled_at,
       location: r.location,
+      maps_url: r.maps_url,
       pool_name: r.pool_name,
       final_score_us: r.final_score_us,
       final_score_them: r.final_score_them,

@@ -118,6 +118,7 @@ training_blocks
    start_time (time)
    end_time (time)
    location (text)
+   maps_url (text, nullable)                -- enlace HTTPS compartido desde Google Maps o similar
    kind (enum: water, dry, physical, technical, mixed)
    created_by (fk → profiles)
    is_active (boolean)
@@ -129,6 +130,7 @@ training_sessions
    scheduled_at (timestamptz)
    duration_minutes (smallint)
    location (text)
+   maps_url (text, nullable)                -- heredado del bloque al generar la sesión
    cancelled (boolean, default false)
    cancellation_reason (text, nullable)        -- texto del motivo, según proceso WhatsApp-first
    cancelled_by (fk → profiles, nullable)       -- quién marcó la cancelación
@@ -162,6 +164,7 @@ matches
    competition_type (enum: league, cup, tournament, friendly)  -- añadido 2026-06-26: el club participa en varias competiciones
    is_home (boolean)
    location (text)
+   maps_url (text, nullable)                -- ubicación navegable de la piscina
    pool_name (text, nullable)
    scheduled_at (timestamptz)
    call_deadline_at (timestamptz, nullable)

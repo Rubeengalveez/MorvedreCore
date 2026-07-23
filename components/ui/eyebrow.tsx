@@ -22,7 +22,7 @@ export function Eyebrow({
       className={cn(
         "text-eyebrow",
         tone === "default" && "text-ink-600",
-        tone === "muted" && "text-ink-400",
+        tone === "muted" && "text-ink-500",
         tone === "inverse" && "text-paper",
         className,
       )}

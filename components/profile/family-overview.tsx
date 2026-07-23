@@ -107,7 +107,7 @@ function FamilyPulse({ family }: { family: FamilyOverview }) {
             ) : null}
           </div>
           <div className={cn("min-w-0 flex-1", useExpandedHeader && "order-3 basis-full pl-0.5")}>
-            <p className="text-pool-ice text-[11px] font-extrabold tracking-[0.13em] uppercase">
+            <p className="text-pool-ice text-xs font-extrabold tracking-[0.08em] uppercase">
               {memberCountLabel}
             </p>
             <h2 id="family-overview-title" className="font-display mt-0.5 text-xl font-extrabold">
@@ -129,7 +129,7 @@ function FamilyPulse({ family }: { family: FamilyOverview }) {
               <span className="font-mono text-base leading-none font-extrabold">
                 {family.pending_approval_count}
               </span>
-              <span className="mt-0.5 text-[9px] leading-none font-extrabold uppercase">
+              <span className="mt-0.5 text-xs leading-tight font-extrabold uppercase">
                 {family.pending_approval_count === 1 ? "pedido" : "pedidos"}
               </span>
             </Link>
@@ -169,7 +169,7 @@ function ChildLane({
           teamColor={member.team_color ?? team?.color ?? "var(--pool-blue)"}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-pool-blue text-[10px] font-extrabold tracking-[0.12em] uppercase">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.08em] uppercase">
             En tu familia · {position} de {total}
           </p>
           <h3 className="font-display text-pool-deep line-clamp-2 text-lg leading-tight font-extrabold">
@@ -207,7 +207,7 @@ function ChildLane({
           <Clock3 className="h-5 w-5" aria-hidden="true" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="text-ink-500 text-[10px] font-extrabold tracking-[0.1em] uppercase">
+          <p className="text-ink-600 text-xs font-extrabold tracking-[0.06em] uppercase">
             Próximo compromiso
           </p>
           {event ? (
@@ -237,7 +237,7 @@ function MiniStat({ value, label }: { value: number | string; label: string }) {
       <strong className="text-pool-deep font-mono text-lg leading-none tabular-nums">
         {value}
       </strong>
-      <span className="text-ink-500 mt-1 text-[10px] font-bold uppercase">{label}</span>
+      <span className="text-ink-600 mt-1 text-xs font-bold uppercase">{label}</span>
     </div>
   );
 }

@@ -34,7 +34,7 @@ export function NotificationsBell({
       {initialUnread > 0 ? (
         <span
           aria-hidden="true"
-          className="bg-action text-paper absolute top-0.5 right-0.5 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[10px] font-extrabold tabular-nums"
+          className="bg-action text-paper absolute top-0 right-0 inline-flex h-6 min-w-6 items-center justify-center rounded-full px-1 text-xs font-extrabold tabular-nums"
         >
           {initialUnread > 9 ? "9+" : initialUnread}
         </span>

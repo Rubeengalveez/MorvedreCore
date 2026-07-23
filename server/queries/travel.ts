@@ -1,9 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+
+export interface TravelCompanion {
+  id: string;
+  full_name: string;
+}
 
 export interface TravelPassenger {
   player_id: string;
   full_name: string;
   photo_url: string | null;
+  companions: TravelCompanion[];
 }
 
 export interface TravelOfferView {
@@ -21,6 +28,12 @@ export interface TravelOfferView {
   passengers: TravelPassenger[];
 }
 
+export interface TravelChildOption {
+  id: string;
+  full_name: string;
+  team_label: string | null;
+}
+
 export interface MatchTravelView {
   match_id: string;
   team_id: string;
@@ -34,6 +47,8 @@ export interface MatchTravelView {
   travel_compensation_cents: number;
   offers: TravelOfferView[];
   is_manager: boolean;
+  is_parent: boolean;
+  children: TravelChildOption[];
 }
 
 function joined<T>(value: T | T[] | null | undefined): T | null {
@@ -46,6 +61,7 @@ export async function getMatchTravel(
   actorProfileId: string,
 ): Promise<MatchTravelView | null> {
   const supabase = await createClient();
+  const admin = createAdminClient();
   const [{ data: match, error: matchError }, { data: offers, error: offersError }] =
     await Promise.all([
       supabase
@@ -55,10 +71,10 @@ export async function getMatchTravel(
         )
         .eq("id", matchId)
         .maybeSingle(),
-      supabase
+      admin
         .from("travel_offers")
         .select(
-          "id, driver_id, vehicle_label, seats_total, seats_taken, departure_from, departure_at, notes, cancelled, profiles!travel_offers_driver_id_fkey(full_name, photo_url), travel_reservations(player_id, cancelled_at, profiles!travel_reservations_player_id_fkey(full_name, photo_url))",
+          "id, driver_id, vehicle_label, seats_total, seats_taken, departure_from, departure_at, notes, cancelled, profiles!travel_offers_driver_id_fkey(full_name, photo_url), travel_reservations(player_id, cancelled_at, profiles!travel_reservations_player_id_fkey(full_name, photo_url), travel_companions(id, full_name, cancelled_at))",
         )
         .eq("match_id", matchId)
         .order("departure_at", { ascending: true }),
@@ -83,6 +99,70 @@ export async function getMatchTravel(
       ((role.role === "coach" || role.role === "delegate") && role.scope_team_id === teamId),
   );
 
+  const { data: parentRole } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("profile_id", actorProfileId)
+    .eq("role", "parent")
+    .maybeSingle();
+  const isParent = Boolean(parentRole);
+
+  const children: TravelChildOption[] = [];
+  if (isParent) {
+    const { data: links } = await admin
+      .from("parent_child_links")
+      .select(
+        "child_profile_id, profiles!parent_child_links_child_profile_id_fkey(id, full_name, is_active)",
+      )
+      .eq("parent_profile_id", actorProfileId);
+    const childIds = Array.from(
+      new Set(
+        ((links ?? []) as Array<{ child_profile_id: string }>).map(
+          (l) => l.child_profile_id,
+        ),
+      ),
+    );
+    const { data: rosterRows } = childIds.length
+      ? await admin
+          .from("team_rosters")
+          .select("player_id, teams(label, season_id)")
+          .in("player_id", childIds)
+          .is("left_at", null)
+      : { data: [] };
+    const teamByPlayer = new Map<string, string>();
+    for (const row of (rosterRows ?? []) as Array<{
+      player_id: string;
+      teams:
+        | { label: string; season_id: string }
+        | { label: string; season_id: string }[]
+        | null;
+    }>) {
+      const team = joined(row.teams);
+      if (team) {
+        teamByPlayer.set(row.player_id, team.label);
+      }
+    }
+    const seen = new Set<string>();
+    for (const link of (links ?? []) as Array<{
+      child_profile_id: string;
+      profiles:
+        | { id: string; full_name: string; is_active: boolean }
+        | { id: string; full_name: string; is_active: boolean }[]
+        | null;
+    }>) {
+      const child = joined(link.profiles);
+      if (!child || !child.is_active) continue;
+      if (seen.has(child.id)) continue;
+      seen.add(child.id);
+      children.push({
+        id: child.id,
+        full_name: child.full_name,
+        team_label: teamByPlayer.get(child.id) ?? null,
+      });
+    }
+    children.sort((a, b) => a.full_name.localeCompare(b.full_name, "es"));
+  }
+
   const rows = (offers ?? []) as Array<{
     id: string;
     driver_id: string;
@@ -98,6 +178,9 @@ export async function getMatchTravel(
       player_id: string;
       cancelled_at: string | null;
       profiles: unknown;
+      travel_companions:
+        | Array<{ id: string; full_name: string; cancelled_at: string | null }>
+        | null;
     }> | null;
   }>;
 
@@ -113,10 +196,14 @@ export async function getMatchTravel(
           full_name?: string;
           photo_url?: string | null;
         } | null;
+        const companions: TravelCompanion[] = (reservation.travel_companions ?? [])
+          .filter((c) => c.cancelled_at == null)
+          .map((c) => ({ id: c.id, full_name: c.full_name }));
         return {
           player_id: reservation.player_id,
           full_name: profile?.full_name ?? "Jugador",
           photo_url: profile?.photo_url ?? null,
+          companions,
         };
       });
 
@@ -127,7 +214,10 @@ export async function getMatchTravel(
       driver_photo_url: driver?.photo_url ?? null,
       vehicle_label: offer.vehicle_label,
       seats_total: offer.seats_total,
-      seats_taken: passengers.length,
+      seats_taken: passengers.reduce(
+        (sum, p) => sum + 1 + p.companions.length,
+        0,
+      ),
       departure_from: offer.departure_from,
       departure_at: offer.departure_at,
       notes: offer.notes,
@@ -151,5 +241,7 @@ export async function getMatchTravel(
       .travel_compensation_cents,
     offers: offerViews,
     is_manager: isManager,
+    is_parent: isParent,
+    children,
   };
 }

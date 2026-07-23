@@ -6,7 +6,7 @@ import { ShoppingCart, Inbox, ShieldCheck } from "lucide-react";
 import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
-import { getActiveProfileContext } from "@/server/queries/active-profile";
+import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getPendingShopOrdersForParent } from "@/server/queries/shop";
 import { SHOP_ORDER_STATUS_LABELS, formatCents } from "@/lib/domain/shop";
 import { ParentDecisionForm } from "./_components/parent-decision-form";
@@ -22,7 +22,10 @@ export default async function ParentPendingPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
   if (ctx.linkedProfiles.length === 0) redirect("/shop");
-  const orders = await getPendingShopOrdersForParent(ctx.ownProfile.id);
+  const [orders, initialPhone] = await Promise.all([
+    getPendingShopOrdersForParent(ctx.ownProfile.id),
+    getOwnProfilePhone(),
+  ]);
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
@@ -104,7 +107,7 @@ export default async function ParentPendingPage() {
                     {formatCents(o.total_cents, o.currency)}
                   </strong>
                 </div>
-                <ParentDecisionForm orderId={o.id} />
+                <ParentDecisionForm orderId={o.id} initialPhone={initialPhone} />
               </div>
             </li>
           ))}

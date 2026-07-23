@@ -20,6 +20,7 @@ import {
   isValidShopOrderStatus,
   isMissingShopPersonalizationSchema,
   parseProduct,
+  resolveShopContactPhone,
   summarizeCart,
   type ShopOrderStatus,
 } from "@/lib/domain/shop";
@@ -390,19 +391,24 @@ export async function createShopOrder(input: {
   if (requesterError || !requester) {
     throw new Error("No pudimos comprobar tus datos de contacto.");
   }
-  const contactPhone =
-    requester.phone_e164 ?? normalizeSpanishPhone(parsed.data.contact_phone ?? "");
-  if (!contactPhone) {
-    throw new Error("Añade un teléfono de contacto válido para enviar el pedido.");
-  }
-  if (!requester.phone_e164) {
-    const { error: phoneError } = await admin
-      .from("profiles")
-      .update({ phone_e164: contactPhone })
-      .eq("id", me.id);
-    if (phoneError) throw new Error("No pudimos guardar tu teléfono de contacto.");
-  }
   const needsGuardian = requiresGuardianApproval(requester.birth_year);
+  const contactPhone = resolveShopContactPhone({
+    storedPhone: requester.phone_e164,
+    submittedPhone: normalizeSpanishPhone(parsed.data.contact_phone ?? ""),
+    deferToGuardian: needsGuardian,
+  });
+  if (!needsGuardian) {
+    if (!contactPhone) {
+      throw new Error("Añade un teléfono de contacto válido para enviar el pedido.");
+    }
+    if (!requester.phone_e164) {
+      const { error: phoneError } = await admin
+        .from("profiles")
+        .update({ phone_e164: contactPhone })
+        .eq("id", me.id);
+      if (phoneError) throw new Error("No pudimos guardar tu teléfono de contacto.");
+    }
+  }
   if (needsGuardian) {
     const { count: guardianCount } = await admin
       .from("parent_child_links")
@@ -452,7 +458,7 @@ export async function createShopOrder(input: {
   if (needsGuardian) {
     await notifyParentsOfOrder(order.id, me.id, products);
   } else {
-    await notifyShopManagerOfOrder(order.id, me.id, contactPhone, cart.lines!, products);
+    await notifyShopManagerOfOrder(order.id, me.id, contactPhone!, cart.lines!, products);
   }
 
   revalidatePath("/shop");
@@ -533,6 +539,7 @@ Puedes gestionarlo desde /admin/shop.
 export async function decideShopOrder(input: {
   order_id: string;
   decision: "approve" | "reject";
+  contact_phone?: string | null;
   parent_notes?: string | null;
 }): Promise<void> {
   const me = await requireSessionProfile();
@@ -543,7 +550,7 @@ export async function decideShopOrder(input: {
   const supabase = await createClient();
   const { data: order } = await supabase
     .from("shop_orders")
-    .select("requested_by, status, contact_phone_e164")
+    .select("requested_by, status")
     .eq("id", parsed.data.order_id)
     .maybeSingle();
   if (!order || order.status !== "pending_parent") {
@@ -565,6 +572,34 @@ export async function decideShopOrder(input: {
 
   const admin = createAdminClient();
   const now = new Date().toISOString();
+  let approverPhone: string | null = null;
+
+  if (parsed.data.decision === "approve") {
+    const { data: approver, error: approverError } = await admin
+      .from("profiles")
+      .select("phone_e164")
+      .eq("id", me.id)
+      .maybeSingle();
+    if (approverError || !approver) {
+      throw new Error("No pudimos comprobar tu teléfono de contacto.");
+    }
+
+    approverPhone = resolveShopContactPhone({
+      storedPhone: approver.phone_e164,
+      submittedPhone: normalizeSpanishPhone(parsed.data.contact_phone ?? ""),
+      deferToGuardian: false,
+    });
+    if (!approverPhone) {
+      throw new Error("Añade un teléfono de contacto válido antes de aprobar el pedido.");
+    }
+    if (!approver.phone_e164) {
+      const { error: phoneError } = await admin
+        .from("profiles")
+        .update({ phone_e164: approverPhone })
+        .eq("id", me.id);
+      if (phoneError) throw new Error("No pudimos guardar tu teléfono de contacto.");
+    }
+  }
 
   const updates: Record<string, unknown> = {
     status: parsed.data.decision === "approve" ? "pending_admin" : "rejected",
@@ -573,6 +608,7 @@ export async function decideShopOrder(input: {
     parent_notes: parsed.data.parent_notes ?? null,
     updated_at: now,
   };
+  if (approverPhone) updates.contact_phone_e164 = approverPhone;
   if (parsed.data.decision === "reject") updates.cancelled_at = now;
 
   const { data: updatedOrder, error } = await admin
@@ -597,7 +633,7 @@ export async function decideShopOrder(input: {
     await notifyShopManagerOfOrder(
       parsed.data.order_id,
       order.requested_by,
-      order.contact_phone_e164 ?? "Sin teléfono",
+      approverPhone!,
       (itemRows ?? []).map((item) => ({
         product_id: item.product_id,
         size: item.size,

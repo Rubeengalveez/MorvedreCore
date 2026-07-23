@@ -1,5 +1,7 @@
 ﻿import { z } from "zod";
 
+import { optionalMapsUrlSchema } from "@/lib/domain/maps";
+
 export const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida. Usa el formato AAAA-MM-DD.");
@@ -322,6 +324,7 @@ export const createTrainingBlockSchema = z
       emptyToNull,
       z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
     ),
+    maps_url: optionalMapsUrlSchema,
     kind: trainingKindSchema.optional(),
   })
   .refine((data) => data.end_date >= data.start_date, {
@@ -354,6 +357,7 @@ export const createTrainingScheduleSchema = z
       emptyToNull,
       z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
     ),
+    maps_url: optionalMapsUrlSchema,
     kind: trainingKindSchema.optional(),
     replace_existing: z.boolean().optional(),
     groups: z.array(trainingScheduleGroupSchema).min(1, "Añade al menos un horario.").max(7),
@@ -390,6 +394,7 @@ export const updateTrainingBlockSchema = z
       emptyToNull,
       z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
     ),
+    maps_url: optionalMapsUrlSchema,
     kind: trainingKindSchema.optional(),
   })
   .refine(
@@ -443,6 +448,7 @@ export const createMatchSchema = z.object({
     emptyToNull,
     z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
   ),
+  maps_url: optionalMapsUrlSchema,
   pool_name: z.preprocess(
     emptyToNull,
     z.string().trim().max(100, "Máximo 100 caracteres.").nullable().optional(),
@@ -471,6 +477,7 @@ export const updateMatchSchema = z
       emptyToNull,
       z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
     ),
+    maps_url: optionalMapsUrlSchema,
     pool_name: z.preprocess(
       emptyToNull,
       z.string().trim().max(100, "Máximo 100 caracteres.").nullable().optional(),
@@ -539,9 +546,9 @@ export const recordMatchStatSchema = z.object({
   goals: z.number().int("Goles enteros.").min(0, "Mínimo 0.").max(99, "Máximo 99.").optional(),
   exclusions: z
     .number()
-    .int("Exclusiones enteras.")
+    .int("Expulsiones enteras.")
     .min(0, "Mínimo 0.")
-    .max(3, "Máximo 3 exclusiones por partido (normativa).")
+    .max(3, "Máximo 3 expulsiones por partido (normativa).")
     .optional(),
   mvp: z.boolean().optional(),
 });
@@ -683,6 +690,7 @@ export const createShopOrderSchema = z.object({
 export const decideShopOrderSchema = z.object({
   order_id: z.string().uuid("Pedido inv�lido."),
   decision: z.enum(["approve", "reject"]),
+  contact_phone: z.string().trim().max(30).nullable().optional(),
   parent_notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
 });
 

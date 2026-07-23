@@ -660,3 +660,24 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Se elimina `@tanstack/react-table` porque no participa en ninguna pantalla. Las actualizaciones compatibles de Supabase, formularios, Zod, Tailwind y Prettier se aplican con el lockfile verificado.
 - Las migraciones mayores de Node types, ESLint, TypeScript y Lucide se aplazan: requieren una iteración específica y no aportan una mejora proporcional para este cierre.
 - La auditoría completa queda registrada en `35-final-codebase-cleanup-summary.md`.
+
+## 2026-07-21 - Teléfono de tienda y terminología deportiva
+
+- Un adulto solo introduce su teléfono en la primera solicitud si todavía no lo tiene en el perfil. El número se normaliza, se guarda de forma privada y las compras posteriores lo reutilizan; sigue siendo editable desde Perfil.
+- Un menor nunca aporta el teléfono del pedido. Su solicitud queda sin contacto hasta que un tutor adulto la aprueba: se usa el teléfono guardado del tutor o se le pide una única vez y se guarda en el perfil de quien confirma.
+- En toda la interfaz se usa `expulsión` o `expulsiones`. El nombre técnico histórico `exclusions` se conserva únicamente en columnas, tipos y consultas internas para no romper datos ni migraciones existentes.
+
+## 2026-07-21 - Escala tipográfica accesible y mobile-first
+
+- La aplicación adopta 13 px como mínimo para etiquetas y metadatos, 15 px para texto secundario y 16 px para contenido principal y formularios. Se eliminan los tamaños arbitrarios de 8 a 12 px de todas las vistas.
+- Los textos pequeños conservan `Inter`; `Manrope` se limita a títulos y `JetBrains Mono` a números, marcadores, horas y códigos donde la alineación tabular aporta información.
+- Las etiquetas en mayúsculas reducen el espaciado entre caracteres y usan colores con contraste suficiente. La paleta `ink` se completa en el tema para evitar estilos ausentes o heredados de forma accidental.
+- La validación visual se realiza desde 320 px. Los controles que no permiten mantener la legibilidad se separan, abrevian de forma comprensible o permiten envolver el contenido sin reducir la fuente.
+
+## 2026-07-21 - Ubicaciones navegables para piscinas
+
+- Los bloques de entrenamiento, sus sesiones generadas y los partidos admiten un enlace HTTPS de Google Maps o de otro servicio de mapas. Se mantiene junto al nombre legible del lugar para no convertir las ubicaciones en un catálogo complejo que el club no necesita.
+- El enlace del bloque se hereda automáticamente al generar o regenerar entrenamientos futuros. Cambiarlo o eliminarlo desde administración actualiza las nuevas sesiones del bloque mediante el flujo ya existente.
+- Los formularios explican cómo copiar el enlace desde Google Maps y validan el protocolo tanto en cliente como en Server Action. La base de datos aplica además longitud máxima y HTTPS como defensa adicional.
+- Calendario y detalle del partido muestran una tarjeta táctil de al menos 48 px con el nombre de la piscina y la acción `Ver mapa`. El enlace usa la asociación universal del móvil para abrir Google Maps, Apple Maps, el navegador u otra aplicación compatible.
+- La migración `20260721010812_add_event_maps_urls.sql` añade las columnas sin modificar las políticas RLS existentes: lectura y edición mantienen exactamente los permisos deportivos de cada tabla.

@@ -14,7 +14,7 @@ const METRICS: ReadonlyArray<{
   Pictogram: ComponentType<{ className?: string; accent?: string }>;
 }> = [
   { id: "goals", label: "Goles", Pictogram: Balon },
-  { id: "exclusions", label: "Excl.", Pictogram: Exclusion },
+  { id: "exclusions", label: "Exp.", Pictogram: Exclusion },
   { id: "mvp", label: "MVP", Pictogram: Trofeo },
   { id: "attendance", label: "Asist.", Pictogram: Calendario },
 ];
@@ -44,7 +44,7 @@ export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
     <div
       role="tablist"
       aria-label="Metrica de ranking"
-      className="no-scrollbar -mx-1 flex items-center gap-1.5 overflow-x-auto px-1 pb-1"
+      className="flex items-center gap-1.5 pb-1"
     >
       {METRICS.map((m) => {
         const Icon = m.Pictogram;
@@ -58,15 +58,15 @@ export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
             onClick={() => navigate(m.id)}
             data-metric-tab={m.id}
             className={cn(
-              "touch-target focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-12 shrink-0 items-center gap-2 rounded-xl border px-3.5 text-sm font-extrabold transition-[background-color,border-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
+              "touch-target focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 text-[13px] font-extrabold transition-[background-color,border-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none sm:gap-2 sm:px-3 sm:text-sm",
               isActive
                 ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
                 : "border-ink-300 bg-paper-card text-ink-700 hover:border-pool-blue hover:text-pool-deep",
               isPending && "opacity-70",
             )}
           >
-            <Icon className="h-4 w-4" accent={isActive ? "var(--ball-gold)" : "currentColor"} />
-            {m.label}
+            <Icon className="h-4 w-4 shrink-0" accent={isActive ? "var(--ball-gold)" : "currentColor"} />
+            <span className="truncate">{m.label}</span>
           </button>
         );
       })}

@@ -65,6 +65,13 @@ export default async function ProfileEditPage() {
     redirect("/login");
   }
 
+  const { count: activeRosterCount } = await admin
+    .from("team_rosters")
+    .select("team_id", { count: "exact", head: true })
+    .eq("player_id", finalProfile.id)
+    .is("left_at", null);
+  const isPlayer = (activeRosterCount ?? 0) > 0;
+
   return (
     <PageShell width="md" className="gap-5 pb-8">
       <AppPageHero
@@ -74,7 +81,7 @@ export default async function ProfileEditPage() {
         icon={<UserRound className="h-6 w-6" aria-hidden="true" />}
       />
 
-      <ProfileForm profile={finalProfile} />
+      <ProfileForm profile={finalProfile} isPlayer={isPlayer} />
     </PageShell>
   );
 }

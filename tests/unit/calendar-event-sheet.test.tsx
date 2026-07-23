@@ -21,6 +21,7 @@ const training: CalendarTraining = {
   scheduled_at: "2026-07-10T17:00:00.000Z",
   duration_minutes: 90,
   location: "Piscina Municipal Puerto Sagunto",
+  maps_url: "https://maps.app.goo.gl/piscina-municipal",
   cancelled: false,
   cancellation_reason: null,
 };
@@ -36,6 +37,7 @@ const match: CalendarMatch = {
   status: "scheduled",
   scheduled_at: "2026-07-18T17:00:00.000Z",
   location: "Piscina CN Terrassa",
+  maps_url: "https://maps.app.goo.gl/piscina-terrassa",
   pool_name: "Piscina CN Terrassa",
   final_score_us: null,
   final_score_them: null,
@@ -51,6 +53,9 @@ describe("calendar event sheet cards", () => {
     expect(screen.getAllByText("19:00–20:30")).toHaveLength(1);
     expect(screen.getByText("90 min")).toBeVisible();
     expect(screen.getByText(training.location!)).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: `Abrir ${training.location} en el mapa` }),
+    ).toHaveAttribute("href", training.maps_url);
     expect(screen.getByRole("link", { name: "Pasar lista" })).toHaveAttribute(
       "href",
       `/attendance/${training.id}`,
@@ -76,6 +81,9 @@ describe("calendar event sheet cards", () => {
     expect(screen.getByRole("heading", { name: "CN Terrassa contra Morvedre" })).toBeVisible();
     expect(screen.getByText("Torneo")).toBeVisible();
     expect(screen.getByText("Piscina CN Terrassa")).toBeVisible();
+    expect(
+      screen.getByRole("link", { name: "Abrir Piscina CN Terrassa en el mapa" }),
+    ).toHaveAttribute("href", match.maps_url);
     expect(screen.getByRole("link", { name: "Ver convocatoria completa" })).toHaveAttribute(
       "href",
       `/matches/${match.id}`,

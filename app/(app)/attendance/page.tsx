@@ -101,7 +101,7 @@ export default async function AttendancePage({
               <ChevronLeft className="h-7 w-7" aria-hidden="true" />
             </Link>
             <div className="min-w-0 text-center">
-              <p className="text-pool-blue text-[11px] font-extrabold tracking-[0.12em] uppercase">
+              <p className="text-pool-blue text-xs font-extrabold tracking-[0.08em] uppercase">
                 {selectedDay === today ? "Hoy" : isFutureDay ? "Próximo día" : "Fecha seleccionada"}
               </p>
               <h2
@@ -229,7 +229,7 @@ export default async function AttendancePage({
                   <ChevronRight
                     className={cn(
                       "h-7 w-7 shrink-0",
-                      isFutureDay ? "text-ink-400" : "text-pool-blue",
+                      isFutureDay ? "text-ink-500" : "text-pool-blue",
                     )}
                     aria-hidden="true"
                   />

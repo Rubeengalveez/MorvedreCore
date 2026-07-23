@@ -22,6 +22,7 @@ export interface MatchDetail {
   status: string;
   scheduled_at: string;
   location: string | null;
+  maps_url: string | null;
   pool_name: string | null;
   notes: string | null;
   final_score_us: number | null;
@@ -48,7 +49,7 @@ export async function getMatchById(matchId: string): Promise<MatchDetail | null>
   const { data, error } = await supabase
     .from("matches")
     .select(
-      "id, season_id, team_id, opponent, competition_type, is_home, status, scheduled_at, location, pool_name, notes, final_score_us, final_score_them, logistics_enabled, teams!matches_team_id_fkey(label, color)",
+      "id, season_id, team_id, opponent, competition_type, is_home, status, scheduled_at, location, maps_url, pool_name, notes, final_score_us, final_score_them, logistics_enabled, teams!matches_team_id_fkey(label, color)",
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -73,6 +74,7 @@ export async function getMatchById(matchId: string): Promise<MatchDetail | null>
     status: (data as { status: string }).status,
     scheduled_at: (data as { scheduled_at: string }).scheduled_at,
     location: (data as { location: string | null }).location,
+    maps_url: (data as { maps_url: string | null }).maps_url,
     pool_name: (data as { pool_name: string | null }).pool_name,
     notes: (data as { notes: string | null }).notes,
     final_score_us: (data as { final_score_us: number | null }).final_score_us,

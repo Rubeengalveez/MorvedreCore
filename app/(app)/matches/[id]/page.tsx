@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
+import { MapLocationLink } from "@/components/ui/map-location-link";
 import { formatLongDate } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
@@ -163,6 +164,13 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         <p className="text-ink-600 text-center text-sm font-medium">
           {formatLongDate(match.scheduled_at)}
         </p>
+        {match.pool_name || match.location || match.maps_url ? (
+          <MapLocationLink
+            name={match.pool_name || match.location}
+            address={match.location}
+            mapsUrl={match.maps_url}
+          />
+        ) : null}
       </div>
 
       {/* ─── CONTENT ─── */}
@@ -352,7 +360,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                           )}
                           {stats.exclusions > 0 && (
                             <span className="rounded-full bg-red-100 px-2.5 py-1 text-xs font-bold text-red-700">
-                              {stats.exclusions} {stats.exclusions === 1 ? "excl." : "excl."}
+                              {stats.exclusions} {stats.exclusions === 1 ? "exp." : "exp."}
                             </span>
                           )}
                         </div>
