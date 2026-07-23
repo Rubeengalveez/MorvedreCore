@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAttendanceDayKey } from "@/lib/domain/attendance";
+import { getMonthRange, monthKeyFromDate } from "@/lib/domain/attendance-history";
 import { firstName, type FamilyRelation } from "@/lib/domain/family";
 import { getUpcomingDashboardEvents, type DashboardWeekEvent } from "./dashboard";
 import type { TeamSummary } from "./teams";
@@ -6,9 +8,9 @@ import type { TeamSummary } from "./teams";
 export interface FamilyMemberStats {
   goals: number;
   matches_played: number;
-  attendance_pct: number;
-  trainings_attended: number;
-  trainings_total: number;
+  month_attendance_pct: number | null;
+  month_trainings_attended: number;
+  month_trainings_total: number;
 }
 
 export interface FamilyMemberOverview {
@@ -50,6 +52,29 @@ type LinkedChild = {
         birth_year: number | null;
         team_color: string | null;
         is_active: boolean;
+      }>
+    | null;
+};
+
+type FamilySeasonStats = {
+  player_id: string;
+  goals: number;
+  matches_played: number;
+};
+
+type FamilyAttendanceRow = {
+  player_id: string;
+  present: boolean;
+  training_sessions:
+    | {
+        scheduled_at: string;
+        cancelled: boolean;
+        teams: { season_id: string } | Array<{ season_id: string }> | null;
+      }
+    | Array<{
+        scheduled_at: string;
+        cancelled: boolean;
+        teams: { season_id: string } | Array<{ season_id: string }> | null;
       }>
     | null;
 };
@@ -96,7 +121,8 @@ export async function getFamilyOverview(
   }
 
   const childIds = children.map((item) => item.profile.id);
-  const [rostersResult, snapshotsResult, ordersResult] = await Promise.all([
+  const currentMonthRange = getMonthRange(monthKeyFromDate());
+  const [rostersResult, snapshotsResult, ordersResult, attendanceResult] = await Promise.all([
     supabase
       .from("team_rosters")
       .select(
@@ -106,9 +132,7 @@ export async function getFamilyOverview(
       .is("left_at", null),
     supabase
       .from("ranking_snapshots")
-      .select(
-        "player_id, goals, matches_played, attendance_pct, trainings_attended, trainings_total",
-      )
+      .select("player_id, goals, matches_played")
       .eq("season_id", seasonId)
       .eq("scope", "season")
       .eq("scope_key", "all")
@@ -118,10 +142,17 @@ export async function getFamilyOverview(
       .select("requested_by")
       .in("requested_by", childIds)
       .eq("status", "pending_parent"),
+    supabase
+      .from("training_attendance")
+      .select(
+        "player_id, present, training_sessions!inner(scheduled_at, cancelled, teams!inner(season_id))",
+      )
+      .in("player_id", childIds),
   ]);
   if (rostersResult.error) throw new Error("No pudimos cargar los equipos de tu familia.");
   if (snapshotsResult.error) throw new Error("No pudimos cargar las estadísticas de tu familia.");
   if (ordersResult.error) throw new Error("No pudimos cargar las compras de tu familia.");
+  if (attendanceResult.error) throw new Error("No pudimos cargar la asistencia de tu familia.");
 
   const teamsByProfile = new Map<string, TeamSummary[]>();
   for (const row of rostersResult.data ?? []) {
@@ -140,9 +171,21 @@ export async function getFamilyOverview(
   const statsByProfile = new Map(
     (snapshotsResult.data ?? []).map((snapshot) => [
       snapshot.player_id,
-      snapshot as FamilyMemberStats,
+      snapshot as FamilySeasonStats,
     ]),
   );
+  const monthlyAttendanceByProfile = new Map<string, { attended: number; total: number }>();
+  for (const row of (attendanceResult.data ?? []) as unknown as FamilyAttendanceRow[]) {
+    const session = joinedOne(row.training_sessions);
+    const team = session ? joinedOne(session.teams) : null;
+    if (!session || session.cancelled || team?.season_id !== seasonId) continue;
+    const day = getAttendanceDayKey(session.scheduled_at);
+    if (day < currentMonthRange.from || day > currentMonthRange.to) continue;
+    const current = monthlyAttendanceByProfile.get(row.player_id) ?? { attended: 0, total: 0 };
+    current.total += 1;
+    if (row.present) current.attended += 1;
+    monthlyAttendanceByProfile.set(row.player_id, current);
+  }
   const pendingOrdersByProfile = new Map<string, number>();
   for (const order of ordersResult.data ?? []) {
     pendingOrdersByProfile.set(
@@ -158,6 +201,11 @@ export async function getFamilyOverview(
   const members = children.map(({ relation, profile }) => {
     const teams = teamsByProfile.get(profile.id) ?? [];
     const memberTeamIds = new Set(teams.map((team) => team.id));
+    const seasonStats = statsByProfile.get(profile.id);
+    const monthAttendance = monthlyAttendanceByProfile.get(profile.id) ?? {
+      attended: 0,
+      total: 0,
+    };
     return {
       id: profile.id,
       full_name: profile.full_name,
@@ -168,7 +216,16 @@ export async function getFamilyOverview(
       relation,
       teams,
       next_event: events.find((event) => memberTeamIds.has(event.team_id)) ?? null,
-      stats: statsByProfile.get(profile.id) ?? null,
+      stats: {
+        goals: seasonStats?.goals ?? 0,
+        matches_played: seasonStats?.matches_played ?? 0,
+        month_attendance_pct:
+          monthAttendance.total > 0
+            ? Math.round((monthAttendance.attended / monthAttendance.total) * 100)
+            : null,
+        month_trainings_attended: monthAttendance.attended,
+        month_trainings_total: monthAttendance.total,
+      },
       pending_order_count: pendingOrdersByProfile.get(profile.id) ?? 0,
     } satisfies FamilyMemberOverview;
   });

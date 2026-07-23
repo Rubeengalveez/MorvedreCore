@@ -137,9 +137,11 @@ export function EventSheet({
 export function TrainingRow({
   training,
   isCoach,
+  compact = false,
 }: {
   training: NonNullable<CalendarEventDay["trainings"][number]>;
   isCoach: boolean;
+  compact?: boolean;
 }) {
   const timeRange = formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes);
 
@@ -151,24 +153,41 @@ export function TrainingRow({
         style={{ backgroundColor: training.team_color }}
       />
 
-      <div className="flex flex-col gap-4 py-4 pr-4 pl-5 sm:p-5 sm:pl-6">
-        <EventCardHeader teamLabel={training.team_label}>
-          <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep">
-            Entrenamiento
-          </EventBadge>
-        </EventCardHeader>
+      <div
+        className={cn(
+          "flex flex-col py-4 pr-4 pl-5 sm:p-5 sm:pl-6",
+          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-4",
+        )}
+      >
+        {compact ? (
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="text-pool-blue min-w-0 truncate text-[0.6875rem] font-black tracking-[0.08em] uppercase">
+              {training.team_label}
+            </span>
+            <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep min-h-7 shrink-0 px-2 text-[0.625rem]">
+              Entreno
+            </EventBadge>
+          </div>
+        ) : (
+          <EventCardHeader teamLabel={training.team_label}>
+            <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep">
+              Entrenamiento
+            </EventBadge>
+          </EventCardHeader>
+        )}
 
         <div className="min-w-0">
           <h3
             className={cn(
-              "text-pool-deep text-lg leading-tight font-extrabold text-pretty",
+              "text-pool-deep leading-tight font-extrabold text-pretty",
+              compact ? "text-base" : "text-lg",
               training.cancelled && "text-ink-500",
             )}
           >
             {training.cancelled ? "Sesión de entrenamiento" : "Sesión de agua y táctica"}
           </h3>
 
-          <div className="mt-3 flex flex-col gap-2.5">
+          <div className={cn("flex flex-col gap-2.5", compact ? "mt-2" : "mt-3")}>
             <EventMetaRow icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <time className="text-pool-deep font-mono text-base font-black tracking-tight tabular-nums">
@@ -181,7 +200,11 @@ export function TrainingRow({
             </EventMetaRow>
 
             {training.location || training.maps_url ? (
-              <MapLocationLink name={training.location} mapsUrl={training.maps_url} />
+              <MapLocationLink
+                name={training.location}
+                mapsUrl={training.maps_url}
+                compact={compact}
+              />
             ) : null}
           </div>
         </div>
@@ -217,11 +240,13 @@ export function MatchRow({
   isCoach,
   activeProfileId,
   onChanged,
+  compact = false,
 }: {
   match: NonNullable<CalendarEventDay["matches"][number]>;
   isCoach: boolean;
   activeProfileId: string;
   onChanged: () => void;
+  compact?: boolean;
 }) {
   const router = useRouter();
   const isCalled = match.callup_status != null;
@@ -237,86 +262,145 @@ export function MatchRow({
         style={{ backgroundColor: match.team_color }}
       />
 
-      <div className="flex flex-col gap-4 py-4 pr-4 pl-5 sm:p-5 sm:pl-6">
-        <EventCardHeader teamLabel={match.team_label}>
-          <EventBadge className="border-ink-300 bg-paper text-ink-600">
-            {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-          </EventBadge>
-          {match.status === "cancelled" ? (
-            <EventBadge className="bg-danger/10 border-danger/20 text-danger">Cancelado</EventBadge>
-          ) : match.status === "played" ? (
-            <EventBadge className="bg-success/10 border-success/20 text-success">Jugado</EventBadge>
-          ) : null}
-        </EventCardHeader>
-
-        <h3 className="sr-only">
-          {homeTeam} contra {awayTeam}
-        </h3>
-
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-1 select-none">
-          <div className="flex min-w-0 items-center gap-1">
-            <Gorro
-              className="h-[18px] w-[18px] shrink-0"
-              accent={match.is_home ? match.team_color : "#718096"}
-              aria-hidden="true"
-            />
-            <span className="text-ink-950 truncate text-xs font-black">{homeTeam}</span>
+      <div
+        className={cn(
+          "flex flex-col py-4 pr-4 pl-5 sm:p-5 sm:pl-6",
+          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-4",
+        )}
+      >
+        {compact ? (
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <span className="text-pool-blue min-w-0 truncate text-[0.6875rem] font-black tracking-[0.08em] uppercase">
+              {match.team_label}
+            </span>
+            <EventBadge className="border-ink-300 bg-paper text-ink-600 min-h-7 shrink-0 px-2 text-[0.625rem]">
+              {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+            </EventBadge>
           </div>
+        ) : (
+          <EventCardHeader teamLabel={match.team_label}>
+            <EventBadge className="border-ink-300 bg-paper text-ink-600">
+              {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+            </EventBadge>
+            {match.status === "cancelled" ? (
+              <EventBadge className="bg-danger/10 border-danger/20 text-danger">
+                Cancelado
+              </EventBadge>
+            ) : match.status === "played" ? (
+              <EventBadge className="bg-success/10 border-success/20 text-success">
+                Jugado
+              </EventBadge>
+            ) : null}
+          </EventCardHeader>
+        )}
 
-          <div className="flex min-w-12 shrink-0 justify-center">
-            {match.status === "played" &&
-            match.final_score_us != null &&
-            match.final_score_them != null ? (
-              <span className="bg-pool-deep text-paper border-pool-deep rounded-lg border px-3 py-1 font-mono text-sm font-black tracking-widest shadow-sm md:text-base">
-                {match.is_home ? match.final_score_us : match.final_score_them}-
-                {match.is_home ? match.final_score_them : match.final_score_us}
-              </span>
-            ) : (
-              <span className="bg-ink-100 text-pool-deep border-ink-200 rounded-lg border px-2 py-1 font-mono text-xs font-black md:text-sm">
-                {formatTimeOfDay(match.scheduled_at)}
-              </span>
-            )}
+        {compact ? (
+          <div className="bg-paper-sunk/70 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 select-none">
+            <div className="min-w-0">
+              <p className="text-ink-600 text-xs font-bold">
+                Morvedre · {match.is_home ? "local" : "visitante"}
+              </p>
+              <h3 className="text-pool-deep mt-0.5 text-base leading-tight font-black text-pretty">
+                <span className="text-ink-500 font-bold">vs </span>
+                {match.opponent}
+              </h3>
+            </div>
+            <div className="shrink-0">
+              {match.status === "played" &&
+              match.final_score_us != null &&
+              match.final_score_them != null ? (
+                <span className="bg-pool-deep text-paper border-pool-deep inline-flex rounded-lg border px-2.5 py-1 font-mono text-sm font-black tracking-wider shadow-sm">
+                  {match.final_score_us}-{match.final_score_them}
+                </span>
+              ) : (
+                <time className="bg-paper-card text-pool-deep border-ink-200 inline-flex rounded-lg border px-2 py-1 font-mono text-sm font-black">
+                  {formatTimeOfDay(match.scheduled_at)}
+                </time>
+              )}
+            </div>
           </div>
+        ) : (
+          <>
+            <h3 className="sr-only">
+              {homeTeam} contra {awayTeam}
+            </h3>
 
-          <div className="flex min-w-0 items-center justify-end gap-1 text-right">
-            <span className="text-ink-950 truncate text-xs font-black">{awayTeam}</span>
-            <Gorro
-              className="h-[18px] w-[18px] shrink-0"
-              accent={match.is_home ? "#718096" : match.team_color}
-              aria-hidden="true"
-            />
-          </div>
-        </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-1 select-none">
+              <div className="flex min-w-0 items-center gap-1">
+                <Gorro
+                  className="h-[18px] w-[18px] shrink-0"
+                  accent={match.is_home ? match.team_color : "#718096"}
+                  aria-hidden="true"
+                />
+                <span className="text-ink-950 truncate text-xs font-black">{homeTeam}</span>
+              </div>
+
+              <div className="flex min-w-12 shrink-0 justify-center">
+                {match.status === "played" &&
+                match.final_score_us != null &&
+                match.final_score_them != null ? (
+                  <span className="bg-pool-deep text-paper border-pool-deep rounded-lg border px-3 py-1 font-mono text-sm font-black tracking-widest shadow-sm md:text-base">
+                    {match.is_home ? match.final_score_us : match.final_score_them}-
+                    {match.is_home ? match.final_score_them : match.final_score_us}
+                  </span>
+                ) : (
+                  <span className="bg-ink-100 text-pool-deep border-ink-200 rounded-lg border px-2 py-1 font-mono text-xs font-black md:text-sm">
+                    {formatTimeOfDay(match.scheduled_at)}
+                  </span>
+                )}
+              </div>
+
+              <div className="flex min-w-0 items-center justify-end gap-1 text-right">
+                <span className="text-ink-950 truncate text-xs font-black">{awayTeam}</span>
+                <Gorro
+                  className="h-[18px] w-[18px] shrink-0"
+                  accent={match.is_home ? "#718096" : match.team_color}
+                  aria-hidden="true"
+                />
+              </div>
+            </div>
+          </>
+        )}
 
         {match.pool_name || match.location || match.maps_url ? (
           <MapLocationLink
             name={match.pool_name || match.location}
             address={match.location}
             mapsUrl={match.maps_url}
+            compact={compact}
           />
         ) : null}
 
         {isCalled && match.callup_status && (
-          <div className="border-ink-200/40 mt-1.5 border-t pt-3">
+          <div className={cn("border-ink-200/40 border-t", compact ? "pt-2" : "mt-1.5 pt-3")}>
             <PremiumRsvpSection
               matchId={match.id}
               currentStatus={match.callup_status}
               onChanged={onChanged}
               router={router}
               playerId={activeProfileId}
+              compact={compact}
             />
           </div>
         )}
 
-        <div className="border-ink-200/40 mt-1 flex flex-col gap-2 border-t pt-3 select-none">
+        <div
+          className={cn(
+            "border-ink-200/40 flex flex-col border-t select-none",
+            compact ? "gap-1.5 pt-2" : "mt-1 gap-2 pt-3",
+          )}
+        >
           <Button
             asChild
             size="sm"
             variant="secondary"
-            className="hover:bg-ink-100/50 flex min-h-12 w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl text-sm font-extrabold"
+            className={cn(
+              "hover:bg-ink-100/50 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl font-extrabold",
+              compact ? "min-h-10 text-sm" : "min-h-12 text-sm",
+            )}
           >
             <Link href={href}>
-              <span>Ver convocatoria completa</span>
+              <span>{compact ? "Ver convocatoria" : "Ver convocatoria completa"}</span>
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </Button>
@@ -325,7 +409,10 @@ export function MatchRow({
               asChild
               size="sm"
               variant="ghost"
-              className="text-ink-600 hover:text-pool-deep min-h-12 w-full cursor-pointer text-sm font-extrabold"
+              className={cn(
+                "text-ink-600 hover:text-pool-deep w-full cursor-pointer text-sm font-extrabold",
+                compact ? "min-h-10" : "min-h-12",
+              )}
             >
               <Link href={`/admin/matches/${match.id}` as Route}>Gestionar convocatoria</Link>
             </Button>
@@ -342,12 +429,14 @@ function PremiumRsvpSection({
   onChanged,
   router,
   playerId,
+  compact = false,
 }: {
   matchId: string;
   currentStatus: string;
   onChanged: () => void;
   router: ReturnType<typeof useRouter>;
   playerId: string;
+  compact?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -372,16 +461,17 @@ function PremiumRsvpSection({
   return (
     <div className="flex flex-col gap-2 select-none">
       <span className="text-ink-600 text-xs font-black tracking-wider uppercase">
-        ¿Confirmas tu asistencia?
+        {compact ? "¿Asistes?" : "¿Confirmas tu asistencia?"}
       </span>
 
-      <div className="flex gap-2.5">
+      <div className={cn("flex w-full", compact ? "gap-2" : "gap-2.5")}>
         <button
           type="button"
           disabled={pending}
           onClick={() => send("confirmed")}
           className={cn(
-            "focus-visible:ring-pool-blue flex min-h-12 flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border text-sm font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+            "focus-visible:ring-pool-blue flex flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+            compact ? "min-h-10 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
             isConfirmed
               ? "bg-success text-paper border-success shadow-sm"
               : "bg-paper border-success/25 text-success hover:bg-success/10",
@@ -400,7 +490,8 @@ function PremiumRsvpSection({
           disabled={pending}
           onClick={() => send("declined")}
           className={cn(
-            "focus-visible:ring-pool-blue flex min-h-12 flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border text-sm font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+            "focus-visible:ring-pool-blue flex flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+            compact ? "min-h-10 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
             isDeclined
               ? "bg-danger text-paper border-danger shadow-sm"
               : "bg-paper border-danger/25 text-danger hover:bg-danger/10",

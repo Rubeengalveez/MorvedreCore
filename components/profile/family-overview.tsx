@@ -197,8 +197,12 @@ function ChildLane({
         <MiniStat value={member.stats?.matches_played ?? 0} label="Partidos" />
         <MiniStat value={member.stats?.goals ?? 0} label="Goles" />
         <MiniStat
-          value={`${Number(member.stats?.attendance_pct ?? 0).toLocaleString("es-ES")}%`}
-          label="Asistencia"
+          value={
+            member.stats?.month_attendance_pct == null
+              ? "—"
+              : `${member.stats.month_attendance_pct}%`
+          }
+          label="Asist. mes"
         />
       </div>
 

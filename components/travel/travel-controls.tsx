@@ -17,6 +17,16 @@ import {
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Sheet,
+  SheetBody,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 interface TravelControlsProps {
   matchId: string;
@@ -350,28 +360,36 @@ export function AddCompanionForm({
 
   return (
     <div className="flex w-full flex-col gap-2">
+      <label
+        htmlFor={`travel-companion-${offerId}-${playerId}`}
+        className="text-pool-deep text-sm font-extrabold"
+      >
+        Nombre del acompañante
+      </label>
       <div className="flex items-center gap-2">
         <Input
+          id={`travel-companion-${offerId}-${playerId}`}
+          name="companion_name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder="Nombre del acompañante"
+          placeholder="Ejemplo: María García…"
           maxLength={80}
+          autoComplete="off"
           className="flex-1"
-          autoFocus
         />
-        <Button
-          type="button"
-          size="sm"
-          onClick={handleSubmit}
-          disabled={pending || !name.trim()}
-        >
-          {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+        <Button type="button" size="sm" onClick={handleSubmit} disabled={pending || !name.trim()}>
+          {pending ? (
+            <LoaderCircle className="h-4 w-4 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4" />
+          )}
           Añadir
         </Button>
         <Button
           type="button"
           variant="ghost"
           size="sm"
+          aria-label="Cancelar nuevo acompañante"
           onClick={() => {
             setOpen(false);
             setError(null);
@@ -380,7 +398,11 @@ export function AddCompanionForm({
           <X className="h-4 w-4" />
         </Button>
       </div>
-      {error ? <p className="text-danger text-sm font-semibold">{error}</p> : null}
+      {error ? (
+        <p role="alert" className="text-danger text-sm font-semibold">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -388,21 +410,71 @@ export function AddCompanionForm({
 export function CancelCompanionButton({ companionId }: { companionId: string }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   return (
-    <button
-      type="button"
-      onClick={() => {
-        startTransition(async () => {
-          const result = await cancelTravelCompanion({ companion_id: companionId });
-          if (result.ok) router.refresh();
-        });
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+        if (!nextOpen) setError(null);
       }}
-      disabled={pending}
-      className="text-danger hover:bg-danger-50 focus-visible:ring-danger inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
     >
-      {pending ? <LoaderCircle className="h-3 w-3 animate-spin" /> : <X className="h-3 w-3" />}
-      Quitar
-    </button>
+      <SheetTrigger asChild>
+        <button
+          type="button"
+          className="text-danger hover:bg-danger-50 focus-visible:ring-danger inline-flex min-h-12 touch-manipulation items-center gap-1.5 rounded-lg px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+          Quitar
+        </button>
+      </SheetTrigger>
+      <SheetContent size="sm">
+        <SheetHeader>
+          <SheetTitle>¿Quitar este acompañante?</SheetTitle>
+          <SheetDescription>
+            La plaza quedará libre y podrás volver a añadirlo si ha sido un error.
+          </SheetDescription>
+        </SheetHeader>
+        <SheetBody>
+          {error ? (
+            <p role="alert" className="text-danger text-sm font-semibold">
+              {error}
+            </p>
+          ) : null}
+        </SheetBody>
+        <SheetFooter>
+          <Button
+            type="button"
+            variant="danger"
+            size="lg"
+            disabled={pending}
+            onClick={() => {
+              setError(null);
+              startTransition(async () => {
+                const result = await cancelTravelCompanion({ companion_id: companionId });
+                if (result.ok) {
+                  setOpen(false);
+                  router.refresh();
+                  return;
+                }
+                setError(result.error);
+              });
+            }}
+          >
+            {pending ? (
+              <LoaderCircle
+                className="h-4 w-4 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+            ) : (
+              <X className="h-4 w-4" aria-hidden="true" />
+            )}
+            {pending ? "Quitando…" : "Sí, quitar acompañante"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -431,7 +503,11 @@ export function CancelTravelOfferButton({ offerId }: { offerId: string }) {
               });
             }}
           >
-            {pending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <X className="h-4 w-4" />}
+            {pending ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <X className="h-4 w-4" />
+            )}
             Sí, cancelar
           </Button>
           <Button

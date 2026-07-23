@@ -91,7 +91,7 @@ export function WeekView({
                 ) : (
                   <div className="flex flex-col gap-3">
                     {dayData.trainings.map((t) => (
-                      <TrainingRow key={t.id} training={t} isCoach={isCoach || isAdmin} />
+                      <TrainingRow key={t.id} training={t} isCoach={isCoach || isAdmin} compact />
                     ))}
                     {dayData.matches.map((m) => (
                       <MatchRow
@@ -100,6 +100,7 @@ export function WeekView({
                         isCoach={isCoach || isAdmin}
                         activeProfileId={activeProfileId}
                         onChanged={() => {}}
+                        compact
                       />
                     ))}
                   </div>

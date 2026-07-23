@@ -209,7 +209,7 @@ export default async function ProfilePage() {
               detail={`${snapshot.matches_played} partidos`}
             />
             <Stat
-              value={`${Number(snapshot.attendance_pct).toLocaleString("es-ES")}%`}
+              value={`${Math.round(Number(snapshot.attendance_pct))}%`}
               label="Asistencia"
               detail={`${snapshot.trainings_attended}/${snapshot.trainings_total} entrenos`}
             />

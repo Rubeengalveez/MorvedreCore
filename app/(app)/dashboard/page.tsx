@@ -480,7 +480,7 @@ function SeasonSnapshot({ stats }: { stats: PlayerSeasonStats }) {
     { label: "Partidos", value: stats.matches_played, icon: CalendarDays },
     {
       label: "Asistencia",
-      value: `${Number(stats.attendance_pct ?? 0).toLocaleString("es-ES", { maximumFractionDigits: 2 })} %`,
+      value: `${Math.round(Number(stats.attendance_pct ?? 0))} %`,
       icon: ShieldCheck,
     },
     { label: "MVP", value: stats.mvp_count, icon: Trophy },

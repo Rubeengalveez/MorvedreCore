@@ -69,7 +69,7 @@ function parseMetric(value?: string): LegendMetric {
 }
 
 function metricValue(row: LegendRow, metric: LegendMetric): string {
-  if (metric === "attendance_pct") return `${row.attendance_pct.toLocaleString("es-ES")}%`;
+  if (metric === "attendance_pct") return `${Math.round(row.attendance_pct)}%`;
   return row[metric].toLocaleString("es-ES");
 }
 

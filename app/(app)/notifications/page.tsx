@@ -9,6 +9,8 @@ import {
   Trophy,
   Volleyball,
   Megaphone,
+  UserCheck,
+  UserX,
   XCircle,
   ChevronRight,
 } from "lucide-react";
@@ -70,6 +72,18 @@ const KIND_META: Record<
     Icon: XCircle,
     color: "var(--danger)",
     tone: "border-danger/30 bg-danger/5",
+  },
+  training_absence: {
+    label: "Ausencia",
+    Icon: UserX,
+    color: "var(--danger)",
+    tone: "border-danger/30 bg-danger/5",
+  },
+  training_attendance_corrected: {
+    label: "Corrección",
+    Icon: UserCheck,
+    color: "var(--success)",
+    tone: "border-success/30 bg-success/5",
   },
   news_pinned: {
     label: "Noticia",
@@ -135,7 +149,11 @@ async function loadContextForNotifications(
   }
 
   const profileIds = Array.from(
-    new Set(items.map((i) => i.recipient_id).filter((v): v is string => v != null)),
+    new Set(
+      items
+        .flatMap((item) => [item.recipient_id, item.related_profile_id])
+        .filter((value): value is string => value != null),
+    ),
   );
   if (profileIds.length > 0) {
     const { data } = await supabase.from("profiles").select("id, photo_url").in("id", profileIds);
@@ -215,7 +233,7 @@ export default async function NotificationsPage({
               key={n.id}
               item={n}
               match={n.related_match_id ? (matchById.get(n.related_match_id) ?? null) : null}
-              photoUrl={photoByProfile.get(n.recipient_id) ?? null}
+              photoUrl={photoByProfile.get(n.related_profile_id ?? n.recipient_id) ?? null}
             />
           ))}
         </ul>

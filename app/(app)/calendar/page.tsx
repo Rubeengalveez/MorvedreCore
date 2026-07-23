@@ -1,5 +1,8 @@
 import type { Metadata } from "next";
+import Link from "next/link";
+import type { Route } from "next";
 import { redirect } from "next/navigation";
+import { CalendarCheck2, ChevronRight } from "lucide-react";
 
 import { Equipo, Silbato } from "@/components/brand/pictograms";
 import { CalendarView, type CalendarViewTeam } from "@/components/calendar/calendar-view";
@@ -64,7 +67,6 @@ export default async function CalendarPage() {
         })),
       )
     : [];
-  const ownTeamIds = new Set(profileTeams[0]?.teams.map((team) => team.id) ?? []);
   const teamMap = new Map<string, CalendarViewTeam & { memberNames: string[] }>();
   for (const { profile, teams } of profileTeams) {
     for (const team of teams) {
@@ -89,7 +91,6 @@ export default async function CalendarPage() {
 
   const teamIds = calendarTeams.map((t) => t.id);
   const ym = currentYearMonth();
-  const now = new Date();
   const startIso = new Date(ym.year, ym.month - 2, 1, 0, 0, 0).toISOString();
   const endIso = new Date(ym.year, ym.month + 3, 0, 23, 59, 59).toISOString();
 
@@ -109,7 +110,12 @@ export default async function CalendarPage() {
 
   const today = todayIso();
   const monthAhead = addDaysIso(today, 30);
-  const sixtyDaysAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 60).toISOString();
+  const attendanceProfileIds = profileTeams
+    .filter((entry) => entry.teams.length > 0)
+    .map((entry) => entry.profile.id);
+  const trainingSessionIds = Array.from(eventsByDay.values()).flatMap((day) =>
+    day.trainings.map((training) => training.id),
+  );
   const [availabilityRes, attendanceRes] = await Promise.all([
     supabase
       .from("match_availability")
@@ -117,11 +123,13 @@ export default async function CalendarPage() {
       .eq("player_id", activeProfile.id)
       .gte("date", today)
       .lte("date", monthAhead),
-    supabase
-      .from("training_attendance")
-      .select("session_id, present")
-      .eq("player_id", activeProfile.id)
-      .gte("marked_at", sixtyDaysAgo),
+    attendanceProfileIds.length > 0 && trainingSessionIds.length > 0
+      ? supabase
+          .from("training_attendance")
+          .select("session_id, present")
+          .in("player_id", attendanceProfileIds)
+          .in("session_id", trainingSessionIds)
+      : Promise.resolve({ data: [], error: null }),
   ]);
 
   const availabilityByDay = new Map<string, boolean>();
@@ -133,7 +141,8 @@ export default async function CalendarPage() {
   const userAttendanceBySession = new Map<string, boolean>();
   for (const a of attendanceRes.data ?? []) {
     const ar = a as { session_id: string; present: boolean };
-    userAttendanceBySession.set(ar.session_id, ar.present);
+    const current = userAttendanceBySession.get(ar.session_id);
+    userAttendanceBySession.set(ar.session_id, current === false ? false : ar.present);
   }
 
   return (
@@ -165,9 +174,22 @@ export default async function CalendarPage() {
           isAdmin={isAdmin}
           activeProfileId={activeProfile.id}
           userAttendanceBySession={userAttendanceBySession}
-          showAttendance={ownTeamIds.size > 0}
+          showAttendance={attendanceProfileIds.length > 0}
         />
       )}
+
+      {attendanceProfileIds.length > 0 ? (
+        <Link
+          href={"/attendance/history" as Route}
+          className="border-ink-200 bg-paper-card text-pool-deep hover:border-pool-blue/45 hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-xl border px-4 py-3 text-sm font-extrabold transition-[background-color,border-color] focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+            <CalendarCheck2 className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <span className="flex-1">Ver asistencia</span>
+          <ChevronRight className="text-ink-500 h-5 w-5 shrink-0" aria-hidden="true" />
+        </Link>
+      ) : null}
 
       {isCoach ? (
         <p className="text-ink-600 flex items-center gap-2 px-1 text-sm font-medium">

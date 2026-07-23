@@ -32,9 +32,9 @@ function member(index: number): FamilyMemberOverview {
     stats: {
       goals: index + 1,
       matches_played: 10,
-      attendance_pct: 90,
-      trainings_attended: 18,
-      trainings_total: 20,
+      month_attendance_pct: index === 0 ? 100 : index === 1 ? 67 : null,
+      month_trainings_attended: index === 0 ? 4 : index === 1 ? 4 : 0,
+      month_trainings_total: index === 0 ? 4 : index === 1 ? 6 : 0,
     },
     pending_order_count: index === 0 ? 1 : 0,
   };
@@ -77,6 +77,8 @@ describe("FamilyOverviewPanel", () => {
     expect(screen.getByText("Lucía y Mateo")).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(2);
     expect(screen.queryByText("+1")).not.toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText("67%")).toBeInTheDocument();
   });
 
   it("keeps a third child readable without widening the family header", () => {

@@ -63,39 +63,42 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "border-pool-blue/40 bg-pool-foam relative overflow-hidden rounded-lg border px-3.5 py-3.5 shadow-[0_4px_14px_rgba(6,32,72,0.09)] sm:px-4",
+        "border-ink-200/90 bg-paper-card/95 relative overflow-hidden rounded-xl border px-3 py-2.5 shadow-[0_3px_12px_rgba(6,32,72,0.07)] sm:px-3.5 sm:py-3",
         className,
       )}
       data-page-header
       {...props}
     >
-      <span className="lane-pattern opacity-80" aria-hidden="true" />
+      <span className="lane-pattern opacity-30" aria-hidden="true" />
       <span
-        className="absolute inset-y-0 left-0 z-[1] w-1"
+        className="absolute inset-y-2 left-0 z-[1] w-1 rounded-r-full"
         style={{ backgroundColor: accentColor }}
         aria-hidden="true"
       />
-      <div className="relative z-[2] flex flex-col gap-3 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
-        <div className="flex min-w-0 items-center gap-3.5">
+      <div className="relative z-[2] flex flex-col gap-2.5 min-[520px]:flex-row min-[520px]:items-center min-[520px]:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
           {icon ? (
             <span
-              className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-[inset_0_-2px_0_rgba(255,255,255,0.14)] [&>svg]:h-5 [&>svg]:w-5"
+              className="bg-pool-deep text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-xl shadow-[inset_0_-1px_0_rgba(255,255,255,0.18),0_2px_6px_rgba(6,32,72,0.12)] [&>svg]:h-[1.125rem] [&>svg]:w-[1.125rem]"
               aria-hidden="true"
             >
               {icon}
             </span>
           ) : null}
-          <div className="min-w-0">
-            <h1 className="font-display text-pool-deep text-2xl leading-none font-extrabold tracking-tight text-balance sm:text-[1.625rem]">
-              {title}
-            </h1>
-            {eyebrow || description ? (
-              <p className="text-ink-700 mt-1 max-w-2xl text-sm leading-5 text-pretty">
-                {eyebrow ? (
-                  <Eyebrow className="text-pool-deep mr-1.5 text-xs">{eyebrow}</Eyebrow>
-                ) : null}
-                {eyebrow && description ? <span aria-hidden="true">· </span> : null}
-                {description ?? null}
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+              <h1 className="text-pool-deep text-xl leading-6 font-extrabold tracking-tight text-balance sm:text-2xl">
+                {title}
+              </h1>
+              {eyebrow ? (
+                <span className="border-pool-blue/15 bg-pool-foam/75 text-pool-deep inline-flex min-h-6 max-w-full items-center rounded-full border px-2 text-[0.8125rem] leading-[1.125rem] font-bold">
+                  {eyebrow}
+                </span>
+              ) : null}
+            </div>
+            {description ? (
+              <p className="text-ink-600 mt-1 max-w-2xl text-sm leading-[1.35] text-pretty">
+                {description}
               </p>
             ) : null}
           </div>

@@ -147,6 +147,8 @@ export function computeRanking(
     const position = i + 1;
     rows.push({
       ...entry,
+      primary_value:
+        options.metric === "attendance" ? Math.round(entry.primary_value) : entry.primary_value,
       position,
       medal: medalFor(position),
     });

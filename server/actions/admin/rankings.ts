@@ -410,16 +410,28 @@ export async function recomputeSnapshotForPlayer(
   playerId: string,
   seasonId: string,
 ): Promise<void> {
+  await recomputeSnapshotsForPlayers([playerId], seasonId);
+}
+
+export async function recomputeSnapshotsForPlayers(
+  playerIds: string[],
+  seasonId: string,
+): Promise<void> {
+  const uniquePlayerIds = Array.from(new Set(playerIds));
+  if (uniquePlayerIds.length === 0) return;
   const admin = createAdminClient();
   const data = await loadSeasonData(seasonId, admin);
-  const snapshots = buildPlayerSnapshots(playerId, seasonId, data);
+  const snapshots = uniquePlayerIds.flatMap((playerId) =>
+    buildPlayerSnapshots(playerId, seasonId, data),
+  );
   if (snapshots.length === 0) return;
 
-  await admin
+  const { error: deleteError } = await admin
     .from("ranking_snapshots")
     .delete()
-    .eq("player_id", playerId)
+    .in("player_id", uniquePlayerIds)
     .eq("season_id", seasonId);
+  throwIfError(deleteError, "No pudimos reiniciar las estadísticas de asistencia.");
 
   await saveSnapshots(admin, snapshots);
 }

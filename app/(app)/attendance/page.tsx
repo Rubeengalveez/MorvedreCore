@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { AttendanceSectionNav } from "@/components/attendance/attendance-section-nav";
 import { getAttendanceDayKey } from "@/lib/domain/attendance";
 import { cn } from "@/lib/utils/cn";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
@@ -89,6 +90,8 @@ export default async function AttendancePage({
         description="Pasa lista y corrige días anteriores."
         icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
       />
+
+      <AttendanceSectionNav current="list" />
 
       <section aria-labelledby="attendance-date-heading" className="flex flex-col gap-3">
         <div className="border-ink-200 bg-paper-card rounded-2xl border p-3">

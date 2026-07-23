@@ -149,12 +149,12 @@ function EventBody({
               {isPostponed ? <Badge bg="var(--ink-600)">Aplazado</Badge> : null}
               {showAttendance && userAttendance === true ? (
                 <Badge bg="var(--success)">
-                  <Check className="h-2.5 w-2.5" /> Asististe
+                  <Check className="h-2.5 w-2.5" /> Asistió
                 </Badge>
               ) : null}
               {showAttendance && userAttendance === false ? (
                 <span className="bg-danger/10 text-eyebrow text-danger inline-flex h-5 items-center gap-0.5 rounded-sm px-2">
-                  <X className="h-2.5 w-2.5" /> No asististe
+                  <X className="h-2.5 w-2.5" /> Ausente
                 </span>
               ) : null}
             </div>

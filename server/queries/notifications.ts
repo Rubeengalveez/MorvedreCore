@@ -9,6 +9,7 @@ export interface NotificationItem {
   href: string | null;
   read_at: string | null;
   related_match_id: string | null;
+  related_profile_id: string | null;
   related_training_session_id: string | null;
   created_at: string;
 }
@@ -20,7 +21,14 @@ function safeNotificationHref(item: NotificationItem): string | null {
   if (item.href.startsWith("/admin/matches/")) {
     return item.related_match_id ? `/matches/${item.related_match_id}` : "/calendar";
   }
-  const allowed = ["/news/", "/matches/", "/shop/orders/", "/calendar", "/notifications"];
+  const allowed = [
+    "/news/",
+    "/matches/",
+    "/shop/orders/",
+    "/attendance/history",
+    "/calendar",
+    "/notifications",
+  ];
   return allowed.some((prefix) => item.href?.startsWith(prefix)) ? item.href : null;
 }
 
@@ -32,7 +40,7 @@ export async function getNotificationsForProfile(
   const { data, error } = await supabase
     .from("notifications")
     .select(
-      "id, recipient_id, kind, title, body, href, read_at, related_match_id, related_training_session_id, created_at",
+      "id, recipient_id, kind, title, body, href, read_at, related_match_id, related_profile_id, related_training_session_id, created_at",
     )
     .eq("recipient_id", recipientId)
     .order("created_at", { ascending: false })

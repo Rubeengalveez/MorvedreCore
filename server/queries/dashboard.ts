@@ -800,11 +800,14 @@ export async function getDashboardData(input: {
     session_id: string;
     present: boolean;
   }>;
-  const monthAttended = monthAttendanceRows.filter(
-    (r) => r.present && monthSessionIds.has(r.session_id),
-  ).length;
+  const recordedMonthAttendance = monthAttendanceRows.filter((row) =>
+    monthSessionIds.has(row.session_id),
+  );
+  const monthAttended = recordedMonthAttendance.filter((row) => row.present).length;
   const monthAttendancePct =
-    monthSessionIds.size > 0 ? Math.round((monthAttended / monthSessionIds.size) * 100) : 0;
+    recordedMonthAttendance.length > 0
+      ? Math.round((monthAttended / recordedMonthAttendance.length) * 100)
+      : 0;
 
   let attendanceStreak = 0;
   const attendanceBySession = new Map<string, boolean>();

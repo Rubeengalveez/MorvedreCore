@@ -148,6 +148,9 @@ describe("computePlayerStats", () => {
       ...Array.from({ length: 8 }, (_, i) =>
         attendance({ session_id: `s-own-${i}`, present: true }),
       ),
+      ...Array.from({ length: 2 }, (_, i) =>
+        attendance({ session_id: `s-own-${i + 8}`, present: false }),
+      ),
       ...Array.from({ length: 5 }, (_, i) =>
         attendance({ session_id: `s-other-${i}`, present: true }),
       ),
@@ -166,6 +169,27 @@ describe("computePlayerStats", () => {
     expect(result.trainings_total).toBe(10);
     expect(result.trainings_attended).toBe(8);
     expect(result.attendance_pct).toBe(80);
+  });
+
+  it("does not treat a training without a saved list as an absence", () => {
+    const sessions: TrainingSessionLite[] = [
+      session({ id: "recorded" }),
+      session({ id: "not-reviewed" }),
+    ];
+    const result = computePlayerStats(
+      "p-1",
+      "season-1",
+      sessions,
+      [attendance({ session_id: "recorded", present: true })],
+      [match({ id: "m-1", team_id: "team-1" })],
+      [callup({ match_id: "m-1" })],
+      [],
+    );
+
+    expect(result.trainings_total).toBe(1);
+    expect(result.trainings_attended).toBe(1);
+    expect(result.attendance_pct).toBe(100);
+    expect(result.attendance_streak).toBe(1);
   });
 
   it("excludes cancelled sessions from the total", () => {

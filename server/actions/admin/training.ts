@@ -681,6 +681,11 @@ export async function markAttendance(input: {
   throwIfError(error, "No pudimos guardar la asistencia. Inténtalo de nuevo.");
 
   await refreshAttendanceDerivedData(parsed.data.session_id, session.team_id, [...rosterIds]);
+  revalidatePath("/attendance");
+  revalidatePath("/attendance/summary");
+  revalidatePath("/attendance/history");
+  revalidatePath("/calendar");
+  revalidatePath("/notifications");
   return { updated: upsertRows.length };
 }
 
@@ -773,6 +778,11 @@ export async function markAllPresent(sessionId: string): Promise<{ updated: numb
   revalidatePath("/admin/trainings");
   revalidatePath(`/admin/trainings/${parsedId.data.id}`);
   revalidatePath("/dashboard");
+  revalidatePath("/attendance");
+  revalidatePath("/attendance/summary");
+  revalidatePath("/attendance/history");
+  revalidatePath("/calendar");
+  revalidatePath("/notifications");
 
   return { updated: upsertRows.length };
 }
@@ -789,12 +799,10 @@ async function refreshAttendanceDerivedData(
     .eq("id", teamId)
     .maybeSingle();
   if (!team) return;
-  const [{ recomputeTrainingStreaksForSession }, { recomputeSnapshotForPlayer }] =
+  const [{ recomputeTrainingStreaksForSession }, { recomputeSnapshotsForPlayers }] =
     await Promise.all([import("./streaks"), import("./rankings")]);
   await recomputeTrainingStreaksForSession(sessionId);
-  await Promise.all(
-    playerIds.map((playerId) => recomputeSnapshotForPlayer(playerId, team.season_id)),
-  );
+  await recomputeSnapshotsForPlayers(playerIds, team.season_id);
   revalidatePath("/rankings");
   revalidatePath("/profile");
   revalidatePath(`/team/${teamId}`);

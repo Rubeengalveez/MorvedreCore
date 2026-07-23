@@ -754,6 +754,7 @@ export type Database = {
           read_at: string | null;
           recipient_id: string;
           related_match_id: string | null;
+          related_profile_id: string | null;
           related_training_session_id: string | null;
           title: string;
         };
@@ -766,6 +767,7 @@ export type Database = {
           read_at?: string | null;
           recipient_id: string;
           related_match_id?: string | null;
+          related_profile_id?: string | null;
           related_training_session_id?: string | null;
           title: string;
         };
@@ -778,6 +780,7 @@ export type Database = {
           read_at?: string | null;
           recipient_id?: string;
           related_match_id?: string | null;
+          related_profile_id?: string | null;
           related_training_session_id?: string | null;
           title?: string;
         };
@@ -801,6 +804,20 @@ export type Database = {
             columns: ["related_match_id"];
             isOneToOne: false;
             referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_related_profile_id_fkey";
+            columns: ["related_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_related_profile_id_fkey";
+            columns: ["related_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles_public";
             referencedColumns: ["id"];
           },
           {
@@ -1706,6 +1723,78 @@ export type Database = {
             columns: ["season_id"];
             isOneToOne: false;
             referencedRelation: "seasons";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      training_attendance_audit: {
+        Row: {
+          changed_at: string;
+          changed_by: string | null;
+          id: number;
+          player_id: string;
+          present: boolean;
+          previous_present: boolean | null;
+          previous_reason: string | null;
+          reason: string | null;
+          session_id: string;
+        };
+        Insert: {
+          changed_at?: string;
+          changed_by?: string | null;
+          id?: never;
+          player_id: string;
+          present: boolean;
+          previous_present?: boolean | null;
+          previous_reason?: string | null;
+          reason?: string | null;
+          session_id: string;
+        };
+        Update: {
+          changed_at?: string;
+          changed_by?: string | null;
+          id?: never;
+          player_id?: string;
+          present?: boolean;
+          previous_present?: boolean | null;
+          previous_reason?: string | null;
+          reason?: string | null;
+          session_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "training_attendance_audit_changed_by_fkey";
+            columns: ["changed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_attendance_audit_changed_by_fkey";
+            columns: ["changed_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles_public";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_attendance_audit_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_attendance_audit_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles_public";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "training_attendance_audit_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "training_sessions";
             referencedColumns: ["id"];
           },
         ];

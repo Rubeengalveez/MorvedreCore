@@ -125,19 +125,20 @@ export function computePlayerStats(
     (a) => a.player_id === playerId && sessionIds.has(a.session_id),
   );
   const trainings_attended = playerAttendance.filter((a) => a.present).length;
-  const trainings_total = playerTeamSessions.length;
+  const trainings_total = playerAttendance.length;
   const attendance_pct = trainings_total > 0 ? (trainings_attended / trainings_total) * 100 : 0;
 
-  const sessionAttendanceById = new Map<string, boolean>();
-  for (const a of playerAttendance) {
-    sessionAttendanceById.set(a.session_id, a.present);
-  }
-  const orderedSessions = [...playerTeamSessions].sort((a, b) =>
-    b.scheduled_at.localeCompare(a.scheduled_at),
-  );
+  const sessionById = new Map(playerTeamSessions.map((session) => [session.id, session]));
+  const orderedSessions = playerAttendance
+    .map((attendance) => ({
+      present: attendance.present,
+      scheduled_at: sessionById.get(attendance.session_id)?.scheduled_at ?? "",
+    }))
+    .filter((attendance) => attendance.scheduled_at !== "")
+    .sort((a, b) => b.scheduled_at.localeCompare(a.scheduled_at));
   let attendance_streak = 0;
-  for (const s of orderedSessions) {
-    if (sessionAttendanceById.get(s.id) !== true) break;
+  for (const attendance of orderedSessions) {
+    if (!attendance.present) break;
     attendance_streak += 1;
   }
 

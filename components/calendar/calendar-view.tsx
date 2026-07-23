@@ -3,11 +3,13 @@
 import { useMemo, useState } from "react";
 import {
   Calendar as CalendarIcon,
+  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Grid3x3,
   List,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -267,6 +269,7 @@ export function CalendarView({
             }}
             selectedIso={selectedIso}
             availabilityByDay={availabilityByDay}
+            userAttendanceBySession={userAttendanceBySession}
           />
         ) : viewMode === "week" ? (
           <WeekView
@@ -303,20 +306,37 @@ export function CalendarView({
         )}
       </div>
 
-      <div className="text-ink-600 flex flex-wrap items-center gap-3 px-1 text-xs font-bold">
-        <span className="inline-flex items-center gap-1">
-          <span aria-hidden="true" className="bg-pool-blue h-2 w-2 rounded-full" />
-          Entreno
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span aria-hidden="true" className="bg-ball-gold h-2 w-2 rounded-full" />
-          Partido
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span aria-hidden="true" className="bg-goggle-red h-2 w-2 rounded-full" />
-          Cancelado
-        </span>
-      </div>
+      {viewMode !== "week" ? (
+        <section
+          aria-label="Leyenda del calendario"
+          className="border-ink-200 text-ink-600 flex w-full flex-nowrap items-center justify-between gap-1 border-t px-0.5 pt-2 text-xs font-bold min-[360px]:text-[0.8125rem]"
+        >
+          <span className="inline-flex shrink-0 items-center gap-0.5">
+            <span aria-hidden="true" className="bg-pool-blue h-1.5 w-1.5 rounded-full" />
+            Entreno
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-0.5">
+            <span aria-hidden="true" className="bg-ball-gold h-1.5 w-1.5 rounded-full" />
+            Partido
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-0.5">
+            <span aria-hidden="true" className="bg-goggle-red h-1.5 w-1.5 rounded-full" />
+            Cancelado
+          </span>
+          {showAttendance ? (
+            <>
+              <span className="text-success inline-flex shrink-0 items-center gap-0.5">
+                <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
+                Asistió
+              </span>
+              <span className="text-danger inline-flex shrink-0 items-center gap-0.5">
+                <X className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
+                Ausente
+              </span>
+            </>
+          ) : null}
+        </section>
+      ) : null}
 
       <EventSheet
         open={open}

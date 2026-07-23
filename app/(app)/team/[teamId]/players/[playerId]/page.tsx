@@ -115,7 +115,10 @@ export default async function TeamPlayerPage({
             <dl className="border-ink-200 bg-paper-card divide-ink-200 mt-3 grid grid-cols-3 divide-x overflow-hidden rounded-2xl border shadow-sm">
               <PrimaryStat label="Partidos" value={snapshot.matches_played} />
               <PrimaryStat label="Goles" value={snapshot.goals} />
-              <PrimaryStat label="Asistencia" value={`${snapshot.attendance_pct}%`} />
+              <PrimaryStat
+                label="Asistencia"
+                value={`${Math.round(Number(snapshot.attendance_pct))}%`}
+              />
             </dl>
           </section>
 

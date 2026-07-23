@@ -2,6 +2,7 @@
 
 import { cn } from "@/lib/utils/cn";
 import { Gorro, SilbatoActivo } from "@/components/brand/pictograms";
+import { Check, Minus, X } from "lucide-react";
 import type { CalendarData, CalendarMatch, CalendarTraining } from "@/server/queries/calendar";
 import {
   getMonthCells,
@@ -19,6 +20,7 @@ export interface MonthViewProps {
   selectedIso?: string;
   availabilityByDay?: Map<string, boolean>;
   activeProfileId?: string;
+  userAttendanceBySession?: Map<string, boolean>;
 }
 
 function buildDayItems(
@@ -75,6 +77,7 @@ export function MonthView({
   onDayClick,
   selectedIso,
   availabilityByDay = new Map(),
+  userAttendanceBySession = new Map(),
 }: MonthViewProps) {
   const cells = getMonthCells(year, month);
   const today = new Date();
@@ -103,6 +106,22 @@ export function MonthView({
           const hasTraining = items.some((it) => it.kind === "training" && !it.cancelled);
           const hasMatch = items.some((it) => it.kind === "match" && it.status !== "cancelled");
           const hasCancelled = items.some((it) => it.cancelled || it.status === "cancelled");
+          const attendanceValues = items
+            .filter(
+              (item) =>
+                item.kind === "training" && !item.cancelled && userAttendanceBySession.has(item.id),
+            )
+            .map((item) => userAttendanceBySession.get(item.id)!);
+          const hasAttended = attendanceValues.some((present) => present);
+          const hasAbsent = attendanceValues.some((present) => !present);
+          const attendanceStatus =
+            hasAttended && hasAbsent
+              ? "mixed"
+              : hasAbsent
+                ? "absent"
+                : hasAttended
+                  ? "present"
+                  : null;
           const teamDots = items
             .filter((it) => !it.cancelled && it.status !== "cancelled")
             .slice(0, 3);
@@ -112,7 +131,7 @@ export function MonthView({
               key={cell.iso}
               type="button"
               onClick={() => onDayClick(cell.iso)}
-              aria-label={`${cell.iso}${hasItems ? `, ${items.length} evento(s)` : ""}${unavailable ? ", no disponible" : ""}${isToday ? ", hoy" : ""}`}
+              aria-label={`${cell.iso}${hasItems ? `, ${items.length} evento(s)` : ""}${attendanceStatus === "present" ? ", asistió" : attendanceStatus === "absent" ? ", no asistió" : attendanceStatus === "mixed" ? ", asistencia parcial" : ""}${unavailable ? ", no disponible" : ""}${isToday ? ", hoy" : ""}`}
               aria-pressed={isSelected}
               className={cn(
                 "group relative flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-lg border p-1 text-center transition-[background-color,border-color,color,box-shadow,transform] duration-200 motion-reduce:transition-none",
@@ -130,15 +149,21 @@ export function MonthView({
                           : "border-pool-deep bg-pool-deep text-paper scale-[1.03] shadow-md"
                     : isToday
                       ? "border-pool-blue/70 bg-pool-foam/30 text-pool-deep border-2 font-extrabold"
-                      : hasMatch
-                        ? "border-ball-gold/40 bg-ball-gold/10 text-pool-deep hover:bg-ball-gold/20 font-extrabold"
-                        : hasTraining
-                          ? "border-pool-blue/15 bg-pool-foam/60 text-pool-deep hover:bg-pool-foam font-semibold"
-                          : hasCancelled
-                            ? "border-goggle-red/25 bg-goggle-red/5 text-goggle-red hover:bg-goggle-red/10 font-semibold"
-                            : unavailable
-                              ? "border-ink-200/50 bg-ink-100/60 text-ink-400 opacity-65"
-                              : "border-ink-200/60 bg-paper text-ink-900 hover:bg-ink-50/70",
+                      : attendanceStatus === "absent"
+                        ? "border-danger/45 bg-danger/10 text-danger font-extrabold"
+                        : attendanceStatus === "present"
+                          ? "border-success/40 bg-success/10 text-pool-deep font-extrabold"
+                          : attendanceStatus === "mixed"
+                            ? "border-pool-blue/40 bg-pool-foam text-pool-deep font-extrabold"
+                            : hasMatch
+                              ? "border-ball-gold/40 bg-ball-gold/10 text-pool-deep hover:bg-ball-gold/20 font-extrabold"
+                              : hasTraining
+                                ? "border-pool-blue/15 bg-pool-foam/60 text-pool-deep hover:bg-pool-foam font-semibold"
+                                : hasCancelled
+                                  ? "border-goggle-red/25 bg-goggle-red/5 text-goggle-red hover:bg-goggle-red/10 font-semibold"
+                                  : unavailable
+                                    ? "border-ink-200/50 bg-ink-100/60 text-ink-400 opacity-65"
+                                    : "border-ink-200/60 bg-paper text-ink-900 hover:bg-ink-50/70",
               )}
             >
               <span className="font-mono text-sm font-extrabold select-none md:text-base">
@@ -167,6 +192,22 @@ export function MonthView({
                     >
                       X
                     </span>
+                  ) : null}
+                  {attendanceStatus === "present" ? (
+                    <Check
+                      className={cn("h-3.5 w-3.5", isSelected ? "text-paper" : "text-success")}
+                      aria-hidden="true"
+                    />
+                  ) : attendanceStatus === "absent" ? (
+                    <X
+                      className={cn("h-3.5 w-3.5", isSelected ? "text-paper" : "text-danger")}
+                      aria-hidden="true"
+                    />
+                  ) : attendanceStatus === "mixed" ? (
+                    <Minus
+                      className={cn("h-3.5 w-3.5", isSelected ? "text-paper" : "text-pool-blue")}
+                      aria-hidden="true"
+                    />
                   ) : null}
                   {unavailable && !hasItems ? (
                     <span

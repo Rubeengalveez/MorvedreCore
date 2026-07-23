@@ -681,3 +681,30 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Los formularios explican cómo copiar el enlace desde Google Maps y validan el protocolo tanto en cliente como en Server Action. La base de datos aplica además longitud máxima y HTTPS como defensa adicional.
 - Calendario y detalle del partido muestran una tarjeta táctil de al menos 48 px con el nombre de la piscina y la acción `Ver mapa`. El enlace usa la asociación universal del móvil para abrir Google Maps, Apple Maps, el navegador u otra aplicación compatible.
 - La migración `20260721010812_add_event_maps_urls.sql` añade las columnas sin modificar las políticas RLS existentes: lectura y edición mantienen exactamente los permisos deportivos de cada tabla.
+
+## 2026-07-23 - Historial, avisos y seguimiento de asistencia
+
+- La lista guardada por el entrenador es la única fuente de verdad. Una sesión sin lista no se interpreta como ausencia ni entra en el porcentaje.
+- Cada jugador puede consultar únicamente su historial y cada tutor adulto el de sus hijos vinculados. La política RLS deja de exponer la asistencia de toda la plantilla al resto de miembros.
+- El historial individual usa un calendario mensual: verde indica asistencia, rojo ausencia y azul una doble sesión con resultados distintos. Debajo se conserva el detalle exacto de fecha, hora, categoría y motivo cuando exista.
+- El calendario general agrega la asistencia de las personas gestionadas por la cuenta. En una familia, el nombre del hijo continúa asociado a la categoría y una ausencia prevalece visualmente si varios hijos comparten sesión.
+- Los entrenadores con `manage_attendance` disponen de un resumen semanal y mensual para todas las categorías. Muestra listas revisadas, asistencias, ausencias y porcentaje por jugador, siempre separado por equipo.
+- Al registrar una ausencia, la base crea un aviso para cada tutor vinculado. Si después se corrige a presente, genera un aviso de corrección para que una notificación antigua no contradiga el historial actual.
+- Cada alta o cambio conserva una traza técnica con estado anterior, estado nuevo, responsable y hora. La traza solo es legible por administradores y entrenadores autorizados; jugadores y tutores ven el estado vigente.
+- La migración `20260723131531_attendance_history_and_guardian_alerts.sql` amplía las notificaciones, crea la traza, automatiza los avisos y endurece la lectura de `training_attendance`.
+
+## 2026-07-23 - Revisión de cambios recientes
+
+- La revisión de los tres commits anteriores confirma el flujo de teléfono familiar, los enlaces de mapas y el salto a la posición de Rankings.
+- Los acompañantes de viaje quedan ligados por base de datos a la misma oferta que su reserva. Sus identificadores de reserva no pueden cambiarse mediante una actualización directa y los nombres se guardan recortados y no vacíos.
+- Las funciones trigger de desplazamientos dejan de ser ejecutables por miembros y la tabla concede de forma explícita los permisos necesarios a `service_role`.
+- Quitar un acompañante exige confirmación, muestra los errores de la operación y mantiene objetivos táctiles de 48 px. El alta incorpora etiqueta de campo, autocompletado seguro y no fuerza el teclado al abrirse en móvil.
+- La migración correctiva es `20260723133133_harden_travel_companions.sql`.
+
+## 2026-07-23 - Coherencia y ubicación de la asistencia
+
+- El acceso al historial de asistencia deja de formar parte de Perfil y pasa a Calendario, junto a los días coloreados y al resto de información temporal.
+- El resumen familiar muestra la asistencia del mes actual para que un tutor vea inmediatamente la diferencia entre sus hijos. El historial mensual coloca el periodo antes de sus cifras para evitar confundirlo con la temporada completa.
+- Perfil, Inicio, Rankings, Leyendas y detalle de jugador conservan estadísticas de temporada, pero su denominador usa exclusivamente listas realmente guardadas. Un entrenamiento sin lista no cuenta como ausencia ni reduce el porcentaje.
+- Los porcentajes visibles se redondean a números enteros; los cálculos y el orden de Rankings conservan internamente toda su precisión.
+- Guardar una lista recalcula las instantáneas de todos sus jugadores en un único lote, evitando porcentajes antiguos y consultas completas repetidas por cada miembro de la plantilla.
