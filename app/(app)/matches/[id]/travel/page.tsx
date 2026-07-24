@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { CarFront, ChevronLeft, Clock3, MapPin, UserPlus, Users } from "lucide-react";
+import { CarFront, Clock3, MapPin, UserPlus, Users } from "lucide-react";
 
 import {
   AddCompanionForm,
@@ -14,6 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { formatLongDate, formatTimeOfDay } from "@/lib/domain/calendar";
 import {
   DEFAULT_TRAVEL_MEETING_POINT,
@@ -43,14 +44,8 @@ export default async function MatchTravelPage({ params }: { params: Promise<{ id
   const suggestedDeparture = new Date(new Date(travel.scheduled_at).getTime() - 90 * 60_000);
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
-      <Link
-        href={`/matches/${id}`}
-        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-1 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ChevronLeft className="h-5 w-5" />
-        Partido
-      </Link>
+    <PageShell width="md" className="gap-4 pb-8">
+      <PageBackLink href={`/matches/${id}` as Route}>Volver al partido</PageBackLink>
 
       <header className="border-ink-200 bg-paper-card overflow-hidden rounded-2xl border shadow-sm">
         <div className="flex items-start gap-3 p-4">

@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import type { Route } from "next";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft,
   CalendarClock,
   Check,
   CheckCircle2,
@@ -14,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { markAttendance } from "@/server/actions/admin";
 import type { DashboardCoachSession } from "@/server/queries/dashboard";
 
@@ -163,15 +162,9 @@ export function AttendanceSheet({
           onClick={() => queueSave(values)}
         />
       ) : null}
-      <nav aria-label="Navegación de asistencia" className="-mb-1">
-        <Link
-          href={`/attendance?date=${sessionDay}` as Route}
-          className="text-pool-blue focus-visible:ring-pool-blue -ml-2 inline-flex min-h-12 touch-manipulation items-center gap-2 rounded-xl px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          Volver a entrenamientos
-        </Link>
-      </nav>
+      <PageBackLink href={`/attendance?date=${sessionDay}` as Route}>
+        Volver a entrenamientos
+      </PageBackLink>
       <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-4">
         <div className="flex items-start gap-3">
           <span

@@ -18,7 +18,7 @@ export function resolveShopContactPhone(input: {
 
 export const SHOP_ORDER_STATUS_LABELS: Record<ShopOrderStatus, string> = {
   pending_parent: "Pendiente de familia",
-  pending_admin: "Enviado a tienda",
+  pending_admin: "Pendiente de Sol",
   rejected: "Rechazado",
   ordered: "Pedido al proveedor",
   received: "Recibido",
@@ -49,7 +49,7 @@ export const SHOP_KANBAN_COLUMNS: ReadonlyArray<{
   emoji: string;
 }> = [
   { id: "pending_parent", title: "Pendiente de familia", emoji: "🟡" },
-  { id: "pending_admin", title: "Listo para tienda", emoji: "🟢" },
+  { id: "pending_admin", title: "Pendientes de Sol", emoji: "🟢" },
   { id: "ordered", title: "Pedido al proveedor", emoji: "📦" },
   { id: "received", title: "Recibido", emoji: "📥" },
   { id: "delivered", title: "Entregado", emoji: "✅" },

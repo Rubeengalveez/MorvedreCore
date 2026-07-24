@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface CartItem {
   productId: string;
@@ -9,99 +9,141 @@ export interface CartItem {
   quantity: number;
 }
 
-const STORAGE_KEY = "morvedre-shop-cart:v2";
-const LEGACY_STORAGE_KEY = "morvedre-shop-cart-v1";
+const STORAGE_PREFIX = "morvedre-shop-cart:v3:";
+const OBSOLETE_STORAGE_KEYS = ["morvedre-shop-cart:v2", "morvedre-shop-cart-v1"];
+const CART_EVENT = "morvedre-shop-cart-changed";
 
-function readFromStorage(): CartItem[] {
+function storageKey(profileId: string): string {
+  return `${STORAGE_PREFIX}${profileId}`;
+}
+
+function normalizeStoredItems(value: unknown): CartItem[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(
+      (item): item is CartItem =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as { productId?: unknown }).productId === "string" &&
+        typeof (item as { quantity?: unknown }).quantity === "number",
+    )
+    .map((item) => ({
+      productId: item.productId,
+      size: typeof item.size === "string" ? item.size || null : null,
+      personalization:
+        typeof item.personalization === "string" ? item.personalization.trim() || null : null,
+      quantity: 1,
+    }));
+}
+
+function readFromStorage(profileId: string): CartItem[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw =
-      window.localStorage.getItem(STORAGE_KEY) ?? window.localStorage.getItem(LEGACY_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .filter(
-        (x): x is CartItem =>
-          typeof x === "object" &&
-          x !== null &&
-          typeof (x as { productId: unknown }).productId === "string" &&
-          typeof (x as { quantity: unknown }).quantity === "number",
-      )
-      .map((x) => ({
-        productId: (x as { productId: string }).productId,
-        size:
-          typeof (x as { size: unknown }).size === "string"
-            ? (x as { size: string }).size || null
-            : null,
-        personalization:
-          typeof (x as { personalization?: unknown }).personalization === "string"
-            ? (x as { personalization: string }).personalization.trim() || null
-            : null,
-        quantity: 1,
-      }));
+    const raw = window.localStorage.getItem(storageKey(profileId));
+    return raw ? normalizeStoredItems(JSON.parse(raw)) : [];
   } catch {
     return [];
   }
 }
 
-function writeToStorage(items: CartItem[]): void {
+function discardUnscopedCarts(): void {
+  if (typeof window === "undefined") return;
+  for (const key of OBSOLETE_STORAGE_KEYS) {
+    window.localStorage.removeItem(key);
+  }
+}
+
+function writeToStorage(profileId: string, items: CartItem[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-    window.localStorage.removeItem(LEGACY_STORAGE_KEY);
+    window.localStorage.setItem(storageKey(profileId), JSON.stringify(items));
+    window.dispatchEvent(new CustomEvent(CART_EVENT, { detail: { profileId } }));
   } catch {}
 }
 
-export function useShopCart() {
+export function useShopCart(profileId: string) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    let active = true;
+    discardUnscopedCarts();
     queueMicrotask(() => {
-      setItems(readFromStorage());
+      if (!active) return;
+      setItems(readFromStorage(profileId));
       setHydrated(true);
     });
-  }, []);
 
-  const persist = useCallback((next: CartItem[]) => {
-    setItems(next);
-    writeToStorage(next);
-  }, []);
+    const syncCart = (event: Event) => {
+      if (
+        event instanceof CustomEvent &&
+        typeof event.detail === "object" &&
+        event.detail !== null &&
+        "profileId" in event.detail &&
+        event.detail.profileId !== profileId
+      ) {
+        return;
+      }
+      setItems(readFromStorage(profileId));
+    };
+    const syncStoredCart = (event: StorageEvent) => {
+      if (event.key === storageKey(profileId)) {
+        setItems(readFromStorage(profileId));
+      }
+    };
+
+    window.addEventListener(CART_EVENT, syncCart);
+    window.addEventListener("storage", syncStoredCart);
+    return () => {
+      active = false;
+      window.removeEventListener(CART_EVENT, syncCart);
+      window.removeEventListener("storage", syncStoredCart);
+    };
+  }, [profileId]);
+
+  const persist = useCallback(
+    (next: CartItem[]) => {
+      setItems(next);
+      writeToStorage(profileId, next);
+    },
+    [profileId],
+  );
 
   const addItem = useCallback(
     (item: CartItem) => {
-      const idx = items.findIndex(
-        (x) =>
-          x.productId === item.productId &&
-          (x.size ?? null) === (item.size ?? null) &&
-          (x.personalization ?? null) === (item.personalization ?? null),
+      const current = readFromStorage(profileId);
+      const index = current.findIndex(
+        (existing) =>
+          existing.productId === item.productId &&
+          (existing.size ?? null) === (item.size ?? null) &&
+          (existing.personalization ?? null) === (item.personalization ?? null),
       );
-      let next: CartItem[];
-      if (idx >= 0) {
-        next = items.map((x, i) => (i === idx ? { ...x, quantity: 1 } : x));
-      } else {
-        next = [...items, { ...item, quantity: 1 }];
-      }
+      const next =
+        index >= 0
+          ? current.map((existing, itemIndex) =>
+              itemIndex === index ? { ...existing, quantity: 1 } : existing,
+            )
+          : [...current, { ...item, quantity: 1 }];
       persist(next);
     },
-    [items, persist],
+    [persist, profileId],
   );
 
   const removeItem = useCallback(
     (productId: string, size: string | null, personalization: string | null) => {
+      const current = readFromStorage(profileId);
       persist(
-        items.filter(
-          (x) =>
+        current.filter(
+          (item) =>
             !(
-              x.productId === productId &&
-              (x.size ?? null) === (size ?? null) &&
-              (x.personalization ?? null) === (personalization ?? null)
+              item.productId === productId &&
+              (item.size ?? null) === (size ?? null) &&
+              (item.personalization ?? null) === (personalization ?? null)
             ),
         ),
       );
     },
-    [items, persist],
+    [persist, profileId],
   );
 
   const clear = useCallback(() => {

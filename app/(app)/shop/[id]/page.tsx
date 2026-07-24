@@ -1,11 +1,10 @@
 import { redirect, notFound } from "next/navigation";
-import Link from "next/link";
-import type { Route } from "next";
-import { ArrowLeft, PackageCheck, ShieldCheck } from "lucide-react";
+import { MessageCircle, PackageCheck, ShieldCheck } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProduct } from "@/server/queries/shop";
 import { formatCents } from "@/lib/domain/shop";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { PageShell } from "@/components/ui/page-shell";
 import { AddToCartButton } from "./_components/add-to-cart-button";
 import { ProductGallery } from "./_components/product-gallery";
@@ -27,19 +26,17 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
   const { id } = await params;
   const product = await getShopProduct(id);
   if (!product) notFound();
+  const whatsappMessage = encodeURIComponent(
+    `Hola Sol, vengo de la tienda de Morvedre Core y me gustaría tener más información sobre “${product.title}”. Gracias.`,
+  );
+  const whatsappUrl = `https://wa.me/34655111532?text=${whatsappMessage}`;
 
   return (
-    <PageShell width="lg" className="gap-5 pb-8">
-      <FloatingCartButton />
-      <Link
-        href={"/shop" as Route}
-        className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit touch-manipulation items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Volver a la tienda
-      </Link>
+    <PageShell width="lg" className="gap-4 pb-8">
+      <FloatingCartButton profileId={ctx.ownProfile.id} />
+      <PageBackLink href="/shop">Volver a la tienda</PageBackLink>
 
-      <header className="border-ink-300 border-b pb-5">
+      <header className="px-0.5 pb-1">
         <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
           {product.category}
         </p>
@@ -66,6 +63,7 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
         <div className="flex min-w-0 flex-col gap-4 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
           <section className="border-ink-300 bg-paper-card rounded-xl border p-4 shadow-sm sm:p-5">
             <AddToCartButton
+              profileId={ctx.ownProfile.id}
               productId={product.id}
               available={product.available}
               sizes={product.sizes}
@@ -95,6 +93,31 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
               Este producto no está disponible ahora mismo.
             </p>
           ) : null}
+
+          <section className="border-success/25 bg-success/10 rounded-2xl border p-4 sm:p-5">
+            <div className="flex items-start gap-3">
+              <span className="bg-success/12 text-success flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+                <MessageCircle className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="font-display text-pool-deep text-lg font-extrabold">
+                  ¿Tienes alguna duda?
+                </h2>
+                <p className="text-ink-600 mt-1 text-sm leading-relaxed font-semibold">
+                  Pregunta directamente a Sol, la encargada de la equipación.
+                </p>
+              </div>
+            </div>
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="bg-success text-paper hover:bg-success/90 focus-visible:ring-success mt-4 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
+            >
+              <MessageCircle className="h-5 w-5" aria-hidden="true" />
+              Preguntar a Sol por WhatsApp
+            </a>
+          </section>
         </div>
       </div>
     </PageShell>

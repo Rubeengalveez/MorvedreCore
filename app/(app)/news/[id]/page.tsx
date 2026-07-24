@@ -1,7 +1,5 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import type { Route } from "next";
-import { Pin, Clock, ArrowLeft } from "lucide-react";
+import { Pin, Clock } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getNewsPost } from "@/server/queries/news";
@@ -9,6 +7,7 @@ import { reactToNews } from "@/server/actions/admin/news";
 import { Avatar } from "@/components/ui/avatar";
 import { Markdown } from "@/components/ui/markdown";
 import { PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { NewsReactions } from "@/components/news/news-card";
 import { relativeTime } from "@/lib/domain/news";
 
@@ -40,13 +39,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      <Link
-        href={"/news" as Route}
-        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Todas las noticias
-      </Link>
+      <PageBackLink href="/news">Todas las noticias</PageBackLink>
       <article className="border-ink-200 bg-paper-card shadow-elev-2 rounded-2xl border p-5 sm:p-7">
         {post.pinned ? (
           <div className="bg-ball-gold/15 text-pool-deep mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold uppercase">

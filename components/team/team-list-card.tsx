@@ -1,8 +1,7 @@
-import Link from "next/link";
 import type { Route } from "next";
-import { ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, BadgeCheck, CircleCheckBig, UsersRound } from "lucide-react";
 
-import { cn } from "@/lib/utils/cn";
 import type { TeamListItem } from "@/server/queries/teams";
 
 export interface TeamListCardProps {
@@ -37,61 +36,58 @@ export function TeamListCard({
       href={href}
       data-team-card
       data-team-relationship={relationship ?? "none"}
-      className={cn(
-        "group border-ink-200 bg-paper-card focus-visible:ring-pool-blue hover:border-pool-blue/40 hover:shadow-elev-2 relative flex min-h-24 w-full touch-manipulation items-center gap-4 overflow-hidden rounded-2xl border px-4 py-3.5 shadow-sm transition-[border-color,box-shadow,transform] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none",
-        relationship === "player" &&
-          "border-pool-blue bg-pool-ice shadow-elev-2 ring-pool-blue/10 ring-1",
-        relationship === "coach" && "border-pool-deep/45 shadow-elev-2",
-        relationship === "both" &&
-          "border-ball-gold bg-pool-ice shadow-elev-2 ring-ball-gold/20 ring-1",
-        showsFamily &&
-          relationship !== "player" &&
-          relationship !== "both" &&
-          "border-pool-blue/30 bg-pool-ice/40 shadow-sm",
-      )}
+      className="group focus-visible:ring-pool-blue hover:bg-pool-foam/45 relative flex min-h-[5.5rem] w-full touch-manipulation items-center gap-3 px-4 py-3 transition-[background-color,transform] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none active:scale-[0.995] motion-reduce:transition-none"
     >
       <span
         aria-hidden="true"
-        className="absolute inset-y-3 left-0 w-[3px] rounded-r-full"
+        className="h-11 w-1.5 shrink-0 rounded-full"
         style={{ backgroundColor: team.color }}
       />
 
-      <div className="min-w-0 flex-1 pl-1">
+      <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 items-baseline gap-2">
+          <h3 className="font-display text-pool-deep truncate text-lg leading-tight font-extrabold">
+            {team.label}
+          </h3>
+          <span className="text-ink-400 shrink-0 text-sm font-bold">
+            {GENDER_LABELS[team.gender] ?? team.gender}
+          </span>
+        </div>
+        <div className="text-ink-600 mt-1 flex min-w-0 items-center gap-1.5 text-sm">
+          <UsersRound className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span className="truncate">
+            {team.player_count} {team.player_count === 1 ? "jugador" : "jugadores"}
+            {team.coach_name ? ` · ${team.coach_name}` : ""}
+          </span>
+        </div>
         {relationship || showsFamily ? (
-          <div className="mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <div className="mt-2 flex flex-wrap gap-1.5">
             {relationship === "player" || relationship === "both" ? (
-              <span className="text-pool-blue inline-flex items-center gap-1.5 text-xs leading-tight font-extrabold tracking-[0.07em] uppercase">
-                <span className="bg-pool-blue h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-                Tu equipo
+              <span className="bg-pool-foam text-pool-blue inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-extrabold">
+                <CircleCheckBig className="h-3.5 w-3.5" aria-hidden="true" />
+                Juegas aquí
               </span>
-            ) : showsFamily ? (
-              <span className="text-pool-blue inline-flex items-center gap-1.5 text-xs leading-tight font-extrabold tracking-[0.07em] uppercase">
-                <span className="bg-pool-blue h-1.5 w-1.5 rounded-full" aria-hidden="true" />
-                Aquí juega {formatFamilyPlayers(familyPlayerNames)}
+            ) : null}
+            {showsFamily ? (
+              <span className="bg-success/10 text-success inline-flex min-h-6 max-w-full items-center gap-1 rounded-full px-2 text-xs leading-tight font-extrabold">
+                <UsersRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                <span className="line-clamp-2">
+                  Aquí juega {formatFamilyPlayers(familyPlayerNames)}
+                </span>
               </span>
             ) : null}
             {relationship === "coach" || relationship === "both" ? (
-              <span className="bg-pool-deep text-paper rounded-full px-2 py-0.5 text-xs leading-tight font-extrabold">
+              <span className="bg-pool-deep text-paper inline-flex min-h-6 items-center gap-1 rounded-full px-2 text-xs font-extrabold">
+                <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 Entrenador titular
               </span>
             ) : null}
           </div>
         ) : null}
-        <h3 className="font-display text-pool-deep truncate text-lg leading-tight font-extrabold">
-          {team.label}
-        </h3>
-        <p className="text-ink-600 mt-1 truncate text-sm">
-          {team.player_count} {team.player_count === 1 ? "jugador" : "jugadores"}
-          <span aria-hidden="true"> · </span>
-          {GENDER_LABELS[team.gender] ?? team.gender}
-        </p>
-        {team.coach_name ? (
-          <p className="text-ink-500 mt-0.5 truncate text-xs">{team.coach_name}</p>
-        ) : null}
       </div>
 
-      <span className="border-ink-200 text-pool-deep group-hover:bg-pool-deep group-hover:text-paper bg-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border transition-[background-color,color,transform] duration-200 group-hover:-translate-y-0.5 motion-reduce:transition-none">
-        <ArrowUpRight className="h-5 w-5" aria-hidden="true" />
+      <span className="bg-paper-sunk text-pool-blue group-hover:bg-pool-deep group-hover:text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform] duration-200 group-hover:translate-x-0.5 motion-reduce:transition-none">
+        <ArrowRight className="h-5 w-5" aria-hidden="true" />
       </span>
     </Link>
   );

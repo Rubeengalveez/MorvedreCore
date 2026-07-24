@@ -7,7 +7,7 @@ import { TeamListCard } from "@/components/team/team-list-card";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getAllTeamsInSeason } from "@/server/queries/teams";
-import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import type { CategoryCode } from "@/lib/domain/categories";
 import { firstName } from "@/lib/domain/family";
 import { createClient } from "@/lib/supabase/server";
 
@@ -93,18 +93,16 @@ export default async function TeamPage() {
       })
       .map((item) => item.team_id),
   );
-  const categories = CATEGORY_ORDER.map((code) => ({
-    code,
-    label: CATEGORY_LABELS[code] ?? code,
-    teams: allTeams.filter((team) => team.category_code === code),
-  })).filter((category) => category.teams.length > 0);
+  const orderedTeams = CATEGORY_ORDER.flatMap((code) =>
+    allTeams.filter((team) => team.category_code === code),
+  );
 
   return (
-    <PageShell width="md" className="gap-6 pb-6">
+    <PageShell width="md" className="gap-4 pb-6">
       <PageHeader
         eyebrow={`Temporada ${season.label}`}
         title="Equipos"
-        description="De Escuela a Absoluto, con tus equipos señalados."
+        description="Todos los equipos del club, ordenados de Escuela a Absoluto."
         icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
       />
 
@@ -114,48 +112,37 @@ export default async function TeamPage() {
           description="Los equipos de la temporada aparecerán aquí cuando estén configurados."
         />
       ) : (
-        <div className="flex flex-col gap-8">
-          {categories.map((category) => (
-            <section
-              key={category.code}
-              id={`team-category-${category.code}`}
-              aria-labelledby={`team-category-${category.code}-title`}
-              className="scroll-mt-28"
+        <section aria-labelledby="team-directory-heading">
+          <div className="mb-2.5 flex min-h-8 items-center justify-between gap-3 px-1">
+            <h2
+              id="team-directory-heading"
+              className="text-pool-deep text-sm font-extrabold tracking-[0.04em] uppercase"
             >
-              <div className="mb-3 flex items-end justify-between gap-3 px-1">
-                <div className="min-w-0">
-                  <h2
-                    id={`team-category-${category.code}-title`}
-                    className="font-display text-pool-deep text-xl font-extrabold tracking-tight"
-                  >
-                    {category.label}
-                  </h2>
-                </div>
-                <span className="text-ink-500 text-sm font-semibold tabular-nums">
-                  {category.teams.length} {category.teams.length === 1 ? "equipo" : "equipos"}
-                </span>
-              </div>
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                {category.teams.map((team) => (
-                  <TeamListCard
-                    key={team.id}
-                    team={team}
-                    relationship={
-                      playerTeamIds.has(team.id) && coachTeamIds.has(team.id)
-                        ? "both"
-                        : coachTeamIds.has(team.id)
-                          ? "coach"
-                          : playerTeamIds.has(team.id)
-                            ? "player"
-                            : null
-                    }
-                    familyPlayerNames={familyPlayersByTeam.get(team.id) ?? []}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
+              {orderedTeams.length} {orderedTeams.length === 1 ? "equipo" : "equipos"}
+            </h2>
+            <span className="text-ink-500 shrink-0 text-sm font-bold">
+              De menor a mayor
+            </span>
+          </div>
+          <div className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 overflow-hidden rounded-2xl border divide-y">
+            {orderedTeams.map((team) => (
+              <TeamListCard
+                key={team.id}
+                team={team}
+                relationship={
+                  playerTeamIds.has(team.id) && coachTeamIds.has(team.id)
+                    ? "both"
+                    : coachTeamIds.has(team.id)
+                      ? "coach"
+                      : playerTeamIds.has(team.id)
+                        ? "player"
+                        : null
+                }
+                familyPlayerNames={familyPlayersByTeam.get(team.id) ?? []}
+              />
+            ))}
+          </div>
+        </section>
       )}
     </PageShell>
   );

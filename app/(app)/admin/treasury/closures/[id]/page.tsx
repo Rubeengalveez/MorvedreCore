@@ -1,12 +1,11 @@
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import type { Route } from "next";
-import { ArrowLeft, Download, FileSpreadsheet } from "lucide-react";
+import { Download, FileSpreadsheet } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { getTreasuryClosure } from "@/server/queries/treasury";
 import { formatTreasuryCents } from "@/lib/domain/treasury";
 import { formatShortDate } from "@/lib/utils/format";
@@ -29,14 +28,8 @@ export default async function TreasuryClosurePage({ params }: { params: Promise<
   const pendingTotal = closure.total_cents - paidTotal;
 
   return (
-    <AdminPageShell width="lg">
-      <Link
-        href={"/admin/treasury" as Route}
-        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Tesoreria
-      </Link>
+    <AdminPageShell width="lg" className="gap-4">
+      <PageBackLink href="/admin/treasury">Tesorería</PageBackLink>
 
       <AdminPageHeader
         eyebrow="Cierre mensual"

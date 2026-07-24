@@ -3,6 +3,7 @@ import { UserRound } from "lucide-react";
 
 import type { Database } from "@/lib/supabase/types";
 import { AppPageHero } from "@/components/ui/app-page-hero";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { PageShell } from "@/components/ui/page-shell";
 import { ProfileForm } from "@/app/(app)/profile/profile-form";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -73,7 +74,8 @@ export default async function ProfileEditPage() {
   const isPlayer = (activeRosterCount ?? 0) > 0;
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
+    <PageShell width="md" className="gap-4 pb-8">
+      <PageBackLink href="/profile">Volver a mi perfil</PageBackLink>
       <AppPageHero
         eyebrow="Tu cuenta"
         title="Editar perfil"

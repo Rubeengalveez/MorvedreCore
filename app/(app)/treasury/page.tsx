@@ -1,9 +1,8 @@
-import Link from "next/link";
-import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Banknote } from "lucide-react";
+import { Banknote } from "lucide-react";
 
 import { AppPageHero } from "@/components/ui/app-page-hero";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { PageShell } from "@/components/ui/page-shell";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getFamilyTreasury } from "@/server/queries/treasury";
@@ -23,14 +22,8 @@ export default async function TreasuryPage() {
   if (!data.canView) redirect("/profile");
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
-      <Link
-        href={"/profile" as Route}
-        className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-12 items-center gap-2 self-start rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-        Volver al perfil
-      </Link>
+    <PageShell width="md" className="gap-4 pb-8">
+      <PageBackLink href="/profile">Volver al perfil</PageBackLink>
       <AppPageHero
         eyebrow="Tesorería"
         title="Lo que pagas este mes"

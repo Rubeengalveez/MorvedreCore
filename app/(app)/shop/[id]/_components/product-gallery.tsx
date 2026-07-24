@@ -59,7 +59,6 @@ export function ProductGallery({
               alt={activeImage.alt ?? title}
               width={900}
               height={1125}
-              unoptimized
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
             />
             <span className="bg-pool-deep/85 text-paper shadow-elev-2 absolute right-3 bottom-3 inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-extrabold">
@@ -98,7 +97,6 @@ export function ProductGallery({
                 alt=""
                 width={144}
                 height={144}
-                unoptimized
                 className="h-full w-full object-cover"
               />
             </button>
@@ -131,7 +129,6 @@ export function ProductGallery({
                   alt={activeImage.alt ?? title}
                   width={1600}
                   height={2000}
-                  unoptimized
                   className="max-h-full max-w-full object-contain"
                 />
                 {images.length > 1 ? (

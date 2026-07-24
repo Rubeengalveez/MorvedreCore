@@ -8,18 +8,24 @@ import {
   ClipboardCheck,
   Flame,
   Megaphone,
+  ShieldAlert,
   ShieldCheck,
   Target,
   Trophy,
 } from "lucide-react";
 
+import { HomePriority } from "@/components/dashboard/home-priority";
 import { PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
-import { formatRelativeUpcoming, formatTimeRangeFromDuration } from "@/lib/domain/calendar";
+import { formatTimeRangeFromDuration } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
+  getAttendanceTeams,
+  getClubDayKey,
+  getCoachAttendanceSessions,
   getDashboardAudience,
   getUpcomingDashboardEvents,
+  type DashboardCoachSession,
   type DashboardWeekEvent,
 } from "@/server/queries/dashboard";
 import { getCurrentSeason } from "@/server/queries/seasons";
@@ -82,26 +88,32 @@ export default async function DashboardPage() {
   );
   const supabase = await createClient();
 
-  const [events, streaks, playerStatsRes, teams, newsFeed] = await Promise.all([
-    getUpcomingDashboardEvents(teamIds, now),
-    isPlayer
-      ? getStreaksForPlayer(season.id, activeProfile.id)
-      : Promise.resolve([] as ActiveStreakRow[]),
-    isPlayer
-      ? supabase
-          .from("ranking_snapshots")
-          .select(
-            "goals, exclusions, mvp_count, matches_played, attendance_pct, attendance_streak, trainings_attended, trainings_total",
+  const [events, streaks, playerStatsRes, teams, newsFeed, coachAttendanceSessions] =
+    await Promise.all([
+      getUpcomingDashboardEvents(teamIds, now),
+      isPlayer
+        ? getStreaksForPlayer(season.id, activeProfile.id)
+        : Promise.resolve([] as ActiveStreakRow[]),
+      isPlayer
+        ? supabase
+            .from("ranking_snapshots")
+            .select(
+              "goals, exclusions, mvp_count, matches_played, attendance_pct, attendance_streak, trainings_attended, trainings_total",
+            )
+            .eq("season_id", season.id)
+            .eq("scope", "season")
+            .eq("scope_key", "all")
+            .eq("player_id", activeProfile.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      getTeamsForProfileInSeason(activeProfile.id, season.id),
+      getNewsFeed({ myProfileId: activeProfile.id, pageSize: 3 }),
+      audience.can_manage_attendance
+        ? getAttendanceTeams(season.id).then((attendanceTeams) =>
+            getCoachAttendanceSessions(attendanceTeams, getClubDayKey(now), now),
           )
-          .eq("season_id", season.id)
-          .eq("scope", "season")
-          .eq("scope_key", "all")
-          .eq("player_id", activeProfile.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    getTeamsForProfileInSeason(activeProfile.id, season.id),
-    getNewsFeed({ myProfileId: activeProfile.id, pageSize: 3 }),
-  ]);
+        : Promise.resolve([] as DashboardCoachSession[]),
+    ]);
 
   const activeStreaks = streaks.filter((streak) => streak.current_value > 0).slice(0, 3);
   const newsItems = [...newsFeed.pinned, ...newsFeed.recent].slice(0, 2);
@@ -123,11 +135,15 @@ export default async function DashboardPage() {
     <PageShell width="md" className="gap-5 pb-8">
       <HomeHero firstName={firstName} now={now} contextLabel={contextLabel} />
 
-      {events[0] ? (
-        <NextTurn event={events[0]} now={now} />
-      ) : (
-        <QuietWeek isPlayer={isPlayer} isCoach={isCoach} />
-      )}
+      <HomePriority
+        event={events[0] ?? null}
+        now={now}
+        hasSportActivity={isPlayer || isCoach}
+        canManageAttendance={audience.can_manage_attendance}
+        coachSessions={coachAttendanceSessions}
+        family={family}
+        playerStats={isPlayer ? playerStatsRes.data : null}
+      />
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.35fr)_minmax(17rem,0.65fr)] lg:items-start">
         <div className="flex min-w-0 flex-col gap-5">
@@ -225,65 +241,6 @@ function HomeHero({
         </time>
       </div>
     </header>
-  );
-}
-
-function NextTurn({ event, now }: { event: DashboardWeekEvent; now: Date }) {
-  const date = new Date(event.scheduled_at);
-  const isMatch = event.kind === "match";
-  const title = isMatch ? event.title.replace(/^Partido contra /, "Contra ") : "Entrenamiento";
-  const timeStr =
-    event.kind === "training" && event.duration_minutes
-      ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
-      : timeFormatter.format(date);
-  return (
-    <section
-      aria-labelledby="next-turn-heading"
-      className="border-ink-200 bg-paper-card shadow-elev-2 overflow-hidden rounded-2xl border"
-    >
-      <div className="flex items-stretch">
-        <div className="bg-pool-foam text-pool-deep border-ink-200 flex w-[4.75rem] shrink-0 flex-col items-center justify-center border-r px-2 py-5 sm:w-24">
-          <span className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-            {weekdayFormatter.format(date).replace(".", "")}
-          </span>
-          <span className="mt-1 font-mono text-3xl leading-none font-extrabold tabular-nums">
-            {dayFormatter.format(date)}
-          </span>
-          <span className="text-ink-500 mt-1 text-xs font-bold uppercase">
-            {monthFormatter.format(date).replace(".", "")}
-          </span>
-        </div>
-        <div className="min-w-0 flex-1 px-4 py-5 sm:px-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-              Lo siguiente
-            </p>
-            {event.is_today || event.is_tomorrow ? (
-              <span className="bg-pool-deep text-paper rounded-full px-2.5 py-1 text-xs font-extrabold uppercase">
-                {event.is_today ? "Hoy" : "Mañana"}
-              </span>
-            ) : null}
-          </div>
-          <h2
-            id="next-turn-heading"
-            className="font-display text-pool-deep mt-2 text-2xl leading-tight font-extrabold text-balance sm:text-3xl"
-          >
-            {title}
-          </h2>
-          <p className="text-ink-600 mt-2 text-sm font-semibold">
-            {event.team_label} · {timeStr} · {formatRelativeUpcoming(event.scheduled_at, now)}
-          </p>
-          <Link
-            href={isMatch ? (`/matches/${event.id}` as Route) : ("/calendar" as Route)}
-            className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue mt-4 inline-flex min-h-12 touch-manipulation items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          >
-            {isMatch ? "Ver partido" : "Abrir calendario"}
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
-      <div className="h-1" style={{ backgroundColor: event.team_color }} aria-hidden="true" />
-    </section>
   );
 }
 
@@ -431,6 +388,8 @@ interface PlayerSeasonStats {
   mvp_count: number;
   matches_played: number;
   attendance_pct: number | null;
+  trainings_attended: number;
+  trainings_total: number;
 }
 
 function PlayerStreaks({ streaks }: { streaks: ActiveStreakRow[] }) {
@@ -478,11 +437,7 @@ function SeasonSnapshot({ stats }: { stats: PlayerSeasonStats }) {
   const items = [
     { label: "Goles", value: stats.goals, icon: Target },
     { label: "Partidos", value: stats.matches_played, icon: CalendarDays },
-    {
-      label: "Asistencia",
-      value: `${Math.round(Number(stats.attendance_pct ?? 0))} %`,
-      icon: ShieldCheck,
-    },
+    { label: "Expulsiones", value: stats.exclusions, icon: ShieldAlert },
     { label: "MVP", value: stats.mvp_count, icon: Trophy },
   ];
 
@@ -609,26 +564,6 @@ function ManagementPanel() {
           );
         })}
       </nav>
-    </section>
-  );
-}
-
-function QuietWeek({ isPlayer, isCoach }: { isPlayer: boolean; isCoach: boolean }) {
-  return (
-    <section className="border-ink-200 bg-paper-card flex min-h-40 flex-col items-center gap-4 rounded-2xl border border-dashed px-5 py-6 text-center min-[360px]:flex-row min-[360px]:text-left">
-      <span className="bg-pool-foam text-pool-blue flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
-        <CalendarDays className="h-6 w-6" aria-hidden="true" />
-      </span>
-      <div className="min-w-0">
-        <h2 className="font-display text-pool-deep text-xl font-extrabold">
-          La piscina está tranquila
-        </h2>
-        <p className="text-ink-600 mt-1 text-sm leading-relaxed">
-          {isPlayer || isCoach
-            ? "No tienes entrenamientos ni partidos programados en los próximos 30 días."
-            : "Cuando tengas actividad vinculada, aparecerá aquí primero."}
-        </p>
-      </div>
     </section>
   );
 }

@@ -1,13 +1,12 @@
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import type { Route } from "next";
-import { ArrowLeft, PackageOpen } from "lucide-react";
+import { PackageOpen } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { createClient } from "@/lib/supabase/server";
 import { getShopProduct } from "@/server/queries/shop";
 import { ShopEditorForm } from "../../../_components/shop-editor-form";
+import { PageBackLink } from "@/components/ui/page-back-link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -37,13 +36,8 @@ export default async function EditShopProductPage({ params }: { params: Promise<
   if (!product) notFound();
 
   return (
-    <AdminPageShell>
-      <Link
-        href={"/admin/shop" as Route}
-        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Pedidos
-      </Link>
+    <AdminPageShell className="gap-4">
+      <PageBackLink href="/admin/shop">Volver a gestión de tienda</PageBackLink>
       <AdminPageHeader
         eyebrow="Catálogo de tienda"
         title={product.title}

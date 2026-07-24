@@ -7,8 +7,14 @@ import { ShoppingBag } from "lucide-react";
 import { useShopCart } from "@/hooks/use-shop-cart";
 import { cn } from "@/lib/utils/cn";
 
-export function CartButton({ className }: { className?: string }) {
-  const cart = useShopCart();
+export function CartButton({
+  profileId,
+  className,
+}: {
+  profileId: string;
+  className?: string;
+}) {
+  const cart = useShopCart(profileId);
   const count = cart.hydrated ? cart.items.length : 0;
 
   return (

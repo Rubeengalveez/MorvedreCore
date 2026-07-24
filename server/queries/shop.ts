@@ -48,6 +48,7 @@ export interface ShopOrderItem {
 
 export interface ShopOrder {
   id: string;
+  order_reference: string;
   requested_by: string;
   requested_by_name?: string;
   approved_by: string | null;
@@ -78,7 +79,7 @@ const LEGACY_PRODUCT_FIELDS =
   "id, title, description, category, price_cents, currency, image_url, sizes, available, max_per_order, created_by, created_at, updated_at";
 
 const ORDER_FIELDS =
-  "id, requested_by, approved_by, managed_by, status, total_cents, currency, contact_phone_e164, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";
+  "id, order_reference, requested_by, approved_by, managed_by, status, total_cents, currency, contact_phone_e164, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";
 
 const ITEM_FIELDS =
   "id, order_id, product_id, size, personalization, quantity, unit_price_cents, subtotal_cents";
@@ -460,6 +461,7 @@ function assembleOrder(
 ): ShopOrder {
   const o = orderRow as {
     id: string;
+    order_reference: string;
     requested_by: string;
     approved_by: string | null;
     managed_by: string | null;
@@ -480,6 +482,7 @@ function assembleOrder(
   };
   return {
     id: o.id,
+    order_reference: o.order_reference,
     requested_by: o.requested_by,
     requested_by_name: profileMap.get(o.requested_by),
     approved_by: o.approved_by,

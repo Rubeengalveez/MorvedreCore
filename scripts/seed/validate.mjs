@@ -66,7 +66,7 @@ async function main() {
     ranking_snapshots: 300,
     streaks: 450,
     shop_products: 12,
-    shop_product_images: 4,
+    shop_product_images: 5,
     shop_orders: 18,
     treasury_concepts: 5,
     treasury_period_closures: 4,

@@ -2,7 +2,6 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  ArrowLeft,
   CalendarRange,
   Check,
   ChevronLeft,
@@ -17,6 +16,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { AttendanceSectionNav } from "@/components/attendance/attendance-section-nav";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { getAttendanceDayKey } from "@/lib/domain/attendance";
 import {
   getAttendancePeriodRange,
@@ -102,13 +102,7 @@ export default async function AttendanceSummaryPage({
 
   return (
     <PageShell width="lg" className="gap-4 pb-8">
-      <Link
-        href={"/attendance" as Route}
-        className="text-pool-blue focus-visible:ring-pool-blue -ml-2 inline-flex min-h-12 items-center gap-2 self-start rounded-xl px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-        Volver a pasar lista
-      </Link>
+      <PageBackLink href={"/attendance" as Route}>Volver a pasar lista</PageBackLink>
 
       <PageHeader
         eyebrow="Todas las categorías"

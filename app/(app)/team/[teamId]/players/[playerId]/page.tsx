@@ -1,10 +1,10 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { ArrowLeft, CalendarCheck, Goal, Shield, Trophy, Waves } from "lucide-react";
+import { CalendarCheck, Goal, Shield, Trophy, Waves } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getTeamById, getTeamRoster } from "@/server/queries/teams";
@@ -55,14 +55,8 @@ export default async function TeamPlayerPage({
     matchesPlayed > 0 ? Math.round(((snapshot?.mvp_count ?? 0) / matchesPlayed) * 100) : 0;
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
-      <Link
-        href={rosterHref}
-        className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit touch-manipulation items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Volver a la plantilla
-      </Link>
+    <PageShell width="md" className="gap-4 pb-8">
+      <PageBackLink href={rosterHref}>Volver a la plantilla</PageBackLink>
 
       <header className="border-ink-200 bg-paper-card shadow-elev-2 overflow-hidden rounded-[1.75rem] border">
         <div className="bg-pool-deep h-20" aria-hidden="true" />

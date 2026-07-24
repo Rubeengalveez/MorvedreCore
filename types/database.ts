@@ -1312,6 +1312,7 @@ export type Database = {
           id: string;
           managed_by: string | null;
           notes: string | null;
+          order_reference: string;
           ordered_at: string | null;
           parent_notes: string | null;
           received_at: string | null;
@@ -1333,6 +1334,7 @@ export type Database = {
           id?: string;
           managed_by?: string | null;
           notes?: string | null;
+          order_reference?: string;
           ordered_at?: string | null;
           parent_notes?: string | null;
           received_at?: string | null;
@@ -1354,6 +1356,7 @@ export type Database = {
           id?: string;
           managed_by?: string | null;
           notes?: string | null;
+          order_reference?: string;
           ordered_at?: string | null;
           parent_notes?: string | null;
           received_at?: string | null;

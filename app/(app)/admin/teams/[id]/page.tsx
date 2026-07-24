@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Route } from "next";
-import { ArrowLeft, UsersRound } from "lucide-react";
+import { UsersRound } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { CATEGORY_LABELS, inferCategory, type CategoryCode } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
 import type { Team } from "@/server/actions/admin";
@@ -140,13 +141,8 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
   const teamCategory = team.category_code as CategoryCode;
 
   return (
-    <AdminPageShell>
-      <Link
-        href={"/admin/teams" as Route}
-        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Todos los equipos
-      </Link>
+    <AdminPageShell className="gap-4">
+      <PageBackLink href="/admin/teams">Todos los equipos</PageBackLink>
       <AdminPageHeader
         eyebrow={CATEGORY_LABELS[teamCategory]}
         title={team.label}

@@ -2,7 +2,6 @@ import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  ArrowLeft,
   CalendarCheck2,
   Check,
   ChevronLeft,
@@ -16,6 +15,7 @@ import { AttendanceHistoryCalendar } from "@/components/attendance/attendance-hi
 import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import {
   getMonthRange,
   isMonthKey,
@@ -83,13 +83,7 @@ export default async function AttendanceHistoryPage({
   if (candidates.length === 0) {
     return (
       <PageShell width="md" className="gap-4 pb-8">
-        <Link
-          href={"/calendar" as Route}
-          className="text-pool-blue focus-visible:ring-pool-blue -ml-2 inline-flex min-h-12 items-center gap-2 self-start rounded-xl px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-          Volver al calendario
-        </Link>
+        <PageBackLink href={"/calendar" as Route}>Volver al calendario</PageBackLink>
         <EmptyState
           icon={<CalendarCheck2 className="h-7 w-7" aria-hidden="true" />}
           title="Todavía no hay asistencia"
@@ -118,13 +112,7 @@ export default async function AttendanceHistoryPage({
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      <Link
-        href={"/calendar" as Route}
-        className="text-pool-blue focus-visible:ring-pool-blue -ml-2 inline-flex min-h-12 items-center gap-2 self-start rounded-xl px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-5 w-5" aria-hidden="true" />
-        Volver al calendario
-      </Link>
+      <PageBackLink href={"/calendar" as Route}>Volver al calendario</PageBackLink>
 
       <PageHeader
         eyebrow="Temporada actual"

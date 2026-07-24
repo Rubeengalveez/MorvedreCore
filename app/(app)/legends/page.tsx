@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import {
-  ArrowLeft,
   CalendarDays,
   Star,
   Target,
@@ -15,6 +14,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Medal } from "@/components/ui/medal";
 import { PageHeader, PageShell, SectionHeader } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { type LegendMetric, type LegendRow } from "@/lib/domain/history";
 import { cn } from "@/lib/utils/cn";
 import { getClubHistory } from "@/server/queries/history";
@@ -144,14 +144,8 @@ export default async function LegendsPage({
   const seasonLabel = `${history.archivedSeasons} ${history.archivedSeasons === 1 ? "temporada archivada" : "temporadas archivadas"}`;
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
-      <Link
-        href="/rankings"
-        className="text-pool-blue focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-1 rounded-lg px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Rankings de temporada
-      </Link>
+    <PageShell width="md" className="gap-4 pb-8">
+      <PageBackLink href="/rankings">Rankings de temporada</PageBackLink>
 
       <PageHeader
         eyebrow={seasonLabel}

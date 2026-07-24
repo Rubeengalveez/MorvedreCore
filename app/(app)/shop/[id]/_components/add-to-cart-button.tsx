@@ -9,6 +9,7 @@ import { useShopCart } from "@/hooks/use-shop-cart";
 import { cn } from "@/lib/utils/cn";
 
 export interface AddToCartButtonProps {
+  profileId: string;
   productId: string;
   available: boolean;
   sizes: string[];
@@ -18,6 +19,7 @@ export interface AddToCartButtonProps {
 }
 
 export function AddToCartButton({
+  profileId,
   productId,
   available,
   sizes,
@@ -25,7 +27,7 @@ export function AddToCartButton({
   personalizationLabel,
   personalizationMaxLength,
 }: AddToCartButtonProps) {
-  const cart = useShopCart();
+  const cart = useShopCart(profileId);
   const [size, setSize] = useState<string | null>(null);
   const [personalization, setPersonalization] = useState("");
   const [error, setError] = useState<string | null>(null);

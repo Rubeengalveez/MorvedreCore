@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import type { Route } from "next";
-import { ArrowLeft, ShoppingBag } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 
 import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getShopProducts } from "@/server/queries/shop";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { CartClient } from "../_components/cart-client";
 import { requiresGuardianApproval } from "@/lib/domain/family";
 
@@ -20,14 +19,8 @@ export default async function CartPage() {
   const [products, initialPhone] = await Promise.all([getShopProducts(), getOwnProfilePhone()]);
 
   return (
-    <PageShell width="lg" className="gap-5 pb-8">
-      <Link
-        href={"/shop" as Route}
-        className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue -ml-2 inline-flex min-h-11 w-fit touch-manipulation items-center gap-2 rounded-xl px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        Seguir comprando
-      </Link>
+    <PageShell width="lg" className="gap-4 pb-8">
+      <PageBackLink href="/shop">Seguir comprando</PageBackLink>
       <PageHeader
         eyebrow="Tienda Morvedre"
         title="Revisa tu solicitud"
@@ -35,6 +28,7 @@ export default async function CartPage() {
         icon={<ShoppingBag className="h-5 w-5" aria-hidden="true" />}
       />
       <CartClient
+        profileId={ctx.ownProfile.id}
         products={products}
         initialPhone={initialPhone}
         requiresGuardian={requiresGuardianApproval(ctx.ownProfile.birth_year)}

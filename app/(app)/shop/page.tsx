@@ -2,13 +2,19 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Route } from "next";
-import { Box, PackageOpen, Search, ShoppingBag } from "lucide-react";
+import type { ReactNode } from "react";
+import { Box, Camera, ChevronRight, PackageOpen, ShieldCheck, ShoppingBag } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { getShopProducts, getShopCategories } from "@/server/queries/shop";
+import {
+  getPendingShopOrdersForParent,
+  getShopCategories,
+  getShopProducts,
+} from "@/server/queries/shop";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { formatCents } from "@/lib/domain/shop";
 import { FloatingCartButton } from "./_components/floating-cart-button";
+import { ShopFilters } from "./_components/shop-filters";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -36,14 +42,17 @@ export default async function ShopPage({
   const category = sp.category && sp.category !== "all" ? sp.category : undefined;
   const search = sp.q;
 
-  const [products, categories] = await Promise.all([
+  const [products, categories, familyOrders] = await Promise.all([
     getShopProducts({ category, search, availableOnly: true }),
     getShopCategories(),
+    ctx.linkedProfiles.length > 0
+      ? getPendingShopOrdersForParent(ctx.ownProfile.id)
+      : Promise.resolve([]),
   ]);
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
-      <FloatingCartButton />
+    <PageShell width="md" className="gap-4 pb-8">
+      <FloatingCartButton profileId={ctx.ownProfile.id} />
       <PageHeader
         eyebrow="Vestuario del club"
         title="Tienda Morvedre"
@@ -52,60 +61,30 @@ export default async function ShopPage({
         className="pr-14 sm:pr-36"
       />
 
-      <form
-        action="/shop"
-        className="border-ink-200 bg-paper-card shadow-elev-1 relative rounded-2xl border"
+      <nav
+        aria-label="Gestiones de compra"
+        className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 overflow-hidden rounded-2xl border divide-y"
       >
-        <label htmlFor="shop-search" className="sr-only">
-          Buscar productos
-        </label>
-        <Search
-          className="text-ink-500 pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2"
-          aria-hidden="true"
+        <ShopShortcut
+          href="/shop/orders"
+          icon={<PackageOpen className="h-5 w-5" aria-hidden="true" />}
+          title="Mis pedidos"
+          detail="Seguimiento, preparación y entrega"
         />
-        <input
-          id="shop-search"
-          name="q"
-          type="search"
-          autoComplete="off"
-          defaultValue={search ?? ""}
-          placeholder="Buscar camisetas, gorros…"
-          className="text-pool-deep placeholder:text-ink-400 focus-visible:ring-pool-blue h-14 w-full rounded-2xl bg-transparent pr-4 pl-12 text-base font-semibold outline-none focus-visible:ring-2"
-        />
-        {category ? <input type="hidden" name="category" value={category} /> : null}
-      </form>
-
-      <Link
-        href={"/shop/orders" as Route}
-        className="border-ink-200 bg-paper-card text-pool-deep shadow-elev-1 hover:border-pool-blue/40 focus-visible:ring-pool-blue flex min-h-14 items-center gap-3 rounded-xl border px-4 transition-[border-color,transform,box-shadow] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
-      >
-        <span className="bg-pool-foam flex h-9 w-9 items-center justify-center rounded-lg">
-          <PackageOpen className="text-pool-blue h-5 w-5" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-extrabold">Mis pedidos</span>
-          <span className="text-ink-500 block text-xs">Consulta su preparación y entrega</span>
-        </span>
-      </Link>
-
-      {categories.length > 0 ? (
-        <nav
-          aria-label="Categorías de producto"
-          className="no-scrollbar -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
-        >
-          <div className="flex w-max gap-2">
-            <CategoryLink href="/shop" active={!category} label="Todo" />
-            {categories.map((item) => (
-              <CategoryLink
-                key={item}
-                href={`/shop?category=${encodeURIComponent(item)}`}
-                active={category === item}
-                label={item}
-              />
-            ))}
-          </div>
-        </nav>
-      ) : null}
+        {ctx.linkedProfiles.length > 0 ? (
+          <ShopShortcut
+            href="/shop/parents/pending"
+            icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+            title="Compras familiares"
+            detail={
+              familyOrders.length > 0
+                ? `${familyOrders.length} ${familyOrders.length === 1 ? "pedido por revisar" : "pedidos por revisar"}`
+                : "No tienes pedidos pendientes"
+            }
+            count={familyOrders.length}
+          />
+        ) : null}
+      </nav>
 
       <section aria-labelledby="shop-products-heading">
         <div className="mb-3 flex items-end justify-between gap-3 px-1">
@@ -123,8 +102,10 @@ export default async function ShopPage({
           <span className="text-ink-500 text-sm font-semibold tabular-nums">{products.length}</span>
         </div>
 
+        <ShopFilters categories={categories} activeCategory={category} search={search} />
+
         {products.length === 0 ? (
-          <div className="border-ink-200 bg-paper-card flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed px-6 text-center">
+          <div className="border-ink-200 bg-paper-card mt-3 flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed px-6 text-center">
             <Box className="text-ink-400 h-8 w-8" aria-hidden="true" />
             <p className="text-pool-deep mt-3 text-base font-extrabold">
               No hay productos disponibles
@@ -132,7 +113,7 @@ export default async function ShopPage({
             <p className="text-ink-500 mt-1 text-sm">Prueba con otra categoría o búsqueda.</p>
           </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:gap-4">
+          <ul className="mt-3 grid grid-cols-2 gap-3 sm:gap-4">
             {products.map((product) => (
               <li key={product.id} className="min-w-0">
                 <ProductCard product={product} />
@@ -159,7 +140,6 @@ function ProductCard({ product }: { product: ShopProduct }) {
             alt={product.title}
             width={600}
             height={750}
-            unoptimized
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none"
           />
         ) : (
@@ -167,6 +147,12 @@ function ProductCard({ product }: { product: ShopProduct }) {
             <ShoppingBag className="h-10 w-10" aria-hidden="true" />
           </div>
         )}
+        {product.images.length > 1 ? (
+          <span className="bg-pool-deep/90 text-paper absolute right-2 bottom-2 inline-flex min-h-7 items-center gap-1 rounded-full px-2 text-xs font-extrabold">
+            <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+            {product.images.length}
+          </span>
+        ) : null}
         <span className="bg-paper/95 text-pool-deep absolute top-2 left-2 max-w-[calc(100%-1rem)] truncate rounded-md px-2 py-1 text-xs font-extrabold tracking-wide uppercase shadow-sm">
           {product.category}
         </span>
@@ -191,18 +177,40 @@ function ProductCard({ product }: { product: ShopProduct }) {
   );
 }
 
-function CategoryLink({ href, active, label }: { href: string; active: boolean; label: string }) {
+function ShopShortcut({
+  href,
+  icon,
+  title,
+  detail,
+  count,
+}: {
+  href: Route;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  count?: number;
+}) {
   return (
     <Link
-      href={href as Route}
-      aria-current={active ? "page" : undefined}
-      className={
-        active
-          ? "bg-pool-deep text-paper focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center rounded-full px-4 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-          : "border-ink-200 bg-paper-card text-ink-700 hover:border-pool-blue/40 hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center rounded-full border px-4 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      }
+      href={href}
+      className="hover:bg-pool-foam/40 focus-visible:ring-pool-blue group flex min-h-16 touch-manipulation items-center gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
     >
-      {label}
+      <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+        {icon}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="text-pool-deep block text-base font-extrabold">{title}</span>
+        <span className="text-ink-500 block truncate text-sm font-semibold">{detail}</span>
+      </span>
+      {count != null && count > 0 ? (
+        <span className="bg-ball-gold text-pool-deep inline-flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-xs font-extrabold tabular-nums">
+          {count}
+        </span>
+      ) : null}
+      <ChevronRight
+        className="text-ink-400 group-hover:text-pool-blue h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+        aria-hidden="true"
+      />
     </Link>
   );
 }

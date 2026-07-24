@@ -193,17 +193,66 @@ async function main() {
   }
   console.log(`[shop] ${productIds.length} productos OK`);
 
-  const galleryRows = productIds.slice(0, 4).map((productId, index) => ({
+  const demoGallery = [
+    {
+      productIndex: 0,
+      url: "/shop/demo/banador-masculino-frontal.webp",
+      alt: "Vista frontal del bañador masculino de waterpolo",
+      sort_order: 0,
+      is_cover: true,
+    },
+    {
+      productIndex: 0,
+      url: "/shop/demo/banador-masculino-trasera.webp",
+      alt: "Vista trasera del bañador masculino de waterpolo",
+      sort_order: 1,
+      is_cover: false,
+    },
+    {
+      productIndex: 1,
+      url: "/shop/demo/banador-femenino-frontal.webp",
+      alt: "Vista frontal del bañador femenino de waterpolo",
+      sort_order: 0,
+      is_cover: true,
+    },
+    {
+      productIndex: 2,
+      url: "/shop/demo/camiseta-entrenamiento-frontal.webp",
+      alt: "Vista frontal de la camiseta de entrenamiento",
+      sort_order: 0,
+      is_cover: true,
+    },
+    {
+      productIndex: 2,
+      url: "/shop/demo/camiseta-entrenamiento-trasera.webp",
+      alt: "Vista trasera de la camiseta de entrenamiento",
+      sort_order: 1,
+      is_cover: false,
+    },
+  ];
+  const galleryRows = demoGallery.map((image) => ({
     id: randomUUID(),
-    product_id: productId,
-    url: "/brand/logo.webp",
+    product_id: productIds[image.productIndex],
+    url: image.url,
     storage_path: null,
-    alt: `Vista de muestra del producto ${PRODUCTS[index].name}`,
-    sort_order: 0,
-    is_cover: true,
+    alt: image.alt,
+    sort_order: image.sort_order,
+    is_cover: image.is_cover,
   }));
   const { error: galleryError } = await admin.from("shop_product_images").insert(galleryRows);
   if (galleryError) throw galleryError;
+
+  for (const productIndex of [0, 1, 2]) {
+    const cover = demoGallery.find(
+      (image) => image.productIndex === productIndex && image.is_cover,
+    );
+    if (!cover) continue;
+    const { error: coverError } = await admin
+      .from("shop_products")
+      .update({ image_url: cover.url })
+      .eq("id", productIds[productIndex]);
+    if (coverError) throw coverError;
+  }
 
   console.log("\n[shop] Creando 18 pedidos en todos los estados del Kanban...");
   const stateDistribution = {

@@ -431,7 +431,7 @@ export async function createShopOrder(input: {
       notes: parsed.data.notes ?? null,
       contact_phone_e164: contactPhone,
     })
-    .select("id")
+    .select("id, order_reference")
     .single();
   if (oErr) throw new Error("No pudimos crear el pedido: " + oErr.message);
 
@@ -456,9 +456,16 @@ export async function createShopOrder(input: {
   }
 
   if (needsGuardian) {
-    await notifyParentsOfOrder(order.id, me.id, products);
+    await notifyParentsOfOrder(order.id, order.order_reference, me.id, products);
   } else {
-    await notifyShopManagerOfOrder(order.id, me.id, contactPhone!, cart.lines!, products);
+    await notifyShopManagerOfOrder(
+      order.id,
+      order.order_reference,
+      me.id,
+      contactPhone!,
+      cart.lines!,
+      products,
+    );
   }
 
   revalidatePath("/shop");
@@ -470,6 +477,7 @@ export async function createShopOrder(input: {
 
 async function notifyShopManagerOfOrder(
   orderId: string,
+  orderReference: string,
   requesterId: string,
   contactPhone: string,
   lines: Array<{
@@ -520,12 +528,12 @@ async function notifyShopManagerOfOrder(
     recipients.map((to) =>
       sendEmail({
         to,
-        subject: `Nueva solicitud de tienda · ${requester?.full_name ?? "Socio/a"}`,
+        subject: `Nuevo pedido ${orderReference} · ${requester?.full_name ?? "Socio/a"}`,
         text: `Nueva solicitud de material en Morvedre Core.
 
 Solicitante: ${requester?.full_name ?? requesterId}
 Teléfono: ${contactPhone}
-Pedido: ${orderId}
+Pedido: ${orderReference}
 
 ${detail}
 
@@ -550,7 +558,7 @@ export async function decideShopOrder(input: {
   const supabase = await createClient();
   const { data: order } = await supabase
     .from("shop_orders")
-    .select("requested_by, status")
+    .select("requested_by, status, order_reference")
     .eq("id", parsed.data.order_id)
     .maybeSingle();
   if (!order || order.status !== "pending_parent") {
@@ -632,6 +640,7 @@ export async function decideShopOrder(input: {
       : { data: [] as Array<{ id: string; title: string }> };
     await notifyShopManagerOfOrder(
       parsed.data.order_id,
+      order.order_reference,
       order.requested_by,
       approverPhone!,
       (itemRows ?? []).map((item) => ({
@@ -652,6 +661,7 @@ export async function decideShopOrder(input: {
 
 async function notifyParentsOfOrder(
   orderId: string,
+  orderReference: string,
   childId: string,
   products: Array<{ id: string; title: string }>,
 ): Promise<void> {
@@ -667,7 +677,7 @@ async function notifyParentsOfOrder(
   const rows = links.map((l) => ({
     recipient_id: l.parent_profile_id,
     kind: "news_pinned" as const,
-    title: "Solicitud de compra",
+    title: `Pedido ${orderReference} por revisar`,
     body: `Tu hijo/a quiere comprar: ${productTitles}`,
     href: `/shop/orders/${orderId}`,
     related_match_id: null,

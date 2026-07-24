@@ -51,13 +51,13 @@ export async function GET() {
       };
       current.cantidad += item.quantity;
       current.importe += item.subtotal_cents / 100;
-      current.pedidos.add(order.id);
+      current.pedidos.add(order.order_reference);
       current.compradores.add(order.requested_by_name ?? order.requested_by);
       current.estados.add(order.status);
       grouped.set(key, current);
 
       detailRows.push({
-        Pedido: order.id,
+        Pedido: order.order_reference,
         Estado: order.status,
         Solicitante: order.requested_by_name ?? order.requested_by,
         Telefono: order.contact_phone_e164 ?? "",

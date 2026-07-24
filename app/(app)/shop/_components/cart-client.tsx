@@ -25,14 +25,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export interface CartClientProps {
+  profileId: string;
   products: ShopProduct[];
   initialPhone: string | null;
   requiresGuardian: boolean;
 }
 
-export function CartClient({ products, initialPhone, requiresGuardian }: CartClientProps) {
+export function CartClient({
+  profileId,
+  products,
+  initialPhone,
+  requiresGuardian,
+}: CartClientProps) {
   const router = useRouter();
-  const cart = useShopCart();
+  const cart = useShopCart(profileId);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -149,7 +155,7 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
         </h2>
         <p className="text-ink-600 mt-2 max-w-sm text-base leading-relaxed">
           {requiresGuardian
-            ? "La tienda no lo recibirá hasta que una persona adulta de tu familia lo apruebe."
+            ? "Sol no recibirá el pedido hasta que una persona adulta de tu familia lo apruebe."
             : "Te llevamos al seguimiento del pedido…"}
         </p>
       </div>
@@ -253,7 +259,6 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
                         alt={product.title}
                         width={80}
                         height={96}
-                        unoptimized
                         className="border-ink-200 h-24 w-20 shrink-0 rounded-xl border object-cover sm:h-26 sm:w-22"
                       />
                     ) : (
@@ -348,7 +353,7 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
               <p className="text-paper/70 mt-3 text-sm leading-relaxed">
                 {cart.items.length} {cart.items.length === 1 ? "producto" : "productos"}.{" "}
                 {requiresGuardian
-                  ? "Primero lo revisará tu familia; todavía no se enviará a la tienda."
+                  ? "Primero lo revisará tu familia; todavía no se enviará a Sol."
                   : "Se guardará en Mis pedidos y la encargada recibirá el aviso."}
               </p>
             </>
@@ -385,7 +390,7 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
             <span className="bg-pool-foam text-pool-blue mb-2 flex h-11 w-11 items-center justify-center rounded-xl">
               <Phone className="h-5 w-5" aria-hidden="true" />
             </span>
-            <SheetTitle>¿Dónde puede contactar contigo la tienda?</SheetTitle>
+            <SheetTitle>¿Dónde puede contactar contigo Sol?</SheetTitle>
             <SheetDescription>
               Guardaremos este teléfono en tu perfil privado y lo usaremos para este pedido.
             </SheetDescription>
@@ -441,13 +446,13 @@ export function CartClient({ products, initialPhone, requiresGuardian }: CartCli
             </span>
             <SheetTitle>Alto ahí: el pedido aún no está enviado</SheetTitle>
             <SheetDescription>
-              Los productos seguirán en el carrito, pero la tienda no recibirá nada hasta que pulses
+              Los productos seguirán en el carrito, pero Sol no recibirá nada hasta que pulses
               “Enviar solicitud”.
             </SheetDescription>
           </SheetHeader>
           <SheetBody>
             <div className="border-ball-gold/35 bg-ball-gold/10 text-ink-700 rounded-xl border px-4 py-3 text-sm leading-relaxed">
-              La tienda no recibirá el pedido hasta que pulses <strong>Enviar solicitud</strong>. Si
+              Sol no recibirá el pedido hasta que pulses <strong>Enviar solicitud</strong>. Si
               sales, los productos seguirán guardados para cuando vuelvas.
             </div>
           </SheetBody>

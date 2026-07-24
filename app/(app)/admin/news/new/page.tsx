@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import type { Route } from "next";
-import { ArrowLeft, Megaphone } from "lucide-react";
+import { Megaphone } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { createNewsPost } from "@/server/actions/admin/news";
 import { NewsEditor, type TeamOption } from "@/components/news/news-editor";
 import { getNewsTeamsForAdmin } from "@/server/queries/news";
+import { PageBackLink } from "@/components/ui/page-back-link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -44,13 +44,8 @@ export default async function NewAdminNewsPage() {
   }
 
   return (
-    <AdminPageShell width="lg">
-      <Link
-        href={"/admin/news" as Route}
-        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Todas las noticias
-      </Link>
+    <AdminPageShell width="lg" className="gap-4">
+      <PageBackLink href="/admin/news">Todas las noticias</PageBackLink>
       <AdminPageHeader
         title="Nueva noticia"
         description="Escribe el aviso, elige quién lo verá y publícalo."

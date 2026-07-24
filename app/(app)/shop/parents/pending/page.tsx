@@ -1,11 +1,10 @@
 import { redirect } from "next/navigation";
-import Link from "next/link";
-import type { Route } from "next";
-import { ShoppingCart, Inbox, ShieldCheck } from "lucide-react";
+import { Inbox, ShieldCheck } from "lucide-react";
 
 import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getPendingShopOrdersForParent } from "@/server/queries/shop";
 import { SHOP_ORDER_STATUS_LABELS, formatCents } from "@/lib/domain/shop";
@@ -28,18 +27,12 @@ export default async function ParentPendingPage() {
   ]);
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
-      <Link
-        href={"/shop" as Route}
-        className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 w-fit items-center gap-2 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <ShoppingCart className="h-4 w-4" aria-hidden="true" />
-        Tienda
-      </Link>
+    <PageShell width="md" className="gap-4 pb-8">
+      <PageBackLink href="/shop">Volver a la tienda</PageBackLink>
       <AppPageHero
         eyebrow="Control familiar"
         title="Compras por revisar"
-        description="Nada llega a la tienda hasta que tú lo apruebas."
+        description="Nada llega a Sol hasta que tú lo apruebas."
         icon={<Inbox className="h-6 w-6" aria-hidden="true" />}
       />
 
@@ -47,7 +40,7 @@ export default async function ParentPendingPage() {
         <ShieldCheck className="text-pool-ice mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <p className="text-sm leading-relaxed font-semibold">
           Comprueba producto, talla y personalización. Al aprobar, el pedido se envía a la persona
-          encargada de la tienda.
+            encargada de la equipación.
         </p>
       </div>
 
@@ -67,6 +60,9 @@ export default async function ParentPendingPage() {
               <div className="bg-pool-foam/65 border-ink-200 flex items-center justify-between gap-2 border-b px-4 py-3">
                 <span className="text-pool-deep text-sm font-extrabold">
                   {o.requested_by_name ?? "Tu hijo/a"}
+                  <span className="text-pool-blue ml-2 text-xs font-extrabold">
+                    {o.order_reference}
+                  </span>
                   <span className="text-ink-500 ml-2 text-xs font-semibold">
                     {new Date(o.requested_at).toLocaleDateString("es-ES", {
                       day: "numeric",

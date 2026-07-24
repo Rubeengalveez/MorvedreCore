@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Route } from "next";
-import { MdArrowBack, MdAutoAwesome } from "react-icons/md";
+import { MdAutoAwesome } from "react-icons/md";
 import { CarFront } from "lucide-react";
 
 import { AdminPageShell } from "@/components/admin/admin-page";
@@ -17,6 +17,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
@@ -243,16 +244,8 @@ export default async function MatchDetailPage({
     });
 
   return (
-    <AdminPageShell>
-      <div className="text-ink-600 flex items-center gap-2 text-sm">
-        <Link
-          href={"/admin/matches" as Route}
-          className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 items-center gap-2 rounded-lg font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <MdArrowBack className="h-5 w-5" aria-hidden="true" />
-          Partidos
-        </Link>
-      </div>
+    <AdminPageShell className="gap-4">
+      <PageBackLink href="/admin/matches">Partidos</PageBackLink>
 
       <div className="relative">
         <PoolScoreboard

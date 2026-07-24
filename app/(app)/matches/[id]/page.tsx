@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { ChevronLeft, Award, FileText, UserCheck, CarFront } from "lucide-react";
+import { Award, FileText, UserCheck, CarFront } from "lucide-react";
 
 import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
 import { Avatar } from "@/components/ui/avatar";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { MapLocationLink } from "@/components/ui/map-location-link";
 import { formatLongDate } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
@@ -130,16 +131,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      {/* Back button */}
-      <div className="flex items-center select-none">
-        <Link
-          href={"/calendar" as Route}
-          className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none active:scale-95"
-        >
-          <ChevronLeft className="h-5 w-5" />
-          <span>Calendario</span>
-        </Link>
-      </div>
+      <PageBackLink href="/calendar">Calendario</PageBackLink>
 
       {/* ─── HERO SCOREBOARD ─── */}
       <div className="flex flex-col gap-4">
