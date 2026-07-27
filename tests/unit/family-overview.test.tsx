@@ -59,13 +59,13 @@ describe("FamilyOverviewPanel", () => {
       <FamilyOverviewPanel family={family(1)} pendingTreasuryCents={3500} />,
     );
 
-    expect(screen.getByText("1 menor a tu cargo")).toBeInTheDocument();
-    expect(screen.getByText("Lucía")).toBeInTheDocument();
+    expect(screen.getByText("1 menor vinculado")).toBeInTheDocument();
+    expect(screen.getByText("Lucía Torres")).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "Ver equipo de Lucía" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver calendario" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver asistencia de Lucía" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver ficha de Lucía" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Revisar pedidos/ })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /Cuotas y pagos/ })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Cuotas familiares/ })).toBeInTheDocument();
   });
 
   it("presents two children as the primary family layout", () => {
@@ -73,12 +73,11 @@ describe("FamilyOverviewPanel", () => {
       <FamilyOverviewPanel family={family(2)} pendingTreasuryCents={0} />,
     );
 
-    expect(screen.getByText("2 menores a tu cargo")).toBeInTheDocument();
-    expect(screen.getByText("Lucía y Mateo")).toBeInTheDocument();
+    expect(screen.getByText("2 menores vinculados")).toBeInTheDocument();
+    expect(screen.getByText("Lucía Torres")).toBeInTheDocument();
+    expect(screen.getByText("Mateo Torres")).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(2);
-    expect(screen.queryByText("+1")).not.toBeInTheDocument();
-    expect(screen.getByText("100%")).toBeInTheDocument();
-    expect(screen.getByText("67%")).toBeInTheDocument();
+    expect(screen.queryByText("Asist. mes")).not.toBeInTheDocument();
   });
 
   it("keeps a third child readable without widening the family header", () => {
@@ -86,10 +85,11 @@ describe("FamilyOverviewPanel", () => {
       <FamilyOverviewPanel family={family(3)} pendingTreasuryCents={0} />,
     );
 
-    expect(screen.getByText("3 menores a tu cargo")).toBeInTheDocument();
-    expect(screen.getByText("Lucía, Mateo y Alba")).toBeInTheDocument();
-    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(screen.getByText("3 menores vinculados")).toBeInTheDocument();
+    expect(screen.getByText("Alba Torres")).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(3);
-    expect(screen.getByText("En tu familia · 3 de 3")).toBeInTheDocument();
+    expect(
+      screen.getByText("Consulta a tus hijos desde la misma cuenta, sin cambiar de perfil."),
+    ).toBeInTheDocument();
   });
 });

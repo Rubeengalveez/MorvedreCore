@@ -1,6 +1,6 @@
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils/cn";
-import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { CATEGORY_COLORS, CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
 import { RankingMetricContext } from "./ranking-row";
 
@@ -68,7 +68,6 @@ export function Podium({
 }
 
 function categoryLabel(row: RankingRow): string {
-  if (row.team_label) return row.team_label;
   const code = row.category_code as CategoryCode;
   return CATEGORY_LABELS[code] ?? code;
 }
@@ -88,7 +87,7 @@ function PodiumLeader({
   isMe: boolean;
   isJumpTarget: boolean;
 }) {
-  const teamColor = row.team_color ?? "var(--pool-blue)";
+  const teamColor = CATEGORY_COLORS[row.category_code] ?? row.team_color ?? "var(--pool-blue)";
 
   return (
     <article
@@ -166,7 +165,7 @@ function PodiumRunner({
   isMe: boolean;
   isJumpTarget: boolean;
 }) {
-  const teamColor = row.team_color ?? "var(--pool-blue)";
+  const teamColor = CATEGORY_COLORS[row.category_code] ?? row.team_color ?? "var(--pool-blue)";
 
   return (
     <article

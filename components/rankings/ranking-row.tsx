@@ -1,4 +1,5 @@
 import { PositionChip } from "@/components/ui/position-chip";
+import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/domain/categories";
 import { cn } from "@/lib/utils/cn";
 import { hexToRgba } from "@/lib/utils/color";
 import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
@@ -26,9 +27,10 @@ export function RankingRowItem({
 }: RankingRowItemProps) {
   const isTop10 = row.position <= 10;
   const tone = isMe ? "me" : isTop10 ? "top" : "default";
-  const teamColor = row.team_color ?? "#1E5AA8";
+  const teamColor = CATEGORY_COLORS[row.category_code] ?? row.team_color ?? "#1E5AA8";
   const baseAlpha = isJumpTarget ? 0.18 : isTop10 ? 0.14 : 0.07;
   const backgroundColor = isMe ? ME_TINT : hexToRgba(teamColor, baseAlpha);
+  const categoryLabel = CATEGORY_LABELS[row.category_code];
 
   return (
     <div
@@ -52,11 +54,9 @@ export function RankingRowItem({
             <span className="text-action ml-1 text-xs font-extrabold uppercase">Tu</span>
           ) : null}
         </p>
-        {row.team_label ? (
-          <p className="text-ink-700 mt-1 line-clamp-1 text-sm leading-none font-semibold">
-            {row.team_label}
-          </p>
-        ) : null}
+        <p className="text-ink-700 mt-1 line-clamp-1 text-sm leading-none font-semibold">
+          {categoryLabel}
+        </p>
         {metric !== "streak" ? <RankingMetricContext row={row} metric={metric} /> : null}
       </div>
       <div className="shrink-0 text-right">

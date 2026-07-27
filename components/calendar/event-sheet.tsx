@@ -161,10 +161,10 @@ export function TrainingRow({
       >
         {compact ? (
           <div className="flex min-w-0 items-center justify-between gap-2">
-            <span className="text-pool-blue min-w-0 truncate text-[0.6875rem] font-black tracking-[0.08em] uppercase">
+            <span className="text-pool-blue min-w-0 truncate text-xs font-black tracking-[0.08em] uppercase">
               {training.team_label}
             </span>
-            <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep min-h-7 shrink-0 px-2 text-[0.625rem]">
+            <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep min-h-7 shrink-0 px-2 text-xs">
               Entreno
             </EventBadge>
           </div>
@@ -270,10 +270,10 @@ export function MatchRow({
       >
         {compact ? (
           <div className="flex min-w-0 items-center justify-between gap-2">
-            <span className="text-pool-blue min-w-0 truncate text-[0.6875rem] font-black tracking-[0.08em] uppercase">
+            <span className="text-pool-blue min-w-0 truncate text-xs font-black tracking-[0.08em] uppercase">
               {match.team_label}
             </span>
-            <EventBadge className="border-ink-300 bg-paper text-ink-600 min-h-7 shrink-0 px-2 text-[0.625rem]">
+            <EventBadge className="border-ink-300 bg-paper text-ink-600 min-h-7 shrink-0 px-2 text-xs">
               {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
             </EventBadge>
           </div>

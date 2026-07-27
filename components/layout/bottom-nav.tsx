@@ -36,6 +36,7 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
     <nav
       aria-label="Navegacion principal Morvedre Core"
       data-bottom-nav
+      style={{ viewTransitionName: "persistent-bottom-nav" }}
       className="fixed inset-x-0 bottom-0 z-30 min-h-[var(--bottom-nav-height)] px-3 pb-[max(env(safe-area-inset-bottom),12px)] sm:px-6"
     >
       <div
@@ -50,7 +51,8 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
           const isActive =
             pathname === href ||
             pathname.startsWith(`${href}/`) ||
-            (href === "/rankings" && pathname.startsWith("/legends"));
+            (href === "/rankings" &&
+              (pathname.startsWith("/legends") || pathname.startsWith("/streaks")));
           return (
             <Link
               key={href}
@@ -58,7 +60,7 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
               aria-current={isActive ? "page" : undefined}
               aria-label={item.label}
               className={cn(
-                "focus-visible:ring-pool-blue group relative flex h-full min-w-0 touch-manipulation flex-col items-center justify-center gap-1 rounded-[1rem] px-1 text-xs transition-[background-color,color,transform,box-shadow] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset active:scale-[0.96] motion-reduce:transition-none",
+                "focus-visible:ring-pool-blue group relative flex h-full min-w-0 touch-manipulation flex-col items-center justify-center gap-1 rounded-[1rem] px-0 text-xs transition-[background-color,color,transform,box-shadow] duration-200 [-webkit-tap-highlight-color:transparent] focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset active:scale-[0.96] motion-reduce:transition-none sm:px-1",
                 isActive
                   ? "bg-pool-deep text-paper shadow-[0_5px_14px_rgba(6,32,72,0.24)]"
                   : "text-ink-600 hover:bg-pool-foam/80 hover:text-pool-deep",
@@ -72,7 +74,7 @@ export function BottomNav({ showAttendance }: { showAttendance: boolean }) {
               />
               <span
                 className={cn(
-                  "max-w-full truncate text-[11px] leading-tight sm:text-xs",
+                  "max-w-full truncate text-xs leading-tight",
                   isActive ? "font-extrabold" : "font-semibold",
                 )}
               >

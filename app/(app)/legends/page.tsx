@@ -1,20 +1,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
-import {
-  CalendarDays,
-  Star,
-  Target,
-  Trophy,
-  UserCheck,
-  type LucideIcon,
-} from "lucide-react";
+import { CalendarDays, Star, Target, Trophy, UserCheck, type LucideIcon } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
+import { RankingsSectionNav } from "@/components/rankings/rankings-section-nav";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Medal } from "@/components/ui/medal";
 import { PageHeader, PageShell, SectionHeader } from "@/components/ui/page-shell";
-import { PageBackLink } from "@/components/ui/page-back-link";
 import { type LegendMetric, type LegendRow } from "@/lib/domain/history";
 import { cn } from "@/lib/utils/cn";
 import { getClubHistory } from "@/server/queries/history";
@@ -121,7 +114,7 @@ function LegendList({ rows, metric }: { rows: LegendRow[]; metric: LegendMetric 
             <p className="text-pool-deep truncate text-sm font-extrabold sm:text-base">
               {row.profile_name}
             </p>
-            <p className="text-ink-500 mt-0.5 truncate text-xs">{metricContext(row, metric)}</p>
+            <p className="text-ink-500 mt-0.5 truncate text-sm">{metricContext(row, metric)}</p>
           </div>
           <p className="text-pool-deep shrink-0 font-mono text-xl font-black tabular-nums sm:text-2xl">
             {metricValue(row, metric)}
@@ -145,8 +138,6 @@ export default async function LegendsPage({
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      <PageBackLink href="/rankings">Rankings de temporada</PageBackLink>
-
       <PageHeader
         eyebrow={seasonLabel}
         title="Leyendas del club"
@@ -155,6 +146,8 @@ export default async function LegendsPage({
         teamColor="var(--ball-gold)"
       />
 
+      <RankingsSectionNav active="legends" />
+
       <nav aria-label="Clasificación histórica" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {METRICS.map(({ value, label, Icon }) => (
           <Link
@@ -162,7 +155,7 @@ export default async function LegendsPage({
             href={`/legends?metric=${value}` as Route}
             aria-current={metric === value ? "page" : undefined}
             className={cn(
-              "focus-visible:ring-pool-blue flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-xs font-extrabold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+              "focus-visible:ring-pool-blue flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-sm font-extrabold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
               metric === value
                 ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
                 : "border-ink-200 bg-paper-card text-ink-600 hover:border-pool-blue/40 hover:text-pool-deep",

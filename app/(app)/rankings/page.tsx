@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import type { Route } from "next";
 import { redirect } from "next/navigation";
-import { Crown, Flame } from "lucide-react";
 
 import { Trofeo } from "@/components/brand/pictograms";
+import { RankingsSectionNav } from "@/components/rankings/rankings-section-nav";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { createClient } from "@/lib/supabase/server";
@@ -18,17 +17,14 @@ import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { type RankingMetric, type RankingScope } from "@/lib/domain/rankings";
 
 import { RankingsContent } from "@/components/rankings/rankings-content";
-import { RankingHubLink } from "@/components/rankings/ranking-hub-link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Rankings - Morvedre Core",
-  description: "Pichichi, MVP, asistencia y racha del club.",
+  description: "Goles, MVP, expulsiones y asistencia de la temporada.",
 };
-
-const STREAK_TYPES = ["goals_consec", "excl_consec", "train_consec", "mvp_consec"] as const;
 
 function parseScope(scopeStr: string | undefined): RankingScope {
   if (!scopeStr || scopeStr === "all") return { kind: "all" };
@@ -45,12 +41,7 @@ function parseScope(scopeStr: string | undefined): RankingScope {
 }
 
 function parseMetric(metricStr: string | undefined): RankingMetric {
-  if (
-    metricStr === "exclusions" ||
-    metricStr === "mvp" ||
-    metricStr === "attendance" ||
-    metricStr === "streak"
-  ) {
+  if (metricStr === "exclusions" || metricStr === "mvp" || metricStr === "attendance") {
     return metricStr;
   }
   return "goals";
@@ -79,8 +70,6 @@ export default async function RankingsPage({
     scope?: string;
     metric?: string;
     page?: string;
-    streak_type?: string;
-    streak_order?: string;
   }>;
 }) {
   const ctx = await getActiveProfileContext();
@@ -91,11 +80,6 @@ export default async function RankingsPage({
   const scope = parseScope(sp.scope);
   const metric = parseMetric(sp.metric);
   const page = parsePage(sp.page);
-
-  const streakType = (STREAK_TYPES as readonly string[]).includes(sp.streak_type ?? "")
-    ? (sp.streak_type as (typeof STREAK_TYPES)[number])
-    : "train_consec";
-  const streakOrder = sp.streak_order === "best" ? "best" : "current";
 
   const meta = await getRankingsMeta();
   if (!meta.season.id) {
@@ -130,20 +114,10 @@ export default async function RankingsPage({
     scope,
     metric,
     my_player_id: activeProfile.id,
-    min_trainings_total: metric === "attendance" || metric === "streak" ? 3 : 0,
-    streak_type: streakType,
-    streak_order: streakOrder,
+    min_trainings_total: metric === "attendance" ? 3 : 0,
   });
 
   const scopeLabel = scopeLabelOf(scope, meta);
-  const streakScope =
-    scope.kind === "all"
-      ? "all"
-      : scope.kind === "category"
-        ? `category:${scope.category_code}`
-        : `team:${scope.team_id}`;
-  const streakHref =
-    `/rankings?scope=${encodeURIComponent(streakScope)}&metric=streak#streaks` as Route;
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
@@ -154,23 +128,7 @@ export default async function RankingsPage({
         icon={<Trofeo className="h-5 w-5" accent="currentColor" />}
       />
 
-      <nav aria-label="Explorar rankings" className="grid grid-cols-2 gap-2.5 sm:gap-3">
-        <RankingHubLink
-          href={streakHref}
-          title="Rachas"
-          description="Constancia de esta temporada"
-          icon={<Flame className="h-6 w-6" aria-hidden="true" />}
-          tone="streaks"
-          active={metric === "streak"}
-        />
-        <RankingHubLink
-          href="/legends"
-          title="Leyendas"
-          description="Historia de nuestros jugadores"
-          icon={<Crown className="h-6 w-6" aria-hidden="true" />}
-          tone="legends"
-        />
-      </nav>
+      <RankingsSectionNav active="season" />
 
       <RankingsContent
         meta={meta}
@@ -183,8 +141,6 @@ export default async function RankingsPage({
           new Set([ownProfile.id, ...linkedProfiles.map((profile) => profile.id)]),
         )}
         page={page}
-        activeStreakType={streakType}
-        activeStreakOrder={streakOrder}
         isAdmin={isAdmin}
       />
     </PageShell>

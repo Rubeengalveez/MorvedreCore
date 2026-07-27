@@ -54,6 +54,7 @@ export async function TopBar({ profile }: TopBarProps) {
   return (
     <header
       data-top-bar
+      style={{ viewTransitionName: "persistent-top-bar" }}
       className="text-paper shadow-elev-4 fixed inset-x-0 top-0 z-40 overflow-hidden rounded-b-[1.75rem] border-b border-white/12 bg-[linear-gradient(135deg,#041a3a_0%,#0a3c7b_54%,#1657a8_100%)]"
     >
       <div className="mx-auto flex min-h-[var(--top-bar-height)] w-full max-w-6xl items-center justify-between gap-2 px-3 pt-[env(safe-area-inset-top)] min-[380px]:px-4 sm:px-6">

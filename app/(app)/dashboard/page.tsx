@@ -115,7 +115,9 @@ export default async function DashboardPage() {
         : Promise.resolve([] as DashboardCoachSession[]),
     ]);
 
-  const activeStreaks = streaks.filter((streak) => streak.current_value > 0).slice(0, 3);
+  const activeStreaks = streaks
+    .filter((streak) => streak.type !== "excl_consec" && streak.current_value > 0)
+    .slice(0, 3);
   const newsItems = [...newsFeed.pinned, ...newsFeed.recent].slice(0, 2);
   const contextLabel =
     family && family.members.length > 0
@@ -422,7 +424,7 @@ function PlayerStreaks({ streaks }: { streaks: ActiveStreakRow[] }) {
           ))}
         </div>
         <Link
-          href={"/rankings?metric=streak#streaks" as Route}
+          href={"/streaks" as Route}
           className="border-ink-200 bg-paper-sunk/65 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-12 items-center justify-between border-t px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
           Ver todas las rachas

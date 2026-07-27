@@ -19,9 +19,9 @@ export async function updateProfile(
   const parsed = updateProfileSchema.safeParse({
     full_name: formData.get("full_name"),
     birth_year: formData.get("birth_year"),
-    cap_number: formData.get("cap_number"),
+    cap_number: formData.has("cap_number") ? formData.get("cap_number") : undefined,
     phone_e164: rawPhone ? (normalizeSpanishPhone(rawPhone) ?? rawPhone) : "",
-    email_contact: formData.get("email_contact"),
+    email_contact: formData.has("email_contact") ? formData.get("email_contact") : undefined,
   });
 
   if (!parsed.success) {
@@ -85,9 +85,9 @@ export async function updateProfile(
       full_name: parsed.data.full_name,
       photo_url: photoUrl,
       birth_year: parsed.data.birth_year,
-      cap_number: parsed.data.cap_number,
       phone_e164: parsed.data.phone_e164,
-      email_contact: parsed.data.email_contact,
+      ...(formData.has("cap_number") ? { cap_number: parsed.data.cap_number } : {}),
+      ...(formData.has("email_contact") ? { email_contact: parsed.data.email_contact } : {}),
     })
     .eq("auth_user_id", user.id);
 

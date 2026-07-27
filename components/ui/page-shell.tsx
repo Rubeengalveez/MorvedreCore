@@ -23,19 +23,21 @@ export function PageShell({
   ...props
 }: PageShellProps) {
   return (
-    <div className="relative min-h-full w-full overflow-x-clip">
-      <div
-        className={cn(
-          "page-enter relative z-[1] mx-auto flex w-full flex-col gap-4 py-4 sm:py-5",
-          !bleed && "page-gutter",
-          widthClass[width],
-          className,
-        )}
-        {...props}
-      >
-        {children}
+    <React.ViewTransition enter="fade-in" exit="fade-out" default="none">
+      <div className="relative min-h-full w-full overflow-x-clip">
+        <div
+          className={cn(
+            "relative z-[1] mx-auto flex w-full flex-col gap-4 py-4 sm:py-5",
+            !bleed && "page-gutter",
+            widthClass[width],
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </React.ViewTransition>
   );
 }
 

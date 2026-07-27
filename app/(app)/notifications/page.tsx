@@ -12,6 +12,7 @@ import {
   UserCheck,
   UserX,
   XCircle,
+  ChevronLeft,
   ChevronRight,
 } from "lucide-react";
 
@@ -50,6 +51,7 @@ const DAY_FORMATTER = new Intl.DateTimeFormat("es-ES", {
   day: "numeric",
   month: "short",
 });
+const NOTIFICATIONS_PER_PAGE = 20;
 
 const KIND_META: Record<
   string,
@@ -168,26 +170,37 @@ async function loadContextForNotifications(
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; page?: string }>;
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 
+  const params = await searchParams;
   const [items, unread] = await Promise.all([
     getNotificationsForProfile(ctx.activeProfile.id, 100).catch(() => [] as NotificationItem[]),
     getUnreadNotificationsCount(ctx.activeProfile.id).catch(() => 0),
   ]);
 
-  const { matchById, photoByProfile } = await loadContextForNotifications(items);
-  const view = (await searchParams).view === "unread" ? "unread" : "all";
+  const view = params.view === "unread" ? "unread" : "all";
   const visibleItems = view === "unread" ? items.filter((item) => item.read_at == null) : items;
+  const totalPages = Math.max(1, Math.ceil(visibleItems.length / NOTIFICATIONS_PER_PAGE));
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const page = Math.min(
+    Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1,
+    totalPages,
+  );
+  const pageItems = visibleItems.slice(
+    (page - 1) * NOTIFICATIONS_PER_PAGE,
+    page * NOTIFICATIONS_PER_PAGE,
+  );
+  const { matchById, photoByProfile } = await loadContextForNotifications(pageItems);
 
   return (
     <PageShell width="md" className="gap-5 pb-8">
       <PageHeader
         eyebrow="Buzón"
         title="Notificaciones"
-        description={`${unread > 0 ? `${unread} sin leer` : "Estás al día"} · ${items.length} avisos`}
+        description={`${unread > 0 ? `${unread} sin leer` : "Estás al día"} · ${items.length}${items.length === 100 ? "+" : ""} avisos recientes`}
         icon={<Bell className="h-5 w-5" aria-hidden="true" />}
         action={<MarkAllNotificationsButton disabled={unread === 0} />}
       />
@@ -202,7 +215,7 @@ export default async function NotificationsPage({
           href={"/notifications?view=all" as Route}
           aria-current={view === "all" ? "page" : undefined}
           className={cn(
-            "flex min-h-11 items-center justify-center rounded-lg text-sm font-extrabold",
+            "focus-visible:ring-pool-blue flex min-h-11 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
             view === "all" ? "bg-pool-deep text-paper" : "text-ink-600",
           )}
         >
@@ -212,7 +225,7 @@ export default async function NotificationsPage({
           href={"/notifications?view=unread" as Route}
           aria-current={view === "unread" ? "page" : undefined}
           className={cn(
-            "flex min-h-11 items-center justify-center rounded-lg text-sm font-extrabold",
+            "focus-visible:ring-pool-blue flex min-h-11 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
             view === "unread" ? "bg-pool-deep text-paper" : "text-ink-600",
           )}
         >
@@ -228,7 +241,7 @@ export default async function NotificationsPage({
         />
       ) : (
         <ul className="flex flex-col gap-2">
-          {visibleItems.map((n) => (
+          {pageItems.map((n) => (
             <NotificationRow
               key={n.id}
               item={n}
@@ -238,6 +251,39 @@ export default async function NotificationsPage({
           ))}
         </ul>
       )}
+
+      {visibleItems.length > NOTIFICATIONS_PER_PAGE ? (
+        <nav
+          aria-label="Páginas de notificaciones"
+          className="border-ink-200 bg-paper-card shadow-elev-1 flex items-center justify-between gap-3 rounded-xl border p-2"
+        >
+          {page > 1 ? (
+            <Link
+              href={`/notifications?view=${view}&page=${page - 1}` as Route}
+              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-1 rounded-lg border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
+            >
+              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              Anterior
+            </Link>
+          ) : (
+            <span aria-hidden="true" className="w-[6.5rem]" />
+          )}
+          <span className="text-ink-700 text-center text-sm font-bold">
+            Página <span className="text-pool-deep font-extrabold">{page}</span> de {totalPages}
+          </span>
+          {page < totalPages ? (
+            <Link
+              href={`/notifications?view=${view}&page=${page + 1}` as Route}
+              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-1 rounded-lg border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
+            >
+              Siguiente
+              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          ) : (
+            <span aria-hidden="true" className="w-[6.5rem]" />
+          )}
+        </nav>
+      ) : null}
     </PageShell>
   );
 }
@@ -270,7 +316,7 @@ function NotificationRow({
   const isUnread = item.read_at == null;
 
   return (
-    <li>
+    <li className="content-auto">
       <NotificationCardAction
         id={item.id}
         href={item.href}

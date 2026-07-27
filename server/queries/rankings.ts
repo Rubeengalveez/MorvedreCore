@@ -106,8 +106,9 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
   const { data: rosters } = playerIds.length
     ? await supabase
         .from("team_rosters")
-        .select("player_id, team_id, teams(id, label, color, category_code)")
+        .select("player_id, team_id, teams!inner(id, label, color, category_code, season_id)")
         .in("player_id", playerIds)
+        .eq("teams.season_id", input.season_id)
         .is("left_at", null)
     : { data: [] };
 

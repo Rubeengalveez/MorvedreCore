@@ -63,7 +63,7 @@ export default async function ShopPage({
 
       <nav
         aria-label="Gestiones de compra"
-        className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 overflow-hidden rounded-2xl border divide-y"
+        className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 divide-y overflow-hidden rounded-2xl border"
       >
         <ShopShortcut
           href="/shop/orders"
@@ -115,7 +115,7 @@ export default async function ShopPage({
         ) : (
           <ul className="mt-3 grid grid-cols-2 gap-3 sm:gap-4">
             {products.map((product) => (
-              <li key={product.id} className="min-w-0">
+              <li key={product.id} className="content-auto min-w-0">
                 <ProductCard product={product} />
               </li>
             ))}
@@ -193,7 +193,7 @@ function ShopShortcut({
   return (
     <Link
       href={href}
-      className="hover:bg-pool-foam/40 focus-visible:ring-pool-blue group flex min-h-16 touch-manipulation items-center gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+      className="hover:bg-pool-foam/40 focus-visible:ring-pool-blue group flex min-h-16 touch-manipulation items-center gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
     >
       <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
         {icon}

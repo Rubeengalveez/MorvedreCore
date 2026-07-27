@@ -3,7 +3,7 @@ import withSerwistInit from "@serwist/next";
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
-  allowedDevOrigins: ["192.168.68.67", "192.168.68.67:3001", "192.168.68.64", "192.168.68.64:3000"],
+  allowedDevOrigins: ["192.168.68.50", "192.168.68.50:3000", "192.168.68.67", "192.168.68.67:3001", "192.168.68.64", "192.168.68.64:3000"],
   experimental: {
     optimizePackageImports: ["lucide-react"],
     serverActions: {},

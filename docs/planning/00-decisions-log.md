@@ -324,7 +324,7 @@ Antes de la fase 3 se hizo una auditor�a profunda. Se arreglaron:
 - **
   ecentActivity IDs duplicados**: ${a} (objeto) daba [object Object] para todos ? ahora usa tt-.
 - **Logo**: 2.13 MB PNG ? 119 KB WebP. Migrados los scripts (generate-icons.mjs, generate-favicon.mjs, generate-logos-and-pictograms.mjs) y .prettierignore.
-- **Migraci�n 0019 duplicada**:  019_profiles_pii_restrict.sql renombrada a  021_profiles_pii_restrict.sql (ya exist�a  019_match_callups_rsvp_protect.sql).
+- **Migraci�n 0019 duplicada**: 019_profiles_pii_restrict.sql renombrada a 021_profiles_pii_restrict.sql (ya exist�a 019_match_callups_rsvp_protect.sql).
 - **Dependencias**: declaradas class-variance-authority, lucide-react,
   eact-hook-form que se usaban transitivamente.
 - **Lint**: 26 warnings
@@ -708,3 +708,23 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Perfil, Inicio, Rankings, Leyendas y detalle de jugador conservan estadísticas de temporada, pero su denominador usa exclusivamente listas realmente guardadas. Un entrenamiento sin lista no cuenta como ausencia ni reduce el porcentaje.
 - Los porcentajes visibles se redondean a números enteros; los cálculos y el orden de Rankings conservan internamente toda su precisión.
 - Guardar una lista recalcula las instantáneas de todos sus jugadores en un único lote, evitando porcentajes antiguos y consultas completas repetidas por cada miembro de la plantilla.
+
+## 2026-07-24 - Perfil operativo y Rachas como sección principal
+
+- Perfil deja de repetir el resumen deportivo, calendario, rankings y próximos compromisos de Inicio. Su responsabilidad pasa a ser identidad, datos de contacto, familia, funciones dentro del club y ajustes de cuenta.
+- Las herramientas se muestran según la función real de la temporada. Un entrenador que no pertenece a una plantilla no ve estadísticas ni accesos de jugador; una persona que combina ambos papeles conserva los dos espacios claramente separados.
+- Foto, teléfono y número de gorro preferido forman el indicador de preparación de un jugador. En perfiles no jugadores se limita a foto y teléfono. Cada dato enlaza directamente con su sección de edición y ninguno se publica.
+- El panel familiar de Perfil deja de duplicar estadísticas y agenda. Presenta a todos los hijos sin cambio de perfil y ofrece accesos directos a su asistencia, ficha, pedidos pendientes y cuota familiar.
+- Rankings adopta tres secciones hermanas y compactas: `Ranking`, `Rachas` y `Leyendas`. Cada una conserva su propia URL para que los filtros, el botón Atrás y los enlaces compartidos sean predecibles.
+- Rachas dispone de una pantalla propia con reto seleccionado, racha actual o récord, progreso personal o de los hijos, posición directa y clasificación completa por club o categoría.
+- Las rachas de expulsiones siguen disponibles como dato técnico para detectar tendencias, pero se excluyen de la experiencia motivacional y de Inicio: la aplicación no premia ni convierte una conducta disciplinaria negativa en un reto infantil.
+- Los cambios de selección usan respuestas visuales de 150-300 ms, propiedades de composición y alternativas para `prefers-reduced-motion`. La interfaz se valida desde 320 px sin reducir el texto principal ni truncar los nombres de las secciones.
+
+## 2026-07-24 - Pulido transversal accesible y reactivo
+
+- `Tu espacio` usa superficies blancas, bordes definidos, iconos oscuros y texto secundario de alto contraste. La jerarquía no depende de fondos grises tenues.
+- Las clasificaciones muestran siempre la categoría derivada por edad y su color canónico. El equipo A/B se conserva para los filtros, pero no sustituye la categoría del jugador ni genera etiquetas y colores contradictorios.
+- Las rutas principales usan transiciones nativas breves de entrada y salida. La barra superior y la navegación inferior permanecen estables, y `prefers-reduced-motion` elimina el movimiento.
+- Las reacciones de noticias responden de forma optimista, y los filtros de Rankings comunican su estado pendiente y evitan pulsaciones duplicadas.
+- Notificaciones muestra veinte avisos por página, conserva el filtro en la URL y solo carga el contexto visual de los avisos visibles. Las listas largas de notificaciones y productos aplazan el render fuera de pantalla.
+- Se eliminan los últimos tamaños arbitrarios de 10 y 11 px en Calendario y navegación. El mínimo visual vuelve a ser el token de 13 px definido para móvil.

@@ -43,7 +43,8 @@ export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
   return (
     <div
       role="tablist"
-      aria-label="Metrica de ranking"
+      aria-label="Métrica de ranking"
+      aria-busy={isPending}
       className="flex items-center gap-1.5 pb-1"
     >
       {METRICS.map((m) => {
@@ -55,18 +56,22 @@ export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
             type="button"
             role="tab"
             aria-selected={isActive}
+            disabled={isPending}
             onClick={() => navigate(m.id)}
             data-metric-tab={m.id}
             className={cn(
-              "touch-target focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 text-[13px] font-extrabold transition-[background-color,border-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none sm:gap-2 sm:px-3 sm:text-sm",
+              "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-12 min-w-0 flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-xl border px-2 text-[13px] font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none sm:gap-2 sm:px-3 sm:text-sm",
               isActive
                 ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
                 : "border-ink-300 bg-paper-card text-ink-700 hover:border-pool-blue hover:text-pool-deep",
               isPending && "opacity-70",
             )}
           >
-            <Icon className="h-4 w-4 shrink-0" accent={isActive ? "var(--ball-gold)" : "currentColor"} />
-            <span className="truncate">{m.label}</span>
+            <Icon
+              className="hidden h-4 w-4 shrink-0 min-[360px]:block"
+              accent={isActive ? "var(--ball-gold)" : "currentColor"}
+            />
+            <span className="whitespace-nowrap">{m.label}</span>
           </button>
         );
       })}

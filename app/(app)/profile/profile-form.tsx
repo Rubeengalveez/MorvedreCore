@@ -29,7 +29,6 @@ import { normalizeSpanishPhone } from "@/lib/domain/phone";
 
 const yearPattern = /^\d{4}$/;
 const dorsalPattern = /^\d{1,2}$/;
-const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const profileFormSchema = z.object({
   full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
@@ -54,11 +53,6 @@ const profileFormSchema = z.object({
     .trim()
     .optional()
     .refine((v) => !v || normalizeSpanishPhone(v) != null, "Escribe un teléfono válido."),
-  email_contact: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || emailPattern.test(v), "Email inválido."),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -98,7 +92,6 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
       birth_year: profile.birth_year?.toString() ?? "",
       cap_number: isPlayer ? (profile.cap_number?.toString() ?? "") : "",
       phone_e164: profile.phone_e164 ?? "",
-      email_contact: profile.email_contact ?? "",
     },
   });
   const watchedFullName = useWatch({ control: form.control, name: "full_name" });
@@ -111,7 +104,6 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
       fd.append("cap_number", values.cap_number ?? "");
     }
     fd.append("phone_e164", normalizeSpanishPhone(values.phone_e164 ?? "") ?? "");
-    fd.append("email_contact", values.email_contact ?? "");
     if (avatarFile) fd.append("avatar_file", avatarFile);
     fd.append("remove_photo", String(removePhoto));
     startTransition(() => {
@@ -156,15 +148,17 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
           )}
         />
 
-        <AvatarEditor
-          name={watchedFullName || profile.full_name}
-          currentUrl={profile.photo_url}
-          teamColor={profile.team_color ?? "var(--pool-blue)"}
-          onChange={(file, removeCurrent) => {
-            setAvatarFile(file);
-            setRemovePhoto(removeCurrent);
-          }}
-        />
+        <section id="photo" className="scroll-mt-[calc(var(--top-bar-height)+1rem)]">
+          <AvatarEditor
+            name={watchedFullName || profile.full_name}
+            currentUrl={profile.photo_url}
+            teamColor={profile.team_color ?? "var(--pool-blue)"}
+            onChange={(file, removeCurrent) => {
+              setAvatarFile(file);
+              setRemovePhoto(removeCurrent);
+            }}
+          />
+        </section>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
           <FormField
@@ -193,42 +187,47 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="cap_number"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel htmlFor="cap_number">Dorsal</FormLabel>
-                <FormControl>
-                  <Input
-                    id="cap_number"
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={99}
-                    placeholder="7"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {isPlayer ? (
+            <FormField
+              control={form.control}
+              name="cap_number"
+              render={({ field }) => (
+                <FormItem id="cap_number" className="scroll-mt-[calc(var(--top-bar-height)+1rem)]">
+                  <FormLabel htmlFor="cap_number_input">Número de gorro preferido</FormLabel>
+                  <FormControl>
+                    <Input
+                      id="cap_number_input"
+                      type="number"
+                      inputMode="numeric"
+                      min={0}
+                      max={99}
+                      placeholder="7"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Lo usaremos como primera opción en las convocatorias.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          ) : null}
         </div>
 
         <FormField
           control={form.control}
           name="phone_e164"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="phone_e164">Teléfono de contacto</FormLabel>
+            <FormItem id="phone_e164" className="scroll-mt-[calc(var(--top-bar-height)+1rem)]">
+              <FormLabel htmlFor="phone_e164_input">Teléfono de contacto</FormLabel>
               <FormControl>
                 <Input
-                  id="phone_e164"
+                  id="phone_e164_input"
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
@@ -243,31 +242,6 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
               <FormDescription>
                 Recomendado para que la encargada de tienda pueda localizarte si haces un pedido.
               </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="email_contact"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="email_contact">Email de contacto</FormLabel>
-              <FormControl>
-                <Input
-                  id="email_contact"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  placeholder="tu@email.com"
-                  value={field.value ?? ""}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}

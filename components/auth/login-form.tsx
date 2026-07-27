@@ -56,9 +56,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
         id="login-form"
         action={(formData) => {
           startTransition(async () => {
-            try {
-              await signIn(formData);
-            } catch {}
+            await signIn(formData);
           });
         }}
         className="flex w-full flex-col gap-4"

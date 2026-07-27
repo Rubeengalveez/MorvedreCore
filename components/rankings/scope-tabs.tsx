@@ -1,5 +1,6 @@
 "use client";
 
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { ChevronDown } from "lucide-react";
@@ -13,6 +14,7 @@ export interface ScopeTabsProps {
   meta: RankingsPageMeta;
   active: RankingScope;
   extraParams?: Record<string, string>;
+  basePath?: "/rankings" | "/streaks";
 }
 
 function scopeToParam(scope: RankingScope): string {
@@ -21,7 +23,12 @@ function scopeToParam(scope: RankingScope): string {
   return `team:${scope.team_id}`;
 }
 
-export function ScopeTabs({ meta, active, extraParams = {} }: ScopeTabsProps) {
+export function ScopeTabs({
+  meta,
+  active,
+  extraParams = {},
+  basePath = "/rankings",
+}: ScopeTabsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const activeCategory = active.kind === "category" ? `category:${active.category_code}` : "";
@@ -34,13 +41,14 @@ export function ScopeTabs({ meta, active, extraParams = {} }: ScopeTabsProps) {
     params.set("scope", scopeToParam(scope));
     params.delete("page");
     startTransition(() => {
-      router.push(`/rankings?${params.toString()}`);
+      router.push(`${basePath}?${params.toString()}` as Route);
     });
   }
 
   return (
     <div
       data-scope-tabs
+      aria-busy={isPending}
       className={cn(
         "border-ink-300 bg-paper-card shadow-elev-1 grid grid-cols-[auto_1fr] items-center gap-2 rounded-md border p-1.5",
         isPending && "opacity-70",
@@ -48,10 +56,11 @@ export function ScopeTabs({ meta, active, extraParams = {} }: ScopeTabsProps) {
     >
       <button
         type="button"
+        disabled={isPending}
         onClick={() => navigate({ kind: "all" })}
         aria-pressed={active.kind === "all"}
         className={cn(
-          "touch-target inline-flex h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold",
+          "focus-visible:ring-pool-blue inline-flex h-12 min-w-12 touch-manipulation items-center justify-center rounded-md px-4 text-sm font-extrabold transition-[background-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
           active.kind === "all"
             ? "bg-pool-deep text-paper shadow-elev-1"
             : "bg-paper text-pool-deep",
@@ -61,9 +70,10 @@ export function ScopeTabs({ meta, active, extraParams = {} }: ScopeTabsProps) {
       </button>
 
       <label className="relative block min-w-0">
-        <span className="sr-only">Filtrar por categoria</span>
+        <span className="sr-only">Filtrar por categoría</span>
         <select
           value={activeCategory}
+          disabled={isPending}
           onChange={(e) => {
             const value = e.target.value;
             if (!value) {
@@ -76,13 +86,13 @@ export function ScopeTabs({ meta, active, extraParams = {} }: ScopeTabsProps) {
             });
           }}
           className={cn(
-            "touch-target h-11 w-full appearance-none truncate rounded-md border px-3 pr-9 text-sm font-extrabold outline-none",
+            "focus-visible:ring-pool-blue h-12 w-full appearance-none truncate rounded-md border px-3 pr-9 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
             active.kind === "category"
               ? "border-pool-blue bg-pool-foam text-pool-deep"
               : "border-ink-200 bg-paper text-ink-700",
           )}
         >
-          <option value="">Categoria</option>
+          <option value="">Categoría</option>
           {meta.categories.map((c) => (
             <option key={c.code} value={`category:${c.code}`}>
               {CATEGORY_LABELS[c.code as CategoryCode] ?? c.label}

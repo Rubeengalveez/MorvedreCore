@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Pin, Clock, Heart, Flame, HandHeart } from "lucide-react";
-import { useTransition } from "react";
+import { useOptimistic, useTransition } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { Markdown } from "@/components/ui/markdown";
@@ -172,10 +172,29 @@ export function NewsReactions({
   canReact?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [optimistic, updateOptimistic] = useOptimistic(
+    { reactions, myReactions },
+    (current, reaction: "like" | "fire" | "thanks") => {
+      const isMine = current.myReactions.includes(reaction);
+      const nextMine = isMine
+        ? current.myReactions.filter((item) => item !== reaction)
+        : [...current.myReactions, reaction];
+      const currentTally = current.reactions.find((item) => item.reaction === reaction);
+      const nextCount = Math.max(0, (currentTally?.count ?? 0) + (isMine ? -1 : 1));
+      const nextReactions = current.reactions.some((item) => item.reaction === reaction)
+        ? current.reactions.map((item) =>
+            item.reaction === reaction ? { ...item, count: nextCount, hasMine: !isMine } : item,
+          )
+        : [...current.reactions, { reaction, count: nextCount, hasMine: true }];
+
+      return { reactions: nextReactions, myReactions: nextMine };
+    },
+  );
 
   function react(reaction: "like" | "fire" | "thanks") {
     if (!onReact) return;
     startTransition(async () => {
+      updateOptimistic(reaction);
       try {
         await onReact(postId, reaction);
       } catch (err) {
@@ -186,9 +205,10 @@ export function NewsReactions({
 
   return (
     <ReactionBar
-      reactions={reactions}
-      myReactions={myReactions}
+      reactions={optimistic.reactions}
+      myReactions={optimistic.myReactions}
       disabled={!canReact || isPending || !onReact}
+      pending={isPending}
       onReact={react}
     />
   );
@@ -198,17 +218,20 @@ function ReactionBar({
   reactions,
   myReactions,
   disabled,
+  pending,
   onReact,
 }: {
   reactions: ReactionTally[];
   myReactions: string[];
   disabled: boolean;
+  pending: boolean;
   onReact: (reaction: "like" | "fire" | "thanks") => void;
 }) {
   return (
     <div
       role="group"
       aria-label="Reaccionar"
+      aria-busy={pending}
       data-reaction-bar
       className="border-ink-300 flex flex-wrap items-center gap-1.5 border-t pt-2"
     >
@@ -228,7 +251,7 @@ function ReactionBar({
             aria-pressed={mine}
             aria-label={`${meta.emoji}: ${count}`}
             className={cn(
-              "focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+              "focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none",
               mine
                 ? "border-pool-deep bg-pool-deep text-paper"
                 : count > 0
