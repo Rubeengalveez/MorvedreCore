@@ -27,7 +27,7 @@ import {
 } from "@/lib/domain/callups";
 import { safeInferCategory, type CategoryCode } from "@/lib/domain/categories";
 
-import { requireCoachOf } from "./_helpers";
+import { requireCoachOf, requireMatchStaffOf } from "./_helpers";
 
 async function recomputeRankingForMatchAll(matchId: string): Promise<void> {
   const { recomputeSnapshotForPlayer } = await import("./rankings");
@@ -275,7 +275,7 @@ export async function createCallup(input: {
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(match.team_id);
+  await requireMatchStaffOf(match.team_id);
 
   const targetTeam = (
     match as { teams?: { id: string; category_code: string; label: string } | null }
@@ -473,7 +473,7 @@ export async function updateCallup(
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(match.team_id);
+  await requireMatchStaffOf(match.team_id);
 
   const { data, error } = await supabase
     .from("match_callups")
@@ -586,7 +586,7 @@ export async function deleteCallup(matchId: string, playerId: string): Promise<v
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(match.team_id);
+  await requireMatchStaffOf(match.team_id);
 
   const { error } = await supabase
     .from("match_callups")
@@ -618,7 +618,7 @@ export async function setMatchStatus(
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(match.team_id);
+  await requireMatchStaffOf(match.team_id);
 
   const { data, error } = await supabase
     .from("matches")
@@ -668,7 +668,7 @@ export async function recordMatchStat(input: {
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(match.team_id);
+  await requireMatchStaffOf(match.team_id);
 
   const { data: callup, error: callupError } = await supabase
     .from("match_callups")
@@ -757,7 +757,7 @@ export async function saveMatchSheet(input: z.input<typeof saveMatchSheetSchema>
     .maybeSingle();
   throwIfError(matchError, "No pudimos cargar el partido.");
   if (!match) throw new Error("El partido no existe.");
-  await requireCoachOf(match.team_id);
+  await requireMatchStaffOf(match.team_id);
 
   const playerIds = parsed.data.stats.map((item) => item.player_id);
   const { data: callups, error: callupsError } = await supabase
@@ -821,29 +821,17 @@ export async function validateMatchStats(matchId: string): Promise<void> {
     throw new Error("Identificador inválido.");
   }
 
-  if (!me.isAdmin) {
-    const supabase = await createClient();
-    const { data: match } = await supabase
-      .from("matches")
-      .select("team_id")
-      .eq("id", parsed.data.match_id)
-      .maybeSingle();
-    if (!match) {
-      throw new Error("El partido no existe.");
-    }
-    const { data: role } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("profile_id", me.id)
-      .eq("role", "coach")
-      .eq("scope_team_id", match.team_id)
-      .maybeSingle();
-    if (!role) {
-      throw new Error("Solo un entrenador o administrador puede validar las estadísticas.");
-    }
-  }
-
   const supabase = await createClient();
+  const { data: match, error: matchError } = await supabase
+    .from("matches")
+    .select("team_id")
+    .eq("id", parsed.data.match_id)
+    .maybeSingle();
+  throwIfError(matchError, "No pudimos cargar el partido.");
+  if (!match) {
+    throw new Error("El partido no existe.");
+  }
+  await requireMatchStaffOf(match.team_id);
   const { error } = await supabase
     .from("match_stats")
     .update({
@@ -879,7 +867,7 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(match.team_id);
+  await requireMatchStaffOf(match.team_id);
 
   const targetTeamRow = (
     match as { teams?: { id: string; category_code: string; label: string } | null }

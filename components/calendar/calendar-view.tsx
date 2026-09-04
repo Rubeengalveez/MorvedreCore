@@ -170,7 +170,7 @@ export function CalendarView({
                 aria-selected={viewMode === id}
                 onClick={() => setViewMode(id)}
                 className={cn(
-                  "focus-visible:ring-pool-blue inline-flex min-h-10 touch-manipulation items-center justify-center gap-1 rounded-lg px-1 text-xs font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+                  "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center gap-1 rounded-lg px-2 text-xs font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
                   viewMode === id
                     ? "bg-pool-deep text-paper shadow-elev-1"
                     : "bg-paper-card/70 text-ink-600",

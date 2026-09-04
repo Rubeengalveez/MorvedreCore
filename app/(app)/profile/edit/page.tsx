@@ -2,9 +2,8 @@ import { redirect } from "next/navigation";
 import { UserRound } from "lucide-react";
 
 import type { Database } from "@/lib/supabase/types";
-import { AppPageHero } from "@/components/ui/app-page-hero";
 import { PageBackLink } from "@/components/ui/page-back-link";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { ProfileForm } from "@/app/(app)/profile/profile-form";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -76,7 +75,7 @@ export default async function ProfileEditPage() {
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <PageBackLink href="/profile">Volver a mi perfil</PageBackLink>
-      <AppPageHero
+      <PageHeader
         eyebrow="Tu cuenta"
         title="Editar perfil"
         description="Mantén tus datos al día. Tu información de contacto sigue siendo privada."

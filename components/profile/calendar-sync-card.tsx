@@ -37,8 +37,9 @@ export function CalendarSyncCard({ token, baseUrl }: { token: string; baseUrl: s
           type="text"
           readOnly
           value={feedUrl}
+          aria-label="Enlace de suscripción al calendario"
           onClick={(e) => (e.target as HTMLInputElement).select()}
-          className="border-ink-300 bg-paper-sunk text-ink-700 min-w-0 flex-1 rounded-md border px-2.5 py-2 font-mono text-xs select-all focus:outline-none"
+          className="border-ink-300 bg-paper-sunk text-ink-700 min-h-12 min-w-0 flex-1 rounded-xl border px-3 font-mono text-xs select-all focus-visible:ring-2 focus-visible:ring-pool-blue focus:outline-none"
         />
         <button
           type="button"

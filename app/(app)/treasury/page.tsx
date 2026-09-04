@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { Banknote } from "lucide-react";
 
-import { AppPageHero } from "@/components/ui/app-page-hero";
 import { PageBackLink } from "@/components/ui/page-back-link";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getFamilyTreasury } from "@/server/queries/treasury";
 import { FamilyTreasuryView } from "./_components/family-treasury-view";
@@ -24,7 +23,7 @@ export default async function TreasuryPage() {
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <PageBackLink href="/profile">Volver al perfil</PageBackLink>
-      <AppPageHero
+      <PageHeader
         eyebrow="Tesorería"
         title="Lo que pagas este mes"
         description="Cuotas, descuentos y pedidos de tienda, desglosados de forma simple."

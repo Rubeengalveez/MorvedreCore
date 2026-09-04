@@ -2,7 +2,7 @@ import { AdminPermissionLayout } from "@/components/admin/admin-permission-layou
 
 export default function MatchesAdminLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AdminPermissionLayout permission="manage_matches" allowCoach>
+    <AdminPermissionLayout permission="manage_matches" allowCoach allowMatchStaff>
       {children}
     </AdminPermissionLayout>
   );

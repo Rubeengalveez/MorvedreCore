@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
-import { ConnectivityBanner, useIsOnline } from "@/components/ui/connectivity-banner";
+import { ConnectivityBanner } from "@/components/ui/connectivity-banner";
 
 describe("ConnectivityBanner", () => {
   let originalOnLine: boolean;
@@ -28,14 +28,15 @@ describe("ConnectivityBanner", () => {
     render(<ConnectivityBanner />);
     const banner = screen.getByRole("status");
     expect(banner).toBeInTheDocument();
-    expect(banner).toHaveTextContent(/Sin conexión a internet/i);
+    expect(banner).toHaveTextContent(/Sin conexión/i);
+    expect(banner).toHaveTextContent(/Algunas funciones no están disponibles/i);
   });
 
   it("shows reconnected message briefly when connection returns", () => {
     Object.defineProperty(navigator, "onLine", { value: false, configurable: true });
 
     const { rerender } = render(<ConnectivityBanner />);
-    expect(screen.getByRole("status")).toHaveTextContent(/Sin conexión a internet/i);
+    expect(screen.getByRole("status")).toHaveTextContent(/Sin conexión/i);
 
     act(() => {
       Object.defineProperty(navigator, "onLine", { value: true, configurable: true });

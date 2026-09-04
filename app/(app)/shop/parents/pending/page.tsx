@@ -1,9 +1,8 @@
 import { redirect } from "next/navigation";
 import { Inbox, ShieldCheck } from "lucide-react";
 
-import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getPendingShopOrdersForParent } from "@/server/queries/shop";
@@ -29,7 +28,7 @@ export default async function ParentPendingPage() {
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <PageBackLink href="/shop">Volver a la tienda</PageBackLink>
-      <AppPageHero
+      <PageHeader
         eyebrow="Control familiar"
         title="Compras por revisar"
         description="Nada llega a Sol hasta que tú lo apruebas."

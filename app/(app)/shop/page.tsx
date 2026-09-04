@@ -12,6 +12,7 @@ import {
   getShopProducts,
 } from "@/server/queries/shop";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { Balon } from "@/components/brand/pictograms/balon";
 import { formatCents } from "@/lib/domain/shop";
 import { FloatingCartButton } from "./_components/floating-cart-button";
 import { ShopFilters } from "./_components/shop-filters";
@@ -143,8 +144,13 @@ function ProductCard({ product }: { product: ShopProduct }) {
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none"
           />
         ) : (
-          <div className="bg-pool-foam text-pool-deep flex h-full items-center justify-center">
-            <ShoppingBag className="h-10 w-10" aria-hidden="true" />
+          <div className="from-pool-foam/80 via-paper-card to-pool-teal/10 flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br p-4 text-center">
+            <div className="bg-paper-card shadow-elev-1 flex h-14 w-14 items-center justify-center rounded-2xl border border-pool-blue/15">
+              <Balon className="h-7 w-7" accent="#FF6B35" />
+            </div>
+            <span className="text-pool-blue text-[11px] font-extrabold tracking-wider uppercase">
+              Oficial Morvedre
+            </span>
           </div>
         )}
         {product.images.length > 1 ? (

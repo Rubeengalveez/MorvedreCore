@@ -3,8 +3,7 @@ import type { Metadata } from "next";
 import type { Route } from "next";
 import { KeyRound } from "lucide-react";
 
-import { AppPageHero } from "@/components/ui/app-page-hero";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -39,7 +38,7 @@ export default async function ChangePasswordPage() {
 
   return (
     <PageShell width="sm" className="gap-5 pb-8" lang="es">
-      <AppPageHero
+      <PageHeader
         eyebrow={isActivation ? "Último paso" : "Seguridad de la cuenta"}
         title={isActivation ? "Activa tu cuenta" : "Cambiar contraseña"}
         description={

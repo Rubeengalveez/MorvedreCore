@@ -71,6 +71,7 @@ interface AdminTile {
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   permission: AdminPermission | "admin";
   allowCoach?: boolean;
+  allowMatchStaff?: boolean;
 }
 
 const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
@@ -124,6 +125,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     Icon: MdSportsVolleyball,
     permission: "manage_matches",
     allowCoach: true,
+    allowMatchStaff: true,
   },
   {
     href: "/admin/treasury",
@@ -173,7 +175,8 @@ export default async function AdminHomePage() {
     (module) =>
       access.isAdmin ||
       access.permissions.has(module.permission as AdminPermission) ||
-      (module.allowCoach === true && access.coachTeamIds.size > 0),
+      (module.allowCoach === true && access.coachTeamIds.size > 0) ||
+      (module.allowMatchStaff === true && access.matchStaffTeamIds.size > 0),
   );
 
   return (

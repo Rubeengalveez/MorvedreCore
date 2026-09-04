@@ -7,12 +7,12 @@ import { RefreshCw, ArrowLeft, WifiOff, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function OfflinePage() {
-  const [isOnline, setIsOnline] = useState(false);
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator === "undefined" ? false : navigator.onLine,
+  );
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    setIsOnline(navigator.onLine);
-
     function handleOnline() {
       setIsOnline(true);
       setTimeout(() => {

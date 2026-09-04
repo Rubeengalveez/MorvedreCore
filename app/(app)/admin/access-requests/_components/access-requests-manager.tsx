@@ -175,13 +175,16 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
                 className="border-ink-300 bg-paper rounded-md border p-4 shadow-sm"
               >
                 <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(request.id)}
-                      onChange={() => toggleSelected(request.id)}
-                      className="accent-pool-deep h-5 w-5"
-                    />
+                  <div className="flex items-center gap-2">
+                    <label className="flex min-h-12 min-w-12 touch-manipulation items-center justify-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(request.id)}
+                        onChange={() => toggleSelected(request.id)}
+                        aria-label={`Seleccionar solicitud de ${request.full_name}`}
+                        className="accent-pool-deep h-5 w-5"
+                      />
+                    </label>
                     <div>
                       <p className="font-display text-ink-900 font-extrabold">
                         {request.full_name}

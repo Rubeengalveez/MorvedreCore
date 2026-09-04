@@ -57,11 +57,13 @@ export async function getAdminAccess(): Promise<{
   isAdmin: boolean;
   permissions: Set<AdminPermission>;
   coachTeamIds: Set<string>;
+  matchStaffTeamIds: Set<string>;
 }> {
   const { profile, supabase } = await requireAuthenticatedProfile();
   const [
     { data: adminRole, error: adminRoleError },
-    { data: coachRoles, error: coachRolesError },
+    { data: staffRoles, error: staffRolesError },
+    { data: teamStaffRows, error: teamStaffError },
     { data: permissionRows, error: permissionError },
   ] = await Promise.all([
     supabase
@@ -73,24 +75,46 @@ export async function getAdminAccess(): Promise<{
       .maybeSingle(),
     supabase
       .from("user_roles")
-      .select("scope_team_id")
+      .select("role, scope_team_id")
       .eq("profile_id", profile.id)
-      .eq("role", "coach")
+      .in("role", ["coach", "delegate"])
       .not("scope_team_id", "is", null),
+    supabase
+      .from("team_staff")
+      .select("role, team_id")
+      .eq("profile_id", profile.id)
+      .in("role", ["head_coach", "assistant_coach", "delegate"]),
     supabase.from("profile_permissions").select("permission").eq("profile_id", profile.id),
   ]);
 
-  if (adminRoleError || coachRolesError || permissionError) {
+  if (adminRoleError || staffRolesError || teamStaffError || permissionError) {
     throw new Error("No pudimos verificar tus permisos. Inténtalo de nuevo.");
+  }
+
+  const coachTeamIds = new Set<string>();
+  const matchStaffTeamIds = new Set<string>();
+
+  for (const row of staffRoles ?? []) {
+    if (!row.scope_team_id) continue;
+    matchStaffTeamIds.add(row.scope_team_id);
+    if (row.role === "coach") {
+      coachTeamIds.add(row.scope_team_id);
+    }
+  }
+
+  for (const row of teamStaffRows ?? []) {
+    matchStaffTeamIds.add(row.team_id);
+    if (row.role === "head_coach" || row.role === "assistant_coach") {
+      coachTeamIds.add(row.team_id);
+    }
   }
 
   return {
     profile,
     isAdmin: Boolean(adminRole),
     permissions: new Set((permissionRows ?? []).map((row) => row.permission as AdminPermission)),
-    coachTeamIds: new Set(
-      (coachRoles ?? []).flatMap((row) => (row.scope_team_id ? [row.scope_team_id] : [])),
-    ),
+    coachTeamIds,
+    matchStaffTeamIds,
   };
 }
 
@@ -141,6 +165,46 @@ export async function requireCoachOf(teamId: string): Promise<AdminProfile> {
   }
   if (!adminRole && !coachRole) {
     throw new Error("No tienes permisos para gestionar este equipo.");
+  }
+
+  return profile;
+}
+
+export async function requireMatchStaffOf(teamId: string): Promise<AdminProfile> {
+  const { profile, supabase } = await requireAuthenticatedProfile();
+  const [{ data: adminRole }, { data: staffRoles, error }] = await Promise.all([
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("profile_id", profile.id)
+      .eq("role", "admin")
+      .is("scope_team_id", null)
+      .maybeSingle(),
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("profile_id", profile.id)
+      .in("role", ["coach", "delegate"])
+      .eq("scope_team_id", teamId),
+  ]);
+
+  if (error) {
+    throw new Error("No pudimos verificar tus permisos. Inténtalo de nuevo.");
+  }
+  if (adminRole || (staffRoles && staffRoles.length > 0)) {
+    return profile;
+  }
+
+  const { data: teamStaff } = await supabase
+    .from("team_staff")
+    .select("role")
+    .eq("team_id", teamId)
+    .eq("profile_id", profile.id)
+    .in("role", ["head_coach", "assistant_coach", "delegate"])
+    .maybeSingle();
+
+  if (!teamStaff) {
+    throw new Error("No tienes permisos de cuerpo técnico (entrenador o delegado) para gestionar este partido.");
   }
 
   return profile;

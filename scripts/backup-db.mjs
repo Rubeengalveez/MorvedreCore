@@ -74,6 +74,8 @@ const TABLES_TO_BACKUP = [
   "audit_log",
 ];
 
+import { createHash } from "node:crypto";
+
 async function runBackup() {
   const now = new Date();
   const timestamp = now.toISOString().replace(/[:.]/g, "-");
@@ -81,22 +83,24 @@ async function runBackup() {
 
   const backupPayload = {
     metadata: {
-      version: "1.0",
+      version: "1.1",
       timestamp: now.toISOString(),
       source: "Morvedre Core DB Exporter",
       tablesCount: TABLES_TO_BACKUP.length,
+      sha256: "",
     },
     tables: {},
   };
 
   let totalRecords = 0;
+  const failedTables = [];
 
   for (const table of TABLES_TO_BACKUP) {
     try {
       const { data, error } = await supabase.from(table).select("*");
       if (error) {
-        console.warn(`[Backup] Aviso: No se pudo exportar la tabla "${table}": ${error.message}`);
-        backupPayload.tables[table] = [];
+        console.error(`[Backup] ERROR: No se pudo exportar la tabla "${table}": ${error.message}`);
+        failedTables.push(table);
       } else {
         const count = data?.length ?? 0;
         totalRecords += count;
@@ -104,9 +108,14 @@ async function runBackup() {
         console.log(`[Backup]   ✓ ${table.padEnd(28)} (${count} registros)`);
       }
     } catch (err) {
-      console.warn(`[Backup] Error al leer "${table}":`, err);
-      backupPayload.tables[table] = [];
+      console.error(`[Backup] ERROR fatal al leer "${table}":`, err);
+      failedTables.push(table);
     }
+  }
+
+  if (failedTables.length > 0) {
+    console.error(`\n[Backup] Error: Falló la exportación de ${failedTables.length} tablas: ${failedTables.join(", ")}`);
+    process.exit(1);
   }
 
   backupPayload.metadata.totalRecords = totalRecords;
@@ -118,12 +127,19 @@ async function runBackup() {
 
   const filename = `morvedre-backup-${timestamp}.json`;
   const filePath = resolve(outputDir, filename);
+
+  const preliminaryContent = JSON.stringify(backupPayload.tables);
+  const hash = createHash("sha256").update(preliminaryContent).digest("hex");
+  backupPayload.metadata.sha256 = hash;
+
   const jsonContent = JSON.stringify(backupPayload, null, 2);
   writeFileSync(filePath, jsonContent, "utf8");
+  writeFileSync(`${filePath}.sha256`, `${hash}  ${filename}\n`, "utf8");
 
   console.log(`\n[Backup] Copia completada con éxito:`);
   console.log(`[Backup] Archivo local: backups/${filename}`);
   console.log(`[Backup] Total registros: ${totalRecords}`);
+  console.log(`[Backup] SHA-256: ${hash}`);
   console.log(`[Backup] Tamaño: ${(Buffer.byteLength(jsonContent) / 1024).toFixed(2)} KB`);
 
   // Opcional: Subida a Storage si se pasa argumento --upload
@@ -138,12 +154,14 @@ async function runBackup() {
         });
 
       if (uploadError) {
-        console.warn(`[Backup] No se pudo subir a Storage (comprobar existencia del bucket): ${uploadError.message}`);
+        console.error(`[Backup] Error crítico al subir a Storage: ${uploadError.message}`);
+        process.exit(1);
       } else {
         console.log(`[Backup]   ✓ Subido a Supabase Storage: backups/${filename}`);
       }
     } catch (storageErr) {
-      console.warn(`[Backup] Error al interactuar con Storage:`, storageErr);
+      console.error(`[Backup] Error fatal al interactuar con Storage:`, storageErr);
+      process.exit(1);
     }
   }
 }

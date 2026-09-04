@@ -134,6 +134,7 @@ export async function createTrainingSchedule(input: {
   }
 
   let replaced = 0;
+  let removableIds: string[] = [];
   try {
     if (parsed.data.replace_existing) {
       const rangeStart = new Date(`${parsed.data.start_date}T00:00:00+02:00`).toISOString();
@@ -172,15 +173,7 @@ export async function createTrainingSchedule(input: {
           .in("session_id", candidates);
         throwIfError(attendanceError, "No pudimos comprobar las listas ya guardadas.");
         const protectedIds = new Set((attendance ?? []).map((entry) => entry.session_id));
-        const removableIds = candidates.filter((id) => !protectedIds.has(id));
-        if (removableIds.length > 0) {
-          const { error: removeError } = await supabase
-            .from("training_sessions")
-            .delete()
-            .in("id", removableIds);
-          throwIfError(removeError, "No pudimos sustituir el horario anterior.");
-          replaced = removableIds.length;
-        }
+        removableIds = candidates.filter((id) => !protectedIds.has(id));
       }
     }
 
@@ -208,10 +201,31 @@ export async function createTrainingSchedule(input: {
         location: session.location,
         maps_url: session.maps_url,
       }));
-    if (toInsert.length > 0) {
-      const { error: sessionError } = await supabase.from("training_sessions").insert(toInsert);
-      throwIfError(sessionError, "No pudimos generar las sesiones del horario.");
+
+    const rpcCaller = supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ error: Error | null }>;
+    const { error: rpcError } = await rpcCaller("atomic_replace_training_schedule", {
+      p_team_id: parsed.data.team_id,
+      p_removable_session_ids: removableIds,
+      p_sessions_to_insert: toInsert,
+    });
+
+    if (rpcError) {
+      if (toInsert.length > 0) {
+        const { error: sessionError } = await supabase.from("training_sessions").insert(toInsert);
+        throwIfError(sessionError, "No pudimos generar las sesiones del horario.");
+      }
+      if (removableIds.length > 0) {
+        const { error: removeError } = await supabase
+          .from("training_sessions")
+          .delete()
+          .in("id", removableIds);
+        throwIfError(removeError, "No pudimos sustituir el horario anterior.");
+      }
     }
+    replaced = removableIds.length;
 
     revalidatePath("/admin/trainings");
     revalidatePath("/calendar");

@@ -7,9 +7,8 @@ import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getNewsFeed } from "@/server/queries/news";
 import { reactToNews } from "@/server/actions/admin/news";
 import { createClient } from "@/lib/supabase/server";
-import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { NewsCard, type NewsCardData } from "@/components/news/news-card";
 
 export const dynamic = "force-dynamic";
@@ -62,7 +61,7 @@ export default async function NewsPage({
 
   return (
     <PageShell width="md" className="gap-6 pb-8">
-      <AppPageHero
+      <PageHeader
         eyebrow="Tablón del club"
         title="Noticias"
         description="Avisos, resultados y novedades del Waterpolo Morvedre."

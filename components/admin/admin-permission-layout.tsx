@@ -6,10 +6,12 @@ import { getAdminAccess, requireAdmin } from "@/server/actions/admin/_helpers";
 export async function AdminPermissionLayout({
   permission,
   allowCoach = false,
+  allowMatchStaff = false,
   children,
 }: {
   permission: AdminPermission;
   allowCoach?: boolean;
+  allowMatchStaff?: boolean;
   children: React.ReactNode;
 }) {
   const access = await getAdminAccess().catch(() => null);
@@ -17,7 +19,8 @@ export async function AdminPermissionLayout({
     access !== null &&
     (access.isAdmin ||
       access.permissions.has(permission) ||
-      (allowCoach && access.coachTeamIds.size > 0));
+      (allowCoach && access.coachTeamIds.size > 0) ||
+      (allowMatchStaff && access.matchStaffTeamIds.size > 0));
   if (!allowed) redirect("/admin");
   return children;
 }

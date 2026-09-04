@@ -83,6 +83,7 @@ export function StaffClient({
         <Input
           type="search"
           name="staff-search"
+          aria-label="Buscar personal por nombre o equipo"
           autoComplete="off"
           placeholder="Buscar por nombre o equipo…"
           value={search}

@@ -201,7 +201,7 @@ export default async function MatchDetailPage({
   const teamScope =
     access.isAdmin || access.permissions.has("manage_matches")
       ? null
-      : Array.from(access.coachTeamIds);
+      : Array.from(access.matchStaffTeamIds);
 
   const data = await loadMatch(id, teamScope);
   if (!data || !data.match) {

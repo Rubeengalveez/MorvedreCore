@@ -17,17 +17,27 @@ export function TreasuryProfileManager({
   players: TreasuryProfileOverview[];
   payerOptions: Array<{ id: string; full_name: string }>;
 }) {
+  const INITIAL_PAGE_SIZE = 24;
+  const [pageSize, setPageSize] = useState(INITIAL_PAGE_SIZE);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
+
   const categories = useMemo(
     () => [...new Set(players.map((player) => player.category_code))],
     [players],
   );
-  const visible = players.filter(
-    (player) =>
-      (category === "all" || player.category_code === category) &&
-      player.full_name.toLocaleLowerCase("es-ES").includes(search.toLocaleLowerCase("es-ES")),
+  const visible = useMemo(
+    () =>
+      players.filter(
+        (player) =>
+          (category === "all" || player.category_code === category) &&
+          player.full_name.toLocaleLowerCase("es-ES").includes(search.toLocaleLowerCase("es-ES")),
+      ),
+    [players, category, search],
   );
+
+  const displayed = useMemo(() => visible.slice(0, pageSize), [visible, pageSize]);
+  const hasMore = visible.length > pageSize;
 
   return (
     <section className="flex flex-col gap-3" aria-labelledby="treasury-players-title">
@@ -50,14 +60,20 @@ export function TreasuryProfileManager({
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPageSize(INITIAL_PAGE_SIZE);
+            }}
             placeholder="Buscar por nombre"
             className="min-w-0 flex-1 bg-transparent text-base outline-none"
           />
         </label>
         <Select
           value={category}
-          onChange={(event) => setCategory(event.target.value)}
+          onChange={(event) => {
+            setCategory(event.target.value);
+            setPageSize(INITIAL_PAGE_SIZE);
+          }}
           aria-label="Filtrar por categoría"
         >
           <option value="all">Todas las categorías</option>
@@ -68,12 +84,37 @@ export function TreasuryProfileManager({
           ))}
         </Select>
       </div>
-      <p className="text-ink-500 px-1 text-xs font-bold">{visible.length} jugadores</p>
+      <div className="flex items-center justify-between px-1 text-xs">
+        <p className="text-ink-500 font-bold">
+          Mostrando {displayed.length} de {visible.length} jugadores
+        </p>
+        {visible.length > displayed.length ? (
+          <button
+            type="button"
+            onClick={() => setPageSize(visible.length)}
+            className="text-pool-blue font-extrabold hover:underline"
+          >
+            Ver todos ({visible.length})
+          </button>
+        ) : null}
+      </div>
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-        {visible.map((player) => (
+        {displayed.map((player) => (
           <TreasuryPlayerCard key={player.id} player={player} payerOptions={payerOptions} />
         ))}
       </div>
+      {hasMore ? (
+        <div className="mt-2 flex justify-center pb-4">
+          <Button
+            type="button"
+            variant="secondary"
+            className="min-h-12 w-full max-w-sm rounded-xl font-extrabold"
+            onClick={() => setPageSize((prev) => prev + INITIAL_PAGE_SIZE)}
+          >
+            Cargar más jugadores ({visible.length - pageSize} restantes)
+          </Button>
+        </div>
+      ) : null}
     </section>
   );
 }

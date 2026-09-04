@@ -213,13 +213,32 @@ export async function isProfileCoachOfMatch(matchId: string, profileId: string):
     .maybeSingle();
   if (matchError || !match) return false;
   const teamId = (match as { team_id: string }).team_id;
-  const { data: role, error: roleError } = await supabase
-    .from("user_roles")
-    .select("role")
-    .eq("profile_id", profileId)
-    .eq("role", "coach")
-    .eq("scope_team_id", teamId)
-    .maybeSingle();
-  if (roleError) return false;
-  return role != null;
+
+  const [{ data: adminRole }, { data: staffRoles }, { data: staffMember }] = await Promise.all([
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("profile_id", profileId)
+      .eq("role", "admin")
+      .is("scope_team_id", null)
+      .maybeSingle(),
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("profile_id", profileId)
+      .in("role", ["coach", "delegate"])
+      .eq("scope_team_id", teamId),
+    supabase
+      .from("team_staff")
+      .select("role")
+      .eq("team_id", teamId)
+      .eq("profile_id", profileId)
+      .in("role", ["head_coach", "assistant_coach", "delegate"])
+      .maybeSingle(),
+  ]);
+
+  return Boolean(adminRole || (staffRoles && staffRoles.length > 0) || staffMember);
 }
+
+export const isProfileMatchStaffOfMatch = isProfileCoachOfMatch;
+

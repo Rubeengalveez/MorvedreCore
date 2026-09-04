@@ -99,10 +99,16 @@ export function AssignmentForm({
         setError(null);
         startTransition(async () => {
           try {
+            const profileId = String(form.get("profile_id") ?? "").trim();
+            const conceptId = String(form.get("concept_id") ?? "").trim();
+            if (!profileId || !conceptId) {
+              setError("Selecciona un perfil y un concepto válidos.");
+              return;
+            }
             const amount = String(form.get("amount_eur") ?? "");
             await assignTreasuryConcept({
-              profile_id: String(form.get("profile_id") ?? ""),
-              concept_id: String(form.get("concept_id") ?? ""),
+              profile_id: profileId,
+              concept_id: conceptId,
               amount_eur: amount ? Number(amount) : null,
               starts_on: String(form.get("starts_on") ?? "") || null,
               ends_on: String(form.get("ends_on") ?? "") || null,
@@ -199,6 +205,7 @@ export function PaidButton({ lineId, paid }: { lineId: string; paid: boolean }) 
     <button
       type="button"
       disabled={pending}
+      aria-label={paid ? "Marcar cobro como pendiente" : "Marcar cobro como pagado"}
       onClick={() => {
         startTransition(async () => {
           await markTreasuryLinePaid({
@@ -209,7 +216,7 @@ export function PaidButton({ lineId, paid }: { lineId: string; paid: boolean }) 
         });
       }}
       className={
-        "inline-flex h-9 shrink-0 items-center justify-center rounded-md px-3 text-xs font-extrabold " +
+        "inline-flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl px-3 text-xs font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none " +
         (paid ? "bg-success/10 text-success" : "bg-paper-sunk text-pool-deep")
       }
     >

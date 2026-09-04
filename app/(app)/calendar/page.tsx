@@ -12,9 +12,8 @@ import { getCalendarData, type CalendarData } from "@/server/queries/calendar";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
 import { addDaysIso, currentYearMonth, todayIso } from "@/lib/domain/calendar";
-import { AppPageHero } from "@/components/ui/app-page-hero";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageShell } from "@/components/ui/page-shell";
+import { PageHeader, PageShell } from "@/components/ui/page-shell";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -147,7 +146,7 @@ export default async function CalendarPage() {
 
   return (
     <PageShell width="lg" className="gap-4 pb-0 sm:pb-0">
-      <AppPageHero
+      <PageHeader
         eyebrow="Tu agenda deportiva"
         title="Tu mes"
         description={

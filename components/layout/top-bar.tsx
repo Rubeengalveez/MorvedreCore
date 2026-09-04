@@ -44,6 +44,7 @@ export async function TopBar({ profile }: TopBarProps) {
   const isPrivileged =
     userRoles.includes("admin") ||
     userRoles.includes("coach") ||
+    userRoles.includes("delegate") ||
     (permissionsData.data?.length ?? 0) > 0;
 
   const category =

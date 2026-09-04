@@ -54,6 +54,7 @@ function isIOSNow(): boolean {
 export function PwaInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [showIosModal, setShowIosModal] = useState(false);
   const hasFiredRef = useRef(false);
 
   useEffect(() => {
@@ -97,8 +98,6 @@ export function PwaInstallPrompt() {
   if (isStandaloneNow()) return null;
 
   const isIOS = isIOSNow();
-
-  const [showIosModal, setShowIosModal] = useState(false);
 
   function dismiss(reason: "dismissed" | "installed") {
     setShowPrompt(false);

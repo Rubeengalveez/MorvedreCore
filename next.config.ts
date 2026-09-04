@@ -7,7 +7,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: ["lucide-react"],
     serverActions: {},
-    viewTransition: true,
   },
   images: {
     formats: ["image/avif", "image/webp"],

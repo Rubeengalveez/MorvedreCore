@@ -585,6 +585,8 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
   const tempPassword = generateTemporaryPassword();
   let authUserId: string | null = null;
   let createdAuthUser = false;
+  let createdProfileId: string | null = null;
+  let isExistingAuthUser = false;
 
   try {
     const existingAuth = await findAuthUserByEmail(request.email);
@@ -603,17 +605,8 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
         return { error: "Ese email ya esta vinculado a otra cuenta del club." };
       }
 
-      const { error: updateAuthError } = await adminUser.auth.admin.updateUserById(
-        existingAuth.id,
-        {
-          password: tempPassword,
-        },
-      );
-      if (updateAuthError) {
-        console.error("[approveAccessRequest] update auth password error:", updateAuthError);
-        return { error: "No pudimos preparar la cuenta de acceso." };
-      }
       authUserId = existingAuth.id;
+      isExistingAuthUser = true;
     } else {
       const { data: newAuth, error: createAuthError } = await adminUser.auth.admin.createUser({
         email: request.email,
@@ -637,7 +630,7 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
         .eq("id", request.candidate_profile_id)
         .single();
 
-      if (candidate?.auth_user_id) {
+      if (candidate?.auth_user_id && candidate.auth_user_id !== authUserId) {
         throw new Error("El perfil candidato ya está vinculado a otra cuenta.");
       }
 
@@ -675,6 +668,7 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
       }
 
       profileId = newProfile.id;
+      createdProfileId = newProfile.id;
     }
 
     const { error: roleError } = await adminUser.from("user_roles").upsert(
@@ -715,11 +709,25 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
       throw new Error("No se pudo actualizar el estado de la solicitud.");
     }
 
+    if (isExistingAuthUser && authUserId) {
+      const { error: updateAuthError } = await adminUser.auth.admin.updateUserById(authUserId, {
+        password: tempPassword,
+      });
+      if (updateAuthError) {
+        console.error("[approveAccessRequest] update auth password error:", updateAuthError);
+      }
+    }
+
     return {
       success: true,
       credentials: [{ email: request.email, temporaryPassword: tempPassword }],
     };
   } catch (err) {
+    if (createdProfileId) {
+      await adminUser.from("parent_child_links").delete().eq("parent_profile_id", createdProfileId);
+      await adminUser.from("user_roles").delete().eq("profile_id", createdProfileId);
+      await adminUser.from("profiles").delete().eq("id", createdProfileId);
+    }
     if (createdAuthUser && authUserId) {
       await adminUser.auth.admin.deleteUser(authUserId).catch((e) => {
         console.error("[approveAccessRequest] rollback deleteUser error:", e);

@@ -142,19 +142,38 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
   const nowIso = now.toISOString();
   const horizonIso = new Date(now.getTime() + NEXT_FOUR_WEEKS_MS).toISOString();
 
+  const sessionsWithAttendance = supabase
+    .from("training_sessions")
+    .select("*")
+    .in("block_id", blockIds)
+    .gte("scheduled_at", nowIso)
+    .lte("scheduled_at", horizonIso)
+    .order("scheduled_at", { ascending: true })
+    .then(async ({ data: sessionsData, error: sessionsError }) => {
+      const sessionIds = (sessionsData ?? []).map((session) => session.id);
+      if (sessionsError || sessionIds.length === 0) {
+        return {
+          sessionsData,
+          sessionsError,
+          attendanceData: [],
+          attendanceError: null,
+        };
+      }
+
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from("training_attendance")
+        .select("session_id, player_id, present, reason")
+        .in("session_id", sessionIds);
+
+      return { sessionsData, sessionsError, attendanceData, attendanceError };
+    });
+
   const [
-    { data: sessionsData, error: sessionsError },
+    { sessionsData, sessionsError, attendanceData, attendanceError },
     { data: rosterData, error: rosterError },
     { data: profilesData, error: profilesError },
-    { data: attendanceData, error: attendanceError },
   ] = await Promise.all([
-    supabase
-      .from("training_sessions")
-      .select("*")
-      .in("block_id", blockIds)
-      .gte("scheduled_at", nowIso)
-      .lte("scheduled_at", horizonIso)
-      .order("scheduled_at", { ascending: true }),
+    sessionsWithAttendance,
     supabase
       .from("team_rosters")
       .select("team_id, player_id, squad_number")
@@ -166,7 +185,6 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
       .eq("is_active", true)
       .order("full_name", { ascending: true })
       .limit(1000),
-    supabase.from("training_attendance").select("session_id, player_id, present, reason"),
   ]);
 
   const loadError = sessionsError ?? rosterError ?? profilesError ?? attendanceError;

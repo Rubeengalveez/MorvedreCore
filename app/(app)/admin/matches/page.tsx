@@ -143,7 +143,7 @@ export default async function MatchesPage() {
   const teamScope =
     access.isAdmin || access.permissions.has("manage_matches")
       ? null
-      : Array.from(access.coachTeamIds);
+      : Array.from(access.matchStaffTeamIds);
   const { seasons, teams, matches, defaultTeamId, defaultSeasonId, error } =
     await loadMatches(teamScope);
 

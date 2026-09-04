@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { WifiOff, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 
@@ -27,22 +27,35 @@ export function useIsOnline(): boolean {
 
 export function ConnectivityBanner() {
   const isOnline = useIsOnline();
-  const [wasOffline, setWasOffline] = useState(false);
   const [showReconnected, setShowReconnected] = useState(false);
+  const wasOfflineRef = useRef(!isOnline);
 
   useEffect(() => {
-    if (!isOnline) {
-      setWasOffline(true);
+    let timer: number | undefined;
+
+    function handleOffline() {
+      wasOfflineRef.current = true;
       setShowReconnected(false);
-    } else if (wasOffline) {
-      setShowReconnected(true);
-      const timer = window.setTimeout(() => {
-        setShowReconnected(false);
-        setWasOffline(false);
-      }, 2500);
-      return () => window.clearTimeout(timer);
     }
-  }, [isOnline, wasOffline]);
+
+    function handleOnline() {
+      if (!wasOfflineRef.current) return;
+      setShowReconnected(true);
+      timer = window.setTimeout(() => {
+        setShowReconnected(false);
+        wasOfflineRef.current = false;
+      }, 2500);
+    }
+
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
+    return () => {
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      if (timer !== undefined) window.clearTimeout(timer);
+    };
+  }, []);
 
   if (isOnline && !showReconnected) {
     return null;
@@ -53,7 +66,7 @@ export function ConnectivityBanner() {
       role="status"
       aria-live="polite"
       className={cn(
-        "fixed top-[var(--top-bar-height,0px)] right-0 left-0 z-50 flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold shadow-elev-2 transition-all duration-300",
+        "fixed top-[var(--top-bar-height,0px)] right-0 left-0 z-50 flex items-center justify-center gap-2 px-3 py-2 text-xs font-bold shadow-elev-2 transition-colors duration-300",
         !isOnline
           ? "bg-pool-deep text-paper border-b border-ball-gold"
           : "bg-success text-paper border-b border-success/30",
@@ -62,7 +75,7 @@ export function ConnectivityBanner() {
       {!isOnline ? (
         <>
           <WifiOff className="text-ball-gold h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>Sin conexión a internet · Modo solo lectura</span>
+          <span>Sin conexión · Algunas funciones no están disponibles</span>
         </>
       ) : (
         <>
