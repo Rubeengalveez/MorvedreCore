@@ -14,7 +14,7 @@ export const metadata = {
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const access = await getAdminAccess().catch(() => null);
   if (!access) redirect("/login" as Route);
-  if (!access.isAdmin && access.permissions.size === 0) {
+  if (!access.isAdmin && access.permissions.size === 0 && access.coachTeamIds.size === 0) {
     redirect("/dashboard" as Route);
   }
 

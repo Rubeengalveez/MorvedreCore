@@ -10,7 +10,6 @@ import {
   createTeamSchema,
   idSchema,
   makeRosterSchema,
-  staffAttendancePermissionSchema,
   staffSchema,
   unrosterSchema,
   updateTeamSchema,
@@ -136,7 +135,6 @@ export async function assignStaff(input: {
   team_id: string;
   profile_id: string;
   role: "head_coach" | "assistant_coach" | "delegate" | "physical_trainer";
-  can_manage_attendance?: boolean;
 }): Promise<void> {
   const admin = await requirePermission("manage_staff");
 
@@ -146,10 +144,6 @@ export async function assignStaff(input: {
   }
 
   const isCoachRole = parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach";
-  if (parsed.data.can_manage_attendance && !isCoachRole) {
-    throw new Error("Solo un entrenador puede recibir permiso para pasar lista.");
-  }
-
   const supabase = await createClient();
   const { error } = await supabase.from("team_staff").insert({
     team_id: parsed.data.team_id,
@@ -187,27 +181,6 @@ export async function assignStaff(input: {
         .eq("profile_id", parsed.data.profile_id)
         .eq("role", parsed.data.role);
       throw new Error("No pudimos completar los permisos del entrenador. Inténtalo de nuevo.");
-    }
-
-    if (parsed.data.can_manage_attendance) {
-      const { error: permissionError } = await supabase.from("profile_permissions").upsert(
-        {
-          profile_id: parsed.data.profile_id,
-          permission: "manage_attendance",
-          granted_by: admin.id,
-        },
-        { onConflict: "profile_id,permission", ignoreDuplicates: true },
-      );
-
-      if (permissionError) {
-        await supabase
-          .from("team_staff")
-          .delete()
-          .eq("team_id", parsed.data.team_id)
-          .eq("profile_id", parsed.data.profile_id)
-          .eq("role", parsed.data.role);
-        throw new Error("No pudimos activar el pase de lista. Inténtalo de nuevo.");
-      }
     }
   }
 
@@ -262,54 +235,6 @@ export async function unassignStaff(input: {
 
   revalidatePath("/admin/staff");
   revalidatePath(`/admin/teams/${parsed.data.team_id}`);
-  revalidatePath("/attendance");
-  revalidatePath("/dashboard");
-}
-
-export async function setStaffAttendancePermission(input: {
-  profile_id: string;
-  enabled: boolean;
-}): Promise<void> {
-  const admin = await requirePermission("manage_staff");
-  const parsed = staffAttendancePermissionSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
-  }
-
-  const supabase = await createClient();
-  const { data: staff, error: staffError } = await supabase
-    .from("team_staff")
-    .select("role")
-    .eq("profile_id", parsed.data.profile_id)
-    .in("role", ["head_coach", "assistant_coach"])
-    .limit(1)
-    .maybeSingle();
-
-  throwIfError(staffError, "No pudimos comprobar la asignación del entrenador.");
-  if (!staff) {
-    throw new Error("Esa persona ya no está asignada como entrenador.");
-  }
-
-  if (parsed.data.enabled) {
-    const { error: permissionError } = await supabase.from("profile_permissions").upsert(
-      {
-        profile_id: parsed.data.profile_id,
-        permission: "manage_attendance",
-        granted_by: admin.id,
-      },
-      { onConflict: "profile_id,permission", ignoreDuplicates: true },
-    );
-    throwIfError(permissionError, "No pudimos activar el permiso de asistencia.");
-  } else {
-    const { error: permissionError } = await supabase
-      .from("profile_permissions")
-      .delete()
-      .eq("profile_id", parsed.data.profile_id)
-      .eq("permission", "manage_attendance");
-    throwIfError(permissionError, "No pudimos retirar el permiso de asistencia.");
-  }
-
-  revalidatePath("/admin/staff");
   revalidatePath("/attendance");
   revalidatePath("/dashboard");
 }

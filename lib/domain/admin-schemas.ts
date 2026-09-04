@@ -111,12 +111,6 @@ export const staffSchema = z.object({
   team_id: z.string().uuid("Equipo inválido."),
   profile_id: z.string().uuid("Persona inválida."),
   role: staffRoleEnum,
-  can_manage_attendance: z.boolean().optional().default(false),
-});
-
-export const staffAttendancePermissionSchema = z.object({
-  profile_id: z.string().uuid("Persona inválida."),
-  enabled: z.boolean(),
 });
 
 export const unrosterSchema = z.object({
@@ -230,7 +224,7 @@ export const updateProfileSchema = z.object({
     nullIfEmpty,
     z
       .string()
-      .regex(/^\+[1-9]\d{6,14}$/, "Formato E.164: +34612345678")
+      .regex(/^\+34\d{9}$/, "Escribe exactamente 9 dígitos.")
       .nullable(),
   ),
   email_contact: z.preprocess(nullIfEmpty, z.string().email("Email inválido.").nullable()),

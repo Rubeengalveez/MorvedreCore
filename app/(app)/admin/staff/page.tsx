@@ -56,11 +56,6 @@ async function loadData(): Promise<{
     getAdminAccess(),
   ]);
 
-  const attendanceManagers = new Set(
-    (permissionData ?? [])
-      .filter((row) => row.permission === "manage_attendance")
-      .map((row) => row.profile_id),
-  );
   const permissionsByProfile: Record<string, AdminPermission[]> = {};
   for (const row of permissionData ?? []) {
     (permissionsByProfile[row.profile_id] ??= []).push(row.permission as AdminPermission);
@@ -82,7 +77,6 @@ async function loadData(): Promise<{
       profile_id: r.profile_id,
       profile_name: profile?.full_name ?? "Sin nombre",
       role: r.role,
-      can_manage_attendance: attendanceManagers.has(r.profile_id),
     };
   });
 

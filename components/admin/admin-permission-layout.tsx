@@ -1,19 +1,23 @@
 import { redirect } from "next/navigation";
 
 import type { AdminPermission } from "@/lib/domain/permissions";
-import { requireAdmin, requirePermission } from "@/server/actions/admin/_helpers";
+import { getAdminAccess, requireAdmin } from "@/server/actions/admin/_helpers";
 
 export async function AdminPermissionLayout({
   permission,
+  allowCoach = false,
   children,
 }: {
   permission: AdminPermission;
+  allowCoach?: boolean;
   children: React.ReactNode;
 }) {
-  const allowed = await requirePermission(permission).then(
-    () => true,
-    () => false,
-  );
+  const access = await getAdminAccess().catch(() => null);
+  const allowed =
+    access !== null &&
+    (access.isAdmin ||
+      access.permissions.has(permission) ||
+      (allowCoach && access.coachTeamIds.size > 0));
   if (!allowed) redirect("/admin");
   return children;
 }

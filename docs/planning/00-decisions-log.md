@@ -728,3 +728,18 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Las reacciones de noticias responden de forma optimista, y los filtros de Rankings comunican su estado pendiente y evitan pulsaciones duplicadas.
 - Notificaciones muestra veinte avisos por página, conserva el filtro en la URL y solo carga el contexto visual de los avisos visibles. Las listas largas de notificaciones y productos aplazan el render fuera de pantalla.
 - Se eliminan los últimos tamaños arbitrarios de 10 y 11 px en Calendario y navegación. El mínimo visual vuelve a ser el token de 13 px definido para móvil.
+
+## 2026-07-28 - Pase de lista compartido entre entrenadores
+
+- Cualquier entrenador principal o asistente activo puede pasar y corregir listas de cualquier categoría de la misma temporada. Ya no necesita que un administrador active `manage_attendance`.
+- La asignación deportiva sigue comprobándose en `team_staff` y en el rol `coach` del equipo de origen. Ser administrador, delegado u otro miembro del staff no concede por sí solo acceso a la asistencia.
+- El recálculo de rachas posterior al guardado usa la misma autorización global de asistencia para evitar que una lista válida falle al pertenecer a la categoría de otro entrenador.
+- La migración `20260727222316_allow_all_coaches_manage_attendance.sql` alinea la función RLS `can_manage_attendance_for` con esta regla.
+
+## 2026-07-28 - Panel deportivo para entrenadores
+
+- Un entrenador asignado puede entrar en `/admin` aunque no tenga permisos administrativos modulares. Su centro de mando muestra `Entrenamientos` y `Partidos`, que son las áreas protegidas por `requireCoachOf`.
+- Las listas, formularios y detalles de esas áreas se limitan a los equipos donde figura como entrenador. Un permiso administrativo explícito conserva el acceso global a su módulo.
+- `Temporadas`, `Equipos`, `Jugadores`, `Familias`, `Personal`, `Tesorería`, `Noticias` y `Tienda` siguen ocultos y bloqueados salvo que la persona reciba el permiso administrativo correspondiente.
+- La migración `20260727223405_allow_coaches_manage_training_blocks.sql` permite que la RLS de los bloques de entrenamiento aplique la misma regla por equipo que las sesiones y los partidos.
+- La migración `20260727223823_scope_training_block_coach_access.sql` añade una comprobación estricta para los bloques de entrenamiento que solo acepta roles `coach` ligados al equipo. Los roles globales heredados se conservan, pero no intervienen en este acceso.

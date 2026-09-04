@@ -31,9 +31,8 @@ test.describe("Experiencia familiar", () => {
     await expect(page.getByRole("heading", { name: "Tu familia" })).toBeVisible();
     await expect(page.getByText("Lucía Torres Demo", { exact: true })).toBeVisible();
     await expect(page.getByText("Mateo Torres Demo", { exact: true })).toBeVisible();
-    await expect(page.getByText("2 menores a tu cargo")).toBeVisible();
-    await expect(page.getByText("Lucía y Mateo", { exact: true })).toBeVisible();
-    await expect(page.getByText("Cuotas y pagos").first()).toBeVisible();
+    await expect(page.getByText("2 menores vinculados")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Cuotas familiares/i })).toBeVisible();
     await expect(page.getByText("Perfil activo")).toHaveCount(0);
 
     if (screenshotDir) {

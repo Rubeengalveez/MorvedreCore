@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin, requireCoachOf } from "./_helpers";
+import { requireAdmin, requireAttendanceManagerOf, requireCoachOf } from "./_helpers";
 import { computeMvp, type MvpCandidate } from "@/lib/domain/mvp";
 import {
   applyStreak,
@@ -365,7 +365,7 @@ export async function recomputeTrainingStreaksForSession(sessionId: string): Pro
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) return;
-  await requireCoachOf(session.team_id);
+  await requireAttendanceManagerOf(session.team_id);
   const team = Array.isArray(session.teams) ? session.teams[0] : session.teams;
   const seasonId = (team as { season_id?: string } | null)?.season_id;
   if (!seasonId) return;

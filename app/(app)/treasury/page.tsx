@@ -30,7 +30,7 @@ export default async function TreasuryPage() {
         description="Cuotas, descuentos y pedidos de tienda, desglosados de forma simple."
         icon={<Banknote className="h-6 w-6" aria-hidden="true" />}
       />
-      <FamilyTreasuryView data={data} />
+      <FamilyTreasuryView data={data} isParent={ctx.linkedProfiles.length > 0} />
     </PageShell>
   );
 }

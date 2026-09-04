@@ -110,7 +110,7 @@ export async function getDashboardAudience(
   seasonId: string,
 ): Promise<DashboardAudience> {
   const supabase = await createClient();
-  const [rosterRes, staffRes, rolesRes, attendancePermissionRes] = await Promise.all([
+  const [rosterRes, staffRes, rolesRes] = await Promise.all([
     supabase
       .from("team_rosters")
       .select("team_id, teams!team_rosters_team_id_fkey(season_id)")
@@ -121,12 +121,6 @@ export async function getDashboardAudience(
       .select("role, teams!team_staff_team_id_fkey(id, label, color, season_id)")
       .eq("profile_id", profileId),
     supabase.from("user_roles").select("role, scope_team_id").eq("profile_id", profileId),
-    supabase
-      .from("profile_permissions")
-      .select("permission")
-      .eq("profile_id", profileId)
-      .eq("permission", "manage_attendance")
-      .maybeSingle(),
   ]);
 
   const playerTeamIds: string[] = [];
@@ -169,9 +163,7 @@ export async function getDashboardAudience(
     player_team_ids: Array.from(new Set(playerTeamIds)),
     staff_teams: staffTeams,
     coach_team_ids: coachTeamIds,
-    can_manage_attendance:
-      Boolean(attendancePermissionRes.data) &&
-      coachTeamIds.some((teamId) => currentCoachTeamIds.has(teamId)),
+    can_manage_attendance: coachTeamIds.some((teamId) => currentCoachTeamIds.has(teamId)),
     roles: Array.from(new Set((rolesRes.data ?? []).map((row) => row.role))),
   };
 }
@@ -181,7 +173,7 @@ export async function hasCurrentAttendancePermission(
   seasonId: string,
 ): Promise<boolean> {
   const supabase = await createClient();
-  const [{ data }, { data: coachRoles }, { data: permission }] = await Promise.all([
+  const [{ data }, { data: coachRoles }] = await Promise.all([
     supabase
       .from("team_staff")
       .select("team_id, role, teams!team_staff_team_id_fkey(season_id)")
@@ -192,15 +184,8 @@ export async function hasCurrentAttendancePermission(
       .select("scope_team_id")
       .eq("profile_id", profileId)
       .eq("role", "coach"),
-    supabase
-      .from("profile_permissions")
-      .select("permission")
-      .eq("profile_id", profileId)
-      .eq("permission", "manage_attendance")
-      .maybeSingle(),
   ]);
 
-  if (!permission) return false;
   const coachTeamIds = new Set((coachRoles ?? []).map((role) => role.scope_team_id));
   return (data ?? []).some((row) => {
     const team = joinedOne(row.teams) as { season_id?: string } | null;

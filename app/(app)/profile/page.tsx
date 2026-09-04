@@ -35,7 +35,7 @@ import { formatTreasuryCents } from "@/lib/domain/treasury";
 import type { AdminPermission } from "@/lib/domain/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/server/actions/auth";
-import { getActiveProfileContext } from "@/server/queries/active-profile";
+import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getDashboardAudience } from "@/server/queries/dashboard";
 import { getFamilyOverview } from "@/server/queries/family";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
@@ -73,13 +73,12 @@ export default async function ProfilePage() {
 
   const { linkedProfiles, ownProfile } = ctx;
   const supabase = await createClient();
-  const [{ data: season }, { data: contact }, treasury, { data: permissionRows }] =
-    await Promise.all([
-      supabase.from("seasons").select("id, label").eq("is_current", true).maybeSingle(),
-      supabase.from("profiles").select("phone_e164").eq("id", ownProfile.id).maybeSingle(),
-      getFamilyTreasury(ownProfile.id),
-      supabase.from("profile_permissions").select("permission").eq("profile_id", ownProfile.id),
-    ]);
+  const [{ data: season }, ownPhone, treasury, { data: permissionRows }] = await Promise.all([
+    supabase.from("seasons").select("id, label").eq("is_current", true).maybeSingle(),
+    getOwnProfilePhone(),
+    getFamilyTreasury(ownProfile.id),
+    supabase.from("profile_permissions").select("permission").eq("profile_id", ownProfile.id),
+  ]);
 
   const [audience, teams, family] = season
     ? await Promise.all([
@@ -125,7 +124,7 @@ export default async function ProfilePage() {
     },
     {
       label: "Teléfono",
-      complete: Boolean(contact?.phone_e164),
+      complete: Boolean(ownPhone),
       icon: Phone,
       href: "/profile/edit#phone_e164",
     },
@@ -179,7 +178,7 @@ export default async function ProfilePage() {
                   icon: CalendarCheck2,
                 },
                 {
-                  href: `/team/${playerTeam.id}/players/${ownProfile.id}`,
+                  href: `/team/${playerTeam.id}/players/${ownProfile.id}?from=profile`,
                   label: "Mi ficha deportiva",
                   detail: "Estadísticas y evolución de temporada",
                   icon: ClipboardCheck,

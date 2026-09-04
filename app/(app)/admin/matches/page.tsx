@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team } from "@/server/actions/admin";
+import { getAdminAccess } from "@/server/actions/admin/_helpers";
 
 import { MatchFormSheet } from "./_components/match-form-sheet";
 import { MatchesList, type MatchRow } from "./_components/matches-list";
@@ -43,8 +44,23 @@ type LoadResult =
       error: string;
     };
 
-async function loadMatches(): Promise<LoadResult> {
+async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
   const supabase = await createClient();
+  let teamsQuery = supabase
+    .from("teams")
+    .select(
+      "id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at",
+    );
+  let matchesQuery = supabase
+    .from("matches")
+    .select(
+      "id, season_id, team_id, opponent, competition_type, is_home, location, pool_name, maps_url, scheduled_at, status, logistics_enabled, notes, final_score_us, final_score_them, created_at, updated_at",
+    )
+    .order("scheduled_at", { ascending: true });
+  if (teamScope) {
+    teamsQuery = teamsQuery.in("id", teamScope);
+    matchesQuery = matchesQuery.in("team_id", teamScope);
+  }
 
   const [
     { data: seasonsData, error: seasonsError },
@@ -55,17 +71,8 @@ async function loadMatches(): Promise<LoadResult> {
       .from("seasons")
       .select("id, label, start_date, end_date, is_current, archived_at, created_at, updated_at")
       .order("start_date", { ascending: false }),
-    supabase
-      .from("teams")
-      .select(
-        "id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at",
-      ),
-    supabase
-      .from("matches")
-      .select(
-        "id, season_id, team_id, opponent, competition_type, is_home, location, pool_name, maps_url, scheduled_at, status, logistics_enabled, notes, final_score_us, final_score_them, created_at, updated_at",
-      )
-      .order("scheduled_at", { ascending: true }),
+    teamsQuery,
+    matchesQuery,
   ]);
 
   const firstError = seasonsError ?? teamsError ?? matchesError;
@@ -132,7 +139,13 @@ async function loadMatches(): Promise<LoadResult> {
 }
 
 export default async function MatchesPage() {
-  const { seasons, teams, matches, defaultTeamId, defaultSeasonId, error } = await loadMatches();
+  const access = await getAdminAccess();
+  const teamScope =
+    access.isAdmin || access.permissions.has("manage_matches")
+      ? null
+      : Array.from(access.coachTeamIds);
+  const { seasons, teams, matches, defaultTeamId, defaultSeasonId, error } =
+    await loadMatches(teamScope);
 
   if (seasons.length === 0) {
     return (

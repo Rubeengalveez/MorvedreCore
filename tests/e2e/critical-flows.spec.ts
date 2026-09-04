@@ -42,8 +42,9 @@ test.describe("Morvedre Core critical flows", () => {
     test.skip(!TEST_ADMIN_EMAIL || !TEST_PASSWORD, "Credenciales E2E no configuradas.");
     await loginAsAdmin(page);
     await page.goto("/dashboard");
-    const iconButtons = page.locator("button[aria-label]");
-    const count = await iconButtons.count();
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    const iconControls = page.locator("a[aria-label], button[aria-label]");
+    const count = await iconControls.count();
     expect(count).toBeGreaterThan(0);
   });
 
@@ -51,6 +52,7 @@ test.describe("Morvedre Core critical flows", () => {
     test.skip(!TEST_ADMIN_EMAIL || !TEST_PASSWORD, "Credenciales E2E no configuradas.");
     await loginAsAdmin(page);
     await page.goto("/calendar");
+    await expect(page.getByRole("heading", { name: "Tu mes" })).toBeVisible();
     const tabs = page.getByRole("tab");
     const tabCount = await tabs.count();
     expect(tabCount).toBeGreaterThan(0);

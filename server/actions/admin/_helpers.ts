@@ -56,21 +56,31 @@ export async function getAdminAccess(): Promise<{
   profile: AdminProfile;
   isAdmin: boolean;
   permissions: Set<AdminPermission>;
+  coachTeamIds: Set<string>;
 }> {
   const { profile, supabase } = await requireAuthenticatedProfile();
-  const [{ data: adminRole, error: roleError }, { data: permissionRows, error: permissionError }] =
-    await Promise.all([
-      supabase
-        .from("user_roles")
-        .select("role")
-        .eq("profile_id", profile.id)
-        .eq("role", "admin")
-        .is("scope_team_id", null)
-        .maybeSingle(),
-      supabase.from("profile_permissions").select("permission").eq("profile_id", profile.id),
-    ]);
+  const [
+    { data: adminRole, error: adminRoleError },
+    { data: coachRoles, error: coachRolesError },
+    { data: permissionRows, error: permissionError },
+  ] = await Promise.all([
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("profile_id", profile.id)
+      .eq("role", "admin")
+      .is("scope_team_id", null)
+      .maybeSingle(),
+    supabase
+      .from("user_roles")
+      .select("scope_team_id")
+      .eq("profile_id", profile.id)
+      .eq("role", "coach")
+      .not("scope_team_id", "is", null),
+    supabase.from("profile_permissions").select("permission").eq("profile_id", profile.id),
+  ]);
 
-  if (roleError || permissionError) {
+  if (adminRoleError || coachRolesError || permissionError) {
     throw new Error("No pudimos verificar tus permisos. Inténtalo de nuevo.");
   }
 
@@ -78,6 +88,9 @@ export async function getAdminAccess(): Promise<{
     profile,
     isAdmin: Boolean(adminRole),
     permissions: new Set((permissionRows ?? []).map((row) => row.permission as AdminPermission)),
+    coachTeamIds: new Set(
+      (coachRoles ?? []).flatMap((row) => (row.scope_team_id ? [row.scope_team_id] : [])),
+    ),
   };
 }
 
@@ -135,14 +148,8 @@ export async function requireCoachOf(teamId: string): Promise<AdminProfile> {
 
 export async function requireAttendanceManagerOf(teamId: string): Promise<AdminProfile> {
   const { profile, supabase } = await requireAuthenticatedProfile();
-  const [targetTeamRes, permissionRes, staffRes, coachRolesRes] = await Promise.all([
+  const [targetTeamRes, staffRes, coachRolesRes] = await Promise.all([
     supabase.from("teams").select("season_id").eq("id", teamId).maybeSingle(),
-    supabase
-      .from("profile_permissions")
-      .select("permission")
-      .eq("profile_id", profile.id)
-      .eq("permission", "manage_attendance")
-      .maybeSingle(),
     supabase
       .from("team_staff")
       .select("team_id, teams!team_staff_team_id_fkey(season_id)")
@@ -155,7 +162,7 @@ export async function requireAttendanceManagerOf(teamId: string): Promise<AdminP
       .eq("role", "coach"),
   ]);
 
-  if (targetTeamRes.error || permissionRes.error || staffRes.error || coachRolesRes.error) {
+  if (targetTeamRes.error || staffRes.error || coachRolesRes.error) {
     throw new Error("No pudimos verificar tus permisos. Inténtalo de nuevo.");
   }
   if (!targetTeamRes.data) {
@@ -171,7 +178,7 @@ export async function requireAttendanceManagerOf(teamId: string): Promise<AdminP
     return joinedTeam?.season_id === targetSeasonId && coachTeamIds.has(staff.team_id);
   });
 
-  if (!permissionRes.data || !isCoachInSeason) {
+  if (!isCoachInSeason) {
     throw new Error("No tienes permiso para gestionar la asistencia de esta temporada.");
   }
 

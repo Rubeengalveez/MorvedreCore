@@ -21,6 +21,7 @@ import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
+import { getAdminAccess } from "@/server/actions/admin/_helpers";
 
 import { ActaManager, type ActaEntry } from "./_components/acta-manager";
 import { CallupList, type CallupEntry } from "./_components/callup-list";
@@ -66,7 +67,10 @@ type MatchWithTeam = MatchRow & {
   team: Pick<Team, "id" | "label" | "color"> | null;
 };
 
-async function loadMatch(id: string): Promise<{
+async function loadMatch(
+  id: string,
+  teamScope: string[] | null,
+): Promise<{
   match: MatchWithTeam | null;
   callups: CallupRow[];
   stats: MatchStatRow[];
@@ -83,14 +87,18 @@ async function loadMatch(id: string): Promise<{
   availability: Array<{ player_id: string; date: string; available: boolean }>;
 } | null> {
   const supabase = await createClient();
+  if (teamScope?.length === 0) return null;
 
-  const { data: matchData, error: matchError } = await supabase
+  let matchQuery = supabase
     .from("matches")
     .select(
       "id, season_id, team_id, opponent, competition_type, is_home, location, pool_name, scheduled_at, status, logistics_enabled, notes, final_score_us, final_score_them, created_at, updated_at",
     )
-    .eq("id", id)
-    .maybeSingle();
+    .eq("id", id);
+  if (teamScope) {
+    matchQuery = matchQuery.in("team_id", teamScope);
+  }
+  const { data: matchData, error: matchError } = await matchQuery.maybeSingle();
 
   if (matchError) return null;
   if (!matchData) return null;
@@ -189,8 +197,13 @@ export default async function MatchDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const tab: Tab = (TABS.find((t) => t.value === sp.tab)?.value ?? "convocatoria") as Tab;
+  const access = await getAdminAccess();
+  const teamScope =
+    access.isAdmin || access.permissions.has("manage_matches")
+      ? null
+      : Array.from(access.coachTeamIds);
 
-  const data = await loadMatch(id);
+  const data = await loadMatch(id, teamScope);
   if (!data || !data.match) {
     notFound();
   }

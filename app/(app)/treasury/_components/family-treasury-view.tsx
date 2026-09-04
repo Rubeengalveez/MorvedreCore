@@ -6,9 +6,10 @@ import type { FamilyTreasury } from "@/server/queries/treasury";
 
 interface FamilyTreasuryViewProps {
   data: FamilyTreasury;
+  isParent: boolean;
 }
 
-export function FamilyTreasuryView({ data }: FamilyTreasuryViewProps) {
+export function FamilyTreasuryView({ data, isParent }: FamilyTreasuryViewProps) {
   const {
     currentPeriod,
     children,
@@ -49,16 +50,15 @@ export function FamilyTreasuryView({ data }: FamilyTreasuryViewProps) {
       <div className="border-ink-200 border-b px-4 py-3.5">
         <div className="flex items-center gap-2">
           <UsersRound className="text-pool-blue h-4 w-4" aria-hidden="true" />
-          <h3 className="text-pool-deep text-sm font-extrabold">Cuotas de tus hijos</h3>
+          <h3 className="text-pool-deep text-sm font-extrabold">
+            {isParent ? "Cuotas de tus hijos" : "Tu cuota"}
+          </h3>
         </div>
       </div>
 
       <ul className="divide-ink-200 divide-y">
         {children.map((child) => (
-          <li
-            key={child.profile_id}
-            className="flex min-h-[56px] items-center gap-3 px-4 py-3"
-          >
+          <li key={child.profile_id} className="flex min-h-[56px] items-center gap-3 px-4 py-3">
             <Avatar
               name={child.profile_name}
               src={child.photo_url}

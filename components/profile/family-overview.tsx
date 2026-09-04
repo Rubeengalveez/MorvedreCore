@@ -120,7 +120,7 @@ function FamilyMemberRow({ member }: { member: FamilyMemberOverview }) {
         </Link>
         {team ? (
           <Link
-            href={`/team/${team.id}/players/${member.id}` as Route}
+            href={`/team/${team.id}/players/${member.id}?from=profile` as Route}
             aria-label={`Ver ficha de ${member.display_name}`}
             className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 touch-manipulation items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >

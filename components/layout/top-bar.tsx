@@ -41,7 +41,10 @@ export async function TopBar({ profile }: TopBarProps) {
   ]);
 
   const userRoles = ((rolesData?.data ?? []) as Array<{ role: string }>).map((r) => r.role);
-  const isPrivileged = userRoles.includes("admin") || (permissionsData.data?.length ?? 0) > 0;
+  const isPrivileged =
+    userRoles.includes("admin") ||
+    userRoles.includes("coach") ||
+    (permissionsData.data?.length ?? 0) > 0;
 
   const category =
     profile.birth_year == null

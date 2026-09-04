@@ -70,6 +70,7 @@ interface AdminTile {
   description: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   permission: AdminPermission | "admin";
+  allowCoach?: boolean;
 }
 
 const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
@@ -114,6 +115,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Bloques y asistencia.",
     Icon: MdSports,
     permission: "manage_trainings",
+    allowCoach: true,
   },
   {
     href: "/admin/matches",
@@ -121,6 +123,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Convocatorias y actas.",
     Icon: MdSportsVolleyball,
     permission: "manage_matches",
+    allowCoach: true,
   },
   {
     href: "/admin/treasury",
@@ -160,17 +163,17 @@ function buildGreeting(now: Date, firstName: string): string {
 }
 
 export default async function AdminHomePage() {
-  const [counts, ctx, access] = await Promise.all([
-    loadCounts(),
-    getActiveProfileContext(),
-    getAdminAccess(),
-  ]);
+  const [ctx, access] = await Promise.all([getActiveProfileContext(), getAdminAccess()]);
+  const counts = access.isAdmin ? await loadCounts() : null;
   const activeProfileName = ctx?.activeProfile.full_name ?? "Admin";
   const firstName = activeProfileName.split(/\s+/)[0] ?? activeProfileName ?? "Admin";
   const now = new Date();
   const greeting = buildGreeting(now, firstName);
   const modules = ADMIN_MODULES.filter(
-    (module) => access.isAdmin || access.permissions.has(module.permission as AdminPermission),
+    (module) =>
+      access.isAdmin ||
+      access.permissions.has(module.permission as AdminPermission) ||
+      (module.allowCoach === true && access.coachTeamIds.size > 0),
   );
 
   return (
@@ -193,7 +196,7 @@ export default async function AdminHomePage() {
           </div>
         </header>
 
-        {access.isAdmin ? (
+        {counts ? (
           <section
             aria-labelledby="admin-stats-heading"
             className="grid grid-cols-2 gap-3 sm:grid-cols-4"

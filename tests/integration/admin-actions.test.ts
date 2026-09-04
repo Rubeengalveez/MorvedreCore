@@ -17,7 +17,6 @@ import {
   recomputeRankingSchema,
   roleAssignmentSchema,
   staffRoleEnum,
-  staffAttendancePermissionSchema,
   staffSchema,
   teamGenderEnum,
   teamTypeEnum,
@@ -269,17 +268,6 @@ describe("staffSchema", () => {
     expect(staffSchema.safeParse(validStaff).success).toBe(true);
   });
 
-  it("defaults attendance access to disabled", () => {
-    const result = staffSchema.parse(validStaff);
-    expect(result.can_manage_attendance).toBe(false);
-  });
-
-  it("accepts explicit attendance access", () => {
-    expect(staffSchema.safeParse({ ...validStaff, can_manage_attendance: true }).success).toBe(
-      true,
-    );
-  });
-
   it("rejects an invalid role", () => {
     expect(staffSchema.safeParse({ ...validStaff, role: "coach" }).success).toBe(false);
   });
@@ -287,24 +275,6 @@ describe("staffSchema", () => {
   it("rejects non-UUID ids", () => {
     expect(staffSchema.safeParse({ ...validStaff, team_id: "x" }).success).toBe(false);
     expect(staffSchema.safeParse({ ...validStaff, profile_id: "x" }).success).toBe(false);
-  });
-});
-
-describe("staffAttendancePermissionSchema", () => {
-  const validPermission = {
-    profile_id: "550e8400-e29b-41d4-a716-446655440001",
-    enabled: true,
-  };
-
-  it("accepts attendance access for a coach", () => {
-    expect(staffAttendancePermissionSchema.safeParse(validPermission).success).toBe(true);
-  });
-
-  it("rejects an invalid profile", () => {
-    expect(
-      staffAttendancePermissionSchema.safeParse({ ...validPermission, profile_id: "invalid" })
-        .success,
-    ).toBe(false);
   });
 });
 
@@ -559,13 +529,28 @@ describe("updateProfileSchema", () => {
     expect(updateProfileSchema.safeParse({ full_name: "A" }).success).toBe(false);
   });
 
-  it("accepts a valid E.164 phone", () => {
+  it("accepts a Spanish phone with exactly nine national digits", () => {
     expect(
       updateProfileSchema.safeParse({
         ...basePayload,
         phone_e164: "+34612345678",
       }).success,
     ).toBe(true);
+  });
+
+  it("rejects phones that do not contain exactly nine Spanish national digits", () => {
+    expect(
+      updateProfileSchema.safeParse({
+        ...basePayload,
+        phone_e164: "+3461234567",
+      }).success,
+    ).toBe(false);
+    expect(
+      updateProfileSchema.safeParse({
+        ...basePayload,
+        phone_e164: "+33612345678",
+      }).success,
+    ).toBe(false);
   });
 
   it("rejects an invalid email", () => {

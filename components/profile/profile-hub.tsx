@@ -37,43 +37,98 @@ export function ProfileIdentity({
   teamColor: string;
   roleLabels: string[];
 }) {
+  const displayedRoles = roleLabels.length > 0 ? roleLabels : ["Miembro del club"];
+  const roleGridClass =
+    displayedRoles.length === 1
+      ? "grid-cols-1"
+      : displayedRoles.length === 2
+        ? "grid-cols-2"
+        : displayedRoles.length === 3
+          ? "grid-cols-3"
+          : "grid-cols-2 sm:grid-cols-3";
+
   return (
-    <header className="border-ink-200 bg-paper-card shadow-elev-1 relative overflow-hidden rounded-2xl border">
-      <span className="lane-pattern opacity-25" aria-hidden="true" />
+    <header className="border-ink-200 bg-paper-card shadow-elev-3 relative overflow-hidden rounded-[1.75rem] border">
       <span
-        className="absolute inset-x-0 top-0 h-1"
+        className="absolute inset-x-0 top-0 z-20 h-1"
         style={{ backgroundColor: teamColor }}
         aria-hidden="true"
       />
-      <div className="relative flex items-center gap-4 px-4 py-4 sm:px-5">
-        <Avatar name={name} src={photoUrl} size={76} teamColor={teamColor} />
-        <div className="min-w-0 flex-1">
-          <p className="text-pool-blue text-sm font-extrabold">Tu perfil</p>
-          <h1 className="font-display text-pool-deep mt-0.5 text-xl leading-tight font-extrabold tracking-tight break-words sm:text-2xl">
-            {name}
-          </h1>
-          <div className="mt-2 flex flex-wrap gap-1.5">
-            {roleLabels.length > 0 ? (
-              roleLabels.map((role) => (
-                <span
-                  key={role}
-                  className="border-ink-200 bg-paper-sunk text-ink-700 inline-flex min-h-7 items-center rounded-full border px-2.5 text-sm font-bold"
-                >
-                  {role}
-                </span>
-              ))
-            ) : (
-              <span className="text-ink-600 text-sm font-semibold">Miembro del club</span>
-            )}
+
+      <div className="relative overflow-hidden bg-[linear-gradient(135deg,#041a3a_0%,#0a3c7b_58%,#1657a8_100%)] px-4 pt-4 pb-5 sm:px-5 sm:pt-5">
+        <span className="lane-pattern-strong opacity-20" aria-hidden="true" />
+        <div className="relative">
+          <div className="flex min-h-12 items-center justify-between gap-3">
+            <p className="text-paper/75 text-xs font-extrabold tracking-[0.12em] uppercase">
+              Tu perfil
+            </p>
+            <Link
+              href={"/profile/edit" as Route}
+              aria-label="Editar tu perfil"
+              className="text-paper hover:bg-paper/20 focus-visible:ring-paper flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border border-white/25 bg-white/10 shadow-sm backdrop-blur-sm transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.96] motion-reduce:transition-none"
+            >
+              <UserRoundPen className="h-5 w-5" aria-hidden="true" />
+            </Link>
+          </div>
+
+          <div className="mt-2 flex min-w-0 items-center gap-3.5 sm:gap-4">
+            <Avatar
+              name={name}
+              src={photoUrl}
+              size={84}
+              teamColor={teamColor}
+              className="ring-paper-card/95 shadow-elev-4 ring-4"
+            />
+            <div className="min-w-0 flex-1">
+              <p className="text-paper/65 text-xs font-bold">Identidad del club</p>
+              <h1 className="font-display text-paper mt-1 text-[1.35rem] leading-[1.08] font-extrabold tracking-tight text-balance break-words sm:text-2xl">
+                {name}
+              </h1>
+            </div>
           </div>
         </div>
-        <Link
-          href={"/profile/edit" as Route}
-          aria-label="Editar tu perfil"
-          className="border-ink-200 bg-paper hover:border-pool-blue focus-visible:ring-pool-blue text-pool-blue flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-[border-color,background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.96] motion-reduce:transition-none"
+      </div>
+
+      <div className="px-3.5 py-3.5 sm:px-5 sm:py-4">
+        <div className="flex items-end justify-between gap-3 px-0.5">
+          <p
+            id="profile-roles-title"
+            className="text-ink-600 text-[0.6875rem] font-extrabold tracking-[0.12em] uppercase"
+          >
+            Funciones en el club
+          </p>
+          <p className="text-pool-blue shrink-0 text-xs font-bold">
+            <span className="font-mono font-extrabold tabular-nums">
+              {roleLabels.length.toString().padStart(2, "0")}
+            </span>{" "}
+            {roleLabels.length === 1 ? "activa" : "activas"}
+          </p>
+        </div>
+
+        <ol
+          aria-labelledby="profile-roles-title"
+          className={cn(
+            "border-ink-200 bg-ink-200 mt-2.5 grid gap-px overflow-hidden rounded-xl border",
+            roleGridClass,
+          )}
         >
-          <UserRoundPen className="h-5 w-5" aria-hidden="true" />
-        </Link>
+          {displayedRoles.map((role, index) => (
+            <li
+              key={role}
+              className="bg-paper-card flex min-h-14 min-w-0 flex-col justify-center px-1.5 py-2.5 min-[360px]:px-2.5 sm:px-3"
+            >
+              <span
+                aria-hidden="true"
+                className="text-pool-blue font-mono text-[0.625rem] leading-none font-extrabold tabular-nums"
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="text-pool-deep mt-1 text-[0.72rem] leading-tight font-extrabold break-words min-[360px]:text-[0.8125rem]">
+                {role}
+              </span>
+            </li>
+          ))}
+        </ol>
       </div>
     </header>
   );

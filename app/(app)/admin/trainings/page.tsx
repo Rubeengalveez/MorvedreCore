@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
+import { getAdminAccess } from "@/server/actions/admin/_helpers";
 
 import { TrainingsList } from "./_components/trainings-list";
 import { TrainingScheduleFormSheet } from "./_components/training-schedule-form-sheet";
@@ -57,8 +58,22 @@ type LoadResult =
 
 const NEXT_FOUR_WEEKS_MS = 4 * 7 * 24 * 60 * 60 * 1000;
 
-async function loadTrainings(): Promise<LoadResult> {
+async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
   const supabase = await createClient();
+  let teamsQuery = supabase
+    .from("teams")
+    .select(
+      "id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at",
+    );
+  let blocksQuery = supabase
+    .from("training_blocks")
+    .select("*")
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+  if (teamScope) {
+    teamsQuery = teamsQuery.in("id", teamScope);
+    blocksQuery = blocksQuery.in("team_id", teamScope);
+  }
 
   const [
     { data: seasonsData, error: seasonsError },
@@ -69,16 +84,8 @@ async function loadTrainings(): Promise<LoadResult> {
       .from("seasons")
       .select("id, label, start_date, end_date, is_current, archived_at, created_at, updated_at")
       .order("start_date", { ascending: false }),
-    supabase
-      .from("teams")
-      .select(
-        "id, season_id, category_code, label, gender, team_type, color, home_pool, notes, created_at, updated_at",
-      ),
-    supabase
-      .from("training_blocks")
-      .select("*")
-      .eq("is_active", true)
-      .order("created_at", { ascending: false }),
+    teamsQuery,
+    blocksQuery,
   ]);
 
   const firstError = seasonsError ?? teamsError ?? blocksError;
@@ -256,6 +263,11 @@ async function loadTrainings(): Promise<LoadResult> {
 }
 
 export default async function TrainingsPage() {
+  const access = await getAdminAccess();
+  const teamScope =
+    access.isAdmin || access.permissions.has("manage_trainings")
+      ? null
+      : Array.from(access.coachTeamIds);
   const {
     seasons,
     teams,
@@ -266,7 +278,7 @@ export default async function TrainingsPage() {
     rosterByTeam,
     attendanceBySession,
     error,
-  } = await loadTrainings();
+  } = await loadTrainings(teamScope);
 
   if (seasons.length === 0) {
     return (

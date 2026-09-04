@@ -5,6 +5,7 @@ import { CalendarCheck, Goal, Shield, Trophy, Waves } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
+import { getPlayerProfileBackTarget } from "@/lib/domain/player-profile-navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getTeamById, getTeamRoster } from "@/server/queries/teams";
@@ -19,13 +20,16 @@ export const metadata: Metadata = {
 
 export default async function TeamPlayerPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ teamId: string; playerId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 
   const { teamId, playerId } = await params;
+  const { from } = await searchParams;
   const [team, roster] = await Promise.all([getTeamById(teamId), getTeamRoster(teamId)]);
   if (!team) notFound();
 
@@ -47,7 +51,7 @@ export default async function TeamPlayerPage({
   const currentYear = new Date().getFullYear();
   const age = player.birth_year != null ? currentYear - player.birth_year : null;
   const number = player.squad_number ?? player.cap_number;
-  const rosterHref = `/team/${team.id}?tab=jugadores` as Route;
+  const backTarget = getPlayerProfileBackTarget(from, team.id);
   const matchesPlayed = snapshot?.matches_played ?? 0;
   const goalsPerMatch = matchesPlayed > 0 ? (snapshot?.goals ?? 0) / matchesPlayed : 0;
   const exclusionsPerMatch = matchesPlayed > 0 ? (snapshot?.exclusions ?? 0) / matchesPlayed : 0;
@@ -56,7 +60,7 @@ export default async function TeamPlayerPage({
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      <PageBackLink href={rosterHref}>Volver a la plantilla</PageBackLink>
+      <PageBackLink href={backTarget.href as Route}>{backTarget.label}</PageBackLink>
 
       <header className="border-ink-200 bg-paper-card shadow-elev-2 overflow-hidden rounded-[1.75rem] border">
         <div className="bg-pool-deep h-20" aria-hidden="true" />

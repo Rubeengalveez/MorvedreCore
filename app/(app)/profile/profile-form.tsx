@@ -25,10 +25,11 @@ import { Input } from "@/components/ui/input";
 import { updateProfile, type UpdateProfileState } from "@/server/actions/profile";
 import type { Tables } from "@/types/database";
 import { AvatarEditor } from "@/components/profile/avatar-editor";
-import { normalizeSpanishPhone } from "@/lib/domain/phone";
+import { normalizeSpanishPhone, toSpanishPhoneDigits } from "@/lib/domain/phone";
 
 const yearPattern = /^\d{4}$/;
 const dorsalPattern = /^\d{1,2}$/;
+const phonePattern = /^\d{9}$/;
 
 const profileFormSchema = z.object({
   full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
@@ -52,7 +53,7 @@ const profileFormSchema = z.object({
     .string()
     .trim()
     .optional()
-    .refine((v) => !v || normalizeSpanishPhone(v) != null, "Escribe un teléfono válido."),
+    .refine((v) => !v || phonePattern.test(v), "Escribe exactamente 9 dígitos."),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -91,7 +92,7 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
       full_name: profile.full_name,
       birth_year: profile.birth_year?.toString() ?? "",
       cap_number: isPlayer ? (profile.cap_number?.toString() ?? "") : "",
-      phone_e164: profile.phone_e164 ?? "",
+      phone_e164: toSpanishPhoneDigits(profile.phone_e164),
     },
   });
   const watchedFullName = useWatch({ control: form.control, name: "full_name" });
@@ -229,11 +230,14 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
                 <Input
                   id="phone_e164_input"
                   type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  placeholder="612 345 678"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  pattern="[0-9]{9}"
+                  minLength={9}
+                  maxLength={9}
+                  placeholder="612345678"
                   value={field.value ?? ""}
-                  onChange={field.onChange}
+                  onChange={(event) => field.onChange(toSpanishPhoneDigits(event.target.value))}
                   onBlur={field.onBlur}
                   name={field.name}
                   ref={field.ref}
