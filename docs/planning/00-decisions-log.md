@@ -743,3 +743,15 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - `Temporadas`, `Equipos`, `Jugadores`, `Familias`, `Personal`, `Tesorería`, `Noticias` y `Tienda` siguen ocultos y bloqueados salvo que la persona reciba el permiso administrativo correspondiente.
 - La migración `20260727223405_allow_coaches_manage_training_blocks.sql` permite que la RLS de los bloques de entrenamiento aplique la misma regla por equipo que las sesiones y los partidos.
 - La migración `20260727223823_scope_training_block_coach_access.sql` añade una comprobación estricta para los bloques de entrenamiento que solo acepta roles `coach` ligados al equipo. Los roles globales heredados se conservan, pero no intervienen en este acceso.
+
+## 2026-09-04 - Fase 9 Polish, Accesibilidad y Offline
+
+- Se consolida la estrategia offline segura: el Service Worker precachea los recursos estáticos y sirve la página `/offline` como fallback ante la pérdida de conexión. Se mantiene la exclusión de cachear respuestas HTML y datos autenticados en disco para evitar fugas de información privada en dispositivos familiares compartidos.
+- La página `/offline` comunica claramente los motivos de seguridad en segunda persona, ofrece reintento manual y detecta en tiempo real la recuperación de red (`window.addEventListener('online')`), recargando suavemente.
+- Se implementa `ConnectivityBanner` en el Shell de la aplicación: un aviso flotante y accesible (`role="status"`, `aria-live="polite"`) que informa del modo solo lectura al perder conexión y comunica el restablecimiento antes de auto-ocultarse.
+- Se mejora el instalador PWA (`PwaInstallPrompt`): soporte para el evento estándar `beforeinstallprompt` en Android y una guía modal accesible con pasos claros para iPhone/iPad (Safari), evitando alertas bloqueantes de navegador.
+- En accesibilidad (WCAG AA), se incorpora la regla global de `:focus-visible` con anillo azul nítido (`var(--pool-blue)`) y desplazamiento para navegación cómoda por teclado. La variante de botón `sm` se amplía a 48 px (`min-h-12`) asegurando objetivos táctiles adecuados en toda la interfaz móvil. Se mantiene el tema diurno de alto contraste de piscina sin dispersar esfuerzos en un modo oscuro secundario.
+- Se preserva el castellano como idioma único de la aplicación, evitando dependencias superfluas de i18n.
+- Se integran los error boundaries de Next.js (`app/error.tsx` y `app/global-error.tsx`) con un logger estructurado (`lib/monitoring/error-logger.ts`) que sanitiza credenciales y permite telemetría condicional con Sentry mediante variables de entorno opcionales sin romper builds locales.
+- Se implementa el script `scripts/backup-db.mjs` (`pnpm db:backup`) que realiza copias completas de las 30 tablas del club en formato JSON estructurado, automatizable semanalmente con GitHub Actions (`.github/workflows/backup.yml`) a coste cero y con retención de 30 días.
+

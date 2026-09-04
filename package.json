@@ -23,7 +23,8 @@
     "seed:wipe": "node scripts/seed/index.mjs wipe",
     "icons:generate": "node scripts/generate-icons.mjs",
     "icons:favicon": "node scripts/generate-favicon.mjs",
-    "auth:check": "node scripts/check-auth-config.mjs"
+    "auth:check": "node scripts/check-auth-config.mjs",
+    "db:backup": "node scripts/backup-db.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.4.0",

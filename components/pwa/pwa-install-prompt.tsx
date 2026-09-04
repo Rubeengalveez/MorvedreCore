@@ -98,8 +98,11 @@ export function PwaInstallPrompt() {
 
   const isIOS = isIOSNow();
 
+  const [showIosModal, setShowIosModal] = useState(false);
+
   function dismiss(reason: "dismissed" | "installed") {
     setShowPrompt(false);
+    setShowIosModal(false);
     if (reason === "installed") {
       writeInstalled();
     } else {
@@ -109,12 +112,7 @@ export function PwaInstallPrompt() {
 
   const handleInstallClick = async () => {
     if (isIOS) {
-      window.alert(
-        "Para instalar en tu iPhone:\n\n" +
-          "1. Pulsa el botón de 'Compartir' (el icono con la flecha hacia arriba abajo en Safari).\n" +
-          "2. Selecciona 'Añadir a la pantalla de inicio' en la lista.",
-      );
-      dismiss("dismissed");
+      setShowIosModal(true);
       return;
     }
 
@@ -130,9 +128,68 @@ export function PwaInstallPrompt() {
   };
 
   return (
-    <div
-      role="dialog"
-      aria-label="Instalar Morvedre Core"
+    <>
+      {showIosModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ios-install-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
+        >
+          <div className="bg-paper-card border-ink-200 shadow-elev-4 w-full max-w-sm rounded-lg border p-5">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="ios-install-title" className="font-display text-pool-deep text-lg font-bold">
+                Instalar en tu iPhone o iPad
+              </h2>
+              <button
+                type="button"
+                onClick={() => dismiss("dismissed")}
+                className="text-ink-500 hover:text-ink-900 flex h-10 w-10 items-center justify-center rounded-full"
+                aria-label="Cerrar instrucciones"
+              >
+                <MdClose className="h-5 w-5" />
+              </button>
+            </div>
+            <ol className="text-ink-700 mt-4 space-y-3 text-sm leading-normal">
+              <li className="flex items-start gap-2">
+                <span className="bg-pool-foam text-pool-deep flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black">
+                  1
+                </span>
+                <span>
+                  Pulsa el botón de <strong>Compartir</strong> en la barra inferior de Safari (el icono de cuadro con flecha hacia arriba).
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="bg-pool-foam text-pool-deep flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black">
+                  2
+                </span>
+                <span>
+                  Baja por las opciones y toca en <strong>&ldquo;Añadir a la pantalla de inicio&rdquo;</strong>.
+                </span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="bg-pool-foam text-pool-deep flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black">
+                  3
+                </span>
+                <span>
+                  Pulsa <strong>Añadir</strong> en la esquina superior derecha.
+                </span>
+              </li>
+            </ol>
+            <Button
+              variant="primary"
+              size="md"
+              onClick={() => dismiss("dismissed")}
+              className="mt-5 w-full font-bold"
+            >
+              ¡Entendido!
+            </Button>
+          </div>
+        </div>
+      )}
+      <div
+        role="dialog"
+        aria-label="Instalar Morvedre Core"
       className="border-pool-deep/20 bg-paper-card shadow-elev-4 fixed right-3 bottom-[calc(var(--bottom-nav-height)+8px)] left-3 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-md border p-3 backdrop-blur-md sm:right-6 sm:bottom-6 sm:left-6"
     >
       <div className="flex min-w-0 items-center gap-3">
@@ -162,5 +219,6 @@ export function PwaInstallPrompt() {
         </button>
       </div>
     </div>
-  );
+  </>
+);
 }

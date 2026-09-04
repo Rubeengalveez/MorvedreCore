@@ -1,6 +1,7 @@
 import { BottomNav } from "@/components/layout/bottom-nav";
 import { TopBar, type TopBarProps } from "@/components/layout/top-bar";
 import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
+import { ConnectivityBanner } from "@/components/ui/connectivity-banner";
 
 export type AppShellProps = TopBarProps & {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ export type AppShellProps = TopBarProps & {
 export function AppShell({ profile, showAttendance, children }: AppShellProps) {
   return (
     <div className="app-stage bg-paper flex min-h-dvh flex-col">
+      <ConnectivityBanner />
       <TopBar profile={profile} />
       <main
         id="main-content"

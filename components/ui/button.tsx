@@ -21,7 +21,7 @@ const buttonVariants = cva(
         gold: "bg-ball-gold text-pool-deep hover:opacity-90 active:opacity-90",
       },
       size: {
-        sm: "h-11 min-h-11 px-4 text-sm",
+        sm: "h-12 min-h-12 px-4 text-sm",
         md: "h-12 min-h-12 px-5 text-base",
         lg: "h-14 min-h-14 px-6 text-base",
         xl: "h-16 min-h-16 px-7 text-lg",

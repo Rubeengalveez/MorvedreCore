@@ -127,14 +127,14 @@ Estimaciones optimistas. La realidad dirá.
 
 > Demo: "Lighthouse PWA 95+, WCAG AA, funciona sin conexión en las pantallas de solo lectura"
 
-- [ ] Auditoría accesibilidad (lectores de pantalla, contraste, foco visible)
-- [ ] Modo oscuro (opcional, con tokens)
-- [ ] Service Worker: cachea dashboard, rankings, calendario
-- [ ] Página "Estás sin conexión" con copy útil
-- [ ] PWA install prompt personalizado
-- [ ] Traducción a valencià (si se decide)
-- [ ] Sentry para errores en producción
-- [ ] Backup semanal automatizado de la DB a Storage
+- [x] Auditoría accesibilidad (lectores de pantalla, foco visible :focus-visible, touch targets >= 48px)
+- [x] Modo oscuro pospuesto por decisión de diseño; foco en WCAG AA sobre tema piscina
+- [x] Service Worker: precache estático y fallback seguro de navegación a /offline
+- [x] Página "Estás sin conexión" (/offline) con copy de privacidad y auto-recarga reactiva
+- [x] PWA install prompt personalizado con guía modal accesible para iOS y Android
+- [x] Decisión de idioma cerrada: exclusivamente en castellano según convención de diseño
+- [x] Sentry condicional con error boundaries (error.tsx, global-error.tsx) y logging estructurado
+- [x] Backup semanal automatizado de la DB vía script Node.js y GitHub Action a coste cero
 
 ## Fase 10 — Lanzamiento (1 semana)
 

@@ -59,6 +59,9 @@ next-env.d.ts
 # Local seed state
 .seed-batch.json
 
+# Local database backups
+backups/
+
 # PWA Service Worker (Serwist) build outputs
 public/sw.js
 public/sw-dev.js
@@ -71,4 +74,3 @@ public/swe-worker-*.js
 
 # pnpm store (local)
 .pnpm-store/
-
