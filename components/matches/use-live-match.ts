@@ -209,14 +209,17 @@ export function useLiveMatch() {
       });
       if (!saved.ok) throw new Error(saved.error);
       const result = saved.data;
-      await persist({
+      const updated: StoredMatch = {
         ...remote,
         device: liveDevice(),
         owner: result.owner,
         revision: result.revision,
         mutation,
-      });
-      location.reload();
+      };
+      await persist(updated);
+      canWrite.current = true;
+      setWritable(true);
+      setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "No pudimos tomar el relevo.");
     } finally {
