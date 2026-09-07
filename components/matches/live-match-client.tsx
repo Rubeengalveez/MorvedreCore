@@ -41,7 +41,11 @@ export function LiveMatchClient() {
   const [notice, setNotice] = useState("");
   const [shareError, setShareError] = useState("");
   const [outWarning, setOutWarning] = useState(false);
-  useEffect(()=>{if(!notice)return;const timer=setTimeout(()=>setNotice(""),4500);return()=>clearTimeout(timer);},[notice]);
+  useEffect(() => {
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(""), 4500);
+    return () => clearTimeout(timer);
+  }, [notice]);
   const s = record?.sheet;
   const closed = s?.phase === "finished";
   const enabled = writable && !closed && !busy;

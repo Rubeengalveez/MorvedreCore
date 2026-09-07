@@ -133,7 +133,7 @@ export function createActaPdf(record: LiveRecord) {
   }
   section("Jugadas por periodo");
   for (const e of s.events.filter((e) => !e.deleted).sort((a, b) => a.period - b.period))
-    line(`P${e.period} · ${describeEvent(e, s)}`, false, 10);
+    line(`P${e.period} - ${describeEvent(e, s).replace(/·/g, "-")}`, false, 10);
   return new File([doc.output("arraybuffer")], `acta-morvedre-${record.date.slice(0, 10)}.pdf`, {
     type: "application/pdf",
   });

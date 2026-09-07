@@ -98,7 +98,10 @@ export function useLiveMatch() {
               if (result && !result.ok) throw new Error(result.error);
               if (result?.ok) {
                 const remote = result.data;
-                if(cached && (cached.dirty || cached.flight) && cached.viewer!==remote.viewer) throw new Error("Este móvil tiene jugadas pendientes de otra sesión. Vuelve a esa cuenta para enviarlas antes de abrir el acta aquí.");
+                if (cached && (cached.dirty || cached.flight) && cached.viewer !== remote.viewer)
+                  throw new Error(
+                    "Este móvil tiene jugadas pendientes de otra sesión. Vuelve a esa cuenta para enviarlas antes de abrir el acta aquí.",
+                  );
                 if (cached && (cached.dirty || cached.flight) && cached.viewer === remote.viewer)
                   next = { ...cached, canEdit: remote.canEdit };
                 else

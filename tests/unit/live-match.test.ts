@@ -123,4 +123,32 @@ describe("acta en directo", () => {
     s.events = [event("goal", { side: "them" })];
     expect(sheetSchema.safeParse(s).success).toBe(false);
   });
+  it("generates a valid acta PDF file without throwing", async () => {
+    const { createActaPdf } = await import("@/lib/domain/acta-pdf");
+    const s = sampleSheet();
+    s.events = [
+      event("goal", { cap: 2 }),
+      event("exclusion", { cap: 2 }),
+      event("timeout", { cap: null }),
+    ];
+    const record = {
+      matchId: "30000000-0000-4000-8000-000000000001",
+      owner: "profile-1",
+      viewer: "profile-1",
+      canEdit: true,
+      opponent: "Rival CF",
+      team: "Infantil",
+      date: "2026-10-15T10:00:00Z",
+      revision: 1,
+      mutation: "mut-1",
+      device: "dev-1",
+      sheet: s,
+      dirty: false,
+    };
+    const file = createActaPdf(record);
+    expect(file).toBeDefined();
+    expect(file.type).toBe("application/pdf");
+    expect(file.name).toMatch(/^acta-morvedre-2026-10-15\.pdf$/);
+    expect(file.size).toBeGreaterThan(500);
+  });
 });
