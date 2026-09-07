@@ -7,7 +7,7 @@ Guía operativa para la gestión económica del club (Mónica y administración)
 ## 1. Filosofía de tesorería del club
 
 - **Coste cero y sin comisiones**: La aplicación no procesa pagos con tarjeta ni cobra comisiones.
-- El cobro real de las cuotas se realiza mediante domiciliación bancaria o transferencia, como siempre ha hecho el club.
+- El cobro se realiza fuera de la app, por el método que acuerde el club.
 - La aplicación actúa como el **libro de cuentas centralizado**: registra compromisos, excepciones, estado de pago de cada jugador y genera los cierres mensuales en Excel.
 
 ---
@@ -15,10 +15,9 @@ Guía operativa para la gestión económica del club (Mónica y administración)
 ## 2. Configuración de cuotas y excepciones
 
 1. Entra en **Administración → Tesorería**.
-2. **Planes de cuota**: Cada categoría tiene su tarifa de temporada (por ejemplo, cuota estándar competitiva o cuota Escuela de 100€/temporada).
-3. **Excepciones personalizadas**:
-   - Para jugadores con descuento por segundo hermano, becas o cuota de entrenador/staff, entra en la ficha del jugador.
-   - Aplica la excepción correspondiente (descuento porcentual o importe fijo). El sistema recalcula todas las mensualidades automáticamente.
+2. Revisa los conceptos existentes. **Crear concepto** permite indicar nombre, tipo, periodicidad, a quién se aplica e importe.
+3. En **Asignar concepto**, selecciona el perfil y concepto. Puedes indicar un importe propio y fechas de inicio y fin para las excepciones acordadas.
+4. Comprueba el resultado en el periodo correspondiente antes de generar un cierre; no supongas que una excepción modifica cierres anteriores.
 
 ---
 
@@ -33,9 +32,9 @@ Guía operativa para la gestión económica del club (Mónica y administración)
 
 ## 4. Cierre mensual y exportación a Excel
 
-1. A final de cada mes natural, ve a la sección **Cierre mensual**.
-2. Selecciona el mes a liquidar (por ejemplo, *Octubre 2026*).
-3. Revisa el resumen general: total emitido, total cobrado y pendientes de cobro.
-4. Pulsa en **Generar y enviar cierre**:
-   - Se genera una hoja de cálculo Excel completa con el desglose detallado de todos los jugadores y familias.
-   - El archivo se envía automáticamente por correo electrónico a la tesorera para conciliar con el banco o preparar las remesas.
+1. En **Generar cierre**, revisa las fechas **Desde** y **Hasta** y el correo de destino.
+2. Pulsa **Generar cierre** y revisa las líneas e importes de la pantalla resultante.
+3. Descarga el Excel para comprobarlo. Cuando corresponda, usa **Enviar a tesoreria** y espera la confirmación de envío.
+4. Si el envío falla, conserva el Excel y revisa el error antes de repetir. La app no realiza el cobro ni envía una orden al banco.
+
+Puedes regenerar un borrador sin cobros registrados. Los cierres enviados, archivados o con pagos se protegen para conservar su historial; la app te avisará si intentas reemplazarlos.

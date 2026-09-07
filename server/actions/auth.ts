@@ -324,10 +324,44 @@ export async function signIn(formData: FormData) {
   redirect(target as Route);
 }
 
-export async function signOut() {
+export async function signOut(input?: {
+  endpoint?: string;
+  localPushRemoved?: boolean;
+}): Promise<{ error?: string }> {
+  const parsed = z
+    .object({
+      endpoint: z.string().url().max(4096).optional(),
+      localPushRemoved: z.boolean().optional(),
+    })
+    .safeParse(input ?? {});
+  if (!parsed.success) return { error: "No pudimos comprobar los datos del dispositivo." };
   const supabase = await createClient();
-  await supabase.auth.signOut();
-  redirect("/login" as Route);
+  if (parsed.data.endpoint) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const profile = user
+      ? await supabase.from("profiles").select("id").eq("auth_user_id", user.id).maybeSingle()
+      : null;
+    const disabled = profile?.data
+      ? await supabase
+          .from("push_subscriptions")
+          .update({ enabled: false })
+          .eq("profile_id", profile.data.id)
+          .eq("endpoint", parsed.data.endpoint)
+          .select("id")
+      : null;
+    if ((!disabled || disabled.error || !disabled.data?.length) && !parsed.data.localPushRemoved) {
+      return {
+        error:
+          "No pudimos desactivar los avisos de este dispositivo. Vuelve a intentarlo antes de salir.",
+      };
+    }
+  }
+  const { error } = await supabase.auth.signOut({ scope: "local" });
+  if (error)
+    return { error: "No pudimos cerrar la sesión. Comprueba tu conexión y vuelve a intentarlo." };
+  return {};
 }
 
 export async function requestPasswordReset(

@@ -15,6 +15,8 @@ const buttonVariants = cva(
         deep: "bg-pool-deep text-paper hover:bg-ink-900 active:bg-ink-900",
         secondary:
           "border border-ink-300 bg-paper-card text-pool-deep shadow-elev-1 hover:bg-pool-foam active:bg-pool-foam",
+        outline:
+          "border border-pool-blue/30 bg-transparent text-pool-blue hover:border-pool-blue hover:bg-pool-foam active:bg-pool-foam",
         ghost: "text-pool-deep hover:bg-pool-foam active:bg-pool-foam",
         danger: "bg-goggle-red text-paper hover:opacity-90 active:opacity-90",
         success: "bg-success text-paper hover:opacity-90 active:opacity-90",
@@ -25,6 +27,7 @@ const buttonVariants = cva(
         md: "h-12 min-h-12 px-5 text-base",
         lg: "h-14 min-h-14 px-6 text-base",
         xl: "h-16 min-h-16 px-7 text-lg",
+        icon: "h-12 w-12 min-h-12 min-w-12 p-0",
       },
     },
     defaultVariants: {

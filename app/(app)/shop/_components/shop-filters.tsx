@@ -51,7 +51,7 @@ export function ShopFilters({ categories, activeCategory, search }: ShopFiltersP
         />
         <button
           type="submit"
-          className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue mr-2 inline-flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue mr-2 inline-flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
           aria-label="Buscar productos"
         >
           <Search className="h-5 w-5" aria-hidden="true" />
@@ -68,7 +68,7 @@ export function ShopFilters({ categories, activeCategory, search }: ShopFiltersP
           name="category"
           defaultValue={activeCategory ?? "all"}
           onChange={(event) => changeCategory(event.currentTarget.value)}
-          className="border-ink-200 bg-paper text-pool-deep focus-visible:ring-pool-blue ml-auto min-h-10 min-w-0 flex-1 rounded-xl border px-3 text-sm font-bold outline-none focus-visible:ring-2"
+          className="border-ink-200 bg-paper text-pool-deep focus-visible:ring-pool-blue ml-auto min-h-12 min-w-0 flex-1 rounded-xl border px-3 text-sm font-bold outline-none focus-visible:ring-2"
         >
           <option value="all">Todos los productos</option>
           {categories.map((category) => (
@@ -80,7 +80,7 @@ export function ShopFilters({ categories, activeCategory, search }: ShopFiltersP
         {hasFilters ? (
           <Link
             href={"/shop" as Route}
-            className="text-ink-500 hover:bg-paper-card hover:text-goggle-red focus-visible:ring-pool-blue inline-flex h-10 w-10 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            className="text-ink-500 hover:bg-paper-card hover:text-goggle-red focus-visible:ring-pool-blue inline-flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-label="Quitar filtros"
           >
             <X className="h-5 w-5" aria-hidden="true" />

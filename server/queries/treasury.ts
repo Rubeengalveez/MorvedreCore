@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { readAllRows } from "@/lib/supabase/read-all-rows";
 import { canViewPersonalFinances } from "@/lib/domain/family";
 import {
   formatTreasuryCents,
@@ -227,48 +228,29 @@ export async function getTreasuryClosure(id: string): Promise<{
   lines: TreasuryLine[];
 }> {
   const supabase = await createClient();
-  const raw = db(supabase);
-  const { data: closure } = await (
-    raw.from("treasury_period_closures").select("*") as {
-      eq: (
-        column: string,
-        value: string,
-      ) => { maybeSingle: () => Promise<{ data: unknown | null }> };
-    }
-  )
+  const { data: closure, error } = await supabase
+    .from("treasury_period_closures")
+    .select("*")
     .eq("id", id)
     .maybeSingle();
+  if (error) throw new Error("No pudimos cargar el cierre: " + error.message);
   if (!closure) return { closure: null, lines: [] };
 
-  const { data: lineRows } = await (
-    raw.from("treasury_lines").select("*") as {
-      eq: (
-        column: string,
-        value: string,
-      ) => {
-        order: (
-          column: string,
-          options?: { ascending?: boolean },
-        ) => Promise<{ data: unknown[] | null }>;
-      };
-    }
-  )
-    .eq("closure_id", id)
-    .order("created_at", { ascending: true });
-  const linesRaw = (lineRows ?? []) as Array<Omit<TreasuryLine, "profile_name">>;
-  const profileIds = Array.from(new Set(linesRaw.map((line) => line.profile_id)));
-  const { data: profiles } = profileIds.length
-    ? await supabase.from("profiles").select("id, full_name").in("id", profileIds)
-    : { data: [] as Array<{ id: string; full_name: string }> };
-  const profileMap = new Map(
-    ((profiles ?? []) as Array<{ id: string; full_name: string }>).map((p) => [p.id, p.full_name]),
+  const rows = await readAllRows("líneas del cierre", (from, to) =>
+    supabase
+      .from("treasury_lines")
+      .select("*, profiles!treasury_lines_profile_id_fkey(full_name)", { count: "exact" })
+      .eq("closure_id", id)
+      .order("created_at", { ascending: true })
+      .order("id")
+      .range(from, to),
   );
 
   return {
-    closure: { ...(closure as Omit<TreasuryClosure, "line_count">), line_count: linesRaw.length },
-    lines: linesRaw.map((line) => ({
+    closure: { ...closure, line_count: rows.length },
+    lines: rows.map(({ profiles, ...line }) => ({
       ...line,
-      profile_name: profileMap.get(line.profile_id) ?? "Perfil",
+      profile_name: (Array.isArray(profiles) ? profiles[0] : profiles)?.full_name ?? "Perfil",
     })),
   };
 }
@@ -351,10 +333,7 @@ export async function getFamilyTreasury(profileId: string): Promise<FamilyTreasu
   const admin = createAdminClient();
 
   const [profileRowsRes, latestClosureRes, teamRowsRes, orderRowsRes] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, full_name, photo_url, team_color")
-      .in("id", allIds),
+    supabase.from("profiles").select("id, full_name, photo_url, team_color").in("id", allIds),
     admin
       .from("treasury_period_closures")
       .select("id, period_label, period_start")
@@ -366,28 +345,38 @@ export async function getFamilyTreasury(profileId: string): Promise<FamilyTreasu
       .select("player_id, teams!team_rosters_team_id_fkey(label, color, season_id)")
       .in("player_id", allIds)
       .is("left_at", null),
-    (db(supabase).from("shop_orders").select("*") as {
-      in: (column: string, values: string[]) => {
-        in: (column: string, values: string[]) => {
-          order: (
+    (
+      db(supabase).from("shop_orders").select("*") as {
+        in: (
+          column: string,
+          values: string[],
+        ) => {
+          in: (
             column: string,
-            options?: { ascending?: boolean },
-          ) => Promise<{ data: unknown[] | null }>;
+            values: string[],
+          ) => {
+            order: (
+              column: string,
+              options?: { ascending?: boolean },
+            ) => Promise<{ data: unknown[] | null }>;
+          };
         };
-      };
-    })
+      }
+    )
       .in("requested_by", allIds)
       .in("status", ["pending_admin", "ordered", "received", "delivered"])
       .order("requested_at", { ascending: false }),
   ]);
 
   const profileMap = new Map(
-    ((profileRowsRes.data ?? []) as Array<{
-      id: string;
-      full_name: string;
-      photo_url: string | null;
-      team_color: string | null;
-    }>).map((p) => [p.id, p]),
+    (
+      (profileRowsRes.data ?? []) as Array<{
+        id: string;
+        full_name: string;
+        photo_url: string | null;
+        team_color: string | null;
+      }>
+    ).map((p) => [p.id, p]),
   );
   const teamByPlayer = new Map<string, { label: string; color: string }>();
   for (const row of (teamRowsRes.data ?? []) as Array<{

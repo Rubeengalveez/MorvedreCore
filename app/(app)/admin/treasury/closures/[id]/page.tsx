@@ -1,8 +1,8 @@
 import { notFound } from "next/navigation";
-import { Download, FileSpreadsheet } from "lucide-react";
+import { FileSpreadsheet } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
-import { Button } from "@/components/ui/button";
+import { DownloadClosureButton } from "@/components/treasury/download-closure-button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { SectionHeader } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
@@ -43,12 +43,7 @@ export default async function TreasuryClosurePage({ params }: { params: Promise<
           <Stat label="Pagado" value={formatTreasuryCents(paidTotal)} />
           <Stat label="Pendiente" value={formatTreasuryCents(pendingTotal)} />
         </div>
-        <Button asChild variant="primary" className="mt-4 w-full">
-          <a href={`/api/treasury/closures/${closure.id}/export`}>
-            <Download className="h-4 w-4" />
-            Descargar Excel
-          </a>
-        </Button>
+        <DownloadClosureButton closureId={closure.id} />
         <SendClosureEmailButton closureId={closure.id} sentToEmail={closure.sent_to_email} />
       </section>
 

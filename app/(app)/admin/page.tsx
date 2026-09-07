@@ -15,12 +15,12 @@ import {
 } from "react-icons/md";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AdminPermission } from "@/lib/domain/permissions";
+import { canAccessAdminModule, type AdminPermission } from "@/lib/domain/permissions";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { LanePattern } from "@/components/ui/lane-pattern";
 import { PageShell, SectionHeader } from "@/components/ui/page-shell";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { getAdminAccess } from "@/server/actions/admin/_helpers";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -70,8 +70,6 @@ interface AdminTile {
   description: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   permission: AdminPermission | "admin";
-  allowCoach?: boolean;
-  allowMatchStaff?: boolean;
 }
 
 const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
@@ -116,7 +114,6 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Bloques y asistencia.",
     Icon: MdSports,
     permission: "manage_trainings",
-    allowCoach: true,
   },
   {
     href: "/admin/matches",
@@ -124,8 +121,6 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Convocatorias y actas.",
     Icon: MdSportsVolleyball,
     permission: "manage_matches",
-    allowCoach: true,
-    allowMatchStaff: true,
   },
   {
     href: "/admin/treasury",
@@ -165,19 +160,13 @@ function buildGreeting(now: Date, firstName: string): string {
 }
 
 export default async function AdminHomePage() {
-  const [ctx, access] = await Promise.all([getActiveProfileContext(), getAdminAccess()]);
+  const [ctx, access] = await Promise.all([getActiveProfileContext(), getRenderAdminAccess()]);
   const counts = access.isAdmin ? await loadCounts() : null;
   const activeProfileName = ctx?.activeProfile.full_name ?? "Admin";
   const firstName = activeProfileName.split(/\s+/)[0] ?? activeProfileName ?? "Admin";
   const now = new Date();
   const greeting = buildGreeting(now, firstName);
-  const modules = ADMIN_MODULES.filter(
-    (module) =>
-      access.isAdmin ||
-      access.permissions.has(module.permission as AdminPermission) ||
-      (module.allowCoach === true && access.coachTeamIds.size > 0) ||
-      (module.allowMatchStaff === true && access.matchStaffTeamIds.size > 0),
-  );
+  const modules = ADMIN_MODULES.filter((module) => canAccessAdminModule(access, module.permission));
 
   return (
     <div className="relative">

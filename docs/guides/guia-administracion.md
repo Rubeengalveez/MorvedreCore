@@ -12,8 +12,8 @@ Cuando un socio, padre o jugador nuevo rellena el formulario de solicitud de acc
 2. Revisa los datos de la persona solicitante (nombre, correo, teléfono, rol y si declara tener hijos en el club).
 3. **Aprobación segura**:
    - Pulsa en **Aprobar**.
-   - El sistema crea la cuenta de usuario en el sistema de autenticación de forma segura y transaccional, asigna el rol (familiar, jugador, etc.) y vincula los hijos si existen.
-   - Si se detecta que el correo ya existía, el sistema asocia el nuevo rol o vínculo familiar sin machacar ni resetear las contraseñas previas del usuario.
+   - El sistema crea la cuenta, asigna el rol (familiar, jugador, etc.) y vincula los hijos si existen. Si falla una alta nueva, intenta retirar la cuenta creada.
+   - Si el correo ya existía, la aprobación puede emitir una contraseña temporal nueva después de guardar el perfil y sus vínculos. Comunícala por un canal privado y explica el cambio obligatorio al entrar.
 
 ---
 
@@ -23,17 +23,17 @@ Cuando un socio, padre o jugador nuevo rellena el formulario de solicitud de acc
 2. Para cada equipo puedes:
    - Asignar el entrenador titular (Vega, Vitaliy, Rubén).
    - Asignar delegados de equipo/mesa autorizados a gestionar actas y partidos.
-   - Añadir o retirar jugadores de la plantilla (*roster*).
+   - Añadir o retirar jugadores de la plantilla (_roster_).
    - Recuerda: la regla del club permite alinear a un jugador en su categoría natural o hasta una categoría superior.
 
 ---
 
 ## 3. Importación de datos desde Excel
 
-1. Si necesitas dar de alta o actualizar en bloque jugadores o familias al inicio de temporada, entra en **Administración → Importar**.
-2. Descarga la plantilla oficial en Excel.
-3. Rellena las columnas (nombre, apellidos, DNI, fecha de nacimiento, número de gorro, categoría, emails y teléfonos).
-4. Sube el archivo: la app valida los datos antes de escribir nada, mostrando un resumen de altas nuevas y actualizaciones para que confirmes los cambios.
+1. Para importar jugadores, entra en **Administración → Jugadores → Importar**.
+2. Prepara un Excel con las columnas que muestra la pantalla: `nombre_completo`, `ano_nacimiento`, `dorsal`, `nombre_equipo`, `email_tutor`, `nombre_tutor`, `telefono_tutor` y `relacion`.
+3. Selecciona el archivo y pulsa **Previsualizar**. Revisa los errores, coincidencias y altas propuestas.
+4. Confirma solo tras revisar el resumen. Al terminar, comprueba el resultado de la importación; no supongas que todas las filas se han importado si aparecen errores.
 
 ---
 
@@ -48,9 +48,9 @@ Cuando un socio, padre o jugador nuevo rellena el formulario de solicitud de acc
 
 ## 5. Copias de seguridad (Backups) y seguridad
 
-- El sistema genera copias de seguridad automáticas de las 30 tablas de la base de datos con verificación de integridad criptográfica SHA-256.
+- El exportador cubre las 41 tablas públicas actuales, con lectura paginada y verificación SHA-256. El workflow semanal requiere credenciales y una ejecución exitosa comprobada.
 - Para verificar manualmente el estado de la última copia en cualquier momento:
   ```bash
   node scripts/verify-backup.mjs
   ```
-- Este comando comprueba los checksums y confirma que todos los registros de jugadores, partidos, entrenamientos y tesorería están íntegros y restaurables.
+- Este comando comprueba el manifiesto, los recuentos y el checksum del archivo. No demuestra que toda la aplicación sea restaurable: Auth y los archivos se respaldan por separado. Sigue el [procedimiento de recuperación](recuperacion-datos.md).

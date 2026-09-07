@@ -238,7 +238,7 @@ export function SuggestCallupSheet({ matchId }: SuggestCallupSheetProps) {
                     value={capOverrides[s.player_id] ?? ""}
                     onChange={(e) => setCap(s.player_id, e.target.value)}
                     disabled={!isSelected}
-                    className="h-10 w-16 px-1 py-1 text-center font-mono text-sm"
+                    className="h-12 w-16 px-1 py-1 text-center font-mono text-sm"
                   />
                 </div>
               </div>

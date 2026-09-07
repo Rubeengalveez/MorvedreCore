@@ -1,6 +1,7 @@
 import { Minus, ShoppingBag, UsersRound } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
 import { formatTreasuryCents } from "@/lib/domain/treasury";
 import type { FamilyTreasury } from "@/server/queries/treasury";
 
@@ -28,10 +29,8 @@ export function FamilyTreasuryView({ data, isParent }: FamilyTreasuryViewProps) 
     monthlyFeeTotalCents > 0 ? Math.round((-siblingDiscountCents / monthlyFeeTotalCents) * 100) : 0;
 
   return (
-    <section
-      aria-labelledby="family-treasury-title"
-      className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border"
-    >
+    <Card asChild className="overflow-hidden">
+      <section aria-labelledby="family-treasury-title">
       <div className="bg-pool-deep text-paper px-5 py-6 text-center">
         <p className="text-paper/75 text-xs font-extrabold tracking-[0.12em] uppercase">
           Cuota de {periodLabel.toLowerCase()}
@@ -130,5 +129,6 @@ export function FamilyTreasuryView({ data, isParent }: FamilyTreasuryViewProps) 
         </span>
       </div>
     </section>
-  );
+  </Card>
+);
 }

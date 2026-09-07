@@ -127,7 +127,7 @@ export default async function AttendanceSummaryPage({
               href={`/attendance/summary?period=${value}&date=${anchor}${queryTeam}` as Route}
               aria-current={period === value ? "page" : undefined}
               className={cn(
-                "focus-visible:ring-pool-blue flex min-h-10 items-center justify-center rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
+                "focus-visible:ring-pool-blue flex min-h-12 touch-manipulation items-center justify-center rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
                 period === value ? "bg-pool-deep text-paper shadow-elev-1" : "text-ink-700",
               )}
             >

@@ -74,3 +74,4 @@ public/swe-worker-*.js
 
 # pnpm store (local)
 .pnpm-store/
+/tmp/acta-audit/

@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
-import { getAdminAccess } from "@/server/actions/admin/_helpers";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
+import { getTeamScope } from "@/lib/domain/permissions";
 
 import { TrainingsList } from "./_components/trainings-list";
 import { TrainingScheduleFormSheet } from "./_components/training-schedule-form-sheet";
@@ -281,11 +282,8 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
 }
 
 export default async function TrainingsPage() {
-  const access = await getAdminAccess();
-  const teamScope =
-    access.isAdmin || access.permissions.has("manage_trainings")
-      ? null
-      : Array.from(access.coachTeamIds);
+  const access = await getRenderAdminAccess();
+  const teamScope = getTeamScope(access, "trainings");
   const {
     seasons,
     teams,

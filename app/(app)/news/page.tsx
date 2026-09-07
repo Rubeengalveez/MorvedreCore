@@ -70,7 +70,7 @@ export default async function NewsPage({
           isAdmin ? (
             <Link
               href={"/admin/news" as Route}
-              className="border-ink-200 bg-paper-card text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none min-[420px]:w-auto"
+              className="border-ink-200 bg-paper-card text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none min-[420px]:w-auto"
             >
               <Settings className="h-4 w-4" aria-hidden="true" /> Gestionar noticias
             </Link>
@@ -123,7 +123,7 @@ export default async function NewsPage({
           {page > 1 ? (
             <Link
               href={`/news?page=${page - 1}` as Route}
-              className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 items-center rounded-lg border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               ← Anterior
             </Link>
@@ -132,7 +132,7 @@ export default async function NewsPage({
           {page * 10 < feed.total ? (
             <Link
               href={`/news?page=${page + 1}` as Route}
-              className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 items-center rounded-lg border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+              className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 items-center rounded-lg border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
             >
               Siguiente →
             </Link>

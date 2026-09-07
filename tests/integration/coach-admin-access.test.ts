@@ -24,15 +24,15 @@ const coachScopeMigration = source(
 
 describe("coach admin access", () => {
   it("recognizes team-scoped coach roles as admin-area access", () => {
-    expect(helpers).toContain("coachTeamIds: Set<string>");
-    expect(adminLayout).toContain("access.coachTeamIds.size === 0");
-    expect(topBar).toContain('userRoles.includes("coach")');
+    expect(helpers).toContain("deriveAdminCapabilities");
+    expect(adminLayout).toContain("canAccessAdminArea(access)");
+    expect(topBar).toContain("canAccessAdminArea(access)");
   });
 
   it("shows and opens only the coach-capable admin modules", () => {
-    expect(adminHome.match(/allowCoach: true/g)).toHaveLength(2);
-    expect(trainingsLayout).toContain('permission="manage_trainings" allowCoach');
-    expect(matchesLayout).toContain('permission="manage_matches" allowCoach');
+    expect(adminHome).toContain("canAccessAdminModule(access, module.permission)");
+    expect(trainingsLayout).toContain('permission="manage_trainings"');
+    expect(matchesLayout).toContain('permission="manage_matches"');
   });
 
   it("scopes training and match reads to the coach teams", () => {

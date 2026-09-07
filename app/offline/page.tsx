@@ -7,12 +7,14 @@ import { RefreshCw, ArrowLeft, WifiOff, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function OfflinePage() {
+  const [lastActa,setLastActa]=useState<string|null>(null);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? false : navigator.onLine,
   );
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
+    queueMicrotask(()=>{const id=localStorage.getItem("morvedre-last-acta");if(id&&/^[0-9a-f-]{36}$/i.test(id))setLastActa(id);});
     function handleOnline() {
       setIsOnline(true);
       setTimeout(() => {
@@ -79,12 +81,12 @@ export default function OfflinePage() {
         </h1>
 
         <p className="text-ink-600 mt-3 text-sm leading-relaxed sm:text-base">
-          Parece que has perdido la señal de red. Para proteger la privacidad en dispositivos
-          compartidos del club, Morvedre Core no almacena datos privados ni convocatorias en la
-          memoria sin conexión.
+          Puedes continuar un acta que hayas preparado en este móvil. Sus jugadas se guardan aquí
+          y se envían al recuperar la conexión. Las demás secciones necesitan internet.
         </p>
 
         <div className="mt-6 flex w-full flex-col gap-3">
+          {lastActa&&<a href={`/acta?match=${lastActa}`} className="bg-pool-deep text-paper flex min-h-12 items-center justify-center rounded-xl p-3 font-bold">Retomar acta del partido</a>}
           <Button
             type="button"
             variant="primary"

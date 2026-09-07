@@ -138,7 +138,7 @@ function UncancelButton({ sessionId }: { sessionId: string }) {
     <Button
       variant="ghost"
       size="sm"
-      className="text-success hover:bg-success/10 h-10 w-10 min-w-10 p-0"
+      className="text-success hover:bg-success/10 h-12 w-12 min-w-12 p-0"
       aria-label="Reactivar sesión"
       disabled={pending}
       onClick={() =>
@@ -180,7 +180,7 @@ function SessionActions({
           <Button
             variant={past || !canEditAttendance ? "secondary" : "primary"}
             size="sm"
-            className="h-10 px-3"
+            className="h-12 px-3"
             aria-label={canEditAttendance ? "Pasar lista" : "Ver plantilla prevista"}
           >
             <MdAssignment className="h-4 w-4" aria-hidden="true" />
@@ -217,7 +217,7 @@ function SessionActions({
             <Button
               variant="ghost"
               size="sm"
-              className="text-danger hover:bg-danger/10 h-10 w-10 min-w-10 p-0"
+              className="text-danger hover:bg-danger/10 h-12 w-12 min-w-12 p-0"
               aria-label="Cancelar sesión"
             >
               <MdCancel className="h-4 w-4" aria-hidden="true" />

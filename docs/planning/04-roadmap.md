@@ -8,46 +8,46 @@ Estimaciones optimistas. La realidad dirá.
 
 > Demo: "Me logueo y veo una pantalla con mi nombre, mi rol y el icono de Morvedre Core"
 
-- [ ] Scaffold del proyecto (Next 15, TS strict, Tailwind v4, shadcn/ui)
-- [ ] Setup de Supabase (proyecto + env + tipos generados)
-- [ ] `lib/supabase/{client,server,middleware}` + `middleware.ts` de sesión
-- [ ] PWA base: manifest.json, service worker con Serwist, iconos placeholder
-- [ ] Sistema de diseño: tokens en `globals.css`, paleta, tipografía, escalas
-- [ ] Layouts: `(marketing)/layout.tsx` y `(app)/layout.tsx` con shell móvil (sidebar inferior + topbar)
-- [ ] Pantalla de login funcional (Supabase Auth, email + password)
-- [ ] Pantalla "Mi perfil" (foto, birth_year, cap_number, license_active)
-- [ ] Wizard de cambio de contraseña obligatorio en primer login
-- [ ] Selector de perfil persistente en la parte superior
-- [ ] Bootstrap del primer admin vía script SQL con un email concreto
-- [ ] CI básico: GitHub Actions → lint + typecheck + build
+- [x] Scaffold del proyecto (Next 16, TypeScript strict, Tailwind v4)
+- [x] Setup de Supabase (proyecto + entorno + tipos generados)
+- [x] Clientes Supabase de navegador, servidor y proxy de sesión
+- [x] PWA base: manifiesto, service worker con Serwist e iconos del club
+- [x] Sistema de diseño: tokens, paleta, tipografía y escalas
+- [x] Layouts de acceso y aplicación con navegación móvil y barra superior
+- [x] Login funcional con Supabase Auth
+- [x] Perfil con foto, año de nacimiento, dorsal y licencia
+- [x] Cambio obligatorio de contraseña en el primer acceso
+- [x] Contexto familiar sin suplantación de identidad
+- [x] Bootstrap seguro del primer administrador
+- [x] CI con lint, tipos, tests y build
 
 ## Fase 1 — Estructura deportiva (1 semana)
 
 > Demo: "El admin crea una temporada, los equipos y mete a los jugadores con su año de nacimiento"
 
-- [ ] Migración: tablas `seasons`, `teams`, `team_staff`, `team_rosters`, `profiles`, `user_roles`
-- [ ] RLS por rol
-- [ ] CRUD Admin: temporadas
-- [ ] CRUD Admin: equipos
-- [ ] CRUD Admin: alta de jugadores y familias (manual + import Excel)
-- [ ] Cálculo automático de categoría visible (sin guardar, derivado)
-- [ ] Vista pública de equipo: lista de plantilla con edad y dorsal
-- [ ] Asignación de staff (entrenadores, delegados)
+- [x] Migración: tablas `seasons`, `teams`, `team_staff`, `team_rosters`, `profiles`, `user_roles`
+- [x] RLS por rol y permiso delegado
+- [x] CRUD Admin: temporadas
+- [x] CRUD Admin: equipos
+- [x] Alta de jugadores y familias manual o mediante Excel
+- [x] Cálculo automático de categoría visible, sin persistir el resultado
+- [x] Vista de equipo con plantilla, edad y dorsal
+- [x] Asignación de entrenadores y delegados
 
 ## Fase 2 — Entrenamientos y partidos (1.5 semanas)
 
 > Demo: "El entrenador crea el bloque de septiembre, la app genera 30 sesiones, marca asistencia y el delegado mete el acta"
 
-- [ ] Migración: `training_blocks`, `training_sessions`, `training_attendance`, `matches`
-- [ ] Creador por bloques (entrenador): genera sesiones en rango de fechas
-- [ ] Pantalla de pasar lista ultrarrápida (asumir todos, desmarcar)
-- [ ] Calendario de equipo con vista mes / semana / día
-- [ ] CRUD partido (admin/entrenador)
-- [ ] `match_availability`: bloqueos manuales del jugador
-- [ ] **Convocatoria con matriz de ascensos + regla B** (`lib/domain/callups.ts`)
-- [ ] Asignación automática de gorro favorito
-- [ ] Confirmación RSVP del jugador
-- [ ] Notificación push al confirmar convocatoria
+- [x] Migración: `training_blocks`, `training_sessions`, `training_attendance`, `matches`
+- [x] Creador por bloques con reemplazo transaccional de sesiones
+- [x] Pantalla de asistencia diaria optimizada para piscina
+- [x] Calendario con vistas mes, semana y agenda
+- [x] CRUD de partidos para administración y staff autorizado
+- [x] Disponibilidad manual del jugador y su familia
+- [x] Convocatoria con matriz de ascensos y regla B
+- [x] Asignación automática de gorro favorito y resolución de conflictos
+- [x] Confirmación RSVP del jugador o tutor vinculado
+- [x] Notificación in-app, email y push para convocatorias
 
 ## Fase 3 — Estadísticas y rankings (1 semana)
 
@@ -68,49 +68,49 @@ Estimaciones optimistas. La realidad dirá.
 
 > Demo: "La directiva publica que la piscina está cerrada, todos reciben push, la gente reacciona"
 
-- [ ] Migración: `news_posts`, `news_reactions`
-- [ ] Editor de noticias con markdown y subida de imágenes
-- [ ] Feed de noticias con reacciones
-- [ ] Fijar noticias importantes
-- [ ] Caducidad automática (cron diario)
+- [x] Migración: `news_posts`, `news_reactions`
+- [x] Editor de noticias con Markdown seguro y subida de imágenes
+- [x] Feed de noticias con reacciones optimistas
+- [x] Noticias destacadas
+- [x] Caducidad automática mediante cron
 
 ## Fase 5 — Tienda (1 semana)
 
 > Demo: "El cadete pide una sudadera, el padre aprueba, la encargada ve el pedido en el Kanban"
 
-- [ ] Migración: `shop_products`, `shop_orders`, `shop_order_items`
-- [ ] Admin: crear producto con interruptores (talla, personalización)
-- [ ] Catálogo público (read-only del estado)
-- [ ] Carrito y checkout
-- [ ] Flujo "Solicitar a mis padres" con notificación push
-- [ ] Aprobación por el padre
-- [ ] Panel Kanban: Pendientes / Aprobados / Encargados / Recibidos / Entregados
-- [ ] Export a Excel de pedidos agrupados por producto
+- [x] Migración: `shop_products`, `shop_orders`, `shop_order_items`
+- [x] Creación de productos con talla, personalización y fotos
+- [x] Catálogo del club
+- [x] Carrito y confirmación de pedido
+- [x] Solicitud de compra de menores a sus tutores
+- [x] Aprobación o rechazo familiar
+- [x] Panel Kanban del ciclo completo del pedido
+- [x] Exportación a Excel agrupada por producto
 
 ## Fase 6 — Tesorería (1 semana)
 
 > Demo: "Llega el día 1, pulso 'Generar cierre de mes' y la tesorera recibe un Excel en su email"
 
-- [ ] Migración: `treasury_concepts`, `treasury_period_closures`, `treasury_lines`
-- [ ] Admin: definir conceptos tarifarios
-- [ ] Asignación de conceptos a perfiles (cuota mensual, descuentos por hermano)
-- [ ] Server Action: `buildPeriodClosure` (puro, testeable)
-- [ ] Generación de Excel con ExcelJS
-- [ ] Envío por Resend al email de tesorería
-- [ ] Vista de la familia: "lo que debo este mes"
-- [ ] Marcado manual como pagado por la tesorería
-- [ ] Cron: recordatorio el día 25 del mes
+- [x] Migración: `treasury_concepts`, `treasury_period_closures`, `treasury_lines`
+- [x] Definición de conceptos tarifarios
+- [x] Asignación de cuotas, responsables de cobro y excepciones
+- [x] Generación testeada del cierre mensual
+- [x] Generación de Excel
+- [x] Envío por Resend al email de tesorería
+- [x] Vista familiar de importes y pagos
+- [x] Marcado manual como pagado
+- [x] Recordatorio mensual mediante cron
 
 ## Fase 7 — Logística de coches (0.5 semanas)
 
 > Demo: "El delegado activa coches, un padre se ofrece con 3 plazas, los jugadores reservan"
 
-- [ ] Migración: `travel_offers`, `travel_reservations`
-- [ ] Toggle "logística activa" en partido visitante
-- [ ] Registro de oferta por conductor
-- [ ] Reserva de asiento por jugador
-- [ ] Vista del delegado: mapa visual de coches
-- [ ] Compensación por km configurable en el partido
+- [x] Migración: `travel_offers`, `travel_reservations`, acompañantes e integridad asociada
+- [x] Activación de logística en partidos visitantes
+- [x] Oferta de coche por conductor
+- [x] Reserva segura de plazas por jugador y acompañante
+- [x] Vista operativa de coches para el staff
+- [x] Compensación configurable por desplazamiento
 
 ## Fase 8 — Históricos y leyendas (0.5 semanas)
 
@@ -125,7 +125,7 @@ Estimaciones optimistas. La realidad dirá.
 
 ## Fase 9 — Polish, a11y, offline (1 semana)
 
-> Demo: "Lighthouse PWA 95+, WCAG AA, funciona sin conexión en las pantallas de solo lectura"
+> Demo: fallback sin conexión y mejoras de accesibilidad. La conformidad WCAG AA y el rendimiento en móviles reales requieren validación específica; los datos privados no se cachean.
 
 - [x] Auditoría accesibilidad (lectores de pantalla, foco visible :focus-visible, touch targets >= 48px)
 - [x] Modo oscuro pospuesto por decisión de diseño; foco en WCAG AA sobre tema piscina
@@ -133,29 +133,30 @@ Estimaciones optimistas. La realidad dirá.
 - [x] Página "Estás sin conexión" (/offline) con copy de privacidad y auto-recarga reactiva
 - [x] PWA install prompt personalizado con guía modal accesible para iOS y Android
 - [x] Decisión de idioma cerrada: exclusivamente en castellano según convención de diseño
-- [x] Sentry condicional con error boundaries (error.tsx, global-error.tsx) y logging estructurado
-- [x] Backup semanal automatizado de la DB vía script Node.js y GitHub Action a coste cero
+- [x] Error boundaries y logging estructurado con redacción de secretos
+- [x] Exportador paginado de 41 tablas públicas, checksum, validación remota y bucket privado
+- [ ] Ejecución semanal acreditada y ensayo de recuperación integral, incluyendo Auth y archivos
 
 ## Fase 10 — Lanzamiento (1 semana)
 
 > Demo: "El club entero está dado de alta y la app es la fuente oficial de la temporada"
 
-- [ ] Import masivo de jugadores desde Cluber (Excel)
+- [x] Importador universal de jugadores desde Excel
 - [ ] Alta de todos los perfiles con contraseñas temporales
 - [ ] Onboarding uno a uno con entrenadores y delegados
 - [ ] Cartel en la piscina con QR para descarga
-- [ ] Documentación interna: "Cómo usar la app" (1 página por rol)
+- [x] Documentación interna de una página por rol
 - [ ] Migración de la primera temporada real con datos reales
 
 ---
 
 ## Riesgos identificados
 
-| Riesgo                                             | Mitigación                                                                                |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Plan free de Supabase se queda corto               | 200 usuarios es trivial para el plan free, monitorear tamaño DB y storage desde día 1     |
-| iOS PWA: push notifications limitadas              | Safari aún no soporta push estándar en PWA; fallback in-app + email                       |
-| Onboarding de 200 personas:谁来 da de alta a quién | Script SQL de bootstrap + invitación por email en lote                                    |
-| Resistencia al cambio (persona de 55 años)         | Sesión presencial + manual visual + botón "ayuda" en cada pantalla                        |
-| Padres separados con acceso al hijo                | Soporte multi-tutor en `parent_child_links` (ya previsto)                                 |
-| Datos RGPD                                         | Consentimiento firmado antes de primera subida de foto; derecho de supresión implementado |
+| Riesgo                                 | Mitigación                                                                                                                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Capacidad del plan gratuito            | Medir uso de base, archivos y tráfico; la cantidad de usuarios por sí sola no garantiza capacidad                                                       |
+| Push en móviles                        | Probar dispositivo, modo de instalación y permisos; mantener el buzón dentro de la app                                                                  |
+| Alta de todos los miembros             | Repartir la revisión de solicitudes y la importación validada con administración                                                                        |
+| Diferencias de experiencia tecnológica | Observar tareas por rol, corregir dudas y usar las guías de una página                                                                                  |
+| Varios tutores del mismo hijo          | Verificar vínculos y permisos de cada tutor con `parent_child_links`                                                                                    |
+| Privacidad de datos y fotos            | Revisar con el club los procedimientos de autorización, acceso y retirada; no dar por probado un derecho de supresión por la existencia de una pantalla |

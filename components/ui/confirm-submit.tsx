@@ -31,7 +31,7 @@ export function ConfirmSubmit({
       <SheetTrigger asChild>
         <button
           type="button"
-          className="border-goggle-red/25 bg-paper text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red inline-flex min-h-11 w-full touch-manipulation items-center justify-center gap-2 rounded-lg border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="border-goggle-red/25 bg-paper text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl border px-3 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <Trash2 className="h-4 w-4" aria-hidden="true" />
           {triggerLabel}

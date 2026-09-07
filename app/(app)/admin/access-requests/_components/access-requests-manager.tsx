@@ -176,7 +176,7 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <label className="flex min-h-12 min-w-12 touch-manipulation items-center justify-center cursor-pointer">
+                    <label className="flex min-h-12 min-w-12 cursor-pointer touch-manipulation items-center justify-center">
                       <input
                         type="checkbox"
                         checked={selected.has(request.id)}
@@ -200,7 +200,8 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
                     <Button
                       onClick={() => handleApprove(request.id)}
                       disabled={pendingId === request.id}
-                      size="sm"
+                      size="icon"
+                      aria-label={`Aprobar solicitud de ${request.full_name}`}
                     >
                       {pendingId === request.id ? (
                         <MdAutorenew className="h-4 w-4 animate-spin" />
@@ -213,7 +214,8 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
                       onClick={() => handleReject(request.id)}
                       disabled={pendingId === request.id}
                       variant="danger"
-                      size="sm"
+                      size="icon"
+                      aria-label={`Rechazar solicitud de ${request.full_name}`}
                     >
                       <MdClose className="h-4 w-4" />
                       <span className="sr-only">Rechazar</span>

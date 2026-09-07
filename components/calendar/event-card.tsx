@@ -6,6 +6,8 @@ import type { Route } from "next";
 
 import { Avatar } from "@/components/ui/avatar";
 import { CapTile } from "@/components/ui/cap-tile";
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { PictogramBadge } from "@/components/ui/pictogram-badge";
 import { cn } from "@/lib/utils/cn";
@@ -82,28 +84,6 @@ export function CalendarEventChip({
   );
 }
 
-function Badge({
-  children,
-  bg,
-  className,
-}: {
-  children: React.ReactNode;
-  bg: string;
-  className?: string;
-}) {
-  return (
-    <span
-      className={cn(
-        "text-eyebrow text-paper inline-flex h-5 items-center rounded-sm px-2",
-        className,
-      )}
-      style={{ backgroundColor: bg }}
-    >
-      {children}
-    </span>
-  );
-}
-
 function EventBody({
   event,
   color,
@@ -136,26 +116,26 @@ function EventBody({
             <div className="flex flex-wrap items-center gap-1.5">
               {event.kind === "match" ? (
                 event.competition_type === "tournament" ? (
-                  <Badge bg="var(--action)">Torneo</Badge>
+                  <StatusBadge variant="brand">Torneo</StatusBadge>
                 ) : event.competition_type === "friendly" ? (
-                  <Badge bg="var(--pool-teal)">Amistoso</Badge>
+                  <StatusBadge variant="info">Amistoso</StatusBadge>
                 ) : (
-                  <Badge bg="var(--ball-gold)">Liga/Copa</Badge>
+                  <StatusBadge variant="gold">Liga/Copa</StatusBadge>
                 )
               ) : (
-                <Badge bg="var(--pool-blue)">Entreno</Badge>
+                <StatusBadge variant="info">Entreno</StatusBadge>
               )}
-              {isCancelled ? <Badge bg="var(--danger)">Cancelado</Badge> : null}
-              {isPostponed ? <Badge bg="var(--ink-600)">Aplazado</Badge> : null}
+              {isCancelled ? <StatusBadge variant="danger">Cancelado</StatusBadge> : null}
+              {isPostponed ? <StatusBadge variant="neutral">Aplazado</StatusBadge> : null}
               {showAttendance && userAttendance === true ? (
-                <Badge bg="var(--success)">
-                  <Check className="h-2.5 w-2.5" /> Asistió
-                </Badge>
+                <StatusBadge variant="success" icon={<Check />}>
+                  Asistió
+                </StatusBadge>
               ) : null}
               {showAttendance && userAttendance === false ? (
-                <span className="bg-danger/10 text-eyebrow text-danger inline-flex h-5 items-center gap-0.5 rounded-sm px-2">
-                  <X className="h-2.5 w-2.5" /> Ausente
-                </span>
+                <StatusBadge variant="danger" icon={<X />}>
+                  Ausente
+                </StatusBadge>
               ) : null}
             </div>
             <p
@@ -244,38 +224,61 @@ export function CalendarEventCard({
     : formatTimeOfDay(event.scheduled_at);
   const isCancelled = !!event.cancelled || event.status === "cancelled";
   const isPostponed = event.status === "postponed";
-  const baseClass = cn(
-    "group flex flex-col gap-2 rounded-2xl border bg-paper-card p-3 shadow-elev-1 transition-[border-color,box-shadow] motion-reduce:transition-none",
-    isPast && !isCancelled && !isPostponed && "border-ink-300 opacity-80",
-    isCancelled && "border-danger/30 bg-danger/5",
-    isPostponed && "border-ink-300 bg-paper/50",
-    !isPast && !isCancelled && !isPostponed && "border-ink-300",
-    href && "hover:border-pool-blue hover:shadow-elev-2",
-    className,
-  );
+  const cardVariant = href ? "interactive" : "default";
+
   const body = (
-    <EventBody
-      event={event}
-      color={color}
-      timeStr={timeStr}
-      isCancelled={isCancelled}
-      isPostponed={isPostponed}
-      isPast={!!isPast}
-      showAttendance={showAttendance}
-      userAttendance={userAttendance}
-    />
-  );
-  if (href) {
-    return (
-      <Link href={href as Route} className={baseClass}>
-        {body}
+    <div className="flex flex-col gap-2 p-3">
+      <EventBody
+        event={event}
+        color={color}
+        timeStr={timeStr}
+        isCancelled={isCancelled}
+        isPostponed={isPostponed}
+        isPast={!!isPast}
+        showAttendance={showAttendance}
+        userAttendance={userAttendance}
+      />
+      {href ? (
         <div className="text-ink-300 group-hover:text-ink-600 -mt-1 -mb-1 self-end transition-transform group-hover:translate-x-0.5">
           <ChevronRight className="h-4 w-4" />
         </div>
-      </Link>
+      ) : null}
+    </div>
+  );
+
+  if (href) {
+    return (
+      <Card
+        asChild
+        variant={cardVariant}
+        accentColor={color}
+        className={cn(
+          "group",
+          isPast && !isCancelled && !isPostponed && "opacity-80",
+          isCancelled && "border-danger/30 bg-danger/5",
+          isPostponed && "bg-paper/50",
+          className,
+        )}
+      >
+        <Link href={href as Route}>{body}</Link>
+      </Card>
     );
   }
-  return <div className={baseClass}>{body}</div>;
+
+  return (
+    <Card
+      variant={cardVariant}
+      accentColor={color}
+      className={cn(
+        isPast && !isCancelled && !isPostponed && "opacity-80",
+        isCancelled && "border-danger/30 bg-danger/5",
+        isPostponed && "bg-paper/50",
+        className,
+      )}
+    >
+      {body}
+    </Card>
+  );
 }
 
 export function CalendarEmptyState({

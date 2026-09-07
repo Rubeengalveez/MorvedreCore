@@ -128,10 +128,17 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   );
 
   const isPlayed = match.status === "played";
+  const {data:liveSheet}=await (await createClient()).from("live_match_sheets").select("match_id").eq("match_id",id).maybeSingle();
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <PageBackLink href="/calendar">Calendario</PageBackLink>
+      {(isCoach||liveSheet)&&<a href={`/acta?match=${match.id}`} className="border-ink-300 text-pool-deep flex min-h-12 items-center justify-center rounded-xl border p-3 font-bold">
+        {match.status === "played" ? "Consultar acta del partido" : "Acta en directo · Delegados"}
+      </a>}
+      <h1 className="sr-only">
+        {match.team_label} contra {match.opponent}
+      </h1>
 
       {/* ─── HERO SCOREBOARD ─── */}
       <div className="flex flex-col gap-4">
@@ -265,7 +272,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                 asChild
                 size="sm"
                 variant="secondary"
-                className="h-9 cursor-pointer rounded-md text-xs font-bold"
+                className="cursor-pointer rounded-md text-xs font-bold"
               >
                 <Link href={`/admin/matches/${match.id}` as Route}>Editar</Link>
               </Button>

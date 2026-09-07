@@ -119,7 +119,7 @@ export function AuthErrorBanner({ code }: AuthErrorBannerProps) {
       <p>{copy.message}</p>
       <Link
         href={copy.href}
-        className="focus-visible:ring-pool-blue inline-flex min-h-11 w-fit touch-manipulation items-center justify-center rounded-xl border border-current px-4 text-sm font-extrabold transition-[background-color,color] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none"
+        className="focus-visible:ring-pool-blue inline-flex min-h-12 w-fit touch-manipulation items-center justify-center rounded-xl border border-current px-4 text-sm font-extrabold transition-[background-color,color] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none"
       >
         {copy.action}
       </Link>

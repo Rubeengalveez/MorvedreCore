@@ -50,6 +50,9 @@ const KIND_LABELS: Record<string, string> = {
   mixed: "Mixto",
 };
 
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+
 export function TrainingBlockCard({
   block,
   team,
@@ -80,14 +83,13 @@ export function TrainingBlockCard({
   }
 
   return (
-    <article className="border-ink-300 bg-paper overflow-hidden rounded-md border">
-      <div aria-hidden="true" className="h-2 w-full" style={{ backgroundColor: team.color }} />
+    <Card accentColor={team.color} className="overflow-hidden">
       <div className="flex flex-col gap-3 p-4">
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex min-h-12 w-full touch-manipulation items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         >
           <span className="text-pool-deep inline-flex h-9 w-9 shrink-0 items-center justify-center rounded">
             {open ? (
@@ -136,9 +138,9 @@ export function TrainingBlockCard({
                 {block.location}
               </span>
             ) : null}
-            <span className="border-ink-300 text-ink-600 inline-flex h-6 w-fit items-center rounded-full border px-2 text-xs font-semibold">
+            <StatusBadge variant="neutral" className="w-fit">
               {KIND_LABELS[block.kind] ?? block.kind}
-            </span>
+            </StatusBadge>
           </div>
         </div>
 
@@ -185,6 +187,6 @@ export function TrainingBlockCard({
           </div>
         ) : null}
       </div>
-    </article>
+    </Card>
   );
 }

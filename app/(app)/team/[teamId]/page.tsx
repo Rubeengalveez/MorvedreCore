@@ -147,7 +147,7 @@ function TeamSectionNav({ active, basePath }: { active: TeamTabId; basePath: Rou
             href={href}
             aria-current={isActive ? "page" : undefined}
             className={cn(
-              "focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center justify-center rounded-xl px-2 text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+              "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-xl px-2 text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
               isActive
                 ? "bg-pool-deep text-paper"
                 : "text-ink-500 hover:bg-pool-foam hover:text-pool-deep",
@@ -336,7 +336,7 @@ function MatchLedgerRow({
       />
       <Link
         href={`/matches/${match.id}` as Route}
-        className="focus-visible:ring-pool-blue block touch-manipulation px-4 py-3.5 pl-5 focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+        className="focus-visible:ring-pool-blue block touch-manipulation px-4 py-3.5 pl-5 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
       >
         <div className="flex min-h-8 items-center justify-between gap-3">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -397,7 +397,7 @@ function MatchLedgerRow({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={`Abrir ${locationText} en Google Maps`}
-            className="focus-visible:ring-pool-blue flex min-h-12 min-w-0 flex-1 touch-manipulation items-center gap-2 px-4 py-3 transition-colors hover:text-pool-blue focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+            className="focus-visible:ring-pool-blue hover:text-pool-blue flex min-h-12 min-w-0 flex-1 touch-manipulation items-center gap-2 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
           >
             <MapPin className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
             <span className="truncate font-bold underline decoration-1 underline-offset-4">
@@ -417,7 +417,7 @@ function MatchLedgerRow({
         <Link
           href={`/matches/${match.id}` as Route}
           aria-label="Ver detalle del partido"
-          className="focus-visible:ring-pool-blue flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center border-l border-ink-200 transition-colors hover:bg-pool-foam hover:text-pool-blue focus-visible:ring-2 focus-visible:ring-inset focus-visible:outline-none"
+          className="focus-visible:ring-pool-blue border-ink-200 hover:bg-pool-foam hover:text-pool-blue flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center border-l transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
         >
           <ChevronRight className="h-5 w-5" aria-hidden="true" />
         </Link>

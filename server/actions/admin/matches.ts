@@ -27,7 +27,7 @@ import {
 } from "@/lib/domain/callups";
 import { safeInferCategory, type CategoryCode } from "@/lib/domain/categories";
 
-import { requireCoachOf, requireMatchStaffOf } from "./_helpers";
+import { requireMatchManagerOf, requireMatchStaffOf } from "./_helpers";
 
 async function recomputeRankingForMatchAll(matchId: string): Promise<void> {
   const { recomputeSnapshotForPlayer } = await import("./rankings");
@@ -138,7 +138,7 @@ export async function createMatch(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  await requireCoachOf(parsed.data.team_id);
+  await requireMatchManagerOf(parsed.data.team_id);
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -210,7 +210,10 @@ export async function updateMatch(
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(parsed.data.team_id ?? existing.team_id);
+  await requireMatchManagerOf(existing.team_id);
+  if (parsed.data.team_id && parsed.data.team_id !== existing.team_id) {
+    await requireMatchManagerOf(parsed.data.team_id);
+  }
 
   const { data, error } = await supabase
     .from("matches")
@@ -243,7 +246,7 @@ export async function deleteMatch(id: string): Promise<void> {
     throw new Error("El partido no existe.");
   }
 
-  await requireCoachOf(existing.team_id);
+  await requireMatchManagerOf(existing.team_id);
 
   const { error } = await supabase.from("matches").delete().eq("id", id);
 
@@ -796,15 +799,18 @@ export async function saveMatchSheet(input: z.input<typeof saveMatchSheetSchema>
   );
   throwIfError(statsError, "No pudimos guardar las estadísticas del acta.");
 
-  const { error: resultError } = await supabase
+  const { data: savedResult, error: resultError } = await supabase
     .from("matches")
     .update({
       status: "played",
       final_score_us: parsed.data.final_score_us,
       final_score_them: parsed.data.final_score_them,
     })
-    .eq("id", parsed.data.match_id);
+    .eq("id", parsed.data.match_id)
+    .select("id")
+    .maybeSingle();
   throwIfError(resultError, "No pudimos guardar el resultado.");
+  if (!savedResult) throw new Error("No pudimos guardar el resultado. Comprueba tus permisos.");
 
   const { recomputeStreaksForMatch } = await import("./streaks");
   await recomputeStreaksForMatch(parsed.data.match_id).catch(() => undefined);

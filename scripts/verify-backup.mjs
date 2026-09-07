@@ -2,82 +2,36 @@
 import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { createHash } from "node:crypto";
+import { validateBackup } from "./lib/backup-data.mjs";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ROOT = resolve(__dirname, "..");
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const BACKUPS_DIR = resolve(ROOT, "backups");
-
-const REQUIRED_TABLES = [
-  "seasons",
-  "teams",
-  "team_staff",
-  "team_rosters",
-  "profiles",
-  "user_roles",
-  "parent_child_links",
-  "training_blocks",
-  "training_sessions",
-  "training_attendance",
-  "matches",
-  "match_callups",
-  "match_stats",
-];
 
 function getLatestBackupFile() {
   if (!existsSync(BACKUPS_DIR)) return null;
   const files = readdirSync(BACKUPS_DIR)
-    .filter((f) => f.endsWith(".json") && f.startsWith("morvedre-backup-"))
+    .filter((file) => file.endsWith(".json") && file.startsWith("morvedre-backup-"))
     .sort()
     .reverse();
   return files[0] ? resolve(BACKUPS_DIR, files[0]) : null;
 }
 
-const targetPath = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : getLatestBackupFile();
-
-if (!targetPath || !existsSync(targetPath)) {
-  console.error("Error: No se encontró ningún archivo de copia de seguridad para verificar.");
-  process.exit(1);
-}
-
-console.log(`[Verify] Verificando copia: ${targetPath}`);
+const targetPath = process.argv[2]
+  ? resolve(process.cwd(), process.argv[2])
+  : getLatestBackupFile();
 
 try {
-  const raw = readFileSync(targetPath, "utf8");
-  const payload = JSON.parse(raw);
-
-  if (!payload.metadata || !payload.tables) {
-    console.error("[Verify] ERROR: Formato inválido de copia. Faltan metadata o tables.");
-    process.exit(1);
-  }
-
-  if (payload.metadata.sha256) {
-    const preliminaryContent = JSON.stringify(payload.tables);
-    const calculatedHash = createHash("sha256").update(preliminaryContent).digest("hex");
-    if (calculatedHash !== payload.metadata.sha256) {
-      console.error(`[Verify] ERROR: Checksum no coincide. Esperado: ${payload.metadata.sha256}, Calculado: ${calculatedHash}`);
-      process.exit(1);
-    }
-    console.log(`[Verify]   ✓ Checksum SHA-256 verificado: ${calculatedHash}`);
-  }
-
-  const missingTables = REQUIRED_TABLES.filter((table) => !Array.isArray(payload.tables[table]));
-  if (missingTables.length > 0) {
-    console.error(`[Verify] ERROR: Faltan tablas críticas en la copia: ${missingTables.join(", ")}`);
-    process.exit(1);
-  }
-
-  let totalRecords = 0;
-  for (const rows of Object.values(payload.tables)) {
-    totalRecords += rows.length;
-  }
-
-  console.log(`[Verify]   ✓ Tablas críticas presentes (${REQUIRED_TABLES.length}/${REQUIRED_TABLES.length})`);
-  console.log(`[Verify]   ✓ Tablas totales en backup: ${Object.keys(payload.tables).length}`);
-  console.log(`[Verify]   ✓ Registros totales: ${totalRecords}`);
-  console.log(`\n[Verify] Copia de seguridad íntegra y válida.`);
-  process.exit(0);
+  if (!targetPath || !existsSync(targetPath))
+    throw new Error("No se encontró ninguna copia para verificar.");
+  const payload = JSON.parse(readFileSync(targetPath, "utf8"));
+  const result = validateBackup(payload);
+  console.log(
+    `[Verify] Manifiesto, claves, recuentos y SHA-256 correctos: ${result.tablesCount} tablas, ${result.totalRecords} registros.`,
+  );
+  console.log(
+    "[Verify] Integridad del archivo verificada. No acredita una restauración ni incluye Auth o archivos de Storage.",
+  );
 } catch (err) {
-  console.error("[Verify] ERROR al leer o parsear la copia:", err);
-  process.exit(1);
+  console.error("[Verify] ERROR:", err instanceof Error ? err.message : err);
+  process.exitCode = 1;
 }

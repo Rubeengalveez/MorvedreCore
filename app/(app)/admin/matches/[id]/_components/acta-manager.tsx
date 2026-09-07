@@ -123,6 +123,11 @@ export function ActaManager({ match, entries }: ActaManagerProps) {
 
   return (
     <div className="flex flex-col gap-5">
+      <a href={`/acta?match=${match.id}`} className="bg-pool-deep text-paper flex min-h-16 flex-col justify-center gap-1 rounded-xl p-4">
+        <strong className="text-lg">Abrir acta en directo →</strong>
+        <span className="text-sm">Gorros, jugadas y expulsiones. Guardado en el móvil durante el partido.</span>
+      </a>
+      <p className="text-ink-600 text-sm">Registro sencillo: introduce los totales al terminar. Si empiezas un acta en directo, sus jugadas serán la fuente de las estadísticas.</p>
       {error ? (
         <Alert variant="danger" title="No se ha guardado">
           {error}

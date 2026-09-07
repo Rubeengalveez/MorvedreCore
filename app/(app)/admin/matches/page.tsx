@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team } from "@/server/actions/admin";
-import { getAdminAccess } from "@/server/actions/admin/_helpers";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
+import { canManageTeam, getTeamScope } from "@/lib/domain/permissions";
 
 import { MatchFormSheet } from "./_components/match-form-sheet";
 import { MatchesList, type MatchRow } from "./_components/matches-list";
@@ -139,13 +140,13 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
 }
 
 export default async function MatchesPage() {
-  const access = await getAdminAccess();
-  const teamScope =
-    access.isAdmin || access.permissions.has("manage_matches")
-      ? null
-      : Array.from(access.matchStaffTeamIds);
+  const access = await getRenderAdminAccess();
+  const teamScope = getTeamScope(access, "match_operations");
   const { seasons, teams, matches, defaultTeamId, defaultSeasonId, error } =
     await loadMatches(teamScope);
+  const editableTeams = teams.filter((team) => canManageTeam(access, "match_schedule", team.id));
+  const editableDefaultTeam =
+    editableTeams.find((team) => team.id === defaultTeamId) ?? editableTeams[0];
 
   if (seasons.length === 0) {
     return (
@@ -176,18 +177,20 @@ export default async function MatchesPage() {
         description="Convocatorias, actas y logística de cada partido."
         icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
         action={
-          <MatchFormSheet
-            seasons={seasons}
-            teams={teams}
-            defaultTeamId={defaultTeamId}
-            defaultSeasonId={defaultSeasonId}
-            trigger={
-              <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-                <MdAdd className="h-6 w-6" aria-hidden="true" />
-                <span>Nuevo partido</span>
-              </Button>
-            }
-          />
+          editableTeams.length > 0 ? (
+            <MatchFormSheet
+              seasons={seasons}
+              teams={editableTeams}
+              defaultTeamId={editableDefaultTeam?.id ?? null}
+              defaultSeasonId={editableDefaultTeam?.season_id ?? defaultSeasonId}
+              trigger={
+                <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                  <MdAdd className="h-6 w-6" aria-hidden="true" />
+                  <span>Nuevo partido</span>
+                </Button>
+              }
+            />
+          ) : null
         }
       />
 

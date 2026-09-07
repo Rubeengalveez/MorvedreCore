@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:backup": "node --test scripts/test-backup.test.mjs",
     "test:e2e": "playwright test",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,css}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json,css}\"",
@@ -24,7 +25,9 @@
     "icons:generate": "node scripts/generate-icons.mjs",
     "icons:favicon": "node scripts/generate-favicon.mjs",
     "auth:check": "node scripts/check-auth-config.mjs",
-    "db:backup": "node scripts/backup-db.mjs"
+    "db:backup": "node scripts/backup-db.mjs",
+    "audit:ui": "node scripts/audit-current-ui.mjs",
+    "audit:logout": "node scripts/check-sign-out.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "5.4.0",
@@ -35,6 +38,7 @@
     "@supabase/supabase-js": "2.110.7",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "jspdf": "4.2.0",
     "lucide-react": "^0.544.0",
     "next": "16.3.3",
     "react": "19.2.7",

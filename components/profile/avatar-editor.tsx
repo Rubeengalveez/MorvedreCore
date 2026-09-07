@@ -141,6 +141,8 @@ export function AvatarEditor({
         type="file"
         accept="image/jpeg,image/png,.jpg,.jpeg,.png"
         className="sr-only"
+        aria-hidden="true"
+        tabIndex={-1}
         onChange={(event) => chooseFile(event.target.files?.[0] ?? null)}
       />
 

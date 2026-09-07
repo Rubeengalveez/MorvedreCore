@@ -146,7 +146,7 @@ export default async function AttendancePage({
           {selectedDay !== today ? (
             <Link
               href={"/attendance" as Route}
-              className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-11 items-center rounded-lg px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+              className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 touch-manipulation items-center rounded-xl px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
             >
               Volver a hoy
             </Link>

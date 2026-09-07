@@ -2,7 +2,8 @@ import Link from "next/link";
 import type { Route } from "next";
 import { MdSettings } from "react-icons/md";
 
-import { createClient } from "@/lib/supabase/server";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
+import { canAccessAdminArea } from "@/lib/domain/permissions";
 import { Logo } from "@/components/brand/logo";
 import { Megafone } from "@/components/brand/pictograms";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
@@ -12,40 +13,19 @@ import { CATEGORY_COLORS, safeInferCategory } from "@/lib/domain/categories";
 import { getUnreadNotificationsCount } from "@/server/queries/notifications";
 
 const utilityActionClass =
-  "touch-manipulation text-paper/90 hover:text-paper focus-visible:ring-paper/80 relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-200 hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none [-webkit-tap-highlight-color:transparent]";
+  "touch-manipulation text-paper/90 hover:text-paper focus-visible:ring-paper/80 relative flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-[background-color,color,transform,box-shadow] duration-200 hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none [-webkit-tap-highlight-color:transparent]";
 
 export interface TopBarProps {
   profile: ProfileSummary;
 }
 
 export async function TopBar({ profile }: TopBarProps) {
-  const supabase = await createClient();
-  const [unread, rolesData, permissionsData] = await Promise.all([
+  const [unread, access] = await Promise.all([
     getUnreadNotificationsCount(profile.id).catch(() => 0),
-    supabase
-      .from("user_roles")
-      .select("role")
-      .eq("profile_id", profile.id)
-      .then(
-        (res: { data: Array<{ role: string }> | null }) => res,
-        () => ({ data: [] as Array<{ role: string }> }),
-      ),
-    supabase
-      .from("profile_permissions")
-      .select("permission")
-      .eq("profile_id", profile.id)
-      .then(
-        (res: { data: Array<{ permission: string }> | null }) => res,
-        () => ({ data: [] as Array<{ permission: string }> }),
-      ),
+    getRenderAdminAccess(),
   ]);
 
-  const userRoles = ((rolesData?.data ?? []) as Array<{ role: string }>).map((r) => r.role);
-  const isPrivileged =
-    userRoles.includes("admin") ||
-    userRoles.includes("coach") ||
-    userRoles.includes("delegate") ||
-    (permissionsData.data?.length ?? 0) > 0;
+  const isPrivileged = canAccessAdminArea(access);
 
   const category =
     profile.birth_year == null
@@ -116,7 +96,7 @@ export async function TopBar({ profile }: TopBarProps) {
             prefetch={false}
             title="Mi perfil"
             aria-label="Mi perfil"
-            className="focus-visible:ring-paper/80 flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-[background-color,transform] duration-200 [-webkit-tap-highlight-color:transparent] hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none"
+            className="focus-visible:ring-paper/80 flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl transition-[background-color,transform] duration-200 [-webkit-tap-highlight-color:transparent] hover:bg-white/14 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none"
           >
             <Avatar
               src={profile.photo_url}

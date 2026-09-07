@@ -752,6 +752,62 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Se mejora el instalador PWA (`PwaInstallPrompt`): soporte para el evento estándar `beforeinstallprompt` en Android y una guía modal accesible con pasos claros para iPhone/iPad (Safari), evitando alertas bloqueantes de navegador.
 - En accesibilidad (WCAG AA), se incorpora la regla global de `:focus-visible` con anillo azul nítido (`var(--pool-blue)`) y desplazamiento para navegación cómoda por teclado. La variante de botón `sm` se amplía a 48 px (`min-h-12`) asegurando objetivos táctiles adecuados en toda la interfaz móvil. Se mantiene el tema diurno de alto contraste de piscina sin dispersar esfuerzos en un modo oscuro secundario.
 - Se preserva el castellano como idioma único de la aplicación, evitando dependencias superfluas de i18n.
-- Se integran los error boundaries de Next.js (`app/error.tsx` y `app/global-error.tsx`) con un logger estructurado (`lib/monitoring/error-logger.ts`) que sanitiza credenciales y permite telemetría condicional con Sentry mediante variables de entorno opcionales sin romper builds locales.
-- Se implementa el script `scripts/backup-db.mjs` (`pnpm db:backup`) que realiza copias completas de las 30 tablas del club en formato JSON estructurado, automatizable semanalmente con GitHub Actions (`.github/workflows/backup.yml`) a coste cero y con retención de 30 días.
+- Se integran los error boundaries de Next.js (`app/error.tsx` y `app/global-error.tsx`) con un logger estructurado (`lib/monitoring/error-logger.ts`) que sanitiza credenciales. Un servicio externo de alertas queda fuera mientras el club no elija proveedor y responsable operativo.
+- `scripts/backup-db.mjs` realiza copias completas de las 30 tablas, incorpora SHA-256, verifica el objeto remoto después de subirlo y aplica una retención de 90 días. El destino es un bucket privado sin políticas cliente; GitHub ya no conserva artefactos JSON con datos personales.
 
+## 2026-09-04 - Unificación del Sistema de Diseño, Accesibilidad Táctil y Auditoría de Integridad (Post-Demo)
+
+- **Auditoría de rutas y enlaces**: Next.js `typedRoutes` y la auditoría exhaustiva confirmaron que todas las rutas estáticas y dinámicas tienen destinos válidos. No existen enlaces muertos (`href="#"`), rutas huérfanas ni botones sin manejador.
+- **Limpieza de skills**: Se evaluaron las capacidades de `.agents/skills`, retirando skills obsoletas de descubrimiento de producto y conservando las 15 herramientas especializadas de desarrollo frontend, React, Next.js, Supabase, accesibilidad y diseño visual.
+- **Sistema de diseño unificado**:
+  - Creación de `Card` (`components/ui/card.tsx`) con soporte para variantes (`default`, `interactive`, `accented`, `lane`, `sunken`), franja cromática del equipo/categoría (`accentColor`) y delegación segura con Radix `Slot` cuando `asChild=true`.
+  - Creación de `StatusBadge` (`components/ui/badge.tsx`) con 7 variantes de contraste asegurado (`success`, `warning`, `danger`, `info`, `neutral`, `brand`, `gold`), punto de estado opcional e iconos integrados.
+  - Extensión de `Button` (`components/ui/button.tsx`) con tamaño `icon` y variante `outline`, garantizando objetivos táctiles conformes a WCAG ≥ 48×48 px (`min-h-12`).
+- **Refactorización transversal**:
+  - _Dashboard_: Unificación de tarjetas de resumen, rachas activas, panel familiar y accesos de gestión.
+  - _Equipos_: Eliminación de dobles `<h1>` en estados vacíos, corrección de jerarquía accesible y migración a `Card`.
+  - _Calendario_: Modernización de `CalendarEventCard` con franja lateral cromática de equipo, badges semánticos de tipo de competición y estado de asistencia.
+  - _Tienda_: Tarjetas de producto, atajos y estados vacíos alineados con el sistema de diseño. En el panel de pedidos (Kanban), los estados del pedido usan `StatusBadge` y botones táctiles.
+  - _Notificaciones_: Buzón con tarjetas semánticas, acento cromático según el tipo de aviso, y botones de filtrado y paginación con altura mínima de 48 px.
+  - _Administración deportiva y noticias_: Normalización de tarjetas de bloques de entrenamiento, listado de partidos y avisos informativos.
+- **Inclusión tecnológica**: Se redactaron 5 guías operativas en lenguaje directo y paso a paso en `docs/guides/` para garantizar la usabilidad en personas con cualquier nivel tecnológico (`guia-familias.md`, `guia-entrenadores.md`, `guia-tesoreria.md`, `guia-tienda.md`, `guia-administracion.md`).
+- **Verificación total de calidad**: 0 errores en TypeScript strict (`tsc --noEmit`), 0 warnings en ESLint (`pnpm run lint`), 72 suites y 624 tests unitarios e integrados aprobados en Vitest (`pnpm run test:run`) y build de producción Next.js (`pnpm run build`) completado con éxito.
+
+## 2026-09-04 - Cierre técnico posterior a la auditoría
+
+> Actualización del 5 de septiembre: las afirmaciones de cierre de este apartado no acreditan la operación completa. El estado vigente y sus límites se recogen en `docs/audits/2026-09-04-operational-status.md`.
+
+- El roadmap vuelve a reflejar el estado real: las fases 0 a 9 están construidas y la fase 10 conserva únicamente el alta real, el onboarding presencial, el material de despliegue y la activación de la temporada que debe aprobar el club.
+- Se elimina definitivamente la referencia a Cluber. El importador acepta hojas Excel del origen que utilice el club.
+- Las migraciones de permisos de delegados, reemplazo atómico de horarios, bucket privado de backups y consolidación de la política de actas están aplicadas en Supabase cloud.
+- La política de `match_stats` vuelve a ser única y bloquea la edición de estadísticas validadas para cualquier persona que no sea administradora.
+- Los destinos de notificaciones push solo admiten rutas internas; URLs absolutas, esquemas y destinos externos vuelven al buzón de notificaciones.
+- Los formularios de tesorería mantienen etiquetas visibles y los controles interactivos transversales respetan un objetivo táctil mínimo de 48 × 48 px.
+- El recorrido autenticado de producción cubre 45 rutas en móvil y escritorio. Comprueba estado HTTP, errores de consola, un único `h1`, overflow horizontal, nombre accesible y tamaño táctil.
+- La protección de contraseñas filtradas de Supabase no se activa porque requiere el plan Pro y el proyecto mantiene el objetivo de coste cero. Se conservan la longitud mínima, las contraseñas temporales con cambio obligatorio y el restablecimiento seguro por email.
+
+## 2026-09-05 - Exportación completa del esquema público y evidencia de cierre
+
+- Se corrige un fallo adicional del exportador: la consulta única podía truncar tablas grandes. Ahora pagina por clave primaria, comprueba recuentos exactos y cubre las 41 tablas públicas contrastadas con el esquema remoto.
+- El formato v1.2 exige manifiesto completo, claves, recuentos y checksum. Las copias anteriores se conservan pero no acreditan cobertura actual. Siete pruebas sintéticas cubren paginación y corrupción sin exportar datos personales.
+- El JSON no contiene Auth, archivos ni esquemas privados, y no es una instantánea transaccional. La recuperación integral permanece pendiente; se añade `docs/guides/recuperacion-datos.md` y se corrigen el roadmap, la guía de administración y el estado operativo.
+- La ejecución real de exportación y retención permanece pendiente de aprobación tras el rechazo de la revisión automática de permisos. No se ha repetido por otra vía.
+- La desactivación push comprueba el resultado del servidor y del navegador. La prueba de envío trata los errores de red y anuncia el resultado de forma accesible; cuatro regresiones verifican esos casos.
+- El informe automático de pantallas conserva todas las observaciones, separa el modo focalizado y devuelve error si encuentra problemas.
+- Se corrigen las fechas propuestas de cierre: el mes se determina en Europe/Madrid y sus límites se generan como fechas de calendario, sin conversión de medianoche local a UTC. Cuatro pruebas cubren cambio de mes y año, febrero bisiesto y horario de verano.
+- Las guías se contrastan con las pantallas: ruta real de importación y columnas admitidas, guardado automático de asistencia, etiquetas de convocatoria, validación de actas y envío separado del cierre.
+- Se reabre el cierre técnico de tesorería por un hallazgo P1: regeneración no atómica de líneas, posible pérdida de marcas de pago y lecturas con errores no comprobados. Debe resolverse antes de generar de nuevo periodos reales.
+- El mismo hallazgo se corrige con `atomic_save_treasury_closure`, accesible solo a `service_role`: reemplazo transaccional con bloqueo, sin regenerar cierres enviados/archivados ni con pagos. Se comprueban todas las lecturas y se trata la desaparición de una línea al marcarla. El ensayo SQL remoto con fixtures revertidos y nueve pruebas de acciones pasan; la suite completa queda en 641 pruebas correctas y 22 omitidas.
+- Los cinco archivos de migración recientes se renombran para reflejar sus versiones cloud registradas, evitando que una sincronización posterior intente aplicarlos otra vez.
+- Seguimiento: la generación de cierre pagina conceptos, asignaciones, perfiles, plantillas, pedidos y cuotas individuales con recuento exacto. El detalle y la exportación paginan también sus líneas; cualquier fallo impide devolver una lectura parcial. La plantilla se filtra por la temporada del cierre y los pedidos usan los límites del periodo en Europe/Madrid. Treinta pruebas focalizadas cubren estas lecturas y las transiciones horarias; las relaciones y filtros se verifican contra PostgREST sin modificar datos.
+- El estado push deja de depender solo de la existencia de una suscripción en el navegador: se comprueba su habilitación para la cuenta autenticada, con consulta RLS y filtro de propietario. Activar renueva suscripciones inactivas y compensa un guardado fallido cancelando la nueva suscripción local. Quince pruebas verifican los estados y errores; la entrega física y el ciclo de cierre de sesión continúan pendientes de validación específica.
+- El cierre de sesión pasa a alcance local: salir en un dispositivo no revoca las sesiones de los demás. Antes se retiran la suscripción local y las notificaciones visibles; el servidor filtra la desactivación por propietario y endpoint, y no muestra éxito si Auth falla. Once pruebas unitarias y un ensayo de producción con dos sesiones aisladas verifican la salida, la pérdida de acceso y el aislamiento entre sesiones. Se añade `pnpm audit:logout` como ensayo manual reproducible; requiere la cuenta de demo y crea/cierra únicamente sus sesiones temporales.
+- Se actualiza el estado de `AGENTS.md`, que aún anunciaba Fase 9 como trabajo futuro y mantenía una referencia contradictoria a reemplazar Cluber. Sus convenciones de desarrollo se conservan; remite al estado operativo fechado como fuente de evidencias y pendientes.
+- Coherencia de permisos deportivos: las capacidades compartidas distinguen programación de partidos de convocatoria/acta. Un entrenador necesita asignación explícita al equipo; los roles globales heredados no equivalen a acceso a todos los equipos. Los delegados pueden gestionar convocatoria, dorsales y resultado, no crear, eliminar ni reprogramar partidos. Los permisos modulares `manage_trainings` y `manage_matches` habilitan su módulo; no se convierten en rol de entrenador para otros módulos. La navegación y los filtros usan la misma derivación; las acciones comprueban también origen y destino al cambiar de equipo. Se conserva la regla específica de asistencia por temporada.
+- La migración `20260905194256_align_sports_capabilities.sql` está preparada pero NO aplicada en cloud: la revisión automática bloqueó el cambio de RLS y triggers por su alcance. Se ha solicitado autorización explícita y se continúa la validación local aislada. No publicar esta corrección como cerrada hasta ejecutar la migración autorizada y sus regresiones de SQL.
+
+## 2026-09-06 - Descarga de cierres y permiso de tesorería
+
+- El endpoint de Excel se alinea con el permiso modular `manage_treasury` de la sección. Se mantiene la lectura autenticada con RLS, sin usar `service_role` para descargar; valida identificadores y no sirve un adjunto parcial si falla su preparación.
+- El botón conserva al usuario en la pantalla cuando hay un error, informa del progreso y admite reintento. Un HTML de login no se guarda como Excel; la petición se cancela al salir y el archivo temporal en memoria se libera.
+- Se añade regresión SQL reversible con datos sintéticos para gestor modular, revocación y acceso familiar. Pasó contra las políticas existentes sin alterar permisos persistentes ni exportar datos del club. Las pruebas de ruta e interfaz, TypeScript y ESLint pasan; la migración de permisos deportivos sigue pendiente de validación y autorización.

@@ -1,55 +1,50 @@
 type ErrorContext = Record<string, unknown>;
 
-function sanitizeContext(context?: ErrorContext): ErrorContext | undefined {
-  if (!context) return undefined;
-  const sanitized: ErrorContext = {};
-  const sensitiveKeys = new Set(["password", "token", "secret", "cookie", "authorization"]);
+const ERROR_NAMES = new Set([
+  "Error",
+  "TypeError",
+  "RangeError",
+  "ReferenceError",
+  "SyntaxError",
+  "URIError",
+  "EvalError",
+  "AggregateError",
+]);
+const AREAS = new Set(["app-error-boundary", "root-global-error"]);
+const ROUTES = new Set(["treasury-closure-export"]);
 
-  for (const [key, value] of Object.entries(context)) {
-    if (sensitiveKeys.has(key.toLowerCase())) {
-      sanitized[key] = "[REDACTED]";
-    } else {
-      sanitized[key] = value;
-    }
+function readProperty(value: unknown, key: string): unknown {
+  try {
+    return value !== null && typeof value === "object" ? Reflect.get(value, key) : undefined;
+  } catch {
+    return undefined;
   }
-  return sanitized;
+}
+
+function safeDigest(value: unknown): string | undefined {
+  return typeof value === "string" && /^\d{1,10}$/.test(value) ? value : undefined;
 }
 
 export function captureException(error: unknown, context?: ErrorContext): void {
-  const timestamp = new Date().toISOString();
-  const safeContext = sanitizeContext(context);
-
-  const errorDetails =
-    error instanceof Error
-      ? {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-          digest: (error as Error & { digest?: string }).digest,
-        }
-      : { message: String(error) };
-
-  // Logging estructurado en consola (capturado por Cloud Logging / Vercel Logs)
-  console.error(
-    JSON.stringify({
-      level: "error",
-      timestamp,
-      ...errorDetails,
-      context: safeContext,
-    }),
-  );
-
-  // Integración condicional con Sentry si el SDK está disponible en runtime y hay DSN configurado
-  const dsn =
-    typeof window !== "undefined"
-      ? (process.env.NEXT_PUBLIC_SENTRY_DSN ?? "")
-      : (process.env.SENTRY_DSN ?? process.env.NEXT_PUBLIC_SENTRY_DSN ?? "");
-
-  if (dsn && typeof window !== "undefined" && (window as unknown as { Sentry?: { captureException: (e: unknown) => void } }).Sentry) {
-    try {
-      (window as unknown as { Sentry: { captureException: (e: unknown) => void } }).Sentry.captureException(error);
-    } catch {
-      // Ignorar fallos de transporte de telemetría
-    }
+  const name = readProperty(error, "name");
+  const area = readProperty(context, "area");
+  const route = readProperty(context, "route");
+  const digest =
+    safeDigest(readProperty(error, "digest")) ?? safeDigest(readProperty(context, "digest"));
+  const diagnostic = {
+    level: "error",
+    timestamp: new Date().toISOString(),
+    event: "application_exception",
+    name: typeof name === "string" && ERROR_NAMES.has(name) ? name : "Error",
+    digest,
+    context: {
+      area: typeof area === "string" && AREAS.has(area) ? area : undefined,
+      route: typeof route === "string" && ROUTES.has(route) ? route : undefined,
+    },
+  };
+  try {
+    console.error(JSON.stringify(diagnostic));
+  } catch {
+    return;
   }
 }

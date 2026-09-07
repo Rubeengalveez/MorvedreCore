@@ -6,7 +6,7 @@ import { Banknote, Check, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatTreasuryCents } from "@/lib/domain/treasury";
+import { currentTreasuryMonth, formatTreasuryCents } from "@/lib/domain/treasury";
 import {
   assignTreasuryConcept,
   buildTreasuryPeriodClosure,
@@ -47,29 +47,41 @@ export function ConceptForm() {
       }}
     >
       <FormTitle icon={<Plus className="h-4 w-4" />} title="Nuevo concepto" />
-      <Input name="code" placeholder="CUOTA_MENSUAL" required />
-      <Input name="label" placeholder="Cuota mensual" required />
-      <div className="grid grid-cols-2 gap-2">
-        <Select name="kind">
-          <option value="fee">Cuota</option>
-          <option value="material">Material</option>
-          <option value="tournament">Torneo</option>
-          <option value="adjustment">Ajuste</option>
-          <option value="discount">Descuento</option>
-        </Select>
-        <Select name="periodicity">
-          <option value="monthly">Mensual</option>
-          <option value="seasonal">Temporada</option>
-          <option value="one_off">Puntual</option>
-        </Select>
+      <FormField label="Código">
+        <Input name="code" placeholder="CUOTA_MENSUAL" required />
+      </FormField>
+      <FormField label="Nombre">
+        <Input name="label" placeholder="Cuota mensual" required />
+      </FormField>
+      <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2">
+        <FormField label="Tipo">
+          <Select name="kind">
+            <option value="fee">Cuota</option>
+            <option value="material">Material</option>
+            <option value="tournament">Torneo</option>
+            <option value="adjustment">Ajuste</option>
+            <option value="discount">Descuento</option>
+          </Select>
+        </FormField>
+        <FormField label="Periodicidad">
+          <Select name="periodicity">
+            <option value="monthly">Mensual</option>
+            <option value="seasonal">Temporada</option>
+            <option value="one_off">Puntual</option>
+          </Select>
+        </FormField>
       </div>
-      <div className="grid grid-cols-[1fr_7rem] gap-2">
-        <Select name="applies_to">
-          <option value="specific_profile">Por perfil</option>
-          <option value="all_players">Jugadores</option>
-          <option value="all_members">Todo el club</option>
-        </Select>
-        <Input name="default_amount_eur" type="number" step="0.01" placeholder="60" required />
+      <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-[1fr_7rem]">
+        <FormField label="Se aplica a">
+          <Select name="applies_to">
+            <option value="specific_profile">Por perfil</option>
+            <option value="all_players">Jugadores</option>
+            <option value="all_members">Todo el club</option>
+          </Select>
+        </FormField>
+        <FormField label="Importe (€)">
+          <Input name="default_amount_eur" type="number" step="0.01" placeholder="60" required />
+        </FormField>
       </div>
       {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
       <Button type="submit" variant="primary" disabled={pending}>
@@ -122,26 +134,36 @@ export function AssignmentForm({
       }}
     >
       <FormTitle icon={<Banknote className="h-4 w-4" />} title="Asignar concepto" />
-      <Select name="profile_id" required>
-        <option value="">Perfil</option>
-        {profiles.map((profile) => (
-          <option key={profile.id} value={profile.id}>
-            {profile.full_name}
-          </option>
-        ))}
-      </Select>
-      <Select name="concept_id" required>
-        <option value="">Concepto</option>
-        {concepts.map((concept) => (
-          <option key={concept.id} value={concept.id}>
-            {concept.label}
-          </option>
-        ))}
-      </Select>
-      <div className="grid grid-cols-3 gap-2">
-        <Input name="amount_eur" type="number" step="0.01" placeholder="Importe" />
-        <Input name="starts_on" type="date" />
-        <Input name="ends_on" type="date" />
+      <FormField label="Perfil">
+        <Select name="profile_id" required>
+          <option value="">Selecciona un perfil</option>
+          {profiles.map((profile) => (
+            <option key={profile.id} value={profile.id}>
+              {profile.full_name}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+      <FormField label="Concepto">
+        <Select name="concept_id" required>
+          <option value="">Selecciona un concepto</option>
+          {concepts.map((concept) => (
+            <option key={concept.id} value={concept.id}>
+              {concept.label}
+            </option>
+          ))}
+        </Select>
+      </FormField>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <FormField label="Importe (€)">
+          <Input name="amount_eur" type="number" step="0.01" placeholder="Importe" />
+        </FormField>
+        <FormField label="Desde">
+          <Input name="starts_on" type="date" />
+        </FormField>
+        <FormField label="Hasta">
+          <Input name="ends_on" type="date" />
+        </FormField>
       </div>
       {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
       <Button type="submit" variant="secondary" disabled={pending}>
@@ -155,9 +177,7 @@ export function ClosureForm({ seasonId }: { seasonId: string | null }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const now = new Date();
-  const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10);
-  const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10);
+  const { start, end } = currentTreasuryMonth(new Date());
 
   return (
     <form
@@ -187,10 +207,16 @@ export function ClosureForm({ seasonId }: { seasonId: string | null }) {
     >
       <FormTitle icon={<Check className="h-4 w-4" />} title="Generar cierre" />
       <div className="grid grid-cols-2 gap-2">
-        <Input name="period_start" type="date" defaultValue={start} required />
-        <Input name="period_end" type="date" defaultValue={end} required />
+        <FormField label="Desde">
+          <Input name="period_start" type="date" defaultValue={start} required />
+        </FormField>
+        <FormField label="Hasta">
+          <Input name="period_end" type="date" defaultValue={end} required />
+        </FormField>
       </div>
-      <Input name="sent_to_email" type="email" placeholder="Email tesoreria" />
+      <FormField label="Enviar a">
+        <Input name="sent_to_email" type="email" placeholder="Email tesoreria" />
+      </FormField>
       {error ? <p className="text-goggle-red text-xs font-bold">{error}</p> : null}
       <Button type="submit" variant="primary" disabled={pending || !seasonId}>
         Generar cierre
@@ -201,27 +227,44 @@ export function ClosureForm({ seasonId }: { seasonId: string | null }) {
 
 export function PaidButton({ lineId, paid }: { lineId: string; paid: boolean }) {
   const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   return (
-    <button
-      type="button"
-      disabled={pending}
-      aria-label={paid ? "Marcar cobro como pendiente" : "Marcar cobro como pagado"}
-      onClick={() => {
-        startTransition(async () => {
-          await markTreasuryLinePaid({
-            line_id: lineId,
-            paid: !paid,
-            payment_method: "bank_transfer",
+    <div className="flex flex-col items-end gap-1">
+      <button
+        type="button"
+        disabled={pending}
+        aria-label={paid ? "Marcar cobro como pendiente" : "Marcar cobro como pagado"}
+        onClick={() => {
+          setError(null);
+          startTransition(async () => {
+            try {
+              await markTreasuryLinePaid({
+                line_id: lineId,
+                paid: !paid,
+                payment_method: "bank_transfer",
+              });
+            } catch (err) {
+              setError(
+                err instanceof Error
+                  ? err.message
+                  : "No pudimos guardar el cobro. Vuelve a intentarlo.",
+              );
+            }
           });
-        });
-      }}
-      className={
-        "inline-flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl px-3 text-xs font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none " +
-        (paid ? "bg-success/10 text-success" : "bg-paper-sunk text-pool-deep")
-      }
-    >
-      {paid ? "Pagado" : "Marcar"}
-    </button>
+        }}
+        className={
+          "focus-visible:ring-pool-blue inline-flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl px-3 text-xs font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none " +
+          (paid ? "bg-success/10 text-success" : "bg-paper-sunk text-pool-deep")
+        }
+      >
+        {paid ? "Pagado" : "Marcar"}
+      </button>
+      {error ? (
+        <p role="alert" className="text-goggle-red max-w-64 text-xs font-bold">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
@@ -307,5 +350,14 @@ function FormTitle({ icon, title }: { icon: React.ReactNode; title: string }) {
       {icon}
       {title}
     </div>
+  );
+}
+
+function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="text-ink-700 flex min-w-0 flex-col gap-1 text-xs font-extrabold">
+      <span>{label}</span>
+      {children}
+    </label>
   );
 }

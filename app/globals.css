@@ -332,10 +332,10 @@
     top: var(--top-bar-height);
   }
 
-  /* Minimum touch target (44px) */
+  /* Minimum touch target (48px) */
   .touch-target {
-    min-height: 44px;
-    min-width: 44px;
+    min-height: 48px;
+    min-width: 48px;
   }
 
   /* Optimal touch target (48px) for primary actions */

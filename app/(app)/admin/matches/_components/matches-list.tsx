@@ -1,8 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { MapPin } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
+import { Calendar, MapPin } from "lucide-react";
 
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils/cn";
 import { isSafeMapsUrl } from "@/lib/domain/maps";
@@ -48,13 +53,14 @@ const STATUS_LABELS: Record<string, string> = {
   postponed: "Aplazado",
 };
 
-const STATUS_BADGE: Record<string, string> = {
-  scheduled: "bg-pool-teal/15 text-pool-deep",
-  in_progress: "bg-warning/15 text-warning",
-  played: "bg-success/15 text-success",
-  cancelled: "bg-danger/15 text-danger",
-  postponed: "bg-ink-300/40 text-ink-600",
-};
+const STATUS_BADGE_VARIANT: Record<string, "info" | "warning" | "success" | "danger" | "neutral"> =
+  {
+    scheduled: "info",
+    in_progress: "warning",
+    played: "success",
+    cancelled: "danger",
+    postponed: "neutral",
+  };
 
 type TabValue = "all" | "scheduled" | "played" | "cancelled";
 
@@ -174,25 +180,19 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
       </div>
 
       {sorted.length === 0 ? (
-        <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-          <p className="text-pool-deep text-base font-semibold">Calendario vacío.</p>
-          <p className="text-ink-600 mt-1 text-sm">
-            Crea el primer partido desde la pestaña de equipos.
-          </p>
-        </div>
+        <EmptyState
+          icon={<Calendar className="h-6 w-6" aria-hidden="true" />}
+          title="Calendario vacío"
+          description="No hay partidos con estos filtros. Cuando el club programe uno, aparecerá aquí."
+        />
       ) : (
         <ul className="flex flex-col gap-3">
           {sorted.map((m) => {
             const safeMaps = isSafeMapsUrl(m.maps_url);
+            const statusVariant = STATUS_BADGE_VARIANT[m.status] ?? "neutral";
             return (
               <li key={m.id}>
-                <div
-                  className="group border-ink-300 bg-paper hover:border-pool-blue hover:bg-pool-foam focus-within:border-pool-blue focus-within:bg-pool-foam relative flex flex-col overflow-hidden rounded-md border transition-colors"
-                  style={{
-                    borderLeftWidth: "4px",
-                    borderLeftColor: m.team_color,
-                  }}
-                >
+                <Card variant="interactive" accentColor={m.team_color} className="group relative">
                   <div className="flex flex-col gap-2 p-4">
                     <div className="text-ink-600 flex flex-wrap items-center gap-2 text-xs">
                       <span className="text-pool-deep font-mono font-semibold">
@@ -200,25 +200,22 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                       </span>
                       <span>·</span>
                       <span className="font-mono font-semibold">{formatTime(m.scheduled_at)}</span>
-                      <span
-                        className={cn(
-                          "ml-auto inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold",
-                          STATUS_BADGE[m.status] ?? "border-ink-300 text-ink-600 border",
-                        )}
-                      >
-                        {STATUS_LABELS[m.status] ?? m.status}
-                      </span>
+                      <div className="ml-auto">
+                        <StatusBadge variant={statusVariant} size="sm">
+                          {STATUS_LABELS[m.status] ?? m.status}
+                        </StatusBadge>
+                      </div>
                     </div>
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-display text-pool-deep text-xl leading-tight font-extrabold">
-                        <a
-                          href={`/admin/matches/${m.id}`}
-                          className="focus-visible:ring-pool-blue before:absolute before:inset-0 before:rounded-md before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                        <Link
+                          href={`/admin/matches/${m.id}` as Route}
+                          className="focus-visible:ring-pool-blue before:absolute before:inset-0 before:rounded-2xl before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                         >
                           {m.is_home
                             ? `${m.team_label} vs ${m.opponent}`
                             : `${m.opponent} vs ${m.team_label}`}
-                        </a>
+                        </Link>
                       </h3>
                       {m.status === "played" ? (
                         <span className="text-pool-deep font-mono text-lg font-extrabold">
@@ -227,18 +224,12 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                       ) : null}
                     </div>
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="border-ink-300 text-ink-600 inline-flex h-6 items-center rounded-full border px-2 text-xs font-semibold">
+                      <StatusBadge variant="neutral" size="sm">
                         {COMPETITION_LABELS[m.competition_type] ?? m.competition_type}
-                      </span>
-                      {m.is_home ? (
-                        <span className="bg-pool-foam text-pool-deep inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
-                          Local
-                        </span>
-                      ) : (
-                        <span className="bg-ink-300/40 text-ink-600 inline-flex h-6 items-center rounded-full px-2 text-xs font-semibold">
-                          Visitante
-                        </span>
-                      )}
+                      </StatusBadge>
+                      <StatusBadge variant={m.is_home ? "brand" : "neutral"} size="sm">
+                        {m.is_home ? "Local" : "Visitante"}
+                      </StatusBadge>
                       {m.pool_name ? (
                         <span className="text-ink-600 text-xs">{m.pool_name}</span>
                       ) : null}
@@ -251,7 +242,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                           target="_blank"
                           rel="noopener noreferrer"
                           aria-label={`Abrir ${m.location ?? m.pool_name ?? "la ubicación"} en Google Maps`}
-                          className="relative z-10 text-pool-blue hover:text-pool-deep inline-flex h-6 items-center gap-1 rounded-full bg-pool-foam px-2 text-xs font-extrabold transition-colors"
+                          className="text-pool-blue hover:text-pool-deep bg-pool-foam relative z-10 inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs font-extrabold transition-colors"
                         >
                           <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
                           Mapa
@@ -260,7 +251,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                     </div>
                     <p className="sr-only">{formatShortDate(m.scheduled_at)}</p>
                   </div>
-                </div>
+                </Card>
               </li>
             );
           })}

@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { readAllRows } from "@/lib/supabase/read-all-rows";
 import { sendEmail } from "@/lib/email/resend";
 import { escapeHtml } from "@/lib/email/html";
+import { getAttendanceDayKey } from "@/lib/domain/attendance";
 import {
   buildTreasuryClosureWorkbook,
   treasuryClosureFilename,
@@ -20,6 +22,7 @@ import {
   buildPeriodClosure,
   eurosToCents,
   monthLabel,
+  treasuryPeriodInstants,
   type TreasuryAssignmentInput,
   type TreasuryConceptInput,
   type TreasuryProfileInput,
@@ -162,53 +165,68 @@ export async function buildTreasuryPeriodClosure(input: {
   const parsed = buildTreasuryClosureSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();
-  const raw = db(admin);
-
-  const [conceptsRes, assignmentsRes, profilesRes, rostersRes, shopOrdersRes, settingsRes] =
+  const period = treasuryPeriodInstants(parsed.data.period_start, parsed.data.period_end);
+  const [concepts, assignments, activeProfiles, rosters, shopOrders, profileSettings] =
     await Promise.all([
-      raw.from("treasury_concepts").select("*") as Promise<{
-        data: unknown[] | null;
-        error: Error | null;
-      }>,
-      raw.from("treasury_profile_concepts").select("*") as Promise<{
-        data: unknown[] | null;
-        error: Error | null;
-      }>,
-      admin.from("profiles").select("id, full_name, is_active").eq("is_active", true),
-      admin.from("team_rosters").select("player_id").is("left_at", null),
-      admin
-        .from("shop_orders")
-        .select("id, requested_by, total_cents, requested_at, status")
-        .gte("requested_at", `${parsed.data.period_start}T00:00:00.000Z`)
-        .lte("requested_at", `${parsed.data.period_end}T23:59:59.999Z`),
-      admin
-        .from("treasury_profile_settings")
-        .select("profile_id, monthly_fee_cents, fee_exempt, billing_profile_id"),
+      readAllRows("conceptos", (from, to) =>
+        admin.from("treasury_concepts").select("*", { count: "exact" }).order("id").range(from, to),
+      ),
+      readAllRows("asignaciones", (from, to) =>
+        admin
+          .from("treasury_profile_concepts")
+          .select("*", { count: "exact" })
+          .order("id")
+          .range(from, to),
+      ),
+      readAllRows("perfiles", (from, to) =>
+        admin
+          .from("profiles")
+          .select("id, full_name, is_active", { count: "exact" })
+          .eq("is_active", true)
+          .order("id")
+          .range(from, to),
+      ),
+      readAllRows("plantillas", (from, to) =>
+        admin
+          .from("team_rosters")
+          .select("player_id, team_id, teams!inner(season_id)", { count: "exact" })
+          .eq("teams.season_id", parsed.data.season_id)
+          .is("left_at", null)
+          .order("team_id")
+          .order("player_id")
+          .range(from, to),
+      ),
+      readAllRows("pedidos", (from, to) =>
+        admin
+          .from("shop_orders")
+          .select("id, requested_by, total_cents, requested_at, status", { count: "exact" })
+          .gte("requested_at", period.from)
+          .lt("requested_at", period.until)
+          .order("id")
+          .range(from, to),
+      ),
+      readAllRows("cuotas individuales", (from, to) =>
+        admin
+          .from("treasury_profile_settings")
+          .select("profile_id, monthly_fee_cents, fee_exempt, billing_profile_id", {
+            count: "exact",
+          })
+          .order("profile_id")
+          .range(from, to),
+      ),
     ]);
 
-  if (conceptsRes.error)
-    throw new Error("No pudimos cargar conceptos: " + errorMessage(conceptsRes.error));
-  if (assignmentsRes.error)
-    throw new Error("No pudimos cargar asignaciones: " + errorMessage(assignmentsRes.error));
-
-  const playerIds = new Set(
-    ((rostersRes.data ?? []) as Array<{ player_id: string }>).map((r) => r.player_id),
-  );
-  const profiles = (
-    (profilesRes.data ?? []) as Array<{ id: string; full_name: string; is_active: boolean }>
-  ).map<TreasuryProfileInput>((p) => ({
-    id: p.id,
-    full_name: p.full_name,
-    is_player: playerIds.has(p.id),
+  const playerIds = new Set(rosters.map((row) => row.player_id));
+  const profiles = activeProfiles.map<TreasuryProfileInput>((profile) => ({
+    id: profile.id,
+    full_name: profile.full_name,
+    is_player: playerIds.has(profile.id),
   }));
-
-  const settings = new Map(
-    (settingsRes.data ?? []).map((setting) => [setting.profile_id, setting]),
-  );
+  const settings = new Map(profileSettings.map((setting) => [setting.profile_id, setting]));
   const draft = buildPeriodClosure({
     periodStart: parsed.data.period_start,
     periodEnd: parsed.data.period_end,
-    concepts: ((conceptsRes.data ?? []) as TreasuryConceptInput[]).filter(
+    concepts: (concepts as TreasuryConceptInput[]).filter(
       (concept) =>
         !(
           concept.kind === "fee" &&
@@ -216,9 +234,9 @@ export async function buildTreasuryPeriodClosure(input: {
           concept.applies_to === "all_players"
         ),
     ),
-    assignments: (assignmentsRes.data ?? []) as TreasuryAssignmentInput[],
+    assignments: assignments as TreasuryAssignmentInput[],
     profiles,
-    shopOrders: (shopOrdersRes.data ?? []) as TreasuryShopOrderInput[],
+    shopOrders: shopOrders as TreasuryShopOrderInput[],
   });
   const profileName = new Map(profiles.map((profile) => [profile.id, profile.full_name]));
   const feeLines = profiles
@@ -263,45 +281,24 @@ export async function buildTreasuryPeriodClosure(input: {
     total_cents: totalCents,
   };
   const { data: closure, error: closureErr } = await (
-    raw
-      .from("treasury_period_closures")
-      .upsert(closurePayload, { onConflict: "season_id,period_start,period_end" }) as {
-      select: (fields: string) => {
-        single: () => Promise<{ data: { id: string } | null; error: Error | null }>;
-      };
+    admin as unknown as {
+      rpc: (
+        name: "atomic_save_treasury_closure",
+        args: { p_closure: typeof closurePayload; p_lines: typeof lines },
+      ) => Promise<{
+        data: { id: string; total_cents: number; line_count: number } | null;
+        error: { message: string } | null;
+      }>;
     }
-  )
-    .select("id")
-    .single();
+  ).rpc("atomic_save_treasury_closure", { p_closure: closurePayload, p_lines: lines });
   if (closureErr || !closure) {
     throw new Error("No pudimos generar el cierre: " + errorMessage(closureErr));
-  }
-
-  await (
-    raw.from("treasury_lines").delete() as {
-      eq: (column: string, value: string) => Promise<{ error: Error | null }>;
-    }
-  ).eq("closure_id", closure.id);
-
-  if (lines.length > 0) {
-    const { error: linesErr } = await (raw.from("treasury_lines").insert(
-      lines.map((line) => ({
-        closure_id: closure.id,
-        profile_id: line.profile_id,
-        concept_id: line.concept_id,
-        source_type: line.source_type,
-        source_id: line.source_id,
-        description: line.description,
-        amount_cents: line.amount_cents,
-      })),
-    ) as Promise<{ error: Error | null }>);
-    if (linesErr) throw new Error("No pudimos guardar las lineas: " + errorMessage(linesErr));
   }
 
   revalidatePath("/admin/treasury");
   revalidatePath(`/admin/treasury/closures/${closure.id}`);
   revalidatePath("/treasury");
-  return { id: closure.id, total_cents: totalCents, line_count: lines.length };
+  return closure;
 }
 
 export async function markTreasuryLinePaid(input: {
@@ -314,20 +311,23 @@ export async function markTreasuryLinePaid(input: {
   const parsed = markTreasuryLinePaidSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
   const admin = createAdminClient();
-  const raw = db(admin);
-  const { error } = await (
-    raw.from("treasury_lines").update({
+  const { data, error } = await admin
+    .from("treasury_lines")
+    .update({
       paid: parsed.data.paid,
       paid_at: parsed.data.paid
-        ? (parsed.data.paid_at ?? new Date().toISOString().slice(0, 10))
+        ? (parsed.data.paid_at ?? getAttendanceDayKey(new Date().toISOString()))
         : null,
       payment_method: parsed.data.paid ? (parsed.data.payment_method ?? "bank_transfer") : null,
-    }) as {
-      eq: (column: string, value: string) => Promise<{ error: Error | null }>;
-    }
-  ).eq("id", parsed.data.line_id);
+    })
+    .eq("id", parsed.data.line_id)
+    .select("id, closure_id")
+    .maybeSingle();
   if (error) throw new Error("No pudimos actualizar el pago: " + errorMessage(error));
+  if (!data)
+    throw new Error("La línea ya no existe. Actualiza el cierre antes de marcar el cobro.");
   revalidatePath("/admin/treasury");
+  revalidatePath(`/admin/treasury/closures/${data.closure_id}`);
   revalidatePath("/treasury");
 }
 

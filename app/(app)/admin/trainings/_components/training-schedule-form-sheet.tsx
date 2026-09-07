@@ -220,7 +220,7 @@ export function TrainingScheduleFormSheet({
                         onClick={() =>
                           setGroups((current) => current.filter((item) => item.id !== group.id))
                         }
-                        className="text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-11 w-11 items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
+                        className="text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-12 w-12 touch-manipulation items-center justify-center rounded-xl focus-visible:ring-2 focus-visible:outline-none"
                         aria-label={`Eliminar horario ${index + 1}`}
                       >
                         <Trash2 className="h-5 w-5" aria-hidden="true" />
@@ -258,7 +258,7 @@ export function TrainingScheduleFormSheet({
                         key={preset.label}
                         type="button"
                         onClick={() => updateGroup(group.id, { weekdays: [...preset.days] })}
-                        className="border-ink-200 bg-paper text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue min-h-10 rounded-lg border px-3 text-xs font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+                        className="border-ink-200 bg-paper text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue min-h-12 touch-manipulation rounded-lg border px-3 text-xs font-extrabold focus-visible:ring-2 focus-visible:outline-none"
                       >
                         {preset.label}
                       </button>

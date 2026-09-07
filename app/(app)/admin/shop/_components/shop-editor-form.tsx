@@ -257,7 +257,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-md border px-3 text-sm font-extrabold"
+            className="border-ink-300 bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-md border px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
           >
             <Upload className="h-4 w-4" />
             {imageFiles.length > 0
@@ -321,7 +321,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
                   update("image_url", null);
                   setImageFiles([]);
                 }}
-                className="text-ink-600 hover:bg-paper-sunk inline-flex h-9 w-9 items-center justify-center rounded-md"
+                className="text-ink-600 hover:bg-paper-sunk focus-visible:ring-pool-blue inline-flex h-12 w-12 touch-manipulation items-center justify-center rounded-md focus-visible:ring-2 focus-visible:outline-none"
                 aria-label="Quitar imagen"
               >
                 <X className="h-4 w-4" />
@@ -335,7 +335,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
       </Field>
       <label
         className={cn(
-          "border-ink-300 bg-paper text-pool-deep flex items-center gap-2 rounded-md border p-2 text-sm",
+          "border-ink-300 bg-paper text-pool-deep flex min-h-12 touch-manipulation items-center gap-2 rounded-md border p-2 text-sm",
         )}
       >
         <input

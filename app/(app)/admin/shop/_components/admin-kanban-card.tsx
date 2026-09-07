@@ -10,6 +10,10 @@ import { formatCents, type ShopOrderStatus } from "@/lib/domain/shop";
 import { updateShopOrderStatus } from "@/server/actions/admin/shop";
 import type { ShopOrder } from "@/server/queries/shop";
 
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { StatusBadge } from "@/components/ui/badge";
+
 export interface AdminKanbanCardProps {
   order: ShopOrder;
 }
@@ -44,12 +48,26 @@ const NEXT_ICON: Record<ShopOrderStatus, React.ComponentType<{ className?: strin
   cancelled: Check,
 };
 
+const STATUS_BADGE_CONFIG: Record<
+  ShopOrderStatus,
+  { variant: "warning" | "info" | "success" | "danger" | "neutral"; label: string }
+> = {
+  pending_parent: { variant: "warning", label: "Firma padre" },
+  pending_admin: { variant: "warning", label: "Pendiente" },
+  ordered: { variant: "info", label: "Encargado" },
+  received: { variant: "info", label: "Recibido" },
+  delivered: { variant: "success", label: "Entregado" },
+  rejected: { variant: "danger", label: "Rechazado" },
+  cancelled: { variant: "neutral", label: "Cancelado" },
+};
+
 export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const next = NEXT_STATUS[order.status];
+  const badgeConfig = STATUS_BADGE_CONFIG[order.status];
 
   function advance() {
     if (!next) return;
@@ -76,24 +94,30 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
     });
   }
 
+  const NextIcon = next ? NEXT_ICON[order.status] : null;
+
   return (
-    <article
-      data-kanban-card={order.id}
-      className="border-ink-300 bg-paper shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-4"
-    >
+    <Card data-kanban-card={order.id} className="gap-3 p-4">
       <div className="flex items-start justify-between gap-3">
-        <Link
-          href={`/shop/orders/${order.id}` as Route}
-          className="text-pool-blue focus-visible:ring-pool-blue rounded text-base font-extrabold hover:underline focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Pedido {order.order_reference}
-        </Link>
-        <span className="text-ink-500 shrink-0 text-sm font-semibold">
-          {new Date(order.requested_at).toLocaleDateString("es-ES", {
-            day: "numeric",
-            month: "short",
-          })}
-        </span>
+        <div className="flex flex-col gap-1">
+          <Link
+            href={`/shop/orders/${order.id}` as Route}
+            className="text-pool-blue focus-visible:ring-pool-blue rounded text-base font-extrabold hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Pedido {order.order_reference}
+          </Link>
+          <span className="text-ink-500 text-xs font-semibold">
+            {new Date(order.requested_at).toLocaleDateString("es-ES", {
+              day: "numeric",
+              month: "short",
+            })}
+          </span>
+        </div>
+        {badgeConfig ? (
+          <StatusBadge variant={badgeConfig.variant} size="sm">
+            {badgeConfig.label}
+          </StatusBadge>
+        ) : null}
       </div>
       <p className="text-pool-deep line-clamp-1 text-base font-extrabold">
         {order.requested_by_name ?? "Jugador"}
@@ -124,41 +148,40 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
           {error}
         </div>
       ) : null}
-      <Link
-        href={`/shop/orders/${order.id}` as Route}
-        className="border-ink-300 text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border px-4 text-base font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-      >
-        Ver detalle
-        <ChevronRight className="h-5 w-5" aria-hidden="true" />
-      </Link>
+      <Button asChild variant="outline" className="w-full">
+        <Link href={`/shop/orders/${order.id}` as Route}>
+          Ver detalle
+          <ChevronRight className="h-5 w-5" aria-hidden="true" />
+        </Link>
+      </Button>
       <div className="flex flex-wrap gap-2">
-        {next ? (
-          <button
+        {next && NextIcon ? (
+          <Button
             type="button"
+            variant="primary"
             onClick={advance}
             disabled={pending}
-            className="bg-pool-deep text-paper hover:bg-ink-900 inline-flex min-h-12 flex-1 touch-manipulation items-center justify-center gap-2 rounded-xl px-3 text-sm font-extrabold disabled:opacity-50"
+            className="flex-1"
           >
-            {(() => {
-              const Icon = NEXT_ICON[order.status];
-              return <Icon className="h-4 w-4" aria-hidden="true" />;
-            })()}
+            <NextIcon className="h-4 w-4" aria-hidden="true" />
             {NEXT_LABEL[order.status]}
-          </button>
+          </Button>
         ) : null}
         {order.status !== "delivered" && order.status !== "cancelled" ? (
-          <button
+          <Button
             type="button"
+            variant="outline"
+            size="icon"
             onClick={cancel}
             disabled={pending}
-            className="border-ink-300 bg-paper text-goggle-red hover:bg-goggle-red/5 inline-flex h-12 w-12 touch-manipulation items-center justify-center rounded-xl border disabled:opacity-50"
+            className="text-goggle-red hover:bg-goggle-red/5 border-ink-300"
             aria-label="Cancelar pedido"
             title="Cancelar"
           >
             <X className="h-5 w-5" aria-hidden="true" />
-          </button>
+          </Button>
         ) : null}
       </div>
-    </article>
+    </Card>
   );
 }

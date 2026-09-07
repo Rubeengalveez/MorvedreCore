@@ -66,7 +66,7 @@ export function WeekView({
 
                 <span
                   className={cn(
-                    "z-10 flex h-9 w-9 items-center justify-center rounded-full font-mono text-sm font-extrabold shadow-sm transition-transform duration-200 group-hover:scale-105",
+                    "z-10 flex h-12 w-12 touch-manipulation items-center justify-center rounded-full font-mono text-sm font-extrabold shadow-sm transition-transform duration-200 group-hover:scale-105",
                     isToday
                       ? "bg-pool-blue text-paper ring-pool-blue/30 scale-105 animate-[pulse_2s_infinite] font-extrabold ring-2"
                       : "bg-paper-card border-ink-300 text-ink-900 border",

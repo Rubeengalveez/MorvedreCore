@@ -1,5 +1,7 @@
 # Auditoría del SRS — Huecos detectados
 
+> Documento histórico del análisis inicial. Las marcas de pendiente describen el estado de aquel momento, no el estado actual del producto. El backlog vigente está en la Fase 10 de `04-roadmap.md` y en `docs/audits/2026-09-04-operational-status.md`.
+
 Documento de trabajo. No es documentación para el club, es un **insumo para decisiones**.
 Marca `[F]` si es bloqueante, `[I]` si es importante pero tiene default razonable, `[C]` si es cosmético.
 

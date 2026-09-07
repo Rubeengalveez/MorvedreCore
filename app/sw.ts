@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { cacheNames, CacheFirst, ExpirationPlugin, NetworkOnly, Serwist } from "serwist";
+import { CacheFirst, ExpirationPlugin, NetworkOnly, Serwist } from "serwist";
+import { getSafeNotificationPath } from "@/lib/pwa/notification-url";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -11,13 +12,12 @@ declare global {
 declare const self: ServiceWorkerGlobalScope;
 
 const STATIC_CACHE_NAME = "morvedre-static-assets-v2";
+const PRECACHE_ENTRIES = self.__SW_MANIFEST ?? [];
+const ACTA_SHELL_REVISION = JSON.stringify(PRECACHE_ENTRIES).split("").reduce((hash, character) => ((hash << 5) - hash + character.charCodeAt(0)) | 0, 0).toString();
 
 const serwist = new Serwist({
   cacheId: "morvedre-core-v2",
-  precacheEntries: [
-    ...(self.__SW_MANIFEST ?? []),
-    { url: "/offline", revision: "1" },
-  ],
+  precacheEntries: [...PRECACHE_ENTRIES, { url: "/offline", revision: ACTA_SHELL_REVISION }, { url: "/acta", revision: ACTA_SHELL_REVISION }],
   precacheOptions: {
     cleanupOutdatedCaches: true,
   },
@@ -26,6 +26,12 @@ const serwist = new Serwist({
   navigationPreload: true,
   fallbacks: {
     entries: [
+      {
+        url: "/acta",
+        matcher({ request }) {
+          return request.destination === "document" && new URL(request.url).pathname === "/acta";
+        },
+      },
       {
         url: "/offline",
         matcher({ request }) {
@@ -66,10 +72,55 @@ self.addEventListener("activate", (event) => {
       .then((names) =>
         Promise.all(
           names
-            .filter((name) => name !== cacheNames.precache && name !== STATIC_CACHE_NAME)
+            .filter((name) => name !== serwist.precacheStrategy.cacheName && name !== STATIC_CACHE_NAME)
             .map((name) => caches.delete(name)),
         ),
       ),
+  );
+});
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+  try {
+    const data = event.data.json();
+    const title = data.title || "Morvedre Core";
+    const options: NotificationOptions = {
+      body: data.body || "",
+      icon: "/brand/icon-192.png",
+      badge: "/brand/icon-192.png",
+      data: {
+        href: getSafeNotificationPath(data.href),
+      },
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch {
+    const text = event.data.text();
+    event.waitUntil(
+      self.registration.showNotification("Morvedre Core", {
+        body: text,
+        icon: "/brand/icon-192.png",
+        badge: "/brand/icon-192.png",
+      }),
+    );
+  }
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const href = getSafeNotificationPath(
+    (event.notification.data as { href?: string } | undefined)?.href,
+  );
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      for (const client of clientList) {
+        if ("navigate" in client && new URL(client.url).origin === self.location.origin) {
+          return client.focus().then(() => (client as WindowClient).navigate(href));
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(href);
+      }
+    }),
   );
 });
 

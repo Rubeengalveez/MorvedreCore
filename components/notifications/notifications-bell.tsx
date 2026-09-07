@@ -26,7 +26,7 @@ export function NotificationsBell({
         initialUnread > 0 ? `Notificaciones, ${initialUnread} sin leer` : "Notificaciones"
       }
       className={cn(
-        "relative flex h-11 w-11 touch-manipulation items-center justify-center rounded-xl text-current transition-[background-color,transform] duration-200 hover:bg-current/14 focus-visible:ring-2 focus-visible:ring-current/70 focus-visible:outline-none active:scale-[0.95] motion-reduce:transition-none",
+        "relative flex h-12 w-12 touch-manipulation items-center justify-center rounded-xl text-current transition-[background-color,transform] duration-200 hover:bg-current/14 focus-visible:ring-2 focus-visible:ring-current/70 focus-visible:outline-none active:scale-[0.95] motion-reduce:transition-none",
         triggerClassName,
       )}
     >

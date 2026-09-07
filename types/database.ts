@@ -33,6 +33,12 @@ export type Database = {
   };
   public: {
     Tables: {
+      live_match_sheets: {
+        Row: { match_id: string; owner_id: string; device_id: string; revision: number; mutation_id: string; document: Json; updated_at: string };
+        Insert: { match_id: string; owner_id: string; device_id: string; revision: number; mutation_id: string; document: Json; updated_at?: string };
+        Update: { document?: Json; revision?: number; mutation_id?: string; device_id?: string; owner_id?: string; updated_at?: string };
+        Relationships: [];
+      };
       access_request_children: {
         Row: {
           child_profile_id: string;
@@ -2594,6 +2600,7 @@ export type Database = {
     };
     Functions: {
       archive_expired_news: { Args: never; Returns: number };
+      save_live_match_sheet: { Args: { p_match:string; p_actor:string; p_device:string; p_revision:number; p_mutation:string; p_document:Json; p_takeover?:boolean }; Returns:number };
       archive_season: {
         Args: {
           p_new_end_date: string;

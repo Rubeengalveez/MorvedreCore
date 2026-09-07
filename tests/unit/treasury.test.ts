@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildPeriodClosure,
+  currentTreasuryMonth,
   eurosToCents,
   formatTreasuryCents,
   monthLabel,
+  treasuryPeriodInstants,
 } from "@/lib/domain/treasury";
 
 const profiles = [
@@ -14,6 +16,38 @@ const profiles = [
 ];
 
 describe("treasury domain", () => {
+  it.each([
+    ["2026-09-01", "2026-09-30", "2026-08-31T22:00:00.000Z", "2026-09-30T22:00:00.000Z"],
+    ["2026-03-29", "2026-03-29", "2026-03-28T23:00:00.000Z", "2026-03-29T22:00:00.000Z"],
+    ["2026-10-25", "2026-10-25", "2026-10-24T22:00:00.000Z", "2026-10-25T23:00:00.000Z"],
+  ])("usa límites exclusivos con horario del club para %s", (start, end, from, until) => {
+    expect(treasuryPeriodInstants(start, end)).toEqual({ from, until });
+  });
+  it("asigna los pedidos cerca de medianoche al mes del club", () => {
+    const draft = buildPeriodClosure({
+      periodStart: "2026-09-01",
+      periodEnd: "2026-09-30",
+      profiles,
+      concepts: [],
+      assignments: [],
+      shopOrders: ["2026-08-31T22:30:00Z", "2026-09-30T22:30:00Z"].map((requested_at, index) => ({
+        id: `order-${index}`,
+        requested_by: "p1",
+        total_cents: 1000,
+        status: "received",
+        requested_at,
+      })),
+    });
+    expect(draft.lines.map((line) => line.source_id)).toEqual(["order-0"]);
+  });
+  it.each([
+    ["2026-08-31T22:30:00Z", "2026-09-01", "2026-09-30"],
+    ["2026-12-31T23:30:00Z", "2027-01-01", "2027-01-31"],
+    ["2028-02-15T12:00:00Z", "2028-02-01", "2028-02-29"],
+    ["2026-03-29T01:30:00Z", "2026-03-01", "2026-03-31"],
+  ])("mantiene el mes del club y todos sus días para %s", (instant, start, end) => {
+    expect(currentTreasuryMonth(new Date(instant))).toEqual({ start, end });
+  });
   it("convierte euros a centimos", () => {
     expect(eurosToCents(60)).toBe(6000);
     expect(eurosToCents(12.35)).toBe(1235);

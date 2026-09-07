@@ -396,7 +396,7 @@ export function MatchRow({
             variant="secondary"
             className={cn(
               "hover:bg-ink-100/50 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl font-extrabold",
-              compact ? "min-h-10 text-sm" : "min-h-12 text-sm",
+              "min-h-12 text-sm",
             )}
           >
             <Link href={href}>
@@ -411,7 +411,7 @@ export function MatchRow({
               variant="ghost"
               className={cn(
                 "text-ink-600 hover:text-pool-deep w-full cursor-pointer text-sm font-extrabold",
-                compact ? "min-h-10" : "min-h-12",
+                "min-h-12",
               )}
             >
               <Link href={`/admin/matches/${match.id}` as Route}>Gestionar convocatoria</Link>
@@ -471,7 +471,7 @@ function PremiumRsvpSection({
           onClick={() => send("confirmed")}
           className={cn(
             "focus-visible:ring-pool-blue flex flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
-            compact ? "min-h-10 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
+            compact ? "min-h-12 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
             isConfirmed
               ? "bg-success text-paper border-success shadow-sm"
               : "bg-paper border-success/25 text-success hover:bg-success/10",
@@ -491,7 +491,7 @@ function PremiumRsvpSection({
           onClick={() => send("declined")}
           className={cn(
             "focus-visible:ring-pool-blue flex flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
-            compact ? "min-h-10 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
+            compact ? "min-h-12 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
             isDeclined
               ? "bg-danger text-paper border-danger shadow-sm"
               : "bg-paper border-danger/25 text-danger hover:bg-danger/10",

@@ -1,9 +1,62 @@
+import { getAttendanceDayKey } from "./attendance";
+
 export type TreasuryConceptKind = "fee" | "material" | "tournament" | "adjustment" | "discount";
 export type TreasuryPeriodicity = "monthly" | "seasonal" | "one_off";
 export type TreasuryAppliesTo =
   "all_players" | "all_members" | "specific_role" | "specific_profile";
 export type TreasuryClosureStatus = "draft" | "sent" | "archived";
 export type TreasuryPaymentMethod = "bank_transfer" | "bizum" | "cash" | "other";
+
+export function currentTreasuryMonth(now: Date): { start: string; end: string } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(now);
+  const year = Number(parts.find((part) => part.type === "year")!.value);
+  const month = Number(parts.find((part) => part.type === "month")!.value);
+  const prefix = `${year}-${String(month).padStart(2, "0")}`;
+  const lastDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  return { start: `${prefix}-01`, end: `${prefix}-${lastDay}` };
+}
+
+export function treasuryPeriodInstants(
+  start: string,
+  end: string,
+): { from: string; until: string } {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  function midnight(date: Date) {
+    const target = date.getTime();
+    let instant = target;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const parts = formatter.formatToParts(new Date(instant));
+      const part = (type: Intl.DateTimeFormatPartTypes) =>
+        Number(parts.find((item) => item.type === type)!.value);
+      const wallTime = Date.UTC(
+        part("year"),
+        part("month") - 1,
+        part("day"),
+        part("hour"),
+        part("minute"),
+        part("second"),
+      );
+      instant += target - wallTime;
+    }
+    return new Date(instant).toISOString();
+  }
+  const nextDay = new Date(`${end}T00:00:00Z`);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+  return { from: midnight(new Date(`${start}T00:00:00Z`)), until: midnight(nextDay) };
+}
 
 export interface TreasuryConceptInput {
   id: string;
@@ -152,7 +205,7 @@ export function buildPeriodClosure(input: {
 
   for (const order of input.shopOrders) {
     if (!["pending_admin", "ordered", "received", "delivered"].includes(order.status)) continue;
-    const date = order.requested_at.slice(0, 10);
+    const date = getAttendanceDayKey(order.requested_at);
     if (date < input.periodStart || date > input.periodEnd) continue;
     lines.push({
       profile_id: order.requested_by,

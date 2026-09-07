@@ -1,26 +1,17 @@
 import { redirect } from "next/navigation";
 
-import type { AdminPermission } from "@/lib/domain/permissions";
-import { getAdminAccess, requireAdmin } from "@/server/actions/admin/_helpers";
+import { canAccessAdminModule, type AdminPermission } from "@/lib/domain/permissions";
+import { getRenderAdminAccess, requireAdmin } from "@/server/actions/admin/_helpers";
 
 export async function AdminPermissionLayout({
   permission,
-  allowCoach = false,
-  allowMatchStaff = false,
   children,
 }: {
   permission: AdminPermission;
-  allowCoach?: boolean;
-  allowMatchStaff?: boolean;
   children: React.ReactNode;
 }) {
-  const access = await getAdminAccess().catch(() => null);
-  const allowed =
-    access !== null &&
-    (access.isAdmin ||
-      access.permissions.has(permission) ||
-      (allowCoach && access.coachTeamIds.size > 0) ||
-      (allowMatchStaff && access.matchStaffTeamIds.size > 0));
+  const access = await getRenderAdminAccess();
+  const allowed = canAccessAdminModule(access, permission);
   if (!allowed) redirect("/admin");
   return children;
 }

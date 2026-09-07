@@ -143,7 +143,7 @@ export function PwaInstallPrompt() {
               <button
                 type="button"
                 onClick={() => dismiss("dismissed")}
-                className="text-ink-500 hover:text-ink-900 flex h-10 w-10 items-center justify-center rounded-full"
+                className="text-ink-500 hover:text-ink-900 focus-visible:ring-pool-blue flex h-12 w-12 touch-manipulation items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
                 aria-label="Cerrar instrucciones"
               >
                 <MdClose className="h-5 w-5" />
@@ -155,7 +155,8 @@ export function PwaInstallPrompt() {
                   1
                 </span>
                 <span>
-                  Pulsa el botón de <strong>Compartir</strong> en la barra inferior de Safari (el icono de cuadro con flecha hacia arriba).
+                  Pulsa el botón de <strong>Compartir</strong> en la barra inferior de Safari (el
+                  icono de cuadro con flecha hacia arriba).
                 </span>
               </li>
               <li className="flex items-start gap-2">
@@ -163,7 +164,8 @@ export function PwaInstallPrompt() {
                   2
                 </span>
                 <span>
-                  Baja por las opciones y toca en <strong>&ldquo;Añadir a la pantalla de inicio&rdquo;</strong>.
+                  Baja por las opciones y toca en{" "}
+                  <strong>&ldquo;Añadir a la pantalla de inicio&rdquo;</strong>.
                 </span>
               </li>
               <li className="flex items-start gap-2">
@@ -189,35 +191,40 @@ export function PwaInstallPrompt() {
       <div
         role="dialog"
         aria-label="Instalar Morvedre Core"
-      className="border-pool-deep/20 bg-paper-card shadow-elev-4 fixed right-3 bottom-[calc(var(--bottom-nav-height)+8px)] left-3 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-md border p-3 backdrop-blur-md sm:right-6 sm:bottom-6 sm:left-6"
-    >
-      <div className="flex min-w-0 items-center gap-3">
-        <span className="bg-pool-blue text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-          {isIOS ? <MdPhoneIphone className="h-5 w-5" /> : <MdGetApp className="h-5 w-5" />}
-        </span>
-        <div className="min-w-0">
-          <p className="font-display text-pool-deep text-sm font-bold">Instalar Morvedre Core</p>
-          <p className="text-ink-600 truncate text-xs">
-            {isIOS
-              ? "Añádelo a tu inicio para usarlo como app"
-              : "Instala la app en tu móvil en un clic"}
-          </p>
+        className="border-pool-deep/20 bg-paper-card shadow-elev-4 fixed right-3 bottom-[calc(var(--bottom-nav-height)+8px)] left-3 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-md border p-3 backdrop-blur-md sm:right-6 sm:bottom-6 sm:left-6"
+      >
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="bg-pool-blue text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+            {isIOS ? <MdPhoneIphone className="h-5 w-5" /> : <MdGetApp className="h-5 w-5" />}
+          </span>
+          <div className="min-w-0">
+            <p className="font-display text-pool-deep text-sm font-bold">Instalar Morvedre Core</p>
+            <p className="text-ink-600 truncate text-xs">
+              {isIOS
+                ? "Añádelo a tu inicio para usarlo como app"
+                : "Instala la app en tu móvil en un clic"}
+            </p>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-1">
+          <Button
+            size="sm"
+            variant="primary"
+            onClick={handleInstallClick}
+            className="font-semibold"
+          >
+            {isIOS ? "Ver cómo" : "Instalar"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => dismiss("dismissed")}
+            className="text-ink-600 hover:bg-pool-foam focus-visible:ring-pool-blue touch-target flex min-h-12 min-w-12 touch-manipulation items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            aria-label="Cerrar aviso de instalación"
+          >
+            <MdClose className="h-5 w-5" />
+          </button>
         </div>
       </div>
-      <div className="flex shrink-0 items-center gap-1">
-        <Button size="sm" variant="primary" onClick={handleInstallClick} className="font-semibold">
-          {isIOS ? "Ver cómo" : "Instalar"}
-        </Button>
-        <button
-          type="button"
-          onClick={() => dismiss("dismissed")}
-          className="text-ink-600 hover:bg-pool-foam focus-visible:ring-pool-blue touch-target flex min-h-12 min-w-12 touch-manipulation items-center justify-center rounded-full transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          aria-label="Cerrar aviso de instalación"
-        >
-          <MdClose className="h-5 w-5" />
-        </button>
-      </div>
-    </div>
-  </>
-);
+    </>
+  );
 }

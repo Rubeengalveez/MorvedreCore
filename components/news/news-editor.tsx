@@ -285,7 +285,7 @@ export function NewsEditor({
               <button
                 type="button"
                 onClick={() => setPreview((value) => !value)}
-                className="border-ink-300 bg-paper text-pool-deep hover:border-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 shrink-0 touch-manipulation items-center gap-1.5 rounded-lg border px-3 text-sm font-extrabold transition-[border-color,background-color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+                className="border-ink-300 bg-paper text-pool-deep hover:border-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 shrink-0 touch-manipulation items-center gap-1.5 rounded-lg border px-3 text-sm font-extrabold transition-[border-color,background-color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
               >
                 {preview ? (
                   <Pencil className="h-4 w-4" aria-hidden="true" />

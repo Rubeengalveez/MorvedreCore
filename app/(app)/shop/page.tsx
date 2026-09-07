@@ -12,6 +12,9 @@ import {
   getShopProducts,
 } from "@/server/queries/shop";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Balon } from "@/components/brand/pictograms/balon";
 import { formatCents } from "@/lib/domain/shop";
 import { FloatingCartButton } from "./_components/floating-cart-button";
@@ -62,30 +65,29 @@ export default async function ShopPage({
         className="pr-14 sm:pr-36"
       />
 
-      <nav
-        aria-label="Gestiones de compra"
-        className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 divide-y overflow-hidden rounded-2xl border"
-      >
-        <ShopShortcut
-          href="/shop/orders"
-          icon={<PackageOpen className="h-5 w-5" aria-hidden="true" />}
-          title="Mis pedidos"
-          detail="Seguimiento, preparación y entrega"
-        />
-        {ctx.linkedProfiles.length > 0 ? (
+      <Card className="divide-ink-200 divide-y overflow-hidden">
+        <nav aria-label="Gestiones de compra">
           <ShopShortcut
-            href="/shop/parents/pending"
-            icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
-            title="Compras familiares"
-            detail={
-              familyOrders.length > 0
-                ? `${familyOrders.length} ${familyOrders.length === 1 ? "pedido por revisar" : "pedidos por revisar"}`
-                : "No tienes pedidos pendientes"
-            }
-            count={familyOrders.length}
+            href="/shop/orders"
+            icon={<PackageOpen className="h-5 w-5" aria-hidden="true" />}
+            title="Mis pedidos"
+            detail="Seguimiento, preparación y entrega"
           />
-        ) : null}
-      </nav>
+          {ctx.linkedProfiles.length > 0 ? (
+            <ShopShortcut
+              href="/shop/parents/pending"
+              icon={<ShieldCheck className="h-5 w-5" aria-hidden="true" />}
+              title="Compras familiares"
+              detail={
+                familyOrders.length > 0
+                  ? `${familyOrders.length} ${familyOrders.length === 1 ? "pedido por revisar" : "pedidos por revisar"}`
+                  : "No tienes pedidos pendientes"
+              }
+              count={familyOrders.length}
+            />
+          ) : null}
+        </nav>
+      </Card>
 
       <section aria-labelledby="shop-products-heading">
         <div className="mb-3 flex items-end justify-between gap-3 px-1">
@@ -106,15 +108,14 @@ export default async function ShopPage({
         <ShopFilters categories={categories} activeCategory={category} search={search} />
 
         {products.length === 0 ? (
-          <div className="border-ink-200 bg-paper-card mt-3 flex min-h-48 flex-col items-center justify-center rounded-2xl border border-dashed px-6 text-center">
-            <Box className="text-ink-400 h-8 w-8" aria-hidden="true" />
-            <p className="text-pool-deep mt-3 text-base font-extrabold">
-              No hay productos disponibles
-            </p>
-            <p className="text-ink-500 mt-1 text-sm">Prueba con otra categoría o búsqueda.</p>
-          </div>
+          <EmptyState
+            icon={<Box className="h-6 w-6" aria-hidden="true" />}
+            title="No hay productos disponibles"
+            description="Prueba con otra categoría o búsqueda."
+            className="mt-3"
+          />
         ) : (
-          <ul className="mt-3 grid grid-cols-2 gap-3 sm:gap-4">
+          <ul className="mt-3 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3">
             {products.map((product) => (
               <li key={product.id} className="content-auto min-w-0">
                 <ProductCard product={product} />
@@ -130,56 +131,59 @@ export default async function ShopPage({
 function ProductCard({ product }: { product: ShopProduct }) {
   const variantText = product.sizes.length > 1 ? `${product.sizes.length} tallas` : "Talla única";
   return (
-    <Link
-      href={`/shop/${product.id}` as Route}
-      className="border-ink-300 bg-paper-card shadow-elev-1 group focus-visible:ring-pool-blue hover:border-pool-blue/50 hover:shadow-elev-2 block h-full touch-manipulation overflow-hidden rounded-xl border transition-[border-color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.99] motion-reduce:transition-none"
-    >
-      <div className="bg-paper-sunk relative aspect-[4/5] overflow-hidden">
-        {product.image_url ? (
-          <Image
-            src={product.image_url}
-            alt={product.title}
-            width={600}
-            height={750}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none"
-          />
-        ) : (
-          <div className="from-pool-foam/80 via-paper-card to-pool-teal/10 flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br p-4 text-center">
-            <div className="bg-paper-card shadow-elev-1 flex h-14 w-14 items-center justify-center rounded-2xl border border-pool-blue/15">
-              <Balon className="h-7 w-7" accent="#FF6B35" />
+    <Card variant="interactive" asChild className="h-full">
+      <Link href={`/shop/${product.id}` as Route} className="group flex flex-col">
+        <div className="bg-paper-sunk relative aspect-[4/5] overflow-hidden">
+          {product.image_url ? (
+            <Image
+              src={product.image_url}
+              alt={product.title}
+              width={600}
+              height={750}
+              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.025] motion-reduce:transition-none"
+            />
+          ) : (
+            <div className="from-pool-foam/80 via-paper-card to-pool-teal/10 flex h-full flex-col items-center justify-center gap-2 bg-gradient-to-br p-4 text-center">
+              <div className="bg-paper-card shadow-elev-1 border-pool-blue/15 flex h-14 w-14 items-center justify-center rounded-2xl border">
+                <Balon className="h-7 w-7" accent="#FF6B35" />
+              </div>
+              <span className="text-pool-blue text-[11px] font-extrabold tracking-wider uppercase">
+                Oficial Morvedre
+              </span>
             </div>
-            <span className="text-pool-blue text-[11px] font-extrabold tracking-wider uppercase">
-              Oficial Morvedre
-            </span>
-          </div>
-        )}
-        {product.images.length > 1 ? (
-          <span className="bg-pool-deep/90 text-paper absolute right-2 bottom-2 inline-flex min-h-7 items-center gap-1 rounded-full px-2 text-xs font-extrabold">
-            <Camera className="h-3.5 w-3.5" aria-hidden="true" />
-            {product.images.length}
-          </span>
-        ) : null}
-        <span className="bg-paper/95 text-pool-deep absolute top-2 left-2 max-w-[calc(100%-1rem)] truncate rounded-md px-2 py-1 text-xs font-extrabold tracking-wide uppercase shadow-sm">
-          {product.category}
-        </span>
-      </div>
-      <div className="flex min-h-32 flex-col p-3">
-        <h3 className="text-pool-deep line-clamp-2 text-base leading-snug font-extrabold">
-          {product.title}
-        </h3>
-        <p className="text-ink-500 mt-1 text-xs font-semibold">{variantText}</p>
-        <div className="border-ink-200 mt-auto border-t pt-3">
-          <span className="text-pool-deep block font-mono text-lg font-extrabold whitespace-nowrap tabular-nums sm:text-xl">
-            {formatCents(product.price_cents, product.currency)}
-          </span>
-          {product.personalization_enabled ? (
-            <span className="text-pool-blue mt-1 block truncate text-xs font-extrabold">
-              Personalizable
+          )}
+          {product.images.length > 1 ? (
+            <span className="bg-pool-deep/90 text-paper absolute right-2 bottom-2 inline-flex min-h-7 items-center gap-1 rounded-full px-2 text-xs font-extrabold">
+              <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+              {product.images.length}
             </span>
           ) : null}
+          <div className="absolute top-2 left-2 max-w-[calc(100%-1rem)]">
+            <StatusBadge variant="brand" size="sm">
+              {product.category}
+            </StatusBadge>
+          </div>
         </div>
-      </div>
-    </Link>
+        <div className="flex min-h-32 flex-1 flex-col p-3.5">
+          <h3 className="text-pool-deep line-clamp-2 text-base leading-snug font-extrabold">
+            {product.title}
+          </h3>
+          <p className="text-ink-500 mt-1 text-xs font-semibold">{variantText}</p>
+          <div className="border-ink-200 mt-auto border-t pt-3">
+            <span className="text-pool-deep block font-mono text-lg font-extrabold whitespace-nowrap tabular-nums sm:text-xl">
+              {formatCents(product.price_cents, product.currency)}
+            </span>
+            {product.personalization_enabled ? (
+              <div className="mt-1.5">
+                <StatusBadge variant="info" size="sm">
+                  Personalizable
+                </StatusBadge>
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </Link>
+    </Card>
   );
 }
 

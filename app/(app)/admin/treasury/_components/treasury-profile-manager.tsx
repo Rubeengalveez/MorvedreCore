@@ -64,8 +64,9 @@ export function TreasuryProfileManager({
               setSearch(event.target.value);
               setPageSize(INITIAL_PAGE_SIZE);
             }}
+            aria-label="Buscar jugador"
             placeholder="Buscar por nombre"
-            className="min-w-0 flex-1 bg-transparent text-base outline-none"
+            className="h-12 min-w-0 flex-1 bg-transparent text-base outline-none"
           />
         </label>
         <Select
@@ -92,7 +93,7 @@ export function TreasuryProfileManager({
           <button
             type="button"
             onClick={() => setPageSize(visible.length)}
-            className="text-pool-blue font-extrabold hover:underline"
+            className="text-pool-blue focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center rounded-lg px-2 font-extrabold hover:underline focus-visible:ring-2 focus-visible:outline-none"
           >
             Ver todos ({visible.length})
           </button>

@@ -203,7 +203,7 @@ export function StreaksContent({
                 }
                 aria-current={activeOrder === order ? "true" : undefined}
                 className={cn(
-                  "focus-visible:ring-pool-blue inline-flex min-h-10 touch-manipulation items-center rounded-md px-2.5 text-sm font-extrabold transition-[background-color,color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+                  "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center rounded-md px-2.5 text-sm font-extrabold transition-[background-color,color,box-shadow] duration-200 focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
                   activeOrder === order
                     ? "bg-paper-card text-pool-deep shadow-sm"
                     : "text-ink-500 hover:text-pool-deep",

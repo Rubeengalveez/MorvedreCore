@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
 import { PushSettings } from "@/components/push/push-settings";
@@ -205,7 +207,7 @@ export default async function NotificationsPage({
         action={<MarkAllNotificationsButton disabled={unread === 0} />}
       />
 
-      <PushSettings publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+      <PushSettings key={ctx.ownProfile.id} publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
 
       <nav
         aria-label="Filtrar notificaciones"
@@ -215,7 +217,7 @@ export default async function NotificationsPage({
           href={"/notifications?view=all" as Route}
           aria-current={view === "all" ? "page" : undefined}
           className={cn(
-            "focus-visible:ring-pool-blue flex min-h-11 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+            "focus-visible:ring-pool-blue flex min-h-12 touch-manipulation items-center justify-center rounded-xl text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
             view === "all" ? "bg-pool-deep text-paper" : "text-ink-600",
           )}
         >
@@ -225,7 +227,7 @@ export default async function NotificationsPage({
           href={"/notifications?view=unread" as Route}
           aria-current={view === "unread" ? "page" : undefined}
           className={cn(
-            "focus-visible:ring-pool-blue flex min-h-11 touch-manipulation items-center justify-center rounded-lg text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
+            "focus-visible:ring-pool-blue flex min-h-12 touch-manipulation items-center justify-center rounded-xl text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
             view === "unread" ? "bg-pool-deep text-paper" : "text-ink-600",
           )}
         >
@@ -260,7 +262,7 @@ export default async function NotificationsPage({
           {page > 1 ? (
             <Link
               href={`/notifications?view=${view}&page=${page - 1}` as Route}
-              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-1 rounded-lg border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
+              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-1 rounded-xl border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
             >
               <ChevronLeft className="h-4 w-4" aria-hidden="true" />
               Anterior
@@ -274,7 +276,7 @@ export default async function NotificationsPage({
           {page < totalPages ? (
             <Link
               href={`/notifications?view=${view}&page=${page + 1}` as Route}
-              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-1 rounded-lg border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
+              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-1 rounded-xl border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
             >
               Siguiente
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -297,6 +299,14 @@ function formatDayShort(iso: string): string {
   return DAY_FORMATTER.format(d);
 }
 
+function getBadgeVariant(kind: string): "brand" | "danger" | "success" | "info" | "neutral" {
+  if (kind === "convocatoria") return "brand";
+  if (kind === "training_cancelled" || kind === "training_absence") return "danger";
+  if (kind === "training_attendance_corrected" || kind === "result_published") return "success";
+  if (kind === "news_pinned" || kind === "match_reminder") return "info";
+  return "neutral";
+}
+
 function NotificationRow({
   item,
   match,
@@ -317,74 +327,74 @@ function NotificationRow({
 
   return (
     <li className="content-auto">
-      <NotificationCardAction
-        id={item.id}
-        href={item.href}
-        className={cn(
-          "shadow-elev-1 flex items-start gap-3 rounded-2xl border p-4",
-          isUnread ? meta.tone : "border-ink-300 bg-paper",
-        )}
+      <Card
+        asChild
+        accentColor={meta.color}
+        className={cn("transition-shadow", isUnread ? "bg-pool-foam/20" : "bg-paper-card")}
       >
-        <span
-          aria-hidden="true"
-          className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-          style={{
-            backgroundColor: `color-mix(in oklab, ${meta.color} 15%, var(--paper))`,
-          }}
+        <NotificationCardAction
+          id={item.id}
+          href={item.href}
+          className="flex items-start gap-3 p-4"
         >
-          <Icon className="h-4 w-4" style={{ color: meta.color }} />
-        </span>
-        <div className="flex flex-1 flex-col gap-1">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-display text-pool-deep text-base font-bold">{item.title}</span>
-            <span
-              className="text-paper rounded-full px-2.5 py-1 text-xs font-extrabold uppercase"
-              style={{ backgroundColor: meta.color }}
-            >
-              {meta.label}
-            </span>
-          </div>
-          {item.kind === "convocatoria" && match ? (
-            <div
-              className="border-ink-300 bg-paper flex items-center gap-2 rounded-md border p-2"
-              style={{ borderLeftWidth: "3px", borderLeftColor: match.team_color }}
-            >
-              <Avatar src={photoUrl} name={item.title} size={28} />
-              <div className="min-w-0 flex-1">
-                <p className="text-pool-deep line-clamp-1 text-sm font-semibold">
-                  vs {match.opponent}
-                </p>
-                <p className="text-ink-600 text-sm font-semibold">
-                  {formatDayShort(match.scheduled_at)} · {formatClock(match.scheduled_at)}
-                </p>
-              </div>
-              <span className="bg-pool-blue text-paper inline-flex min-h-10 items-center rounded-lg px-3 text-sm font-extrabold">
-                Responder
-              </span>
+          <span
+            aria-hidden="true"
+            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+            style={{
+              backgroundColor: `color-mix(in oklab, ${meta.color} 15%, var(--paper))`,
+            }}
+          >
+            <Icon className="h-4 w-4" style={{ color: meta.color }} />
+          </span>
+          <div className="flex flex-1 flex-col gap-1">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="font-display text-pool-deep text-base font-bold">{item.title}</span>
+              <StatusBadge variant={getBadgeVariant(item.kind)} size="sm">
+                {meta.label}
+              </StatusBadge>
             </div>
-          ) : item.kind === "match_reminder" && match ? (
-            <p className="text-ink-900 text-sm">
-              Mañana tienes partido contra <span className="font-semibold">{match.opponent}</span> a
-              las <span className="font-mono">{formatClock(match.scheduled_at)}</span>.
-            </p>
-          ) : item.kind === "training_cancelled" ? (
-            <p className="text-ink-900 text-sm">
-              El entreno de hoy se canceló. {item.body ? `Motivo: ${item.body}` : null}
-            </p>
-          ) : item.body ? (
-            <p className="text-ink-900 text-sm whitespace-pre-line">{item.body}</p>
-          ) : null}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-ink-600 text-sm">{timeAgo(item.created_at)}</span>
-            {item.href ? (
-              <span className="text-pool-blue inline-flex items-center gap-0.5 text-xs font-semibold">
-                Abrir
-                <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-              </span>
+            {item.kind === "convocatoria" && match ? (
+              <div
+                className="border-ink-300 bg-paper flex items-center gap-2 rounded-xl border p-2"
+                style={{ borderLeftWidth: "3px", borderLeftColor: match.team_color }}
+              >
+                <Avatar src={photoUrl} name={item.title} size={28} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-pool-deep line-clamp-1 text-sm font-semibold">
+                    vs {match.opponent}
+                  </p>
+                  <p className="text-ink-600 text-sm font-semibold">
+                    {formatDayShort(match.scheduled_at)} · {formatClock(match.scheduled_at)}
+                  </p>
+                </div>
+                <span className="bg-pool-blue text-paper inline-flex min-h-12 items-center rounded-xl px-3 text-sm font-extrabold">
+                  Responder
+                </span>
+              </div>
+            ) : item.kind === "match_reminder" && match ? (
+              <p className="text-ink-900 text-sm">
+                Mañana tienes partido contra <span className="font-semibold">{match.opponent}</span>{" "}
+                a las <span className="font-mono">{formatClock(match.scheduled_at)}</span>.
+              </p>
+            ) : item.kind === "training_cancelled" ? (
+              <p className="text-ink-900 text-sm">
+                El entreno de hoy se canceló. {item.body ? `Motivo: ${item.body}` : null}
+              </p>
+            ) : item.body ? (
+              <p className="text-ink-900 text-sm whitespace-pre-line">{item.body}</p>
             ) : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-ink-600 text-sm">{timeAgo(item.created_at)}</span>
+              {item.href ? (
+                <span className="text-pool-blue inline-flex items-center gap-0.5 text-xs font-semibold">
+                  Abrir
+                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
+                </span>
+              ) : null}
+            </div>
           </div>
-        </div>
-      </NotificationCardAction>
+        </NotificationCardAction>
+      </Card>
     </li>
   );
 }

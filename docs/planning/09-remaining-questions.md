@@ -1,5 +1,7 @@
 # Preguntas pendientes (no bloqueantes)
 
+> Documento histórico de descubrimiento. Sus casillas no representan el backlog actual y varias preguntas ya quedaron resueltas durante las fases posteriores. Para el estado vigente consulta `00-decisions-log.md`, la Fase 10 de `04-roadmap.md` y `docs/audits/2026-09-04-operational-status.md`.
+
 Estas preguntas se resuelven durante la implementación, en la fase correspondiente. No bloquean la Fase 0.
 
 ## Para Fase 0 (scaffold)

@@ -298,7 +298,7 @@ export function CartClient({
                           item.personalization ?? null,
                         )
                       }
-                      className="border-ink-200 text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-11 w-11 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+                      className="border-ink-200 text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
                       aria-label={`Eliminar ${product.title}`}
                     >
                       <Trash2 className="h-5 w-5" aria-hidden="true" />

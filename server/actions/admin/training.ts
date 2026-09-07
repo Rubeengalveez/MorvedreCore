@@ -16,7 +16,7 @@ import {
 import { generateSessionsFromBlock, type TrainingBlock } from "@/lib/domain/training";
 import { canEditAttendanceForDay } from "@/lib/domain/attendance";
 
-import { requireAttendanceManagerOf, requireCoachOf } from "./_helpers";
+import { requireAttendanceManagerOf, requireTrainingManagerOf } from "./_helpers";
 
 export type TrainingBlockRow = Tables<"training_blocks">;
 export type TrainingSessionRow = Tables<"training_sessions">;
@@ -60,7 +60,7 @@ export async function createTrainingBlock(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  const admin = await requireCoachOf(parsed.data.team_id);
+  const admin = await requireTrainingManagerOf(parsed.data.team_id);
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -108,7 +108,7 @@ export async function createTrainingSchedule(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  const admin = await requireCoachOf(parsed.data.team_id);
+  const admin = await requireTrainingManagerOf(parsed.data.team_id);
   const supabase = await createClient();
   const blockRows = parsed.data.groups.map((group) => ({
     team_id: parsed.data.team_id,
@@ -300,7 +300,10 @@ export async function updateTrainingBlock(
     throw new Error("El bloque no existe.");
   }
 
-  await requireCoachOf(parsed.data.team_id ?? existing.team_id);
+  await requireTrainingManagerOf(existing.team_id);
+  if (parsed.data.team_id && parsed.data.team_id !== existing.team_id) {
+    await requireTrainingManagerOf(parsed.data.team_id);
+  }
 
   const { data, error } = await supabase
     .from("training_blocks")
@@ -349,7 +352,7 @@ export async function deleteTrainingBlock(id: string): Promise<void> {
     throw new Error("El bloque no existe.");
   }
 
-  await requireCoachOf(existing.team_id);
+  await requireTrainingManagerOf(existing.team_id);
 
   const { error } = await supabase.from("training_blocks").delete().eq("id", parsedId.data.id);
 
@@ -378,7 +381,7 @@ export async function generateSessionsFromBlockAction(
     throw new Error("El bloque no existe.");
   }
 
-  await requireCoachOf(row.team_id);
+  await requireTrainingManagerOf(row.team_id);
 
   const block = await blockFromRow(row);
   const generated = generateSessionsFromBlock(block);
@@ -437,7 +440,7 @@ export async function resyncFutureTrainingSessionsAction(
     throw new Error("El bloque no existe.");
   }
 
-  await requireCoachOf(row.team_id);
+  await requireTrainingManagerOf(row.team_id);
 
   const now = new Date().toISOString();
   const { data: futureSessions, error: futureError } = await supabase
@@ -524,7 +527,7 @@ export async function cancelTrainingSession(sessionId: string, reason: string): 
     throw new Error("La sesión no existe.");
   }
 
-  const admin = await requireCoachOf(session.team_id);
+  const admin = await requireTrainingManagerOf(session.team_id);
 
   const cancelledAt = new Date().toISOString();
   const { error: updateError } = await supabase
@@ -601,7 +604,7 @@ export async function uncancelTrainingSession(sessionId: string): Promise<void> 
     throw new Error("La sesión no existe.");
   }
 
-  await requireCoachOf(session.team_id);
+  await requireTrainingManagerOf(session.team_id);
 
   const { error } = await supabase
     .from("training_sessions")

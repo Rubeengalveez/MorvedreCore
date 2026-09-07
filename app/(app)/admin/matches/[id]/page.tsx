@@ -21,7 +21,8 @@ import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
-import { getAdminAccess } from "@/server/actions/admin/_helpers";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
+import { canManageTeam, getTeamScope } from "@/lib/domain/permissions";
 
 import { ActaManager, type ActaEntry } from "./_components/acta-manager";
 import { CallupList, type CallupEntry } from "./_components/callup-list";
@@ -197,17 +198,15 @@ export default async function MatchDetailPage({
   const { id } = await params;
   const sp = await searchParams;
   const tab: Tab = (TABS.find((t) => t.value === sp.tab)?.value ?? "convocatoria") as Tab;
-  const access = await getAdminAccess();
-  const teamScope =
-    access.isAdmin || access.permissions.has("manage_matches")
-      ? null
-      : Array.from(access.matchStaffTeamIds);
+  const access = await getRenderAdminAccess();
+  const teamScope = getTeamScope(access, "match_operations");
 
   const data = await loadMatch(id, teamScope);
   if (!data || !data.match) {
     notFound();
   }
   const { match, callups, stats, profileMeta, teamById, availability } = data;
+  const canEditMatch = canManageTeam(access, "match_schedule", match.team_id);
 
   const conflicting = new Set(
     availability.filter((a) => a.available === false).map((a) => a.player_id),
@@ -259,6 +258,9 @@ export default async function MatchDetailPage({
   return (
     <AdminPageShell className="gap-4">
       <PageBackLink href="/admin/matches">Partidos</PageBackLink>
+      <h1 className="sr-only">
+        Gestionar {match.team?.label ?? "Morvedre"} contra {match.opponent}
+      </h1>
 
       <div className="relative">
         <PoolScoreboard
@@ -400,13 +402,17 @@ export default async function MatchDetailPage({
                 Detalles del partido
               </h2>
               <p className="text-ink-600 mt-0.5 text-sm">
-                Edita la información que verá el equipo.
+                {canEditMatch
+                  ? "Edita la información que verá el equipo."
+                  : "La programación la gestiona el entrenador o la persona responsable de partidos."}
               </p>
             </div>
-            {match.team ? (
+            {match.team && canEditMatch ? (
               <MatchDetailsForm match={match} team={match.team} />
             ) : (
-              <p className="text-ink-600 text-sm italic">No se puede editar: falta el equipo.</p>
+              <Button asChild variant="outline">
+                <Link href={`/matches/${match.id}` as Route}>Ver información del partido</Link>
+              </Button>
             )}
           </>
         ) : null}
@@ -430,7 +436,11 @@ export default async function MatchDetailPage({
               <EmptyState
                 icon={<CarFront className="h-6 w-6" aria-hidden="true" />}
                 title="Logística desactivada"
-                description="Activa la logística en Detalles para empezar a organizar el viaje."
+                description={
+                  canEditMatch
+                    ? "Activa la logística en Detalles para empezar a organizar el viaje."
+                    : "Pide al entrenador o a la persona responsable de partidos que active la logística."
+                }
               />
             )}
           </>

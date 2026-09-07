@@ -8,7 +8,7 @@ describe("OfflinePage", () => {
 
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/Estás sin conexión/i);
     expect(
-      screen.getByText(/Para proteger la privacidad en dispositivos compartidos/i),
+      screen.getByText(/Puedes continuar un acta que hayas preparado en este móvil/i),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Reintentar conexión/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Volver a la pantalla anterior/i })).toBeInTheDocument();

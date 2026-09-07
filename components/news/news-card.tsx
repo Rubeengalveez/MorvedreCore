@@ -138,7 +138,7 @@ export function NewsCard({ post, variant = "feed", onReact, canReact = true }: N
               <Markdown className="text-sm leading-relaxed">{summary}</Markdown>
               <Link
                 href={href}
-                className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-11 items-center gap-1 rounded-lg text-sm font-extrabold hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 items-center gap-1 rounded-lg text-sm font-extrabold hover:underline focus-visible:ring-2 focus-visible:outline-none"
               >
                 Leer más
               </Link>
@@ -251,7 +251,7 @@ function ReactionBar({
             aria-pressed={mine}
             aria-label={`${meta.emoji}: ${count}`}
             className={cn(
-              "focus-visible:ring-pool-blue inline-flex min-h-11 touch-manipulation items-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none",
+              "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none",
               mine
                 ? "border-pool-deep bg-pool-deep text-paper"
                 : count > 0

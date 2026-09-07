@@ -16,6 +16,8 @@ import {
 
 import { HomePriority } from "@/components/dashboard/home-priority";
 import { PageShell } from "@/components/ui/page-shell";
+import { Card, CardActionRow } from "@/components/ui/card";
+import { StatusBadge } from "@/components/ui/badge";
 import { createClient } from "@/lib/supabase/server";
 import { formatTimeRangeFromDuration } from "@/lib/domain/calendar";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
@@ -168,32 +170,30 @@ export default async function DashboardPage() {
                 eyebrow="Tu vestuario"
                 title={teams.length === 1 ? "Tu equipo" : "Tus equipos"}
               />
-              <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border">
+              <Card className="mt-3 divide-y divide-ink-200">
                 {teams.map((team) => (
-                  <Link
-                    key={team.id}
-                    href={`/team/${team.id}` as Route}
-                    className="border-ink-200 hover:bg-pool-foam/60 focus-visible:bg-pool-foam/60 focus-visible:ring-pool-blue flex min-h-16 touch-manipulation items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-                  >
-                    <span
-                      className="h-10 w-1.5 shrink-0 rounded-full"
-                      style={{ backgroundColor: team.color }}
-                      aria-hidden="true"
-                    />
-                    <span className="min-w-0 flex-1">
-                      <span className="text-pool-deep block truncate text-base font-extrabold">
-                        {team.label}
+                  <CardActionRow key={team.id} asChild className="min-h-16">
+                    <Link href={`/team/${team.id}` as Route}>
+                      <span
+                        className="h-10 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: team.color }}
+                        aria-hidden="true"
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span className="text-pool-deep block truncate text-base font-extrabold">
+                          {team.label}
+                        </span>
+                        <span className="text-ink-500 block text-sm font-semibold">
+                          {audience.staff_teams.some((staffTeam) => staffTeam.id === team.id)
+                            ? "Cuerpo técnico"
+                            : "Plantilla"}
+                        </span>
                       </span>
-                      <span className="text-ink-500 block text-sm font-semibold">
-                        {audience.staff_teams.some((staffTeam) => staffTeam.id === team.id)
-                          ? "Cuerpo técnico"
-                          : "Plantilla"}
-                      </span>
-                    </span>
-                    <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
-                  </Link>
+                      <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
+                    </Link>
+                  </CardActionRow>
                 ))}
-              </div>
+              </Card>
             </section>
           ) : null}
 
@@ -214,35 +214,37 @@ function HomeHero({
   contextLabel: string;
 }) {
   return (
-    <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-3.5 sm:px-5 sm:py-4">
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-pool-blue text-xs font-extrabold tracking-[0.08em] uppercase">
-            {contextLabel}
-          </p>
-          <h1 className="font-display text-pool-deep mt-0.5 truncate text-[1.35rem] leading-tight font-extrabold tracking-tight">
-            Hola, {firstName}
-          </h1>
+    <Card asChild>
+      <header className="px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-pool-blue text-xs font-extrabold tracking-[0.08em] uppercase">
+              {contextLabel}
+            </p>
+            <h1 className="font-display text-pool-deep mt-0.5 truncate text-[1.35rem] leading-tight font-extrabold tracking-tight">
+              Hola, {firstName}
+            </h1>
+          </div>
+          <time
+            dateTime={now.toISOString()}
+            className="bg-pool-foam text-pool-deep border-pool-blue/15 flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border"
+            aria-label={new Intl.DateTimeFormat("es-ES", {
+              timeZone: "Europe/Madrid",
+              weekday: "long",
+              day: "numeric",
+              month: "long",
+            }).format(now)}
+          >
+            <span className="font-mono text-lg leading-none font-extrabold tabular-nums">
+              {dayFormatter.format(now)}
+            </span>
+            <span className="text-pool-blue mt-0.5 text-xs leading-tight font-extrabold tracking-[0.05em] uppercase">
+              {monthFormatter.format(now).replace(".", "")}
+            </span>
+          </time>
         </div>
-        <time
-          dateTime={now.toISOString()}
-          className="bg-pool-foam text-pool-deep border-pool-blue/15 flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border"
-          aria-label={new Intl.DateTimeFormat("es-ES", {
-            timeZone: "Europe/Madrid",
-            weekday: "long",
-            day: "numeric",
-            month: "long",
-          }).format(now)}
-        >
-          <span className="font-mono text-lg leading-none font-extrabold tabular-nums">
-            {dayFormatter.format(now)}
-          </span>
-          <span className="text-pool-blue mt-0.5 text-xs leading-tight font-extrabold tracking-[0.05em] uppercase">
-            {monthFormatter.format(now).replace(".", "")}
-          </span>
-        </time>
-      </div>
-    </header>
+      </header>
+    </Card>
   );
 }
 
@@ -254,57 +256,59 @@ function HomeDigest({
   posts: NewsPostWithReactions[];
 }) {
   return (
-    <section aria-label="Agenda y noticias" className="grid gap-3 md:grid-cols-2 md:items-start">
+    <section aria-label="Agenda y noticias" className="grid gap-3">
       {events.length > 0 ? (
-        <article className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border">
-          <DigestHeader
-            icon={CalendarDays}
-            title="Próximos días"
-            detail={`${events.length} ${events.length === 1 ? "compromiso" : "compromisos"}`}
-            href="/calendar"
-            linkLabel="Calendario"
-          />
-          <div className="divide-ink-200 divide-y">
-            {events.map((event) => (
-              <AgendaDigestRow key={`${event.kind}-${event.id}`} event={event} />
-            ))}
-          </div>
-        </article>
+        <Card asChild className="overflow-hidden">
+          <article>
+            <DigestHeader
+              icon={CalendarDays}
+              title="Próximos días"
+              detail={`${events.length} ${events.length === 1 ? "compromiso" : "compromisos"}`}
+              href="/calendar"
+              linkLabel="Calendario"
+            />
+            <div className="divide-ink-200 divide-y">
+              {events.map((event) => (
+                <AgendaDigestRow key={`${event.kind}-${event.id}`} event={event} />
+              ))}
+            </div>
+          </article>
+        </Card>
       ) : null}
 
       {posts.length > 0 ? (
-        <article className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border">
-          <DigestHeader
-            icon={Megaphone}
-            title="Noticias del club"
-            detail="Lo último publicado"
-            href="/news"
-            linkLabel="Ver todas"
-          />
-          <div className="divide-ink-200 divide-y">
-            {posts.map((post) => (
-              <Link
-                key={post.id}
-                href={`/news/${post.id}` as Route}
-                className="hover:bg-pool-foam/60 focus-visible:bg-pool-foam/60 focus-visible:ring-pool-blue flex min-h-[4.5rem] touch-manipulation items-center gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-              >
-                <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                  <Megaphone className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="text-pool-deep line-clamp-2 block text-sm leading-snug font-extrabold">
-                    {post.title}
-                  </span>
-                  <span className="text-ink-500 mt-1 block truncate text-xs font-semibold">
-                    {post.audience_team_label ?? "Todo el club"} ·{" "}
-                    {newsDateFormatter.format(new Date(post.published_at))}
-                  </span>
-                </span>
-                <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
-              </Link>
-            ))}
-          </div>
-        </article>
+        <Card asChild className="overflow-hidden">
+          <article>
+            <DigestHeader
+              icon={Megaphone}
+              title="Noticias del club"
+              detail="Lo último publicado"
+              href="/news"
+              linkLabel="Ver todas"
+            />
+            <div className="divide-ink-200 divide-y">
+              {posts.map((post) => (
+                <CardActionRow key={post.id} asChild className="min-h-[4.5rem]">
+                  <Link href={`/news/${post.id}` as Route}>
+                    <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                      <Megaphone className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="text-pool-deep line-clamp-2 block text-sm leading-snug font-extrabold">
+                        {post.title}
+                      </span>
+                      <span className="text-ink-500 mt-1 block truncate text-xs font-semibold">
+                        {post.audience_team_label ?? "Todo el club"} ·{" "}
+                        {newsDateFormatter.format(new Date(post.published_at))}
+                      </span>
+                    </span>
+                    <ChevronRight className="text-ink-400 h-5 w-5 shrink-0" aria-hidden="true" />
+                  </Link>
+                </CardActionRow>
+              ))}
+            </div>
+          </article>
+        </Card>
       ) : null}
     </section>
   );
@@ -398,7 +402,7 @@ function PlayerStreaks({ streaks }: { streaks: ActiveStreakRow[] }) {
   return (
     <section aria-labelledby="streaks-heading">
       <SectionHeading id="streaks-heading" eyebrow="Tu mejor momento" title="Rachas activas" />
-      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border">
+      <Card className="mt-3 overflow-hidden">
         <div className="divide-ink-200 divide-y">
           {streaks.slice(0, 3).map((streak, index) => (
             <div key={streak.type} className="flex min-h-16 items-center gap-3 px-4 py-2.5">
@@ -430,7 +434,7 @@ function PlayerStreaks({ streaks }: { streaks: ActiveStreakRow[] }) {
           Ver todas las rachas
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
-      </div>
+      </Card>
     </section>
   );
 }
@@ -444,50 +448,49 @@ function SeasonSnapshot({ stats }: { stats: PlayerSeasonStats }) {
   ];
 
   return (
-    <section
-      aria-labelledby="season-summary-heading"
-      className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border"
-    >
-      <header className="bg-paper-sunk border-ink-200 flex min-h-16 items-center gap-3 border-b px-4 py-2.5">
-        <span className="bg-paper-card text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
-          <Target className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-pool-blue text-xs font-extrabold tracking-[0.06em] uppercase">
-            Esta temporada
-          </p>
-          <h2 id="season-summary-heading" className="text-pool-deep text-base font-extrabold">
-            Resumen deportivo
-          </h2>
-        </div>
-        <Link
-          href={"/rankings" as Route}
-          className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-12 shrink-0 items-center gap-1 rounded-lg px-1 text-xs font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Rankings
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-        </Link>
-      </header>
-      <div className="grid grid-cols-2 sm:grid-cols-4">
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <div
-              key={item.label}
-              className="border-ink-200 flex min-h-17 items-center gap-2.5 border-r border-b px-3 py-2.5 even:border-r-0 nth-[n+3]:border-b-0 sm:border-b-0 sm:last:border-r-0 sm:even:border-r"
-            >
-              <Icon className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
-              <div className="min-w-0">
-                <p className="text-pool-deep font-mono text-lg leading-none font-extrabold tabular-nums">
-                  {item.value}
-                </p>
-                <p className="text-ink-600 mt-1 truncate text-xs font-bold">{item.label}</p>
+    <Card asChild className="overflow-hidden">
+      <section aria-labelledby="season-summary-heading">
+        <header className="bg-paper-sunk border-ink-200 flex min-h-16 items-center gap-3 border-b px-4 py-2.5">
+          <span className="bg-paper-card text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-sm">
+            <Target className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-pool-blue text-xs font-extrabold tracking-[0.06em] uppercase">
+              Esta temporada
+            </p>
+            <h2 id="season-summary-heading" className="text-pool-deep text-base font-extrabold">
+              Resumen deportivo
+            </h2>
+          </div>
+          <Link
+            href={"/rankings" as Route}
+            className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue inline-flex min-h-12 shrink-0 items-center gap-1 rounded-lg px-1 text-xs font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Rankings
+            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        </header>
+        <div className="grid grid-cols-2 sm:grid-cols-4">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <div
+                key={item.label}
+                className="border-ink-200 flex min-h-17 items-center gap-2.5 border-r border-b px-3 py-2.5 even:border-r-0 nth-[n+3]:border-b-0 sm:border-b-0 sm:last:border-r-0 sm:even:border-r"
+              >
+                <Icon className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
+                <div className="min-w-0">
+                  <p className="text-pool-deep font-mono text-lg leading-none font-extrabold tabular-nums">
+                    {item.value}
+                  </p>
+                  <p className="text-ink-600 mt-1 truncate text-xs font-bold">{item.label}</p>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </div>
-    </section>
+            );
+          })}
+        </div>
+      </section>
+    </Card>
   );
 }
 
@@ -497,7 +500,7 @@ function FamilyPanel({ family }: { family: FamilyOverview }) {
   return (
     <section aria-labelledby="family-heading">
       <SectionHeading id="family-heading" eyebrow="Todo en una vista" title="Tu familia" />
-      <div className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border">
+      <Card className="mt-3 overflow-hidden">
         <div className="divide-ink-200 divide-y">
           {family.members.map((member) => (
             <div key={member.id} className="flex min-h-16 items-center gap-3 px-4 py-3">
@@ -516,10 +519,10 @@ function FamilyPanel({ family }: { family: FamilyOverview }) {
                 </p>
               </div>
               {member.pending_order_count > 0 ? (
-                <span className="bg-ball-gold/20 text-pool-deep rounded-full px-2.5 py-1 text-xs font-extrabold">
+                <StatusBadge variant="gold" size="md">
                   {member.pending_order_count}{" "}
                   {member.pending_order_count === 1 ? "pedido" : "pedidos"}
-                </span>
+                </StatusBadge>
               ) : null}
             </div>
           ))}
@@ -531,7 +534,7 @@ function FamilyPanel({ family }: { family: FamilyOverview }) {
           {memberCount === 1 ? "Ver perfil y gestiones" : "Ver familia y gestiones"}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
-      </div>
+      </Card>
     </section>
   );
 }
@@ -545,27 +548,24 @@ function ManagementPanel() {
   return (
     <section aria-labelledby="management-heading">
       <SectionHeading id="management-heading" eyebrow="Administración" title="Gestionar" />
-      <nav
-        aria-label="Acciones de administración"
-        className="border-ink-200 bg-paper-card shadow-elev-1 mt-3 overflow-hidden rounded-2xl border"
-      >
-        {items.map((item) => {
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.href}
-              href={item.href as Route}
-              className="border-ink-200 hover:bg-pool-foam/60 focus-visible:bg-pool-foam/60 focus-visible:ring-pool-blue flex min-h-14 items-center gap-3 border-b px-4 transition-colors last:border-b-0 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-            >
-              <Icon className="text-pool-blue h-5 w-5" aria-hidden="true" />
-              <span className="text-pool-deep min-w-0 flex-1 text-sm font-extrabold">
-                {item.label}
-              </span>
-              <ChevronRight className="text-ink-400 h-5 w-5" aria-hidden="true" />
-            </Link>
-          );
-        })}
-      </nav>
+      <Card asChild className="mt-3 overflow-hidden">
+        <nav aria-label="Acciones de administración" className="divide-y divide-ink-200">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <CardActionRow key={item.href} asChild className="min-h-14">
+                <Link href={item.href as Route}>
+                  <Icon className="text-pool-blue h-5 w-5" aria-hidden="true" />
+                  <span className="text-pool-deep min-w-0 flex-1 text-sm font-extrabold">
+                    {item.label}
+                  </span>
+                  <ChevronRight className="text-ink-400 h-5 w-5" aria-hidden="true" />
+                </Link>
+              </CardActionRow>
+            );
+          })}
+        </nav>
+      </Card>
     </section>
   );
 }

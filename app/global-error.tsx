@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import Link from "next/link";
 import { captureException } from "@/lib/monitoring/error-logger";
 
 export default function GlobalError({
@@ -39,15 +40,12 @@ export default function GlobalError({
             >
               Reiniciar aplicación
             </button>
-            <button
-              type="button"
-              onClick={() => {
-                window.location.href = "/";
-              }}
-              className="border-ink-300 bg-paper text-pool-deep h-12 w-full rounded-md border px-4 text-base font-semibold transition-colors hover:bg-slate-50"
+            <Link
+              href="/"
+              className="border-ink-300 bg-paper text-pool-deep inline-flex h-12 w-full items-center justify-center rounded-md border px-4 text-base font-semibold transition-colors hover:bg-slate-50"
             >
               Ir a la portada
-            </button>
+            </Link>
           </div>
         </div>
       </body>

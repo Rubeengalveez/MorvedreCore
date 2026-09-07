@@ -11,7 +11,6 @@ import {
   ClipboardCheck,
   Hash,
   KeyRound,
-  LogOut,
   Phone,
   Settings2,
   ShieldCheck,
@@ -29,12 +28,11 @@ import {
   ProfileReadiness,
   SettingsLink,
 } from "@/components/profile/profile-hub";
-import { Button } from "@/components/ui/button";
+import { SignOutButton } from "@/components/auth/sign-out-button";
 import { PageShell, SectionHeader } from "@/components/ui/page-shell";
 import { formatTreasuryCents } from "@/lib/domain/treasury";
 import type { AdminPermission } from "@/lib/domain/permissions";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/server/actions/auth";
 import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getDashboardAudience } from "@/server/queries/dashboard";
 import { getFamilyOverview } from "@/server/queries/family";
@@ -337,12 +335,7 @@ export default async function ProfilePage() {
         </div>
       </details>
 
-      <form action={signOut}>
-        <Button type="submit" variant="danger" size="md" className="w-full">
-          <LogOut className="h-4 w-4" aria-hidden="true" />
-          Cerrar sesión
-        </Button>
-      </form>
+      <SignOutButton />
     </PageShell>
   );
 }

@@ -1,0 +1,38 @@
+do $test$
+declare actor uuid:=gen_random_uuid(); p uuid; player uuid; season uuid; team uuid; mid uuid; device uuid:=gen_random_uuid(); mutation uuid:=gen_random_uuid(); doc jsonb; rev integer; denied boolean;
+begin
+  insert into auth.users(id) values(actor);
+  insert into public.profiles(auth_user_id,full_name) values(actor,'Prueba acta delegado') returning id into p;
+  insert into public.profiles(full_name) values('Prueba acta jugador') returning id into player;
+  insert into public.seasons(label,start_date,end_date,is_current) values('Prueba acta','2095-09-01','2096-07-31',false) returning id into season;
+  insert into public.teams(season_id,category_code,gender,label) values(season,'cadete','male','Prueba acta') returning id into team;
+  insert into public.matches(season_id,team_id,opponent,scheduled_at) values(season,team,'Rival prueba','2095-10-01T12:00:00Z') returning id into mid;
+  insert into public.match_callups(match_id,player_id,cap_number) values(mid,player,1);
+  insert into public.team_staff(team_id,profile_id,role) values(team,p,'delegate');
+  doc:=jsonb_build_object('version',1,'players',jsonb_build_array(jsonb_build_object('id',player,'name','Prueba','cap',1)),'opponentCaps','[1,2]'::jsonb,'periods',4,'period',1,'phase','playing','keeper',1,'baseline','[]'::jsonb,'baselineThem',0,'events',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','goal','period',1,'keeper',null,'deleted',false),jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','penalty','period',1,'keeper',null,'deleted',false)));
+  execute 'set local role service_role';
+  rev:=public.save_live_match_sheet(mid,p,device,0,mutation,doc);
+  if rev<>1 then raise exception 'FAIL initial revision';end if;
+  if public.save_live_match_sheet(mid,p,device,0,mutation,doc)<>1 then raise exception 'FAIL retry duplicated';end if;
+  if not exists(select 1 from public.match_stats where match_id=mid and goals=1 and exclusions=1)then raise exception 'FAIL derived totals';end if;
+  denied:=false;begin perform public.save_live_match_sheet(mid,p,device,0,gen_random_uuid(),doc);exception when others then denied:=true;end;
+  if not denied then raise exception 'FAIL stale update accepted';end if;
+  denied:=false;begin perform public.save_live_match_sheet(mid,p,gen_random_uuid(),1,gen_random_uuid(),doc);exception when others then denied:=true;end;
+  if not denied then raise exception 'FAIL second device accepted';end if;
+  denied:=false;begin perform public.save_live_match_sheet(mid,player,device,1,gen_random_uuid(),doc);exception when insufficient_privilege then denied:=true;end;
+  if not denied then raise exception 'FAIL non delegate allowed';end if;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub',actor::text,true);
+  execute 'set local role authenticated';
+  denied:=false;begin perform public.save_live_match_sheet(mid,p,device,1,gen_random_uuid(),doc);exception when insufficient_privilege then denied:=true;end;
+  if not denied then raise exception 'FAIL RPC exposed to authenticated';end if;
+  execute 'reset role';
+  execute 'set local role service_role';
+  doc:=jsonb_set(doc,'{phase}','"finished"');
+  perform public.save_live_match_sheet(mid,p,device,1,gen_random_uuid(),doc);
+  if not exists(select 1 from public.matches where id=mid and status='played' and final_score_us=1)then raise exception 'FAIL final score';end if;
+  if not exists(select 1 from public.match_stats where match_id=mid and validated_at is not null)then raise exception 'FAIL validation';end if;
+  denied:=false;begin perform public.save_live_match_sheet(mid,p,device,2,gen_random_uuid(),jsonb_set(doc,'{events}','[]'));exception when others then denied:=true;end;
+  if not denied then raise exception 'FAIL closed sheet modified';end if;
+  execute 'reset role';
+end;$test$;

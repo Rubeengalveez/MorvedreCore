@@ -3,12 +3,13 @@ import { redirect } from "next/navigation";
 import { UsersRound } from "lucide-react";
 
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { TeamListCard } from "@/components/team/team-list-card";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getAllTeamsInSeason } from "@/server/queries/teams";
 import type { CategoryCode } from "@/lib/domain/categories";
-import { firstName } from "@/lib/domain/family";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,10 @@ const CATEGORY_ORDER: CategoryCode[] = [
   "absoluto",
 ];
 
+function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
 export default async function TeamPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
@@ -36,9 +41,11 @@ export default async function TeamPage() {
   const season = await getCurrentSeason();
   if (!season) {
     return (
-      <PageShell width="md">
-        <EmptyTeams
-          title="Equipos"
+      <PageShell width="md" className="gap-4 pb-6">
+        <PageHeader title="Equipos" />
+        <EmptyState
+          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+          title="Sin temporada activa"
           description="La temporada activa todavía no está configurada."
         />
       </PageShell>
@@ -107,7 +114,8 @@ export default async function TeamPage() {
       />
 
       {allTeams.length === 0 ? (
-        <EmptyTeams
+        <EmptyState
+          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
           title="Todavía no hay equipos"
           description="Los equipos de la temporada aparecerán aquí cuando estén configurados."
         />
@@ -124,7 +132,7 @@ export default async function TeamPage() {
               De menor a mayor
             </span>
           </div>
-          <div className="border-ink-200 bg-paper-card shadow-elev-1 divide-ink-200 overflow-hidden rounded-2xl border divide-y">
+          <Card className="divide-ink-200 divide-y">
             {orderedTeams.map((team) => (
               <TeamListCard
                 key={team.id}
@@ -141,19 +149,9 @@ export default async function TeamPage() {
                 familyPlayerNames={familyPlayersByTeam.get(team.id) ?? []}
               />
             ))}
-          </div>
+          </Card>
         </section>
       )}
     </PageShell>
-  );
-}
-
-function EmptyTeams({ title, description }: { title: string; description: string }) {
-  return (
-    <section className="border-ink-200 bg-paper-card flex min-h-56 flex-col items-center justify-center rounded-2xl border border-dashed px-6 text-center">
-      <UsersRound className="text-ink-400 h-9 w-9" aria-hidden="true" />
-      <h1 className="font-display text-pool-deep mt-4 text-xl font-extrabold">{title}</h1>
-      <p className="text-ink-600 mt-2 max-w-sm text-sm leading-relaxed">{description}</p>
-    </section>
   );
 }

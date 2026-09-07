@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 
-import { getAdminAccess } from "@/server/actions/admin/_helpers";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
+import { canAccessAdminArea } from "@/lib/domain/permissions";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -12,14 +13,8 @@ export const metadata = {
 };
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const access = await getAdminAccess().catch(() => null);
-  if (!access) redirect("/login" as Route);
-  if (
-    !access.isAdmin &&
-    access.permissions.size === 0 &&
-    access.coachTeamIds.size === 0 &&
-    access.matchStaffTeamIds.size === 0
-  ) {
+  const access = await getRenderAdminAccess();
+  if (!canAccessAdminArea(access)) {
     redirect("/dashboard" as Route);
   }
 

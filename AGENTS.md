@@ -4,7 +4,7 @@
 
 ## Qué es esto
 
-**Morvedre Core** es la PWA propia del Club Waterpolo Morvedre (Puerto de Sagunto, Valencia). Reemplaza a Cluber para eliminar comisiones y centralizar gestión deportiva, comunicativa, logística y de tesorería.
+**Morvedre Core** es la PWA propia del Club Waterpolo Morvedre (Puerto de Sagunto, Valencia). Centraliza gestión deportiva, comunicativa, logística y de tesorería sin comisiones de una plataforma intermediaria.
 
 150-250 personas en el club (jugadores desde Benjamín hasta Absoluto + padres + staff + directiva). El usuario (Rubén / `galvillo9@gmail.com`) es admin total, entrenador de Cadete B y Juvenil, y jugador. **El club nunca usó Cluber**: la app se construye desde cero con objetivo de coste 0 y autosuficiencia tecnológica.
 
@@ -36,14 +36,16 @@ Toda la planificación está en `docs/planning/`. **Orden de lectura sugerido**:
 
 ## Estado actual
 
-**Fase 8 — Históricos y leyendas. COMPLETADA en el repositorio, compilando y validada con tests locales y build de producción.** Ver `docs/planning/26-phase-8-summary.md` para el detalle.
+**Actualizado el 5 de septiembre de 2026: remediación de la auditoría posterior a la demo, en curso.** La implementación incluye Históricos y Leyendas, mejoras PWA y accesibilidad de Fase 9, componentes visuales compartidos y correcciones de seguridad, tesorería y autenticación. Consulta primero `docs/audits/2026-09-04-operational-status.md` para las evidencias y los pendientes actuales; los resúmenes de fase son históricos.
 
-Pendiente para probar en el cloud:
+Pendientes operativos principales:
 
 - Comprobar que las notificaciones push nativas se reciben y desactivan correctamente si expiran.
 - Probar el envío de correos de cierre a través de Resend.
+- Autorizar la exportación real del respaldo y ensayar recuperación integral, incluyendo Auth y archivos.
+- Validar usabilidad por roles, accesibilidad y datos de la temporada real con el club.
 
-Próxima fase: **Fase 9 — Polish, accesibilidad y offline**.
+Un build correcto no acredita el cierre completo de la auditoría. Las verificaciones pendientes figuran en el estado operativo.
 
 ### Lo que ya está implementado (Fase 0 + 1 + 2)
 
@@ -106,7 +108,7 @@ Próxima fase: **Fase 9 — Polish, accesibilidad y offline**.
 
 ## Próximo paso acordado
 
-**Fase 9 — Polish, accesibilidad y offline**: auditoría WCAG, caché offline de vistas de solo lectura, página sin conexión y mejoras PWA.
+Cerrar los hallazgos y verificaciones pendientes de la auditoría, y preparar el lanzamiento con el club. La política offline vigente conserva recursos públicos y una página de fallback; no guarda respuestas autenticadas para lectura sin conexión.
 
 ## Documentos disponibles
 
@@ -153,3 +155,13 @@ Próxima fase: **Fase 9 — Polish, accesibilidad y offline**.
 ## Scripts utiles
 
 - `node scripts/check-auth-config.mjs` — diagnostica si Google OAuth esta bien configurado en Supabase (providers habilitados, redirect URLs, etc).
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+# This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
