@@ -35,6 +35,7 @@ export interface AdminCapabilities {
   permissions: ReadonlySet<AdminPermission>;
   coachTeamIds: ReadonlySet<string>;
   matchStaffTeamIds: ReadonlySet<string>;
+  delegateTeamIds?: ReadonlySet<string>;
 }
 
 export type TeamCapability = "trainings" | "match_schedule" | "match_operations";
@@ -47,14 +48,17 @@ export function deriveAdminCapabilities(input: {
 }): AdminCapabilities {
   const coachTeamIds = new Set<string>();
   const matchStaffTeamIds = new Set<string>();
+  const delegateTeamIds = new Set<string>();
   for (const role of input.roles) {
     if (!role.scope_team_id) continue;
+    if (role.role === "delegate") delegateTeamIds.add(role.scope_team_id);
     if (role.role === "coach") coachTeamIds.add(role.scope_team_id);
     if (role.role === "coach" || role.role === "delegate") {
       matchStaffTeamIds.add(role.scope_team_id);
     }
   }
   for (const staff of input.staff) {
+    if (staff.role === "delegate") delegateTeamIds.add(staff.team_id);
     if (staff.role === "delegate") matchStaffTeamIds.add(staff.team_id);
   }
   return {
@@ -62,7 +66,12 @@ export function deriveAdminCapabilities(input: {
     permissions: new Set(input.permissions.map((row) => row.permission).filter(isAdminPermission)),
     coachTeamIds,
     matchStaffTeamIds,
+    delegateTeamIds,
   };
+}
+
+export function canUseLiveMatch(access: AdminCapabilities, teamId: string): boolean {
+  return access.delegateTeamIds?.has(teamId) === true;
 }
 
 export function hasGlobalPermission(

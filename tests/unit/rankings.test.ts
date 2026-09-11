@@ -5,6 +5,7 @@ import {
   computeRanking,
   findMyPosition,
   isMyPositionOutsideTopN,
+  isSchoolScope,
   paginateRanking,
   paginateRankingWithPodium,
   rankingPageForPosition,
@@ -390,5 +391,32 @@ describe("isMyPositionOutsideTopN", () => {
 
   it("returns false when playerId is null", () => {
     expect(isMyPositionOutsideTopN(ranking, null, 10)).toBe(false);
+  });
+});
+
+describe("isSchoolScope", () => {
+  const teams = [
+    { id: "team-1", category_code: "benjamin", team_type: "competitive", label: "Benjamín" },
+    { id: "team-2", category_code: "escuela", team_type: "school", label: "Escuela" },
+  ];
+
+  it("identifies category:escuela as school scope", () => {
+    expect(isSchoolScope({ kind: "category", category_code: "escuela" }, teams)).toBe(true);
+  });
+
+  it("identifies team with team_type school as school scope", () => {
+    expect(isSchoolScope({ kind: "team", team_id: "team-2" }, teams)).toBe(true);
+  });
+
+  it("identifies all scope as non-school scope", () => {
+    expect(isSchoolScope({ kind: "all" }, teams)).toBe(false);
+  });
+
+  it("identifies competitive category as non-school scope", () => {
+    expect(isSchoolScope({ kind: "category", category_code: "benjamin" }, teams)).toBe(false);
+  });
+
+  it("identifies competitive team as non-school scope", () => {
+    expect(isSchoolScope({ kind: "team", team_id: "team-1" }, teams)).toBe(false);
   });
 });

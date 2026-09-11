@@ -13,11 +13,18 @@ declare const self: ServiceWorkerGlobalScope;
 
 const STATIC_CACHE_NAME = "morvedre-static-assets-v2";
 const PRECACHE_ENTRIES = self.__SW_MANIFEST ?? [];
-const ACTA_SHELL_REVISION = JSON.stringify(PRECACHE_ENTRIES).split("").reduce((hash, character) => ((hash << 5) - hash + character.charCodeAt(0)) | 0, 0).toString();
+const ACTA_SHELL_REVISION = JSON.stringify(PRECACHE_ENTRIES)
+  .split("")
+  .reduce((hash, character) => ((hash << 5) - hash + character.charCodeAt(0)) | 0, 0)
+  .toString();
 
 const serwist = new Serwist({
   cacheId: "morvedre-core-v2",
-  precacheEntries: [...PRECACHE_ENTRIES, { url: "/offline", revision: ACTA_SHELL_REVISION }, { url: "/acta", revision: ACTA_SHELL_REVISION }],
+  precacheEntries: [
+    ...PRECACHE_ENTRIES,
+    { url: "/offline", revision: ACTA_SHELL_REVISION },
+    { url: "/acta", revision: ACTA_SHELL_REVISION },
+  ],
   precacheOptions: {
     cleanupOutdatedCaches: true,
   },
@@ -72,7 +79,9 @@ self.addEventListener("activate", (event) => {
       .then((names) =>
         Promise.all(
           names
-            .filter((name) => name !== serwist.precacheStrategy.cacheName && name !== STATIC_CACHE_NAME)
+            .filter(
+              (name) => name !== serwist.precacheStrategy.cacheName && name !== STATIC_CACHE_NAME,
+            )
             .map((name) => caches.delete(name)),
         ),
       ),

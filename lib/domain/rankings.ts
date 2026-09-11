@@ -264,3 +264,21 @@ export function computeAttendanceStreak(
   }
   return streak;
 }
+
+export function isSchoolScope(
+  scope: RankingScope,
+  teams?: Array<{ id: string; category_code: string; team_type?: string; label?: string }>,
+): boolean {
+  if (scope.kind === "category") {
+    return scope.category_code === "escuela";
+  }
+  if (scope.kind === "team") {
+    const team = teams?.find((t) => t.id === scope.team_id);
+    return (
+      team?.team_type === "school" ||
+      team?.category_code === "escuela" ||
+      team?.label?.toLowerCase().includes("escuela") === true
+    );
+  }
+  return false;
+}

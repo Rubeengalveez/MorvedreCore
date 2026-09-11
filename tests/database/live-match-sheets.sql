@@ -11,6 +11,9 @@ begin
   insert into public.team_staff(team_id,profile_id,role) values(team,p,'delegate');
   doc:=jsonb_build_object('version',1,'players',jsonb_build_array(jsonb_build_object('id',player,'name','Prueba','cap',1)),'opponentCaps','[1,2]'::jsonb,'periods',4,'period',1,'phase','playing','keeper',1,'baseline','[]'::jsonb,'baselineThem',0,'events',jsonb_build_array(jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','goal','period',1,'keeper',null,'deleted',false),jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','penalty','period',1,'keeper',null,'deleted',false)));
   execute 'set local role service_role';
+  perform public.prepare_live_match_caps(mid,p,jsonb_build_array(jsonb_build_object('id',player,'cap',2)));
+  if not exists(select 1 from public.match_callups where match_id=mid and cap_number=2) then raise exception 'FAIL caps preparation';end if;
+  perform public.prepare_live_match_caps(mid,p,jsonb_build_array(jsonb_build_object('id',player,'cap',1)));
   rev:=public.save_live_match_sheet(mid,p,device,0,mutation,doc);
   if rev<>1 then raise exception 'FAIL initial revision';end if;
   if public.save_live_match_sheet(mid,p,device,0,mutation,doc)<>1 then raise exception 'FAIL retry duplicated';end if;
@@ -24,6 +27,11 @@ begin
   execute 'reset role';
   perform set_config('request.jwt.claim.sub',actor::text,true);
   execute 'set local role authenticated';
+  if not exists(select 1 from public.live_match_sheets where match_id=mid) then raise exception 'FAIL delegate cannot read sheet';end if;
+  denied:=false;begin update public.match_stats set goals=9 where match_id=mid;exception when insufficient_privilege then denied:=true;end;
+  if not denied then raise exception 'FAIL direct totals update allowed';end if;
+  denied:=false;rev:=0;begin update public.matches set final_score_us=9 where id=mid;get diagnostics rev=row_count;exception when insufficient_privilege then denied:=true;end;
+  if not denied and rev>0 then raise exception 'FAIL direct score update allowed';end if;
   denied:=false;begin perform public.save_live_match_sheet(mid,p,device,1,gen_random_uuid(),doc);exception when insufficient_privilege then denied:=true;end;
   if not denied then raise exception 'FAIL RPC exposed to authenticated';end if;
   execute 'reset role';
@@ -34,5 +42,16 @@ begin
   if not exists(select 1 from public.match_stats where match_id=mid and validated_at is not null)then raise exception 'FAIL validation';end if;
   denied:=false;begin perform public.save_live_match_sheet(mid,p,device,2,gen_random_uuid(),jsonb_set(doc,'{events}','[]'));exception when others then denied:=true;end;
   if not denied then raise exception 'FAIL closed sheet modified';end if;
+  execute 'reset role';
+  delete from public.team_staff where team_id=team and profile_id=p;
+  insert into public.user_roles(profile_id,role) values(p,'admin');
+  execute 'set local role service_role';
+  denied:=false;begin perform public.save_live_match_sheet(mid,p,device,2,gen_random_uuid(),doc);exception when insufficient_privilege then denied:=true;end;
+  if not denied then raise exception 'FAIL admin without delegate can write';end if;
+  execute 'reset role';
+  execute 'set local role authenticated';
+  if exists(select 1 from public.live_match_sheets where match_id=mid) then raise exception 'FAIL admin without delegate can read';end if;
+  denied:=false;begin update public.match_stats set goals=9 where match_id=mid;exception when insufficient_privilege then denied:=true;end;
+  if not denied then raise exception 'FAIL source guard bypassed by hidden sheet';end if;
   execute 'reset role';
 end;$test$;

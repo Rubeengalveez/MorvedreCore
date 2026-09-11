@@ -144,7 +144,7 @@ export interface SuggestCallupArgs {
 }
 
 export function suggestCallup(args: SuggestCallupArgs): CallupSuggestion[] {
-  const { targetTeam, scheduledAt, allTeams, allPlayers, allAvailability, max = 13 } = args;
+  const { targetTeam, scheduledAt, allTeams, allPlayers, allAvailability, max = 14 } = args;
   const scheduledDate =
     typeof scheduledAt === "string" ? scheduledAt.slice(0, 10) : formatLocalDate(scheduledAt);
   const targetIdx = categoryIndex(targetTeam.category_code);
@@ -276,4 +276,53 @@ export function defaultCapForPlayer(
     if (!taken.has(candidate)) return candidate;
   }
   return null;
+}
+
+export function prepareCallupProposal(
+  suggestions: CallupSuggestion[],
+  existingCallups: Array<{
+    player_id: string;
+    cap_number: number | null;
+    status: string;
+  }>,
+  max = 14,
+): CallupSuggestion[] {
+  const existingPlayerIds = new Set(existingCallups.map((callup) => callup.player_id));
+  const activeStatuses = new Set<CallupStatus>(["called", "confirmed"]);
+  const activeCount = existingCallups.filter((callup) =>
+    activeStatuses.has(callup.status as CallupStatus),
+  ).length;
+  let placesLeft = Math.max(0, max - activeCount);
+  const usedCaps = new Set(
+    existingCallups
+      .map((callup) => callup.cap_number)
+      .filter((cap): cap is number => cap != null && cap >= 1 && cap <= 99),
+  );
+
+  return suggestions
+    .filter((suggestion) => !existingPlayerIds.has(suggestion.player_id))
+    .map((suggestion) => {
+      const preferredCap =
+        suggestion.cap_number != null && suggestion.cap_number >= 1 && suggestion.cap_number <= 99
+          ? suggestion.cap_number
+          : 1;
+      let capNumber: number | null = null;
+      for (let offset = 0; offset < 99; offset += 1) {
+        const candidate = ((preferredCap - 1 + offset) % 99) + 1;
+        if (!usedCaps.has(candidate)) {
+          capNumber = candidate;
+          usedCaps.add(candidate);
+          break;
+        }
+      }
+
+      const isSelected = !suggestion.has_conflict && placesLeft > 0;
+      if (isSelected) placesLeft -= 1;
+
+      return {
+        ...suggestion,
+        cap_number: capNumber,
+        is_substitute: !isSelected,
+      };
+    });
 }

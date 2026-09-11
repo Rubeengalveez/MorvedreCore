@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
+
+import { updateCallupResult } from "@/server/actions/admin/matches";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { cn } from "@/lib/utils/cn";
-import { deleteCallup, updateCallup, type CallupRow } from "@/server/actions/admin";
+import { deleteCallup, type CallupRow } from "@/server/actions/admin";
 
 export interface CallupEntry {
   callup: CallupRow;
@@ -58,14 +59,14 @@ export function CallupList({ entries }: { entries: CallupEntry[] }) {
       </div>
       <ul className="flex flex-col gap-2">
         {entries.map((entry) => (
-          <CallupRowItem key={entry.callup.player_id} entry={entry} />
+          <CallupRowItem key={entry.callup.player_id} entry={entry} entries={entries} />
         ))}
       </ul>
     </div>
   );
 }
 
-function CallupRowItem({ entry }: { entry: CallupEntry }) {
+function CallupRowItem({ entry, entries }: { entry: CallupEntry; entries: CallupEntry[] }) {
   const router = useRouter();
   const [capDraft, setCapDraft] = useState(
     entry.callup.cap_number != null ? String(entry.callup.cap_number) : "",
@@ -88,14 +89,22 @@ function CallupRowItem({ entry }: { entry: CallupEntry }) {
     });
   }
 
-  function commitCap() {
-    const value = Number(capDraft);
-    if (!Number.isInteger(value) || value < 0 || value > 99) {
-      setError("El dorsal debe estar entre 0 y 99.");
-      return;
-    }
-    if (value === entry.callup.cap_number) return;
-    run(() => updateCallup(entry.callup.match_id, entry.callup.player_id, { cap_number: value }));
+  async function update(input: { cap_number?: number | null; status?: "confirmed" | "declined" }) {
+    const result = await updateCallupResult(entry.callup.match_id, entry.callup.player_id, input);
+    if (!result.ok) throw new Error(result.error);
+  }
+  const occupied = new Set(
+    entries
+      .filter(
+        (other) =>
+          other.callup.player_id !== entry.callup.player_id &&
+          ["called", "confirmed"].includes(other.callup.status),
+      )
+      .map((other) => other.callup.cap_number),
+  );
+  function commitCap(value: string) {
+    setCapDraft(value);
+    run(() => update({ cap_number: value ? Number(value) : null }));
   }
 
   function remove() {
@@ -107,7 +116,7 @@ function CallupRowItem({ entry }: { entry: CallupEntry }) {
   }
 
   function setStatus(status: "confirmed" | "declined") {
-    run(() => updateCallup(entry.callup.match_id, entry.callup.player_id, { status }));
+    run(() => update({ status }));
   }
 
   const statusTone =
@@ -161,17 +170,22 @@ function CallupRowItem({ entry }: { entry: CallupEntry }) {
 
       <div className="border-ink-200 mt-3 grid grid-cols-[5.5rem_1fr_auto] items-end gap-2 border-t pt-3">
         <label className="text-ink-600 text-xs font-extrabold uppercase">
-          Dorsal
-          <Input
-            type="number"
-            inputMode="numeric"
-            min={0}
-            max={99}
+          Gorro
+          <select
+            aria-label={`Gorro de ${entry.player?.full_name ?? "jugador"}`}
             value={capDraft}
-            onChange={(event) => setCapDraft(event.target.value)}
-            onBlur={commitCap}
-            className="mt-1 h-12 text-center font-mono text-lg"
-          />
+            disabled={pending}
+            onChange={(event) => commitCap(event.target.value)}
+            className="mt-1 h-12 w-full rounded-lg border border-slate-400 bg-white px-2 text-center font-mono text-lg focus-visible:outline-2 focus-visible:outline-blue-700"
+          >
+            <option value="">—</option>
+            {Array.from({ length: 99 }, (_, index) => (
+              <option key={index + 1} value={index + 1} disabled={occupied.has(index + 1)}>
+                {index + 1}
+                {occupied.has(index + 1) ? " · ocupado" : ""}
+              </option>
+            ))}
+          </select>
         </label>
         <div className="grid grid-cols-2 gap-2">
           <button

@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Search, X } from "lucide-react";
 import { MdAutorenew, MdDelete } from "react-icons/md";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
@@ -27,12 +28,13 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { cn } from "@/lib/utils/cn";
 import { rosterPlayer, unrosterPlayer } from "@/server/actions/admin";
 
 const dorsalPattern = /^\d{1,2}$/;
 
 const rosterSchema = z.object({
-  player_id: z.string().uuid("Jugador inválido."),
+  player_id: z.string().min(1, "Selecciona un jugador de la lista.").uuid("Jugador inválido."),
   squad_number: z
     .string()
     .trim()
@@ -63,10 +65,10 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
   }
 }
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton({ label, formId }: { label: string; formId?: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+    <Button type="submit" form={formId} size="lg" className="w-full" disabled={pending}>
       {pending ? <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
       {pending ? "Añadiendo..." : label}
     </Button>
@@ -90,6 +92,7 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
   const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
+  const formId = `roster-form-${teamId}`;
 
   const form = useForm<RosterValues>({
     resolver: zodResolver(rosterSchema),
@@ -101,7 +104,6 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
       form.reset({ player_id: "", squad_number: "" });
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
-      setSearch("");
     }
   }, [state, form]);
 
@@ -122,7 +124,13 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
   });
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setSearch("");
+      }}
+    >
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent size="lg">
         <SheetHeader>
@@ -134,7 +142,7 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
         <SheetBody>
           <Form {...form}>
             <form
-              id={`roster-form-${teamId}`}
+              id={formId}
               onSubmit={onSubmit}
               className="flex flex-col gap-4 pb-2"
               noValidate
@@ -146,39 +154,132 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
               <FormField
                 control={form.control}
                 name="player_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Jugador</FormLabel>
-                    <FormControl>
-                      <div className="flex flex-col gap-2">
-                        <Input
-                          type="search"
-                          placeholder="Buscar por nombre"
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <select
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                          className="border-ink-300 bg-paper text-ink-900 flex h-12 min-h-12 w-full rounded border px-4 py-2 text-base"
-                          size={Math.min(8, Math.max(3, filtered.length))}
-                        >
-                          <option value="">Selecciona un jugador</option>
-                          {filtered.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.full_name}
-                              {c.birth_year ? ` (${c.birth_year})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedPlayer = candidates.find((c) => c.id === field.value);
+                  return (
+                    <FormItem>
+                      <FormLabel>Jugador</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col gap-2">
+                          <input
+                            type="hidden"
+                            name={field.name}
+                            value={field.value}
+                            ref={field.ref}
+                          />
+
+                          <div className="relative">
+                            <Search
+                              className="text-ink-400 pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                              aria-hidden="true"
+                            />
+                            <Input
+                              type="search"
+                              placeholder="Buscar por nombre..."
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                              className="h-12 pl-9 pr-9 text-base"
+                            />
+                            {search ? (
+                              <button
+                                type="button"
+                                onClick={() => setSearch("")}
+                                className="text-ink-400 hover:text-ink-700 focus-visible:ring-pool-blue absolute top-1/2 right-2.5 -translate-y-1/2 rounded-md p-1.5 focus-visible:ring-2 focus-visible:outline-none"
+                                aria-label="Borrar búsqueda"
+                              >
+                                <X className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            ) : null}
+                          </div>
+
+                          <div
+                            role="listbox"
+                            aria-label="Listado de jugadores disponibles"
+                            className="border-ink-200 bg-paper divide-ink-100 max-h-56 sm:max-h-64 overflow-y-auto rounded-xl border divide-y shadow-xs"
+                          >
+                            {filtered.length === 0 ? (
+                              <div className="p-6 text-center text-sm text-ink-500">
+                                {candidates.length === 0
+                                  ? "Todos los jugadores registrados ya forman parte de este equipo."
+                                  : "No se encontraron jugadores que coincidan con la búsqueda."}
+                              </div>
+                            ) : (
+                              filtered.map((c) => {
+                                const isSelected = field.value === c.id;
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    onClick={() => field.onChange(c.id)}
+                                    className={cn(
+                                      "flex w-full min-h-12 touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors focus-visible:ring-pool-blue focus-visible:ring-2 focus-visible:outline-none",
+                                      isSelected
+                                        ? "bg-pool-foam border-l-4 border-l-pool-blue text-pool-deep"
+                                        : "hover:bg-pool-foam/40 text-ink-900",
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <span
+                                        className={cn(
+                                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                                          isSelected
+                                            ? "bg-pool-deep text-paper"
+                                            : "bg-ink-100 text-ink-700",
+                                        )}
+                                      >
+                                        {c.full_name.slice(0, 2).toUpperCase()}
+                                      </span>
+                                      <div className="min-w-0">
+                                        <span className="block truncate text-sm font-semibold text-pool-deep">
+                                          {c.full_name}
+                                        </span>
+                                        <span className="text-ink-500 text-xs">
+                                          {c.birth_year
+                                            ? `Nacimiento: ${c.birth_year}`
+                                            : "Sin año registrado"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                    {isSelected ? (
+                                      <span className="bg-pool-blue text-paper flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {selectedPlayer ? (
+                            <div className="border-pool-blue/30 bg-pool-foam/60 flex items-center justify-between rounded-lg border px-3 py-2 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Check className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
+                                <span className="truncate font-medium text-pool-deep">
+                                  Seleccionado:{" "}
+                                  <strong className="font-bold">{selectedPlayer.full_name}</strong>
+                                  {selectedPlayer.birth_year
+                                    ? ` (${selectedPlayer.birth_year})`
+                                    : ""}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => field.onChange("")}
+                                className="text-ink-500 hover:text-ink-900 ml-2 shrink-0 font-bold underline"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField
@@ -209,7 +310,7 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
           </Form>
         </SheetBody>
         <SheetFooter>
-          <SubmitButton label="Añadir a la plantilla" />
+          <SubmitButton label="Añadir a la plantilla" formId={formId} />
         </SheetFooter>
       </SheetContent>
     </Sheet>

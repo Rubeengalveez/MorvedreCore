@@ -5,7 +5,6 @@ import { Trofeo } from "@/components/brand/pictograms";
 import { RankingsSectionNav } from "@/components/rankings/rankings-section-nav";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
-import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getRankings,
@@ -94,21 +93,6 @@ export default async function RankingsPage({
     );
   }
 
-  const isAdmin = ownProfile
-    ? await createClient()
-        .then((supabase) =>
-          supabase
-            .from("user_roles")
-            .select("role")
-            .eq("profile_id", ownProfile.id)
-            .eq("role", "admin")
-            .is("scope_team_id", null)
-            .maybeSingle(),
-        )
-        .then((r) => !!r.data)
-        .catch(() => false)
-    : false;
-
   const ranking = await getRankings({
     season_id: meta.season.id,
     scope,
@@ -141,7 +125,6 @@ export default async function RankingsPage({
           new Set([ownProfile.id, ...linkedProfiles.map((profile) => profile.id)]),
         )}
         page={page}
-        isAdmin={isAdmin}
       />
     </PageShell>
   );

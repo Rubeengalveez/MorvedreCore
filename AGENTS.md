@@ -108,7 +108,7 @@ Un build correcto no acredita el cierre completo de la auditoría. Las verificac
 
 ## Próximo paso acordado
 
-Cerrar los hallazgos y verificaciones pendientes de la auditoría, y preparar el lanzamiento con el club. La política offline vigente conserva recursos públicos y una página de fallback; no guarda respuestas autenticadas para lectura sin conexión.
+Cerrar los hallazgos y verificaciones pendientes de la auditoría, y preparar el lanzamiento con el club. La política offline conserva recursos públicos y una página de fallback; no guarda respuestas autenticadas en la caché del service worker. Excepción del acta en directo: el documento preparado se conserva en IndexedDB para registrar sin conexión y sincronizar después. Ver `docs/guides/acta-en-directo.md`.
 
 ## Documentos disponibles
 

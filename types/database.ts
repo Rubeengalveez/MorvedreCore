@@ -2600,6 +2600,7 @@ export type Database = {
     };
     Functions: {
       archive_expired_news: { Args: never; Returns: number };
+      prepare_live_match_caps: { Args: { p_match: string; p_actor: string; p_players: Json }; Returns: undefined };
       save_live_match_sheet: { Args: { p_match:string; p_actor:string; p_device:string; p_revision:number; p_mutation:string; p_document:Json; p_takeover?:boolean }; Returns:number };
       archive_season: {
         Args: {

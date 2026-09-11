@@ -73,7 +73,9 @@ describe("PushSettings failure feedback", () => {
     fireEvent.click(activate);
     expect(await screen.findByRole("alert")).toHaveTextContent("No pudimos guardar");
     expect(cancelNew).toHaveBeenCalledOnce();
-    expect(screen.getByRole("button", { name: "Activar" })).toBeEnabled();
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Activar" })).toBeEnabled();
+    });
   });
 
   it("explains a failed status check without claiming push is enabled", async () => {

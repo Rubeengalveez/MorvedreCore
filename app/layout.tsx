@@ -74,21 +74,13 @@ export default function RootLayout({
                     navigator.serviceWorker.getRegistrations().then(function(registrations) {
                       return Promise.all(registrations.map(function(registration) {
                         return registration.unregister();
-                      })).then(function(results) {
-                        return results.some(Boolean);
-                      });
-                    }).then(function(unregistered) {
+                      }));
+                    }).then(function() {
                       return caches.keys().then(function(cacheNames) {
                         return Promise.all(cacheNames.map(function(cacheName) {
                           return caches.delete(cacheName);
                         }));
-                      }).then(function() {
-                        return unregistered;
                       });
-                    }).then(function(unregistered) {
-                      if (unregistered) {
-                        window.location.reload();
-                      }
                     }).catch(function(error) {
                       console.warn('[SW] Development cleanup failed:', error);
                     });

@@ -1,18 +1,42 @@
-import Link from "next/link";
-import type { Route } from "next";
 import { Balon } from "@/components/brand/pictograms";
 
 export interface EmptyStateProps {
   metricLabel: string;
   scopeLabel: string;
-  showRegenerateCta?: boolean;
+  metric?: string;
+  isSchool?: boolean;
+  description?: string;
 }
 
 export function EmptyState({
   metricLabel,
   scopeLabel,
-  showRegenerateCta = false,
+  metric = "goals",
+  isSchool = false,
+  description: customDescription,
 }: EmptyStateProps) {
+  const isAttendance = metric === "attendance";
+
+  let description = customDescription;
+  if (!description) {
+    if (isSchool) {
+      if (isAttendance) {
+        description =
+          "Cuando se registre asistencia en los entrenamientos de la Escuela, las posiciones se calculan solas.";
+      } else {
+        description =
+          "La Escuela es formativa y no disputa partidos de competición ni genera actas.";
+      }
+    } else {
+      if (isAttendance) {
+        description =
+          "Cuando se registre asistencia en los entrenamientos, las posiciones se calculan solas.";
+      } else {
+        description = "Cuando se validen actas, las posiciones se calculan solas.";
+      }
+    }
+  }
+
   return (
     <div className="border-ink-300 bg-paper-card flex flex-col items-center gap-3 rounded-md border border-dashed p-8 text-center">
       <div className="bg-pool-foam flex h-14 w-14 items-center justify-center rounded-full">
@@ -22,18 +46,8 @@ export function EmptyState({
         <p className="font-display text-pool-deep text-base font-extrabold">
           Sin datos de {metricLabel.toLowerCase()} en {scopeLabel.toLowerCase()}
         </p>
-        <p className="text-ink-600 text-sm">
-          Cuando se validen actas, las posiciones se calculan solas.
-        </p>
+        <p className="text-ink-600 text-sm">{description}</p>
       </div>
-      {showRegenerateCta ? (
-        <Link
-          href={"/admin/matches" as Route}
-          className="border-pool-deep bg-pool-deep text-paper shadow-elev-1 hover:bg-ink-900 focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-xl border px-4 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          Ir a partidos
-        </Link>
-      ) : null}
     </div>
   );
 }

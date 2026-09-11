@@ -1,9 +1,29 @@
 import type { NextConfig } from "next";
 import withSerwistInit from "@serwist/next";
+import os from "node:os";
+
+const detectedIps = Object.values(os.networkInterfaces())
+  .flat()
+  .filter((i): i is os.NetworkInterfaceInfo => Boolean(i && i.family === "IPv4" && !i.internal))
+  .flatMap((i) => [i.address, `${i.address}:3000`, `${i.address}:3001`]);
 
 const nextConfig: NextConfig = {
   typedRoutes: true,
-  allowedDevOrigins: ["192.168.68.50", "192.168.68.50:3000", "192.168.68.67", "192.168.68.67:3001", "192.168.68.64", "192.168.68.64:3000"],
+  allowedDevOrigins: [
+    "localhost",
+    "localhost:3000",
+    "127.0.0.1",
+    "127.0.0.1:3000",
+    ...detectedIps,
+    "192.168.68.71",
+    "192.168.68.71:3000",
+    "192.168.68.50",
+    "192.168.68.50:3000",
+    "192.168.68.67",
+    "192.168.68.67:3001",
+    "192.168.68.64",
+    "192.168.68.64:3000",
+  ],
   experimental: {
     optimizePackageImports: ["lucide-react", "react-icons"],
     serverActions: {},

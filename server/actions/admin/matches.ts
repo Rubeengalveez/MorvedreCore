@@ -19,6 +19,7 @@ import {
   defaultCapForPlayer,
   findConflicts,
   isPlayerBRuleBlocked,
+  prepareCallupProposal,
   suggestCallup,
   type AvailabilityRow,
   type CallupSuggestion,
@@ -319,7 +320,7 @@ export async function createCallup(input: {
     .eq("date", localIsoDate(match.scheduled_at));
   const existingCallupsPromise = supabase
     .from("match_callups")
-    .select("player_id, cap_number")
+    .select("player_id, cap_number, status")
     .eq("match_id", parsed.data.match_id);
 
   const [{ data: allTeams }, { data: availability }, { data: existingCallups }] = await Promise.all(
@@ -328,6 +329,13 @@ export async function createCallup(input: {
 
   if (existingCallups?.some((c) => c.player_id === parsed.data.player_id)) {
     throw new Error("El jugador ya está convocado en este partido.");
+  }
+  if (
+    (existingCallups ?? []).filter(
+      (callup) => callup.status === "called" || callup.status === "confirmed",
+    ).length >= 14
+  ) {
+    throw new Error("La convocatoria ya tiene el máximo de 14 jugadores.");
   }
 
   const teamsForCallup: TeamForCallup[] = (allTeams ?? []).map((t) => ({
@@ -364,9 +372,11 @@ export async function createCallup(input: {
     throw new Error("El jugador ha marcado que no está disponible ese día.");
   }
 
-  const existingCaps = (existingCallups ?? [])
-    .filter((c): c is { player_id: string; cap_number: number } => c.cap_number != null)
-    .map((c) => ({ player_id: c.player_id, cap_number: c.cap_number }));
+  const existingCaps = (existingCallups ?? []).flatMap((callup) =>
+    callup.cap_number == null
+      ? []
+      : [{ player_id: callup.player_id, cap_number: callup.cap_number }],
+  );
 
   const capNumber =
     parsed.data.cap_number ??
@@ -397,6 +407,7 @@ export async function createCallup(input: {
     .single();
 
   if (error) {
+    if (error.code === "23514") throw new Error(error.message);
     if (error.code === "23505") {
       throw new Error("El jugador ya está convocado en este partido.");
     }
@@ -421,13 +432,69 @@ export async function createCallup(input: {
     related_match_id: parsed.data.match_id,
   });
   if (notifyError) {
-    throw new Error("Se añadió la convocatoria, pero no pudimos avisar al jugador.");
+    console.error("No pudimos avisar al jugador convocado", notifyError);
   }
 
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${parsed.data.match_id}`);
 
   return data;
+}
+
+const suggestedCallupsSchema = z
+  .object({
+    match_id: z.string().uuid("Partido inválido."),
+    players: z
+      .array(
+        z.object({
+          player_id: z.string().uuid("Jugador inválido."),
+          cap_number: z.number().int().min(1).max(99),
+          source_team_id: z.string().uuid().nullable(),
+        }),
+      )
+      .min(1, "Selecciona al menos un jugador.")
+      .max(14, "Solo puedes seleccionar 14 jugadores como máximo."),
+  })
+  .superRefine((data, ctx) => {
+    const playerIds = data.players.map((player) => player.player_id);
+    if (new Set(playerIds).size !== playerIds.length) {
+      ctx.addIssue({ code: "custom", message: "Hay jugadores repetidos." });
+    }
+    const capNumbers = data.players.map((player) => player.cap_number);
+    if (new Set(capNumbers).size !== capNumbers.length) {
+      ctx.addIssue({ code: "custom", message: "Cada jugador debe tener un gorro distinto." });
+    }
+  });
+
+export async function createSuggestedCallups(input: unknown): Promise<
+  | { ok: true; created: number }
+  | { ok: false; created: number; error: string }
+> {
+  const parsed = suggestedCallupsSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, created: 0, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
+  }
+
+  let created = 0;
+  for (const player of parsed.data.players) {
+    try {
+      await createCallup({
+        match_id: parsed.data.match_id,
+        player_id: player.player_id,
+        cap_number: player.cap_number,
+        source_team_id: player.source_team_id,
+      });
+      created += 1;
+    } catch (error) {
+      return {
+        ok: false,
+        created,
+        error: error instanceof Error ? error.message : "No pudimos completar la convocatoria.",
+      };
+    }
+  }
+
+  return { ok: true, created };
 }
 
 export async function updateCallup(
@@ -439,7 +506,8 @@ export async function updateCallup(
   },
 ): Promise<CallupRow> {
   const parsed = updateCallupSchema.safeParse({
-    callup_id: `${matchId}:${playerId}`,
+    match_id: matchId,
+    player_id: playerId,
     cap_number: input.cap_number,
     status: input.status,
   });
@@ -486,6 +554,7 @@ export async function updateCallup(
     .select("*")
     .single();
 
+  if (error?.code === "23514") throw new Error(error.message);
   throwIfError(error, "No pudimos actualizar la convocatoria. Inténtalo de nuevo.");
   if (!data) {
     throw new Error("No pudimos actualizar la convocatoria. Inténtalo de nuevo.");
@@ -894,6 +963,7 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
     { data: availability, error: availabilityError },
     { data: previousMatches, error: previousMatchError },
     { data: snapshots, error: snapshotsError },
+    { data: currentCallups, error: currentCallupsError },
   ] = await Promise.all([
     supabase.from("teams").select("id, category_code, label"),
     supabase.from("team_rosters").select("team_id, player_id").is("left_at", null),
@@ -916,6 +986,10 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
       .eq("season_id", match.season_id)
       .eq("scope", "team")
       .eq("scope_key", match.team_id),
+    supabase
+      .from("match_callups")
+      .select("player_id, cap_number, status")
+      .eq("match_id", matchId),
   ]);
 
   throwIfError(teamsError, "No pudimos cargar los equipos.");
@@ -924,6 +998,7 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
   throwIfError(availabilityError, "No pudimos cargar la disponibilidad.");
   throwIfError(previousMatchError, "No pudimos revisar la convocatoria anterior.");
   throwIfError(snapshotsError, "No pudimos cargar el rendimiento de la temporada.");
+  throwIfError(currentCallupsError, "No pudimos revisar la convocatoria actual.");
 
   const previousMatchId = previousMatches?.[0]?.id ?? null;
   const { data: previousCallups, error: previousCallupsError } = previousMatchId
@@ -974,11 +1049,41 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
     reason: a.reason,
   }));
 
-  return suggestCallup({
+  const suggestions = suggestCallup({
     targetTeam,
     scheduledAt: match.scheduled_at,
     allTeams: teamsForCallup,
     allPlayers: players,
     allAvailability: availabilityRows,
   });
+  return prepareCallupProposal(suggestions, currentCallups ?? []);
+}
+
+export async function suggestCallupForMatchResult(matchId: string): Promise<
+  | { ok: true; data: CallupSuggestion[] }
+  | { ok: false; error: string }
+> {
+  try {
+    return { ok: true, data: await suggestCallupForMatch(matchId) };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No pudimos preparar la propuesta.",
+    };
+  }
+}
+
+export async function updateCallupResult(
+  matchId: string,
+  playerId: string,
+  input: Parameters<typeof updateCallup>[2],
+) {
+  try {
+    return { ok: true as const, data: await updateCallup(matchId, playerId, input) };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : "No pudimos guardar el cambio.",
+    };
+  }
 }

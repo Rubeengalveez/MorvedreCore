@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Check, Search, X } from "lucide-react";
 import { MdAutorenew, MdDelete } from "react-icons/md";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
@@ -28,6 +29,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils/cn";
 import { assignStaff, unassignStaff } from "@/server/actions/admin";
 
 const ROLE_OPTIONS = [
@@ -45,7 +47,7 @@ const RELATION_OPTIONS: Record<(typeof ROLE_OPTIONS)[number]["value"], string> =
 };
 
 const staffSchema = z.object({
-  profile_id: z.string().uuid("Persona inválida."),
+  profile_id: z.string().min(1, "Selecciona una persona de la lista.").uuid("Persona inválida."),
   role: z.enum(["head_coach", "assistant_coach", "delegate", "physical_trainer"]),
 });
 
@@ -67,19 +69,24 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
   }
 }
 
-function SubmitButton({ label }: { label: string }) {
+function SubmitButton({ label, formId }: { label: string; formId?: string }) {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+    <Button type="submit" form={formId} size="lg" className="w-full" disabled={pending}>
       {pending ? <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
       {pending ? "Asignando..." : label}
     </Button>
   );
 }
 
+export interface StaffOption {
+  id: string;
+  full_name: string;
+}
+
 export interface StaffAssignSheetProps {
   teamId: string;
-  candidates: Array<{ id: string; full_name: string; category_code: string | null }>;
+  candidates: StaffOption[];
   trigger: React.ReactNode;
 }
 
@@ -88,6 +95,7 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
   const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
+  const formId = `staff-form-${teamId}`;
 
   const form = useForm<StaffValues>({
     resolver: zodResolver(staffSchema),
@@ -95,17 +103,16 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
   });
 
   useEffect(() => {
-    if (state?.ok && open) {
+    if (state?.ok) {
       form.reset({ profile_id: "", role: "head_coach" });
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSearch("");
       setOpen(false);
     }
-  }, [state, form, open]);
+  }, [state, form]);
 
-  const filtered = candidates.filter((c) =>
-    c.full_name.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = candidates
+    .filter((c) => c.full_name.toLowerCase().includes(search.toLowerCase()))
+    .slice(0, 50);
 
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
@@ -118,23 +125,33 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
   });
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
+    <Sheet
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setSearch("");
+      }}
+    >
       <SheetTrigger asChild>{trigger}</SheetTrigger>
       <SheetContent size="lg">
         <SheetHeader>
-          <SheetTitle>Añadir personal</SheetTitle>
+          <SheetTitle>Asignar personal</SheetTitle>
           <SheetDescription>
-            Selecciona la persona y el rol que tendrá en este equipo.
+            Añade entrenador, asistente o delegado al cuerpo técnico del equipo.
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
           <Form {...form}>
             <form
-              id={`staff-form-${teamId}`}
+              id={formId}
               onSubmit={onSubmit}
               className="flex flex-col gap-4 pb-2"
               noValidate
             >
+              {state?.error ? (
+                <p className="text-danger text-sm font-medium">{state.error}</p>
+              ) : null}
+
               <FormField
                 control={form.control}
                 name="role"
@@ -164,43 +181,128 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
               <FormField
                 control={form.control}
                 name="profile_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Persona</FormLabel>
-                    <FormControl>
-                      <div className="flex flex-col gap-2">
-                        <Input
-                          type="search"
-                          placeholder="Buscar por nombre"
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                        />
-                        <Select
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                          size={10}
-                        >
-                          <option value="">Selecciona una persona</option>
-                          {filtered.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.full_name}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const selectedPerson = candidates.find((c) => c.id === field.value);
+                  return (
+                    <FormItem>
+                      <FormLabel>Persona</FormLabel>
+                      <FormControl>
+                        <div className="flex flex-col gap-2">
+                          <input
+                            type="hidden"
+                            name={field.name}
+                            value={field.value}
+                            ref={field.ref}
+                          />
+
+                          <div className="relative">
+                            <Search
+                              className="text-ink-400 pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"
+                              aria-hidden="true"
+                            />
+                            <Input
+                              type="search"
+                              placeholder="Buscar por nombre..."
+                              value={search}
+                              onChange={(e) => setSearch(e.target.value)}
+                              className="h-12 pl-9 pr-9 text-base"
+                            />
+                            {search ? (
+                              <button
+                                type="button"
+                                onClick={() => setSearch("")}
+                                className="text-ink-400 hover:text-ink-700 focus-visible:ring-pool-blue absolute top-1/2 right-2.5 -translate-y-1/2 rounded-md p-1.5 focus-visible:ring-2 focus-visible:outline-none"
+                                aria-label="Borrar búsqueda"
+                              >
+                                <X className="h-4 w-4" aria-hidden="true" />
+                              </button>
+                            ) : null}
+                          </div>
+
+                          <div
+                            role="listbox"
+                            aria-label="Listado de personas disponibles"
+                            className="border-ink-200 bg-paper divide-ink-100 max-h-56 sm:max-h-64 overflow-y-auto rounded-xl border divide-y shadow-xs"
+                          >
+                            {filtered.length === 0 ? (
+                              <div className="p-6 text-center text-sm text-ink-500">
+                                {candidates.length === 0
+                                  ? "Todas las personas registradas ya están asignadas."
+                                  : "No se encontraron personas que coincidan con la búsqueda."}
+                              </div>
+                            ) : (
+                              filtered.map((c) => {
+                                const isSelected = field.value === c.id;
+                                return (
+                                  <button
+                                    key={c.id}
+                                    type="button"
+                                    role="option"
+                                    aria-selected={isSelected}
+                                    onClick={() => field.onChange(c.id)}
+                                    className={cn(
+                                      "flex w-full min-h-12 touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors focus-visible:ring-pool-blue focus-visible:ring-2 focus-visible:outline-none",
+                                      isSelected
+                                        ? "bg-pool-foam border-l-4 border-l-pool-blue text-pool-deep"
+                                        : "hover:bg-pool-foam/40 text-ink-900",
+                                    )}
+                                  >
+                                    <div className="flex items-center gap-3 min-w-0">
+                                      <span
+                                        className={cn(
+                                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+                                          isSelected
+                                            ? "bg-pool-deep text-paper"
+                                            : "bg-ink-100 text-ink-700",
+                                        )}
+                                      >
+                                        {c.full_name.slice(0, 2).toUpperCase()}
+                                      </span>
+                                      <span className="truncate text-sm font-semibold text-pool-deep">
+                                        {c.full_name}
+                                      </span>
+                                    </div>
+                                    {isSelected ? (
+                                      <span className="bg-pool-blue text-paper flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+                                        <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                                      </span>
+                                    ) : null}
+                                  </button>
+                                );
+                              })
+                            )}
+                          </div>
+
+                          {selectedPerson ? (
+                            <div className="border-pool-blue/30 bg-pool-foam/60 flex items-center justify-between rounded-lg border px-3 py-2 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <Check className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
+                                <span className="truncate font-medium text-pool-deep">
+                                  Seleccionado:{" "}
+                                  <strong className="font-bold">{selectedPerson.full_name}</strong>
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => field.onChange("")}
+                                className="text-ink-500 hover:text-ink-900 ml-2 shrink-0 font-bold underline"
+                              >
+                                Quitar
+                              </button>
+                            </div>
+                          ) : null}
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
             </form>
           </Form>
         </SheetBody>
         <SheetFooter>
-          <SubmitButton label="Asignar" />
+          <SubmitButton label="Asignar" formId={formId} />
         </SheetFooter>
       </SheetContent>
     </Sheet>

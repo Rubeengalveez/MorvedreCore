@@ -77,3 +77,33 @@ Hallazgo adicional del 5 de septiembre corregido: `buildTreasuryPeriodClosure` a
 La exportación real y la retención remota siguen pendientes de autorización: la revisión automática de permisos rechazó esa ejecución porque copia datos personales y puede eliminar respaldos antiguos. Las pruebas sintéticas no acceden a datos del club.
 
 Verificación adicional del 5 de septiembre: suite completa de 74 archivos, 641 pruebas correctas y 22 omitidas; más 7 pruebas del exportador y el ensayo SQL transaccional. ESLint y build de producción con TypeScript pasan después del guardado atómico. El recorrido final focalizado de tienda y tesorería termina con 4 combinaciones y 0 problemas. Las guías de administración, familias, entrenadores y tesorería se han ajustado a rutas, etiquetas y guardado observados en el código. Los nombres de las cinco migraciones recientes coinciden ahora con las versiones registradas en cloud, sin volver a ejecutar su SQL.
+
+## 7 de septiembre: acta en directo
+
+Implementación e integración del acta completa con registro sencillo disponible antes de abrirla. El rediseño mantiene marcador, tablas por gorro y botones visibles; terminar cuarto tiene confirmación explícita. La guía está en `docs/guides/acta-en-directo.md`.
+
+Evidencias de esta revisión:
+
+- Suite completa: 85 archivos, 736 pruebas correctas y 22 omitidas. Siete pruebas del exportador de respaldo correctas. La tabla `live_match_sheets` forma parte del manifiesto de 42 tablas.
+- Pruebas de dominio y sincronización: penalti como expulsión, límites, porteros, correcciones, persistencia fallida, reintento idempotente y jugada nueva mientras se confirma un envío anterior.
+- Build de producción, comprobación TypeScript y ESLint de los cambios correctos.
+- Ensayo SQL con fixtures sintéticos y rollback: autorización, RLS, escritura exclusiva por servidor, revisiones, reintentos, protección de estadísticas y resultado, cierre y rechazo de cambios posteriores. Las dos migraciones del acta están aplicadas; esto no aplica ni sustituye la migración deportiva pendiente documentada arriba.
+- `scripts/test-live-acta.mjs` recorre seis tamaños: 320×568, 360×640, 390×844, 430×932, 768×1024 y 844×390. Comprueba controles de al menos 48 px, anotación, tiempos, tarjetas, corrección, seis cuartos, resultado y PDF. Usa únicamente fixtures sintéticos que elimina al terminar.
+- Ensayo sobre build de producción con service worker: recarga completa sin conexión, conservación de una jugada y sincronización posterior sin duplicación. Se corrige la limpieza de caché que borraba el precache propio al activar el worker.
+- PDF de tres páginas generado y renderizado para revisión visual. El botón prepara el archivo antes de abrir el menú nativo del móvil y evita compartir una versión anterior.
+
+Las capturas y resultados locales están en `tmp/acta-audit/`. La validación en navegador emulado no sustituye una sesión con delegados y teléfonos físicos en la piscina. No se ha desplegado la web ni se declaran cerrados los pendientes operativos anteriores.
+
+## 8 de septiembre: entrada del delegado y gorros únicos
+
+Se reproduce el bloqueo de una convocatoria existente con gorros repetidos. Ahora muestra su lista para corregirlos, mantiene la vuelta al mismo partido y separa carga, error y preparación. El registro sencillo tiene ruta propia fuera de administración. La entrada al acta en directo solo se muestra a delegados del equipo y esa restricción se comprueba también en Server Actions y RLS, incluso para actas cerradas.
+
+Las migraciones `20260908120517_live_match_delegate_entry.sql` y `20260908121825_prevent_duplicate_match_caps.sql` están aplicadas tras ensayos con fixtures y rollback. Las pruebas SQL verifican restricciones de rol, protección de totales cuando RLS oculta el acta, preparación de gorros, rechazo de duplicados al insertar/editar/reactivar y cambio atómico de números. Los duplicados históricos no se modificaron.
+
+El recorrido de navegador comprueba entrada oculta sin delegación, ambos modos accesibles al delegado, salida al partido y reparación de una convocatoria duplicada; continúa con todo el partido, offline y PDF. Capturas: `tmp/acta-audit/entrada-320.png` y `tmp/acta-audit/revisar-gorros-320.png`. La primera suite completa de esta revisión pasó 742 pruebas con 22 omitidas; las dos regresiones adicionales de selector y clave compuesta de convocatoria también pasan. Se repite la verificación final tras añadir la prevención de nuevos duplicados. No se ha desplegado la web.
+
+Verificación final de gorros: el recorrido de producción local pasa con dos escrituras simultáneas al mismo número: una se guarda y la otra recibe `23514`; no aparecen duplicados. Continúa con entrada por rol, registro sencillo, seis tamaños, texto ampliado, partido completo, recarga offline y PDF. El build final pasa con TypeScript. La captura de carga está en `tmp/acta-audit/carga-acta.png`. Un primer intento de suite y build en paralelo agotó memoria; se cerraron servidores propios de ensayo y se limitaron los workers para repetirlo.
+
+El asesor de seguridad no señala las funciones nuevas del acta. Conserva avisos de funciones existentes (`archive_season`, `atomic_replace_training_schedule`) ejecutables por usuarios autenticados y de protección de contraseñas filtradas desactivada; no se han modificado esos módulos. Referencias: [funciones SECURITY DEFINER](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable) y [protección de contraseñas](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection).
+
+Resultado de la repetición final: 88 archivos, 744 pruebas correctas y 22 omitidas; ningún fallo. ESLint de los cambios finales pasa.

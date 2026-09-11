@@ -1,3 +1,6 @@
+import { DelegateMatchEntry } from "@/components/matches/delegate-match-entry";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
+import { canUseLiveMatch } from "@/lib/domain/permissions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
@@ -127,6 +130,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     (callup) => callup.player_id === ctx.ownProfile.id || linkedProfileIds.has(callup.player_id),
   );
 
+  const delegate = canUseLiveMatch(await getRenderAdminAccess(), match.team_id);
   const isPlayed = match.status === "played";
   const { data: liveSheet } = await (
     await createClient()
@@ -139,51 +143,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <PageBackLink href="/calendar">Calendario</PageBackLink>
-      {(isCoach || liveSheet) && (
-        <a
-          href={`/acta?match=${match.id}`}
-          className={cn(
-            "flex min-h-14 items-center justify-between rounded-xl px-4 py-3 font-bold transition-all",
-            match.status === "played"
-              ? "bg-pool-surface border-pool-blue/30 text-pool-deep hover:bg-pool-surface/80 border"
-              : "bg-pool-deep text-paper hover:bg-pool-deep/90 shadow-sm",
-          )}
-        >
-          <div className="flex items-center gap-3">
-            <FileText
-              className={cn(
-                "h-5 w-5 shrink-0",
-                match.status === "played" ? "text-pool-blue" : "text-energy-orange",
-              )}
-              aria-hidden="true"
-            />
-            <div className="flex flex-col text-left">
-              <span className="text-sm font-extrabold sm:text-base">
-                {match.status === "played"
-                  ? "Consultar acta digital del partido"
-                  : "Mesa y acta en directo"}
-              </span>
-              <span
-                className={cn(
-                  "text-xs font-normal",
-                  match.status === "played" ? "text-ink-600" : "text-sky-200",
-                )}
-              >
-                {match.status === "played"
-                  ? "Goleadores, parciales y descarga de PDF oficial"
-                  : "Anotar goles, expulsiones y cronómetro a pie de piscina"}
-              </span>
-            </div>
-          </div>
-          <span
-            className={cn(
-              "ml-2 text-xs font-bold tracking-wider uppercase",
-              match.status === "played" ? "text-pool-blue" : "text-amber-ball",
-            )}
-          >
-            Abrir →
-          </span>
-        </a>
+      {delegate && (
+        <DelegateMatchEntry matchId={match.id} started={Boolean(liveSheet)} finished={isPlayed} />
       )}
       <h1 className="sr-only">
         {match.team_label} contra {match.opponent}

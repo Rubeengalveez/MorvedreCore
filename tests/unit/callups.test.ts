@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   canCallUpTo,
   defaultCapForPlayer,
+  prepareCallupProposal,
   findConflicts,
   getBRuleTeamsForCategory,
   isPlayerBRuleBlocked,
@@ -418,5 +419,45 @@ describe("defaultCapForPlayer", () => {
       cap_number: i + 1,
     }));
     expect(defaultCapForPlayer("p-x", { cap_number: 5 }, CADETE_A.id, taken)).toBeNull();
+  });
+});
+
+describe("prepareCallupProposal", () => {
+  it("excluye jugadores ya convocados y completa solo las plazas libres", () => {
+    const suggestions = [1, 2, 3, 4].map((cap) => ({
+      player_id: `p-${cap}`,
+      full_name: `Jugador ${cap}`,
+      cap_number: cap,
+      category_code: "cadete" as const,
+      source_team_id: null,
+      is_ascending: false,
+      has_conflict: false,
+      is_substitute: false,
+      reason: null,
+    }));
+    const result = prepareCallupProposal(suggestions, [
+      { player_id: "p-1", cap_number: 1, status: "confirmed" },
+      { player_id: "existing", cap_number: 9, status: "called" },
+    ], 3);
+    expect(result.map((item) => item.player_id)).toEqual(["p-2", "p-3", "p-4"]);
+    expect(result.filter((item) => !item.is_substitute)).toHaveLength(1);
+  });
+
+  it("asigna gorros únicos sin ocupar los que ya usa la convocatoria", () => {
+    const suggestions = ["a", "b", "c"].map((player_id) => ({
+      player_id,
+      full_name: player_id,
+      cap_number: 7,
+      category_code: "cadete" as const,
+      source_team_id: null,
+      is_ascending: false,
+      has_conflict: false,
+      is_substitute: false,
+      reason: null,
+    }));
+    const result = prepareCallupProposal(suggestions, [
+      { player_id: "existing", cap_number: 7, status: "confirmed" },
+    ]);
+    expect(result.map((item) => item.cap_number)).toEqual([8, 9, 10]);
   });
 });

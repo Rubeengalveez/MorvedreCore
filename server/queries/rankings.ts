@@ -213,6 +213,7 @@ export interface RankingsPageMeta {
     id: string;
     label: string;
     category_code: CategoryCode;
+    team_type?: "competitive" | "school";
     color: string;
     player_count: number;
   }>;
@@ -243,7 +244,7 @@ export async function getRankingsMeta(activeSeasonId?: string): Promise<Rankings
   const [{ data: teams }, { data: rosters }] = await Promise.all([
     supabase
       .from("teams")
-      .select("id, label, category_code, color, season_id")
+      .select("id, label, category_code, team_type, color, season_id")
       .eq("season_id", season.id),
     supabase.from("team_rosters").select("team_id, left_at"),
   ]);
@@ -253,6 +254,7 @@ export async function getRankingsMeta(activeSeasonId?: string): Promise<Rankings
       id: string;
       label: string;
       category_code: string;
+      team_type: "competitive" | "school";
       color: string;
       season_id: string;
     }>
@@ -281,6 +283,7 @@ export async function getRankingsMeta(activeSeasonId?: string): Promise<Rankings
       id: t.id,
       label: t.label,
       category_code: t.category_code as CategoryCode,
+      team_type: t.team_type,
       color: t.color,
       player_count: count,
     };

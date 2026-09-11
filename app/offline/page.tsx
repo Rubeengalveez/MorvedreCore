@@ -7,14 +7,17 @@ import { RefreshCw, ArrowLeft, WifiOff, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function OfflinePage() {
-  const [lastActa,setLastActa]=useState<string|null>(null);
+  const [lastActa, setLastActa] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState(() =>
     typeof navigator === "undefined" ? false : navigator.onLine,
   );
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
-    queueMicrotask(()=>{const id=localStorage.getItem("morvedre-last-acta");if(id&&/^[0-9a-f-]{36}$/i.test(id))setLastActa(id);});
+    queueMicrotask(() => {
+      const id = localStorage.getItem("morvedre-last-acta");
+      if (id && /^[0-9a-f-]{36}$/i.test(id)) setLastActa(id);
+    });
     function handleOnline() {
       setIsOnline(true);
       setTimeout(() => {
@@ -81,12 +84,19 @@ export default function OfflinePage() {
         </h1>
 
         <p className="text-ink-600 mt-3 text-sm leading-relaxed sm:text-base">
-          Puedes continuar un acta que hayas preparado en este móvil. Sus jugadas se guardan aquí
-          y se envían al recuperar la conexión. Las demás secciones necesitan internet.
+          Puedes continuar un acta que hayas preparado en este móvil. Sus jugadas se guardan aquí y
+          se envían al recuperar la conexión. Las demás secciones necesitan internet.
         </p>
 
         <div className="mt-6 flex w-full flex-col gap-3">
-          {lastActa&&<a href={`/acta?match=${lastActa}`} className="bg-pool-deep text-paper flex min-h-12 items-center justify-center rounded-xl p-3 font-bold">Retomar acta del partido</a>}
+          {lastActa && (
+            <a
+              href={`/acta?match=${lastActa}`}
+              className="bg-pool-deep text-paper flex min-h-12 items-center justify-center rounded-xl p-3 font-bold"
+            >
+              Retomar acta del partido
+            </a>
+          )}
           <Button
             type="button"
             variant="primary"
@@ -115,16 +125,14 @@ export default function OfflinePage() {
 
           <Link
             href="/"
-            className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue focus-visible:ring-offset-paper mt-2 inline-block text-xs font-semibold underline-offset-4 hover:underline focus-visible:rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+            className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue focus-visible:ring-offset-paper mt-2 inline-block text-xs font-semibold underline-offset-4 hover:underline focus-visible:rounded focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
           >
             Ir a la portada del club
           </Link>
         </div>
       </div>
 
-      <p className="text-ink-400 mt-6 text-xs">
-        Club Waterpolo Morvedre · Puerto de Sagunto
-      </p>
+      <p className="text-ink-400 mt-6 text-xs">Club Waterpolo Morvedre · Puerto de Sagunto</p>
     </main>
   );
 }

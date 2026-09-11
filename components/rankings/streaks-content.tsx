@@ -6,7 +6,7 @@ import { Dumbbell, Flame, Goal, Star, type LucideIcon } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { SectionHeader } from "@/components/ui/page-shell";
-import { type RankingScope, paginateRankingWithPodium } from "@/lib/domain/rankings";
+import { type RankingScope, isSchoolScope, paginateRankingWithPodium } from "@/lib/domain/rankings";
 import { type MotivationalStreakType, type StreakOrder } from "@/lib/domain/streak-presentation";
 import { cn } from "@/lib/utils/cn";
 import type { RankingsPageMeta, RankingResult } from "@/server/queries/rankings";
@@ -123,6 +123,7 @@ export function StreaksContent({
   const trackedRows = trackedPlayerIds
     .map((playerId) => rankingByPlayer.get(playerId) ?? null)
     .filter((row): row is NonNullable<typeof row> => row != null);
+  const isSchool = isSchoolScope(activeScope, meta.teams);
   const baseHref = buildHref({
     scope: activeScope,
     type: activeType,
@@ -245,7 +246,19 @@ export function StreaksContent({
       ) : null}
 
       {ranking.rows.length === 0 ? (
-        <EmptyState metricLabel="Rachas" scopeLabel={scopeLabel(activeScope, meta)} />
+        <EmptyState
+          metric={activeType}
+          metricLabel="Rachas"
+          scopeLabel={scopeLabel(activeScope, meta)}
+          isSchool={isSchool}
+          description={
+            isSchool
+              ? activeType === "train_consec"
+                ? "Cuando se registre asistencia en los entrenamientos de la Escuela, aparecerán aquí las rachas."
+                : "La Escuela es formativa y no disputa partidos de competición ni genera actas."
+              : undefined
+          }
+        />
       ) : (
         <>
           {paged.podium_rows.length > 0 ? (

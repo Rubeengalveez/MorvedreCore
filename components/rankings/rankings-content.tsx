@@ -4,6 +4,7 @@ import { type CategoryCode } from "@/lib/domain/categories";
 import {
   type RankingMetric,
   type RankingScope,
+  isSchoolScope,
   paginateRankingWithPodium,
 } from "@/lib/domain/rankings";
 import type { RankingsPageMeta, RankingResult } from "@/server/queries/rankings";
@@ -38,7 +39,6 @@ export interface RankingsContentProps {
   ownProfileId: string;
   trackedPlayerIds: string[];
   page: number;
-  isAdmin?: boolean;
 }
 
 function buildBaseParams(input: { scope: RankingScope; metric: RankingMetric }): string {
@@ -74,11 +74,11 @@ export function RankingsContent({
   ownProfileId,
   trackedPlayerIds,
   page,
-  isAdmin = false,
 }: RankingsContentProps) {
   const metricMeta = METRICS.find((m) => m.id === activeMetric) ?? METRICS[0]!;
   const paged = paginateRankingWithPodium({ ranking: ranking.rows, page, page_size: 10 });
   const hasData = ranking.rows.length > 0;
+  const isSchool = isSchoolScope(activeScope, meta.teams);
   const jumpTargetPlayerId = useRankingAnchor(paged.page);
   const rankingByPlayer = new Map(ranking.rows.map((row) => [row.player_id, row]));
   const trackedRows = trackedPlayerIds
@@ -123,9 +123,10 @@ export function RankingsContent({
 
       {!hasData ? (
         <EmptyState
+          metric={activeMetric}
           metricLabel={metricMeta.label}
           scopeLabel={scopeLabelOf(activeScope, meta)}
-          showRegenerateCta={isAdmin}
+          isSchool={isSchool}
         />
       ) : (
         <>

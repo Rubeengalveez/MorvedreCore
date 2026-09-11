@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   defaultPeriods,
+  findPenaltyGoalCandidate,
   playerTotals,
   score,
   sheetSchema,
@@ -123,6 +124,96 @@ describe("acta en directo", () => {
     s.events = [event("goal", { side: "them" })];
     expect(sheetSchema.safeParse(s).success).toBe(false);
   });
+  it("counts assists and every shot outcome once", () => {
+    const s = sampleSheet();
+    const goalEvent = event("goal");
+    s.events = [
+      goalEvent,
+      event("assist", { cap: 1, related_event_id: goalEvent.id }),
+      event("shot_corner"),
+      event("shot_blocked"),
+      event("penalty_missed"),
+    ];
+    expect(playerTotals(s, "us", 2)).toMatchObject({
+      goals: 1,
+      shots: 4,
+      missedShots: 3,
+      shotsCorner: 1,
+    });
+    expect(playerTotals(s, "us", 1).assists).toBe(1);
+    expect(sheetSchema.safeParse(s).success).toBe(true);
+  });
+  it("links one penalty result and rejects a second result", () => {
+    const s = sampleSheet();
+    const penalty = event("penalty", { side: "them", cap: 2 });
+    const goal = event("goal_penalty", {
+      related_event_id: penalty.id,
+      origin: "penalty_flow",
+    });
+    s.events = [penalty, goal];
+    expect(sheetSchema.safeParse(s).success).toBe(true);
+    s.events.push(
+      event("penalty_missed", {
+        related_event_id: penalty.id,
+        origin: "penalty_flow",
+      }),
+    );
+    expect(sheetSchema.safeParse(s).success).toBe(false);
+  });
+  it("rejects an assistance linked to a penalty goal", () => {
+    const s = sampleSheet();
+    const penaltyGoal = event("goal_penalty");
+    s.events = [
+      penaltyGoal,
+      event("assist", { cap: 1, related_event_id: penaltyGoal.id }),
+    ];
+    expect(sheetSchema.safeParse(s).success).toBe(false);
+  });
+  it("requires linked actions to stay in the same quarter", () => {
+    const s = sampleSheet();
+    const goal = event("goal", { period: 1 });
+    s.events = [goal, event("assist", { cap: 1, period: 2, related_event_id: goal.id })];
+    expect(sheetSchema.safeParse(s).success).toBe(false);
+    const penalty = event("penalty", { side: "them", cap: 2, period: 1 });
+    s.events = [
+      penalty,
+      event("penalty_missed", {
+        period: 2,
+        related_event_id: penalty.id,
+        origin: "penalty_flow",
+      }),
+    ];
+    expect(sheetSchema.safeParse(s).success).toBe(false);
+  });
+  it("asks about a manual penalty goal next to a rival penalty", () => {
+    const s = sampleSheet();
+    const manualGoal = event("goal_penalty", { origin: "manual", period: 2 });
+    const penalty = event("penalty", { side: "them", cap: 2, period: 2 });
+    s.events = [manualGoal, penalty];
+    expect(findPenaltyGoalCandidate(s, "manual_then_penalty", 2, penalty.id)).toBe(manualGoal);
+  });
+  it("uses the penalty period when a pending flow is resumed later", () => {
+    const s = sampleSheet();
+    const manualGoal = event("goal_penalty", { origin: "manual", period: 1 });
+    const penalty = event("penalty", { side: "them", cap: 2, period: 1 });
+    s.period = 2;
+    s.events = [manualGoal, penalty];
+    expect(findPenaltyGoalCandidate(s, "manual_then_penalty", 2, penalty.id)).toBe(manualGoal);
+  });
+  it("does not confuse two consecutive penalties that already have separate results", () => {
+    const s = sampleSheet();
+    const firstPenalty = event("penalty", { side: "them", cap: 2, period: 2 });
+    const firstGoal = event("goal_penalty", {
+      related_event_id: firstPenalty.id,
+      origin: "penalty_flow",
+      period: 2,
+    });
+    const secondPenalty = event("penalty", { side: "them", cap: 1, period: 2 });
+    s.events = [firstPenalty, firstGoal, secondPenalty];
+    expect(findPenaltyGoalCandidate(s, "manual_then_penalty", 2, secondPenalty.id)).toBeNull();
+    s.events = [firstPenalty, firstGoal];
+    expect(findPenaltyGoalCandidate(s, "penalty_then_manual", 2)).toBe(firstGoal);
+  });
   it("generates a valid acta PDF file without throwing", async () => {
     const { createActaPdf } = await import("@/lib/domain/acta-pdf");
     const s = sampleSheet();
@@ -148,7 +239,7 @@ describe("acta en directo", () => {
     const file = createActaPdf(record);
     expect(file).toBeDefined();
     expect(file.type).toBe("application/pdf");
-    expect(file.name).toMatch(/^acta-morvedre-2026-10-15\.pdf$/);
+    expect(file.name).toBe("acta-2026-10-15-infantil-rival-cf.pdf");
     expect(file.size).toBeGreaterThan(500);
   });
 });

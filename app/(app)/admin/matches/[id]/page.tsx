@@ -22,7 +22,7 @@ import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
 import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
-import { canManageTeam, getTeamScope } from "@/lib/domain/permissions";
+import { canManageTeam, getTeamScope, canUseLiveMatch } from "@/lib/domain/permissions";
 
 import { ActaManager, type ActaEntry } from "./_components/acta-manager";
 import { CallupList, type CallupEntry } from "./_components/callup-list";
@@ -206,6 +206,13 @@ export default async function MatchDetailPage({
     notFound();
   }
   const { match, callups, stats, profileMeta, teamById, availability } = data;
+  const { data: liveSheet } = await (
+    await createClient()
+  )
+    .from("live_match_sheets")
+    .select("match_id")
+    .eq("match_id", match.id)
+    .maybeSingle();
   const canEditMatch = canManageTeam(access, "match_schedule", match.team_id);
 
   const conflicting = new Set(
@@ -331,7 +338,7 @@ export default async function MatchDetailPage({
       <section className="flex flex-col gap-4">
         {tab === "convocatoria" ? (
           <>
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="border-pool-blue/20 bg-pool-foam/50 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex flex-col">
                 <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
                   Paso 1
@@ -339,25 +346,25 @@ export default async function MatchDetailPage({
                 <h2 className="font-display text-pool-deep text-xl font-extrabold">
                   Prepara el equipo
                 </h2>
-                <p className="text-ink-600 mt-0.5 text-sm">
-                  Revisa la propuesta, las respuestas y los dorsales.
+                <p className="text-ink-600 mt-0.5 text-sm leading-relaxed">
+                  Te proponemos los jugadores y sus gorros. Solo tienes que revisar y confirmar.
                 </p>
               </div>
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button size="sm">
+                  <Button size="lg" className="w-full shrink-0 sm:w-auto">
                     <MdAutoAwesome className="h-4 w-4" aria-hidden="true" />
-                    Preparar propuesta
+                    Crear convocatoria
                   </Button>
                 </SheetTrigger>
-                <SheetContent size="lg">
-                  <SheetHeader>
-                    <SheetTitle>Propuesta de convocatoria</SheetTitle>
+                <SheetContent size="full" className="sm:right-0 sm:left-auto sm:w-[42rem] sm:rounded-tl-xl">
+                  <SheetHeader className="shrink-0 pr-14">
+                    <SheetTitle>Prepara la convocatoria</SheetTitle>
                     <SheetDescription>
-                      Una base ordenada con continuidad, rendimiento, edad, asistencia y disciplina.
+                      Revisa los jugadores y confirma. Puedes cambiar cualquier gorro.
                     </SheetDescription>
                   </SheetHeader>
-                  <SheetBody>
+                  <SheetBody className="min-h-0 overflow-hidden px-0">
                     <SuggestCallupSheet matchId={match.id} />
                   </SheetBody>
                 </SheetContent>
@@ -380,15 +387,24 @@ export default async function MatchDetailPage({
                 Resultado, goles y expulsiones con controles grandes.
               </p>
             </div>
-            <ActaManager
-              match={{
-                id: match.id,
-                status: match.status,
-                final_score_us: match.final_score_us,
-                final_score_them: match.final_score_them,
-              }}
-              entries={actaEntries}
-            />
+            {liveSheet && canUseLiveMatch(access, match.team_id) ? (
+              <a
+                href={`/acta?match=${match.id}`}
+                className="bg-pool-deep text-paper flex min-h-14 items-center justify-center rounded-xl p-4 text-lg font-bold"
+              >
+                Continuar o consultar el acta en directo →
+              </a>
+            ) : (
+              <ActaManager
+                match={{
+                  id: match.id,
+                  status: match.status,
+                  final_score_us: match.final_score_us,
+                  final_score_them: match.final_score_them,
+                }}
+                entries={actaEntries}
+              />
+            )}
           </>
         ) : null}
 

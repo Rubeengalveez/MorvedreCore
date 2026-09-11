@@ -511,7 +511,7 @@ export const createCallupSchema = z.object({
   cap_number: z
     .number()
     .int("Dorsal entero.")
-    .min(0, "Mínimo 0.")
+    .min(1, "El gorro debe estar entre 1 y 99.")
     .max(99, "Máximo 99.")
     .nullable()
     .optional(),
@@ -520,17 +520,18 @@ export const createCallupSchema = z.object({
 
 export const updateCallupSchema = z
   .object({
-    callup_id: z.string().uuid("Convocatoria inválida."),
+    match_id: z.string().uuid("Partido inválido."),
+    player_id: z.string().uuid("Jugador inválido."),
     cap_number: z
       .number()
       .int("Dorsal entero.")
-      .min(0, "Mínimo 0.")
+      .min(1, "El gorro debe estar entre 1 y 99.")
       .max(99, "Máximo 99.")
       .nullable()
       .optional(),
     status: callupStatusSchema.optional(),
   })
-  .refine((data) => Object.keys(data).length > 0, {
+  .refine((data) => data.cap_number !== undefined || data.status !== undefined, {
     message: "No hay cambios para guardar.",
   });
 

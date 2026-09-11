@@ -53,6 +53,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@chenglou/pretext": "0.0.8",
     "@playwright/test": "^1.61.1",
     "@serwist/next": "9.5.11",
     "@tailwindcss/postcss": "4.3.3",

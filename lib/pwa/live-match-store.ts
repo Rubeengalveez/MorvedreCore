@@ -1,7 +1,9 @@
 import { sheetSchema, type LiveRecord } from "@/lib/domain/live-match";
+import { generateUuid } from "@/lib/utils/uuid";
 
 export type StoredMatch = LiveRecord & {
   flight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number };
+  takeoverFlight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number };
 };
 const DB = "morvedre-live-acta-v1";
 function open(): Promise<IDBDatabase> {
@@ -62,7 +64,7 @@ export async function clearLocalMatches() {
       const store = tx.objectStore("matches");
       const request = store.getAll();
       request.onsuccess = () => {
-        if (request.result.some((r: StoredMatch) => r.dirty || r.flight)) {
+        if (request.result.some((r: StoredMatch) => r.dirty || r.flight || r.takeoverFlight)) {
           tx.abort();
           return;
         }
@@ -81,10 +83,11 @@ export async function clearLocalMatches() {
     db.close();
   }
 }
+
 export function liveDevice() {
   let id = localStorage.getItem("morvedre-acta-device");
   if (!id) {
-    id = crypto.randomUUID();
+    id = generateUuid();
     localStorage.setItem("morvedre-acta-device", id);
   }
   return id;

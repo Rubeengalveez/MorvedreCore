@@ -1,5 +1,13 @@
 # Log de decisiones
 
+## 2026-09-11 - Revisión del diseño del acta, sin implementar todavía
+
+- Rubén rechaza el acabado actual por acumulación de bloques, poca claridad y navegación de vuelta inconsistente. Solicita únicamente análisis y planificación antes de nuevos cambios de interfaz.
+- Se redacta [37-acta-design-review-and-redesign-plan.md](37-acta-design-review-and-redesign-plan.md): diagnóstico del código actual, reflexión sobre errores, composición propuesta, contrato de navegación, adaptación móvil, accesibilidad y fases con criterios de aceptación.
+- Queda descartado separar porteros encima de los jugadores: todos se presentan en orden de gorro, incluidos 1 y 13. Se propone integrar sus estadísticas en la misma lista, eliminar duplicaciones y conservar un control compacto y explícito de portero en juego.
+- Los requisitos funcionales del plan 36 se mantienen. Sus comprobaciones históricas no acreditan el diseño posterior ni la aceptación del usuario. Las capturas disponibles son anteriores a la versión revisada y el servidor local estaba apagado durante este análisis; las nuevas mediciones visuales quedan pendientes.
+- No se modifica código ni base de datos en esta revisión. La ejecución del nuevo diseño queda pendiente de orden del usuario.
+
 ## 2026-07-09 - Cierre documental Fase 7.5
 
 - **Fase 7.5 cerrada antes de Fase 8**: `24-operational-closure-plan.md` queda marcado como plan inicial y `25-operational-closure-summary.md` como fuente de verdad del cierre operativo validado.
@@ -203,7 +211,7 @@ Si el usuario quiere tocar algo, los puntos abiertos son: tipografía, paleta ex
 
 - **Perfiles visibles entre sí (PII pública)**: por diseño del usuario ("en una app de club los miembros se ven entre sí"), la RLS de `profiles` permite SELECT a todos los autenticados. Los campos verdaderamente privados (phone_e164, email_contact) son responsabilidad del código de aplicación: nunca se seleccionan en vistas compartidas (team, dashboard, etc.). Decisión consciente del usuario. El `profiles_public` view existe como medida defensiva futura.
 - **`competition_type` enum** para partidos: `'league' | 'cup' | 'tournament' | 'friendly'`. Decidido en discovery (sept 2025). El club participa en varias competiciones autonómicas.
-- **Convocatorias**: 13 jugadores por defecto (configurable via parámetro `max` en `suggestCallup`). Decidido por normativa waterpolo + lógica del SRS.
+- **Convocatorias**: 14 jugadores como máximo y por defecto en la propuesta (configurable vía parámetro `max` en `suggestCallup`). Validado con el funcionamiento real del club y protegido también en base de datos.
 - **Dorsal automático**: la app usa `profile.cap_number` como dorsal por defecto. Si hay conflicto (otro jugador ya tiene ese número en el mismo partido), busca el siguiente libre. El coach puede override manual.
 - **Cancelación de entrenamientos**: WhatsApp-first, app refleja el estado. Decidido en Fase 1. La acción `cancelTrainingSession` crea notificaciones in-app para los jugadores del roster.
 - **Notificaciones in-app primero, push real después**: en Fase 2 se crea el buzón in-app (bell icon + página /notifications). Push notifications reales con VAPID se implementan en Fase 9 polish. La tabla `notifications` ya soporta ambos.
@@ -806,8 +814,55 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Coherencia de permisos deportivos: las capacidades compartidas distinguen programación de partidos de convocatoria/acta. Un entrenador necesita asignación explícita al equipo; los roles globales heredados no equivalen a acceso a todos los equipos. Los delegados pueden gestionar convocatoria, dorsales y resultado, no crear, eliminar ni reprogramar partidos. Los permisos modulares `manage_trainings` y `manage_matches` habilitan su módulo; no se convierten en rol de entrenador para otros módulos. La navegación y los filtros usan la misma derivación; las acciones comprueban también origen y destino al cambiar de equipo. Se conserva la regla específica de asistencia por temporada.
 - La migración `20260905194256_align_sports_capabilities.sql` está preparada pero NO aplicada en cloud: la revisión automática bloqueó el cambio de RLS y triggers por su alcance. Se ha solicitado autorización explícita y se continúa la validación local aislada. No publicar esta corrección como cerrada hasta ejecutar la migración autorizada y sus regresiones de SQL.
 
+## 2026-09-07 - Acta en directo y simplificación para delegados
+
+- Se mantienen el registro sencillo de totales y el acta completa. El acta usa eventos por cuarto, sin reloj, con marcador global prioritario y parciales secundarios. Penalti cometido equivale a una expulsión; dos se destacan en amarillo y tres o roja indican fuera. Entrenadores tienen tiempos muertos y tarjetas, sin límites automáticos de tiempos.
+- La revisión del usuario descarta una pantalla larga y complicada. El diseño concentra marcador arriba, celdas de ambos equipos en paralelo y botones accesibles abajo. Terminar cuarto es una acción visible con confirmación y marcador; anotar abre un panel guiado. No se superponen avisos sobre las celdas. Con texto ampliado se reorganizan las columnas.
+- Excepción offline explícita: el acta preparada guarda su documento privado en IndexedDB. Se guarda antes de confirmar y se sincroniza mediante Server Action validada, con revisiones e identificadores idempotentes. El resto de respuestas autenticadas continúa fuera de la caché del service worker. Un dispositivo escribe; el cierre de sesión no elimina jugadas pendientes.
+- Las migraciones `20260907154016_live_match_sheets.sql` y `20260907155246_live_match_source_guards.sql` están aplicadas. RLS limita la lectura; la escritura transaccional exige actor autorizado y protege marcador y estadísticas derivados. La tabla se incluye en el respaldo.
+- PDF mediante jsPDF; compartir requiere una acción del usuario y usa el menú nativo o descarga. Pretext se utiliza únicamente como dependencia de desarrollo para medir texto en la prueba de interfaz. Guía de uso: `docs/guides/acta-en-directo.md`.
+
 ## 2026-09-06 - Descarga de cierres y permiso de tesorería
 
 - El endpoint de Excel se alinea con el permiso modular `manage_treasury` de la sección. Se mantiene la lectura autenticada con RLS, sin usar `service_role` para descargar; valida identificadores y no sirve un adjunto parcial si falla su preparación.
 - El botón conserva al usuario en la pantalla cuando hay un error, informa del progreso y admite reintento. Un HTML de login no se guarda como Excel; la petición se cancela al salir y el archivo temporal en memoria se libera.
 - Se añade regresión SQL reversible con datos sintéticos para gestor modular, revocación y acceso familiar. Pasó contra las políticas existentes sin alterar permisos persistentes ni exportar datos del club. Las pruebas de ruta e interfaz, TypeScript y ESLint pasan; la migración de permisos deportivos sigue pendiente de validación y autorización.
+
+## 2026-09-08 - Entrada del delegado y convocatoria existente
+
+- Por petición del usuario, el acta en directo queda reservada a delegados asignados al equipo, tanto en enlaces como en Server Actions y RLS. Ni administrador, entrenador ni permiso modular sustituyen esa asignación. El resto de estadísticas públicas del partido se conserva.
+- El partido muestra un bloque visible con los dos modos. El registro sencillo se abre en `/matches/[id]/registro`, sin trasladar al delegado a administración.
+- Se reproduce el error de convocatoria existente con gorros duplicados. Antes cualquier fallo de esquema mostraba un mensaje genérico de preparar convocatoria; ahora se presenta la lista para corregir gorros en la misma entrada, con guardado transaccional y comprobación de permisos y roster.
+- Carga y error tienen una pantalla visual accesible, reintento y vuelta al partido de origen. Se elimina el enlace erróneo a `/admin/matches`.
+- Migración `20260908120517_live_match_delegate_entry.sql` aplicada tras ensayo transaccional con fixtures y rollback. Los triggers de totales conservan su protección aunque el acta quede oculta por RLS a otros gestores.
+
+- Ampliación pedida por el usuario: impedir duplicados desde su origen. Los selectores de gorro deshabilitan números ocupados por convocados activos; un trigger serializa escrituras por partido y rechaza inserciones, cambios y reactivaciones que repetirían gorro. Los datos antiguos no se renumeran automáticamente. Preparar gorros admite intercambios atómicos sin dejar números temporalmente duplicados.
+- Se corrige además la validación de `updateCallup`: la convocatoria tiene clave compuesta partido/jugador, no un UUID concatenado. El error impedía editar sus datos aunque ambos identificadores fueran válidos. El resultado estructurado conserva mensajes útiles en producción.
+
+## 2026-09-08 - Plan del acta tras la prueba con un delegado
+
+- La prueba con el padre de Rubén valida el recorrido principal como fácil e intuitivo. Se conservará la selección equipo → jugador → acción, mejorando visibilidad, legibilidad y acabado.
+- Se redacta [36-acta-live-feedback-plan.md](36-acta-live-feedback-plan.md), con los requisitos ACT-01 a ACT-13: relevo, asistencias, portería, tiempos pedidos, tiros simplificados, penalti rival y prevención de duplicados, corrección accesible, colores de sanción, convocatoria máxima de 14 y PDF horizontal/vertical.
+- El máximo de Morvedre pasa a ser un requisito de 14 convocados activos; el rival tendrá 14 por defecto y cantidad ajustable.
+- El plan distingue métricas calculables de las que el registro simplificado no permite conocer, conserva la compatibilidad de actas históricas y define pruebas de integridad, offline, dos dispositivos, accesibilidad y PDF.
+- El arreglo anterior del error 500 de la propuesta de convocatoria queda aparcado como asunto separado; no se da por terminado dentro del trabajo del acta.
+
+## 2026-09-09 - Ejecución del rediseño del acta tras la prueba familiar
+
+- Rubén autoriza ejecutar el plan 36. El documento del acta evoluciona a versión 2, manteniendo lectura de la versión 1 y evitando que un cliente antiguo sustituya silenciosamente datos nuevos.
+- El relevo usa UUID seguro compatible y conserva un intento idempotente antes de enviarlo. Una respuesta perdida se recupera sin repetir el cambio de propietario ni perder pendientes locales.
+- Se añaden asistencias, tiro a córner y el flujo de penalti rival. Gol normal y en superioridad se guardan antes de preguntar la asistencia. La sanción rival se guarda antes de elegir lanzador y resultado. Los posibles goles de penalti duplicados se confirman en ambos órdenes.
+- Portería se muestra en un bloque propio con paradas, encajados y sanciones. El portero activo tiene un control directo y un gol rival no puede guardarse sin portero válido. Los tiempos se rotulan siempre como pedidos y las tarjetas del entrenador comparten ese acceso visible.
+- La corrección pasa a ser una acción permanente con controles grandes y confirmación de anulación. El riesgo por sanciones colorea toda la fila y conserva cifra y texto para no depender del color.
+- La convocatoria propia queda limitada a 14 en dominio, acciones y trigger transaccional. Un acta histórica más grande conserva lectura. El rival parte de 14 y permite ajustar cantidad y números.
+- El PDF usa primera página horizontal y páginas verticales para análisis y secuencia por cuartos. Solo publica porcentajes deducibles de los eventos registrados; no inventa minutos ni tiros entre palos.
+- Las pruebas locales específicas, TypeScript, renderizado del PDF y auditoría responsive pasan. La migración `20260908182336_enforce_fourteen_player_callups.sql` está preparada pero no aplicada en cloud: la revisión automática rechazó `supabase db push --dry-run` al alcanzarse el límite de uso de Codex. Quedan pendientes el ensayo remoto y una nueva prueba sin ayuda con delegados reales.
+
+## 2026-09-11 - Remediación visual y de usabilidad del acta
+
+- Se ejecuta el plan 37 tras la autorización de Rubén. La pantalla adopta una jerarquía estable de marcador, tabla de jugadores y controles, eliminando tarjetas y resúmenes duplicados que reducían la zona útil.
+- Morvedre vuelve a ordenarse por gorro del 1 al 14, con los porteros dentro de la misma lista. Sus filas muestran paradas y goles encajados; su elección se mantiene en un control compacto y visible.
+- En 360 px o más se conservan ambos equipos en paralelo. A 320 px se alternan mediante un selector rotulado para que cifras y sanciones sigan siendo legibles. Una y dos expulsiones usan fondos ámbar y naranja; tres o roja usan rojo, siempre con cifra y estado textual.
+- Los paneles comparten Atrás, contexto, título y Cerrar. Se elimina la navegación variable al pie de cada paso. Cerrar una continuación opcional no deshace la jugada ya registrada ni provoca que el panel se abra de nuevo.
+- Tiempo muerto indica expresamente «Pedidos» y comparte la zona fija con Morvedre, Rival, Corregir y Terminar cuarto. Con poca altura se permite scroll de página; con texto al 200 % los controles pasan al flujo y a una columna.
+- La misma versión pasa TypeScript, ESLint, 46 pruebas focalizadas y la auditoría completa con datos sintéticos: nueve viewports entre 320×568 y 768×1024 más paisaje, texto al 150 % y 200 %, objetivos táctiles de 48 px, offline, seis cuartos, corrección y PDF. Falta repetir la prueba sin ayuda con delegados; no se atribuye a esta versión la aceptación de una anterior.
