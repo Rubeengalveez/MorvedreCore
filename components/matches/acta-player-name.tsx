@@ -25,11 +25,16 @@ export function ActaPlayerName({ name }: { name: string }) {
       );
       setChoice(fit < 0 ? widths.length - 1 : fit);
     };
-    const observer = new ResizeObserver(update);
-    observer.observe(node);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(update) : null;
+    observer?.observe(node);
+    window.addEventListener("resize", update);
     update();
-    void document.fonts?.ready.then(update);
-    return () => observer.disconnect();
+    const fontsReady = document.fonts?.ready;
+    if (fontsReady && typeof fontsReady.then === "function") void fontsReady.then(update);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", update);
+    };
   }, [name]);
   return (
     <span ref={container} title={name} aria-label={name} className="relative block w-full min-w-0">

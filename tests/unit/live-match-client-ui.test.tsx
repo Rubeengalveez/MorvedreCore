@@ -77,6 +77,75 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("interfaz del acta", () => {
+  it("completa el destino de un penalti antiguo desde corregir sin duplicarlo", async () => {
+    const missed = event("penalty_missed");
+    mock.hook.mockReturnValue({ ...mock.hook(), record: record([missed]) });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Corregir" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tiro" }));
+    fireEvent.click(screen.getByRole("button", { name: "Penalti fallado" }));
+    expect(mock.change).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Fuera / palo" }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
+    expect(mock.change.mock.calls[0][0].events).toEqual([
+      expect.objectContaining({ id: missed.id, kind: "penalty_missed", missOutcome: "out" }),
+    ]);
+  });
+  it.each([
+    ["Parada", "save"],
+    ["Fuera / palo", "out"],
+  ] as const)("guarda el destino %s de un penalti en un solo tiro", async (label, outcome) => {
+    const penalty = event("penalty", { side: "them", cap: 4 });
+    const current = record([penalty]);
+    current.sheet.pending = { kind: "penalty_shot", penalty_event_id: penalty.id, shooter_cap: 2 };
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Resultado del penalti" })).toBeInTheDocument(),
+    );
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: label }),
+    );
+    await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
+    const saved = mock.change.mock.calls[0][0] as LiveSheet;
+    expect(saved.events).toHaveLength(2);
+    expect(saved.events[1]).toMatchObject({
+      kind: "penalty_missed",
+      missOutcome: outcome,
+      related_event_id: penalty.id,
+    });
+    expect(saved.pending).toBeNull();
+  });
+  it("elegir portero inicia el siguiente cuarto con un solo toque en su nombre", async () => {
+    const paused = record();
+    paused.sheet.phase = "break";
+    mock.hook.mockReturnValue({ ...mock.hook(), record: paused });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Empezar cuarto 2" }));
+    expect(mock.change).not.toHaveBeenCalled();
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Iván Ortiz/ }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
+    expect(mock.change.mock.calls[0][0]).toMatchObject({
+      phase: "playing",
+      period: 2,
+      keeper: 13,
+      keeperStints: [{ period: 2, cap: 13 }],
+    });
+  });
+  it("permite corregir una selección sin contar dos porteros", async () => {
+    const current = record();
+    current.sheet.keeperStints = [{ cap: 1, period: 1, afterEventId: null }];
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Portero en juego, gorro 1/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Corregir selección" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Iván Ortiz/ }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
+    expect(mock.change.mock.calls[0][0].keeperStints).toEqual([
+      { cap: 13, period: 1, afterEventId: null },
+    ]);
+  });
   it("guarda el gol antes de preguntar por la asistencia", async () => {
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: /Morvedre, gorro 2,/ }));
@@ -91,7 +160,7 @@ describe("interfaz del acta", () => {
   it("guarda el penalti rival una sola vez antes de elegir lanzador", async () => {
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: /Rival, gorro 4,/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Penalti · +1 expulsión" }));
+    fireEvent.click(screen.getByRole("button", { name: "Penalti" }));
     await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
     const saved = mock.change.mock.calls[0][0] as LiveSheet;
     expect(saved.events.at(-1)).toMatchObject({ side: "them", cap: 4, kind: "penalty" });
@@ -273,23 +342,27 @@ describe("interfaz del acta", () => {
     expect(screen.getByText(/En juego/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Morvedre, gorro 2,/ })).toHaveClass("bg-amber-50");
     expect(screen.getByRole("button", { name: /Morvedre, gorro 3,/ })).toHaveClass("bg-orange-100");
-    expect(screen.getByRole("button", { name: /Portero de Morvedre, gorro 13,/ })).toHaveClass("bg-red-100");
+    expect(screen.getByRole("button", { name: /Portero de Morvedre, gorro 13,/ })).toHaveClass(
+      "bg-red-100",
+    );
     expect(screen.getAllByText(/Fuera/i).length).toBeGreaterThan(0);
   });
 
   it("mantiene los porteros dentro del orden numérico", () => {
     const unordered = sheet();
-    unordered.players = [unordered.players[2], unordered.players[0], unordered.players[3], unordered.players[1]];
+    unordered.players = [
+      unordered.players[2],
+      unordered.players[0],
+      unordered.players[3],
+      unordered.players[1],
+    ];
     render(<ActaPlayerBoard sheet={unordered} playing onPlayer={vi.fn()} />);
     const ownRows = screen
       .getAllByRole("button")
       .filter((button) => button.getAttribute("aria-label")?.includes("Morvedre, gorro"));
-    expect(ownRows.map((row) => row.getAttribute("aria-label")?.match(/gorro (\d+)/)?.[1])).toEqual([
-      "1",
-      "2",
-      "3",
-      "13",
-    ]);
+    expect(ownRows.map((row) => row.getAttribute("aria-label")?.match(/gorro (\d+)/)?.[1])).toEqual(
+      ["1", "2", "3", "13"],
+    );
   });
 
   it("permite cerrar una continuación guardada sin volver a abrirla", async () => {
@@ -302,13 +375,20 @@ describe("interfaz del acta", () => {
     mock.hook.mockReturnValue({ ...mock.hook(), record: pendingRecord });
     render(<LiveMatchClient />);
     await waitFor(() =>
-      expect(screen.getByRole("heading", { name: "¿Quién dio la asistencia?" })).toBeInTheDocument(),
+      expect(
+        screen.getByRole("heading", { name: "¿Quién dio la asistencia?" }),
+      ).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
-    await waitFor(() => expect(mock.change).toHaveBeenCalledWith(expect.objectContaining({ pending: null })));
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
     await waitFor(() =>
-      expect(screen.queryByRole("heading", { name: "¿Quién dio la asistencia?" })).not.toBeInTheDocument(),
+      expect(mock.change).toHaveBeenCalledWith(expect.objectContaining({ pending: null })),
+    );
+    expect(mock.change).toHaveBeenCalledTimes(1);
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "¿Quién dio la asistencia?" }),
+      ).not.toBeInTheDocument(),
     );
   });
 });
-

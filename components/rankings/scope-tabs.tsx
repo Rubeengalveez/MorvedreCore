@@ -14,7 +14,7 @@ export interface ScopeTabsProps {
   meta: RankingsPageMeta;
   active: RankingScope;
   extraParams?: Record<string, string>;
-  basePath?: "/rankings" | "/streaks";
+  basePath?: "/rankings" | "/streaks" | "/legends";
 }
 
 function scopeToParam(scope: RankingScope): string {

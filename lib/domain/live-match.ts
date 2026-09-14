@@ -16,6 +16,7 @@ export const actionLabels = {
   red: "Roja",
   save: "Parada",
   penalty_save: "Penalti parado",
+  keeper_out: "Tiro recibido",
   timeout: "Tiempo muerto pedido",
   coach_yellow: "Amarilla al entrenador",
   coach_red: "Roja al entrenador",
@@ -29,6 +30,7 @@ export const playerSchema = z.object({
   id: z.string().uuid(),
   cap: z.number().int().min(1).max(99),
   name: z.string().min(1).max(150),
+  retired: z.boolean().optional(),
 });
 
 export const eventSchema = z.object({
@@ -41,6 +43,7 @@ export const eventSchema = z.object({
   deleted: z.boolean().default(false),
   related_event_id: z.string().uuid().nullable().optional(),
   origin: z.enum(["manual", "goal_flow", "penalty_flow"]).optional(),
+  missOutcome: z.enum(["out", "save"]).optional(),
 });
 
 const pendingSchema = z.discriminatedUnion("kind", [
@@ -61,6 +64,16 @@ export const sheetSchema = z
     period: z.number().int().min(1).max(8),
     phase: z.enum(["ready", "playing", "break", "finished"]),
     keeper: z.number().int().min(1).max(99).nullable(),
+    keeperStints: z
+      .array(
+        z.object({
+          period: z.number().int().min(1).max(8),
+          cap: z.number().int().min(1).max(99),
+          afterEventId: z.string().max(100).nullable(),
+        }),
+      )
+      .max(512)
+      .optional(),
     events: z.array(eventSchema).max(3000),
     pending: pendingSchema.nullable().optional(),
     baseline: z
@@ -96,6 +109,17 @@ export const sheetSchema = z
     }
     if (s.keeper !== null && !s.players.some((player) => player.cap === s.keeper)) {
       fail("El portero no está convocado.");
+    }
+    if (
+      s.keeperStints?.some(
+        (stint) =>
+          stint.period > s.period ||
+          !s.players.some((player) => player.cap === stint.cap) ||
+          (stint.afterEventId !== null &&
+            !s.events.some((event) => event.id === stint.afterEventId)),
+      )
+    ) {
+      fail("Revisa los cuartos registrados de portería.");
     }
 
     for (const event of s.events) {
@@ -142,10 +166,13 @@ export const sheetSchema = z
         } else if (
           event.origin === "penalty_flow" &&
           !(
-            related.side === "them" &&
             related.kind === "penalty" &&
             related.period === event.period &&
-            (event.kind === "goal_penalty" || event.kind === "penalty_missed")
+            (related.side === "them"
+              ? event.side === "us" &&
+                (event.kind === "goal_penalty" || event.kind === "penalty_missed")
+              : (event.side === "them" && event.kind === "goal") ||
+                (event.side === "us" && ["penalty_save", "keeper_out"].includes(event.kind)))
           )
         ) {
           fail("El lanzamiento no corresponde a ese penalti.");
@@ -156,7 +183,12 @@ export const sheetSchema = z
     const assistsByGoal = new Map<string, number>();
     const shotsByPenalty = new Map<string, number>();
     for (const event of s.events.filter((entry) => !entry.deleted && entry.related_event_id)) {
-      const map = event.kind === "assist" ? assistsByGoal : event.origin === "penalty_flow" ? shotsByPenalty : null;
+      const map =
+        event.kind === "assist"
+          ? assistsByGoal
+          : event.origin === "penalty_flow"
+            ? shotsByPenalty
+            : null;
       if (!map) continue;
       map.set(event.related_event_id!, (map.get(event.related_event_id!) ?? 0) + 1);
     }
@@ -177,12 +209,14 @@ export const sheetSchema = z
       const penalty = s.events.find(
         (event) => event.id === pending.penalty_event_id && !event.deleted,
       );
-      if (!penalty || penalty.side !== "them" || penalty.kind !== "penalty") {
+      if (!penalty || penalty.kind !== "penalty") {
         fail("El penalti pendiente ya no existe.");
       }
       if (
         pending.shooter_cap !== null &&
-        !s.players.some((player) => player.cap === pending.shooter_cap)
+        !(penalty?.side === "us"
+          ? s.opponentCaps.includes(pending.shooter_cap)
+          : s.players.some((player) => player.cap === pending.shooter_cap))
       ) {
         fail("El lanzador pendiente no está convocado.");
       }
@@ -263,7 +297,8 @@ export function playerTotals(sheet: LiveSheet, side: Side, cap: number) {
     saves,
     penaltySaves: events.filter((event) => event.kind === "penalty_save").length,
     conceded,
-    received: saves + conceded,
+    received: saves + conceded + events.filter((event) => event.kind === "keeper_out").length,
+    receivedOut: events.filter((event) => event.kind === "keeper_out").length,
     shots: goals + missedShots.length,
     missedShots: missedShots.length,
     shotsOut: events.filter((event) => event.kind === "shot_out").length,
@@ -309,7 +344,11 @@ export function percentage(numerator: number, denominator: number): number | nul
 export function describeEvent(event: MatchEvent, sheet: LiveSheet) {
   const player =
     event.side === "us" ? sheet.players.find((entry) => entry.cap === event.cap)?.name : "";
-  return `${event.side === "us" ? "Morvedre" : "Rival"}${event.cap !== null ? ` · #${event.cap}${player ? ` ${player}` : ""}` : ""} · ${actionLabels[event.kind]}`;
+  const label =
+    event.kind === "goal" && event.origin === "penalty_flow"
+      ? "Gol de penalti"
+      : actionLabels[event.kind];
+  return `${event.side === "us" ? "Morvedre" : "Rival"}${event.cap !== null ? ` · #${event.cap}${player ? ` ${player}` : ""}` : ""} · ${label}`;
 }
 
 export function lastSportEvent(sheet: LiveSheet, excludingId?: string): MatchEvent | null {

@@ -1,7 +1,14 @@
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { CalendarDays, ChevronRight, ExternalLink, MapPin, UserRoundCog } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronRight,
+  ExternalLink,
+  MapPin,
+  Timer,
+  UserRoundCog,
+} from "lucide-react";
 
 import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
@@ -12,23 +19,26 @@ import { getTeamById, getTeamMatches, getTeamRoster, getTeamStaff } from "@/serv
 import { cn } from "@/lib/utils/cn";
 import { isSafeMapsUrl } from "@/lib/domain/maps";
 import type { CategoryCode } from "@/lib/domain/categories";
+import { getSwimCoachTeamIds } from "@/server/queries/swim-times";
 
 import { TeamPlayersTab } from "./_components/team-players-tab";
+import { TeamSwimTimesTab } from "./_components/team-swim-times-tab";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type TeamTabId = "principal" | "jugadores" | "partidos";
+type TeamTabId = "principal" | "jugadores" | "partidos" | "tiempos";
 type TeamMatch = Awaited<ReturnType<typeof getTeamMatches>>[number];
 
 const TEAM_TABS: Array<{ id: TeamTabId; label: string }> = [
   { id: "principal", label: "Resumen" },
   { id: "jugadores", label: "Plantilla" },
   { id: "partidos", label: "Partidos" },
+  { id: "tiempos", label: "Tiempos" },
 ];
 
 function parseTab(value: string | undefined): TeamTabId {
-  if (value === "jugadores" || value === "partidos") return value;
+  if (value === "jugadores" || value === "partidos" || value === "tiempos") return value;
   return "principal";
 }
 
@@ -62,11 +72,12 @@ export default async function TeamDetailPage({
   const team = await getTeamById(teamId);
   if (!team) notFound();
 
-  const [season, roster, staff, matches] = await Promise.all([
+  const [season, roster, staff, matches, swimCoachTeamIds] = await Promise.all([
     getCurrentSeason(),
     getTeamRoster(team.id),
     getTeamStaff(team.id),
     getTeamMatches(team.id, 30),
+    getSwimCoachTeamIds(ctx.ownProfile.id),
   ]);
 
   const upcoming = matches
@@ -127,6 +138,16 @@ export default async function TeamDetailPage({
             played={played}
           />
         ) : null}
+
+        {activeTab === "tiempos" ? (
+          <TeamSwimTimesTab
+            teamId={team.id}
+            teamLabel={team.label}
+            teamColor={team.color}
+            isCoach={swimCoachTeamIds.includes(team.id)}
+            roster={roster}
+          />
+        ) : null}
       </div>
     </PageShell>
   );
@@ -136,7 +157,7 @@ function TeamSectionNav({ active, basePath }: { active: TeamTabId; basePath: Rou
   return (
     <nav
       aria-label="Secciones del equipo"
-      className="border-ink-200 bg-paper-card grid grid-cols-3 gap-1 rounded-2xl border p-1.5 shadow-sm"
+      className="border-ink-200 bg-paper-card grid grid-cols-4 gap-1 rounded-2xl border p-1.5 shadow-sm"
     >
       {TEAM_TABS.map((tab) => {
         const isActive = tab.id === active;

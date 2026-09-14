@@ -15,6 +15,7 @@ import {
   Settings2,
   ShieldCheck,
   Shirt,
+  Timer,
   UserRoundPen,
   UsersRound,
 } from "lucide-react";
@@ -36,6 +37,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getDashboardAudience } from "@/server/queries/dashboard";
 import { getFamilyOverview } from "@/server/queries/family";
+import { getSwimCoachTeamIds } from "@/server/queries/swim-times";
 import { getTeamsForProfileInSeason } from "@/server/queries/teams";
 import { getFamilyTreasury } from "@/server/queries/treasury";
 
@@ -71,12 +73,14 @@ export default async function ProfilePage() {
 
   const { linkedProfiles, ownProfile } = ctx;
   const supabase = await createClient();
-  const [{ data: season }, ownPhone, treasury, { data: permissionRows }] = await Promise.all([
-    supabase.from("seasons").select("id, label").eq("is_current", true).maybeSingle(),
-    getOwnProfilePhone(),
-    getFamilyTreasury(ownProfile.id),
-    supabase.from("profile_permissions").select("permission").eq("profile_id", ownProfile.id),
-  ]);
+  const [{ data: season }, ownPhone, treasury, { data: permissionRows }, coachTeamIds] =
+    await Promise.all([
+      supabase.from("seasons").select("id, label").eq("is_current", true).maybeSingle(),
+      getOwnProfilePhone(),
+      getFamilyTreasury(ownProfile.id),
+      supabase.from("profile_permissions").select("permission").eq("profile_id", ownProfile.id),
+      getSwimCoachTeamIds(ownProfile.id),
+    ]);
 
   const [audience, teams, family] = season
     ? await Promise.all([
@@ -181,6 +185,12 @@ export default async function ProfilePage() {
                   detail: "Estadísticas y evolución de temporada",
                   icon: ClipboardCheck,
                 },
+                {
+                  href: `/players/${ownProfile.id}/swim-times`,
+                  label: "Mis tiempos de nado",
+                  detail: "Tiempo actual, mejor e historial de 50 y 100 m",
+                  icon: Timer,
+                },
               ]}
             />
           ) : null}
@@ -203,6 +213,16 @@ export default async function ProfilePage() {
                   detail: "Consulta semanal y mensual",
                   icon: UsersRound,
                 },
+                ...(coachTeamIds.length > 0
+                  ? [
+                      {
+                        href: "/team",
+                        label: "Añadir tiempos de nado",
+                        detail: "Elige tu equipo y registra toda la plantilla",
+                        icon: Timer,
+                      },
+                    ]
+                  : []),
               ]}
             />
           ) : null}

@@ -1,6 +1,7 @@
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { CalendarCheck, Goal, Shield, Trophy, Waves } from "lucide-react";
+import Link from "next/link";
+import { CalendarCheck, Goal, Shield, Timer, Trophy, Waves } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { PageShell } from "@/components/ui/page-shell";
@@ -94,6 +95,21 @@ export default async function TeamPlayerPage({
           </p>
         </div>
       </header>
+
+      <Link
+        href={`/players/${player.player_id}/swim-times?from=team&teamId=${teamId}` as Route}
+        className="border-pool-blue/30 bg-pool-foam/55 text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue flex min-h-16 touch-manipulation items-center gap-3 rounded-2xl border px-4 py-3 font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <span className="bg-pool-deep text-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+          <Timer className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block">Tiempos de nado</span>
+          <span className="text-ink-600 mt-0.5 block text-sm font-semibold">
+            Tiempo actual, mejor e historial de 50 y 100 m
+          </span>
+        </span>
+      </Link>
 
       {snapshot ? (
         <>

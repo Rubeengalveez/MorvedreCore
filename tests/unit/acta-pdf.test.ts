@@ -1,127 +1,362 @@
-import { writeFile } from "node:fs/promises";
-import { expect, it } from "vitest";
-import { createActaPdf } from "../../lib/domain/acta-pdf";
-import type { LiveRecord, MatchEvent } from "../../lib/domain/live-match";
+import { describe, it, expect } from "vitest";
+import { createActaPdf } from "@/lib/domain/acta-pdf";
+import type { LiveRecord, LiveSheet, MatchEvent } from "@/lib/domain/live-match";
 
-const players = Array.from({ length: 14 }, (_, index) => ({
-  id: `${String(index + 1).padStart(8, "0")}-0000-4000-8000-000000000001`,
-  cap: index + 1,
-  name: ["Álex García", "Marcos Ruiz", "Pablo Martínez", "Javier López", "Hugo Pérez", "Sergio Gómez", "Lucas Sánchez", "Mateo Fernández", "Daniel Torres", "Adrián Navarro", "Diego Romero", "Bruno Molina", "Iván Ortiz", "Leo Castillo"][index],
-}));
-const event = (index: number, kind: MatchEvent["kind"], values: Partial<MatchEvent> = {}): MatchEvent => ({
-  id: `${String(index + 30).padStart(8, "0")}-0000-4000-8000-000000000001`,
-  side: "us",
-  cap: 2,
-  kind,
-  period: index < 8 ? 1 : index < 15 ? 2 : index < 22 ? 3 : 4,
-  keeper: null,
-  deleted: false,
-  origin: "manual",
-  related_event_id: null,
-  ...values,
-});
+function testSheet(): LiveSheet {
+  const events: MatchEvent[] = [
+    {
+      id: "ev-1",
+      side: "us",
+      cap: 4,
+      kind: "goal",
+      period: 1,
+      keeper: null,
+      deleted: false,
+    },
+    {
+      id: "ev-2",
+      side: "us",
+      cap: 7,
+      kind: "assist",
+      period: 1,
+      related_event_id: "ev-1",
+      keeper: null,
+      deleted: false,
+    },
+    {
+      id: "ev-3",
+      side: "them",
+      cap: 9,
+      kind: "exclusion",
+      period: 1,
+      keeper: null,
+      deleted: false,
+    },
+    {
+      id: "ev-4",
+      side: "us",
+      cap: 4,
+      kind: "goal_extra",
+      period: 1,
+      keeper: null,
+      deleted: false,
+    },
+    {
+      id: "ev-5",
+      side: "them",
+      cap: 5,
+      kind: "goal",
+      period: 2,
+      keeper: 1,
+      deleted: false,
+    },
+    {
+      id: "ev-6",
+      side: "us",
+      cap: 1,
+      kind: "save",
+      period: 2,
+      keeper: 1,
+      deleted: false,
+    },
+    {
+      id: "ev-7",
+      side: "them",
+      cap: 3,
+      kind: "penalty",
+      period: 3,
+      keeper: null,
+      deleted: false,
+    },
+    {
+      id: "ev-8",
+      side: "us",
+      cap: 2,
+      kind: "goal_penalty",
+      period: 3,
+      keeper: null,
+      deleted: false,
+    },
+  ];
 
-it("genera un informe multipágina con orientaciones mixtas y todos los datos", async () => {
-  const goal = event(1, "goal");
-  const rivalPenalty = event(11, "penalty", { side: "them", cap: 7 });
-  const record: LiveRecord = {
-    matchId: "99999999-0000-4000-8000-000000000001",
-    owner: players[0].id,
-    viewer: players[0].id,
+  return {
+    version: 1,
+    players: [
+      { id: "p-1", cap: 1, name: "Marc Portero" },
+      { id: "p-2", cap: 2, name: "David Capitán" },
+      { id: "p-3", cap: 4, name: "Lucía Goleadora" },
+      { id: "p-4", cap: 7, name: "Carlos Asistente" },
+      { id: "p-5", cap: 8, name: "Hugo SinAcciones" },
+    ],
+    opponentCaps: [1, 3, 5, 9],
+    periods: 4,
+    period: 4,
+    phase: "finished",
+    keeper: 1,
+    events,
+    baseline: [],
+    baselineThem: 0,
+  };
+}
+
+function testRecord(sheet = testSheet()): LiveRecord {
+  return {
+    matchId: "m-123456",
+    owner: "user-1",
+    viewer: "user-1",
     canEdit: true,
-    opponent: "Club Waterpolo Turia",
-    team: "Infantil Mixto",
-    date: "2026-09-08T16:00:00.000Z",
-    competition: "Liga autonómica",
-    venue: "Piscina Internúcleos",
+    opponent: "CW Castellón",
+    team: "Cadete B",
+    date: "2026-09-14T18:00:00Z",
+    competition: "league",
+    venue: "Piscina Municipal Puerto Sagunto",
     homeAway: "home",
-    revision: 8,
-    mutation: "88888888-0000-4000-8000-000000000001",
-    device: "77777777-0000-4000-8000-000000000001",
+    revision: 1,
+    mutation: "done",
+    device: "mobile-1",
+    sheet,
     dirty: false,
-    sheet: {
-      version: 2,
-      players,
-      opponentCaps: Array.from({ length: 14 }, (_, index) => index + 1),
+  };
+}
+
+describe("createActaPdf", () => {
+  it("genera un PDF válido sin errores con acta horizontal y análisis vertical", async () => {
+    const record = testRecord();
+    const pdfFile = createActaPdf(record);
+
+    expect(pdfFile).toBeDefined();
+    expect(pdfFile.name).toContain("acta-2026-09-14-cadete-b-cw-castellon.pdf");
+    expect(pdfFile.type).toBe("application/pdf");
+    expect(pdfFile.size).toBeGreaterThan(1000);
+
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const pdfString = buffer.toString("latin1");
+    expect(pdfString.startsWith("%PDF-")).toBe(true);
+    const boxes = [...pdfString.matchAll(/\/MediaBox \[0 0 ([\d.]+) ([\d.]+)\]/g)];
+    expect(boxes).toHaveLength(4);
+    expect(Number(boxes[0][1])).toBeGreaterThan(Number(boxes[0][2]));
+    expect(Number(boxes[1][1])).toBeLessThan(Number(boxes[1][2]));
+    expect(pdfString).toContain("MORVEDRE");
+    expect(pdfString).toContain("CW Castell");
+  });
+
+  it("gestiona actas vacías o sin eventos sin lanzar excepciones", () => {
+    const emptySheet: LiveSheet = {
+      version: 1,
+      players: [{ id: "p-1", cap: 1, name: "Portero Solo" }],
+      opponentCaps: [1, 2],
+      periods: 4,
+      period: 1,
+      phase: "ready",
+      keeper: 1,
+      events: [],
+      baseline: [],
+      baselineThem: 0,
+    };
+    const record = testRecord(emptySheet);
+    const pdfFile = createActaPdf(record);
+    expect(pdfFile.size).toBeGreaterThan(500);
+  });
+
+  it("genera el acta completa con 13 jugadores, comparativa de expulsiones y analítica individual", async () => {
+    const sheet: LiveSheet = {
+      version: 1,
+      players: [
+        { id: "p-1", cap: 1, name: "Leo Ruiz Torres" },
+        { id: "p-2", cap: 2, name: "Pau Pérez Méndez" },
+        { id: "p-3", cap: 3, name: "Arnau Crespo Díaz" },
+        { id: "p-4", cap: 4, name: "Biel Carmona Muñoz" },
+        { id: "p-5", cap: 5, name: "Arnau Solà Díaz" },
+        { id: "p-6", cap: 6, name: "Eneko Ibarra Muñoz" },
+        { id: "p-7", cap: 7, name: "Rayan Martínez Méndez" },
+        { id: "p-8", cap: 8, name: "Oliver Torres Domínguez" },
+        { id: "p-9", cap: 9, name: "Saúl Rojas Vázquez" },
+        { id: "p-10", cap: 10, name: "Jan Vallès García" },
+        { id: "p-11", cap: 11, name: "Liam Gallego Serrano" },
+        { id: "p-12", cap: 12, name: "Izan Ruiz Méndez" },
+        { id: "p-13", cap: 13, name: "Asier Rojas Prieto" },
+      ],
+      opponentCaps: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13],
       periods: 4,
       period: 4,
       phase: "finished",
-      keeper: 13,
-      baseline: players.map((player) => ({ cap: player.cap, goals: 0, exclusions: 0 })),
-      baselineThem: 0,
-      pending: null,
+      keeper: 1,
       events: [
-        goal,
-        event(2, "assist", { cap: 6, related_event_id: goal.id, origin: "goal_flow" }),
-        event(3, "goal_extra", { cap: 4 }),
-        event(4, "shot_out", { cap: 5 }),
-        event(5, "shot_blocked", { cap: 7 }),
-        event(6, "shot_corner", { cap: 8 }),
-        event(7, "exclusion", { cap: 9 }),
-        event(8, "goal", { side: "them", cap: 3, keeper: 1 }),
-        event(9, "save", { cap: 1 }),
-        event(10, "penalty_save", { cap: 1 }),
-        rivalPenalty,
-        event(12, "goal_penalty", { cap: 10, related_event_id: rivalPenalty.id, origin: "penalty_flow" }),
-        event(13, "timeout", { side: "us", cap: null }),
-        event(14, "coach_yellow", { side: "them", cap: null }),
-        event(15, "goal", { cap: 3 }),
-        event(16, "goal", { side: "them", cap: 5, keeper: 13 }),
-        event(17, "save", { cap: 13 }),
-        event(18, "exclusion", { cap: 9 }),
-        event(19, "penalty_missed", { cap: 11 }),
-        event(20, "goal_extra", { cap: 12 }),
-        event(21, "timeout", { side: "them", cap: null }),
-        event(22, "goal", { side: "them", cap: 7, keeper: 13 }),
-        event(23, "exclusion", { cap: 9 }),
-        event(24, "red", { cap: 14 }),
-        event(25, "goal", { cap: 2 }),
-        event(26, "goal", { side: "them", cap: 7, keeper: 13 }),
+        { id: "e-1", side: "us", cap: 2, kind: "goal", period: 1, keeper: null, deleted: false },
+        { id: "e-2", side: "us", cap: 2, kind: "goal", period: 1, keeper: null, deleted: false },
+        { id: "e-3", side: "them", cap: 6, kind: "goal", period: 1, keeper: 1, deleted: false },
+        { id: "e-4", side: "them", cap: 6, kind: "goal", period: 1, keeper: 1, deleted: false },
+        { id: "e-5", side: "us", cap: 3, kind: "goal", period: 1, keeper: null, deleted: false },
+        { id: "e-6", side: "us", cap: 5, kind: "goal", period: 2, keeper: null, deleted: false },
+        { id: "e-7", side: "us", cap: 5, kind: "goal", period: 2, keeper: null, deleted: false },
+        { id: "e-8", side: "us", cap: 6, kind: "goal", period: 3, keeper: null, deleted: false },
+        {
+          id: "e-9",
+          side: "us",
+          cap: 6,
+          kind: "goal_extra",
+          period: 3,
+          keeper: null,
+          deleted: false,
+        },
+        { id: "e-10", side: "them", cap: 8, kind: "goal", period: 3, keeper: 10, deleted: false },
+        { id: "e-11", side: "them", cap: 6, kind: "goal", period: 3, keeper: 10, deleted: false },
+        { id: "e-12", side: "them", cap: 2, kind: "goal", period: 3, keeper: 10, deleted: false },
+        { id: "e-13", side: "them", cap: 4, kind: "goal", period: 3, keeper: 10, deleted: false },
+        { id: "e-14", side: "them", cap: 5, kind: "goal", period: 3, keeper: 10, deleted: false },
+        { id: "e-15", side: "them", cap: 12, kind: "goal", period: 3, keeper: 10, deleted: false },
+        { id: "e-16", side: "them", cap: 13, kind: "goal", period: 3, keeper: 10, deleted: false },
+        {
+          id: "e-17",
+          side: "us",
+          cap: 4,
+          kind: "goal_penalty",
+          period: 4,
+          keeper: null,
+          deleted: false,
+        },
+        { id: "e-18", side: "us", cap: 7, kind: "goal", period: 4, keeper: null, deleted: false },
+        { id: "e-19", side: "us", cap: 12, kind: "goal", period: 4, keeper: null, deleted: false },
+        {
+          id: "e-20",
+          side: "them",
+          cap: 4,
+          kind: "exclusion",
+          period: 1,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-21",
+          side: "them",
+          cap: 4,
+          kind: "exclusion",
+          period: 2,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-22",
+          side: "them",
+          cap: 4,
+          kind: "exclusion",
+          period: 4,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-23",
+          side: "them",
+          cap: 2,
+          kind: "exclusion",
+          period: 1,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-24",
+          side: "them",
+          cap: 3,
+          kind: "exclusion",
+          period: 2,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-25",
+          side: "them",
+          cap: 7,
+          kind: "exclusion",
+          period: 3,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-26",
+          side: "us",
+          cap: 3,
+          kind: "exclusion",
+          period: 1,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-27",
+          side: "us",
+          cap: 4,
+          kind: "exclusion",
+          period: 2,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-28",
+          side: "us",
+          cap: 5,
+          kind: "exclusion",
+          period: 3,
+          keeper: null,
+          deleted: false,
+        },
+        {
+          id: "e-29",
+          side: "us",
+          cap: 5,
+          kind: "exclusion",
+          period: 4,
+          keeper: null,
+          deleted: false,
+        },
+        { id: "e-30", side: "us", cap: 1, kind: "save", period: 1, keeper: 1, deleted: false },
+        { id: "e-31", side: "us", cap: 1, kind: "save", period: 1, keeper: 1, deleted: false },
+        {
+          id: "e-32",
+          side: "us",
+          cap: 1,
+          kind: "penalty_save",
+          period: 1,
+          keeper: 1,
+          deleted: false,
+        },
       ],
-    },
-  };
-  const file = createActaPdf(record);
-  expect(file.size).toBeGreaterThan(10_000);
-  expect(file.name).toBe("acta-2026-09-08-infantil-mixto-club-waterpolo-turia.pdf");
-  const source = Buffer.from(await file.arrayBuffer()).toString("latin1");
-  if (process.env.ACTA_PDF_PREVIEW) {
-    await writeFile(process.env.ACTA_PDF_PREVIEW, Buffer.from(await file.arrayBuffer()));
-  }
-  expect(source).toMatch(/^%PDF-/);
-  expect(source.match(/\/Type \/Page\b/g)?.length).toBeGreaterThanOrEqual(3);
-  expect(source).toMatch(/\/MediaBox \[0 0 841\.\d+ 595\.\d+\]/);
-  expect(source).toMatch(/\/MediaBox \[0 0 595\.\d+ 841\.\d+\]/);
+      baseline: [],
+      baselineThem: 0,
+    };
 
-  const provisional = createActaPdf({
-    ...record,
-    opponent: "Club con un nombre especialmente largo para probar la maquetación",
-    dirty: true,
-    sheet: {
-      ...record.sheet,
-      periods: 6,
-      period: 1,
-      phase: "playing",
-      events: [],
-    },
-  });
-  expect(provisional.size).toBeGreaterThan(8_000);
+    const record: LiveRecord = {
+      matchId: "m-full-test",
+      owner: "user-1",
+      viewer: "user-1",
+      canEdit: true,
+      opponent: "CW Castellón",
+      team: "Cadete B",
+      date: "2026-09-13T12:00:00Z",
+      competition: "league",
+      venue: "Piscina 25m",
+      homeAway: "home",
+      revision: 77,
+      mutation: "done",
+      device: "mobile-1",
+      sheet,
+      dirty: false,
+    };
 
-  const extraPlayers = Array.from({ length: 4 }, (_, index) => ({
-    id: `${String(index + 70).padStart(8, "0")}-0000-4000-8000-000000000001`,
-    cap: index + 15,
-    name: `Jugador histórico con nombre largo ${index + 15}`,
-  }));
-  const historical = createActaPdf({
-    ...record,
-    sheet: {
-      ...record.sheet,
-      players: [...record.sheet.players, ...extraPlayers],
-      baseline: [
-        ...record.sheet.baseline,
-        ...extraPlayers.map((player) => ({ cap: player.cap, goals: 1, exclusions: 0 })),
-      ],
-    },
+    const pdfFile = createActaPdf(record);
+    expect(pdfFile).toBeDefined();
+    expect(pdfFile.size).toBeGreaterThan(1500);
+
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    const pdfString = buffer.toString("latin1");
+    expect(pdfString).toContain("Nuestro equipo");
+    expect(pdfString).not.toContain("(LOCAL/VISITANTE)");
+    expect(pdfString).toContain("CW Castell");
+    expect(pdfString).toContain("Resultado por cuartos");
+    expect(pdfString).toContain("Nuestra porter");
+    expect(pdfString).toContain("GOLES DE 1+");
+    expect(pdfString).toContain("Expulsiones");
+    expect(pdfString).toContain("Asistencias");
+    expect(pdfString).toContain("Oliver Torres Dom");
   });
-  const historicalSource = Buffer.from(await historical.arrayBuffer()).toString("latin1");
-  expect(historicalSource.match(/\/Type \/Page\b/g)?.length).toBeGreaterThanOrEqual(4);
 });

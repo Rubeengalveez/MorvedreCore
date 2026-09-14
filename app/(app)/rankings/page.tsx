@@ -16,6 +16,10 @@ import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { type RankingMetric, type RankingScope } from "@/lib/domain/rankings";
 
 import { RankingsContent } from "@/components/rankings/rankings-content";
+import { SwimRankingsContent } from "@/components/rankings/swim-rankings-content";
+import type { RankingPageMetric } from "@/components/rankings/metric-tabs";
+import { getSwimRanking } from "@/server/queries/swim-times";
+import type { SwimDistance, SwimRankingMode, SwimStartType } from "@/lib/domain/swim-times";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -39,7 +43,8 @@ function parseScope(scopeStr: string | undefined): RankingScope {
   return { kind: "all" };
 }
 
-function parseMetric(metricStr: string | undefined): RankingMetric {
+function parseMetric(metricStr: string | undefined): RankingPageMetric {
+  if (metricStr === "swim") return "swim";
   if (metricStr === "exclusions" || metricStr === "mvp" || metricStr === "attendance") {
     return metricStr;
   }
@@ -69,6 +74,9 @@ export default async function RankingsPage({
     scope?: string;
     metric?: string;
     page?: string;
+    distance?: string;
+    mode?: string;
+    start?: string;
   }>;
 }) {
   const ctx = await getActiveProfileContext();
@@ -79,6 +87,9 @@ export default async function RankingsPage({
   const scope = parseScope(sp.scope);
   const metric = parseMetric(sp.metric);
   const page = parsePage(sp.page);
+  const distance: SwimDistance = sp.distance === "100" ? 100 : 50;
+  const mode: SwimRankingMode = sp.mode === "best" ? "best" : "latest";
+  const startType: SwimStartType = sp.start === "block" ? "block" : "water";
 
   const meta = await getRankingsMeta();
   if (!meta.season.id) {
@@ -93,13 +104,27 @@ export default async function RankingsPage({
     );
   }
 
-  const ranking = await getRankings({
-    season_id: meta.season.id,
-    scope,
-    metric,
-    my_player_id: activeProfile.id,
-    min_trainings_total: metric === "attendance" ? 3 : 0,
-  });
+  const ranking =
+    metric === "swim"
+      ? null
+      : await getRankings({
+          season_id: meta.season.id,
+          scope,
+          metric: metric as RankingMetric,
+          my_player_id: activeProfile.id,
+          min_trainings_total: metric === "attendance" ? 3 : 0,
+        });
+  const swimRows =
+    metric === "swim"
+      ? await getSwimRanking({
+          seasonId: meta.season.id,
+          distance,
+          mode,
+          startType,
+          category: scope.kind === "category" ? scope.category_code : null,
+          teamId: scope.kind === "team" ? scope.team_id : null,
+        })
+      : null;
 
   const scopeLabel = scopeLabelOf(scope, meta);
 
@@ -114,18 +139,30 @@ export default async function RankingsPage({
 
       <RankingsSectionNav active="season" />
 
-      <RankingsContent
-        meta={meta}
-        ranking={ranking as RankingResult}
-        activeScope={scope}
-        activeMetric={metric}
-        myPlayerId={activeProfile.id}
-        ownProfileId={ownProfile.id}
-        trackedPlayerIds={Array.from(
-          new Set([ownProfile.id, ...linkedProfiles.map((profile) => profile.id)]),
-        )}
-        page={page}
-      />
+      {metric === "swim" && swimRows ? (
+        <SwimRankingsContent
+          meta={meta}
+          rows={swimRows}
+          scope={scope}
+          distance={distance}
+          mode={mode}
+          startType={startType}
+          page={page}
+        />
+      ) : ranking ? (
+        <RankingsContent
+          meta={meta}
+          ranking={ranking as RankingResult}
+          activeScope={scope}
+          activeMetric={metric as RankingMetric}
+          myPlayerId={activeProfile.id}
+          ownProfileId={ownProfile.id}
+          trackedPlayerIds={Array.from(
+            new Set([ownProfile.id, ...linkedProfiles.map((profile) => profile.id)]),
+          )}
+          page={page}
+        />
+      ) : null}
     </PageShell>
   );
 }

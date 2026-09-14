@@ -1,8 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils/cn";
-import { Gorro, SilbatoActivo } from "@/components/brand/pictograms";
-import { Check, Minus, X } from "lucide-react";
+import { CalendarMarker, type CalendarMarkerKind } from "./calendar-key";
 import type { CalendarData, CalendarMatch, CalendarTraining } from "@/server/queries/calendar";
 import {
   getMonthCells,
@@ -105,6 +104,7 @@ export function MonthView({
           const hasItems = items.length > 0;
           const hasTraining = items.some((it) => it.kind === "training" && !it.cancelled);
           const hasMatch = items.some((it) => it.kind === "match" && it.status !== "cancelled");
+          const hasPostponed = items.some((it) => it.status === "postponed");
           const hasCancelled = items.some((it) => it.cancelled || it.status === "cancelled");
           const attendanceValues = items
             .filter(
@@ -122,116 +122,49 @@ export function MonthView({
                 : hasAttended
                   ? "present"
                   : null;
-          const teamDots = items
-            .filter((it) => !it.cancelled && it.status !== "cancelled")
-            .slice(0, 3);
+
+          const indicators: CalendarMarkerKind[] = [];
+          if (hasTraining) indicators.push("training");
+          if (hasMatch) indicators.push("match");
+          if (hasCancelled) indicators.push("cancelled");
+          if (hasPostponed) indicators.push("postponed");
+          if (unavailable) indicators.push("unavailable");
 
           return (
             <button
               key={cell.iso}
               type="button"
               onClick={() => onDayClick(cell.iso)}
-              aria-label={`${cell.iso}${hasItems ? `, ${items.length} evento(s)` : ""}${attendanceStatus === "present" ? ", asistió" : attendanceStatus === "absent" ? ", no asistió" : attendanceStatus === "mixed" ? ", asistencia parcial" : ""}${unavailable ? ", no disponible" : ""}${isToday ? ", hoy" : ""}`}
+              aria-label={`${cell.iso}${hasTraining ? ", entrenamiento" : ""}${hasMatch ? ", partido" : ""}${hasCancelled ? ", actividad cancelada" : ""}${hasPostponed ? ", partido aplazado" : ""}${hasItems ? `, ${items.length} evento(s)` : ""}${attendanceStatus === "present" ? ", asistió" : attendanceStatus === "absent" ? ", no asistió" : attendanceStatus === "mixed" ? ", asistencia parcial" : ""}${unavailable ? ", no disponible" : ""}${isToday ? ", hoy" : ""}`}
               aria-pressed={isSelected}
               className={cn(
                 "group relative flex min-h-12 cursor-pointer flex-col items-center justify-center rounded-lg border p-1 text-center transition-[background-color,border-color,color,box-shadow,transform] duration-200 motion-reduce:transition-none",
                 "focus-visible:ring-pool-blue focus-visible:ring-offset-paper focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
-                "touch-target active:scale-95",
+                "h-12 active:scale-95",
                 !cell.inMonth
                   ? "pointer-events-none border-transparent bg-transparent opacity-15"
-                  : isSelected
-                    ? hasMatch
-                      ? "bg-ball-gold text-pool-deep border-ball-gold scale-[1.03] shadow-md"
-                      : hasTraining
-                        ? "border-pool-blue bg-pool-blue text-paper scale-[1.03] shadow-md"
-                        : hasCancelled
-                          ? "border-goggle-red bg-goggle-red text-paper scale-[1.03] shadow-md"
-                          : "border-pool-deep bg-pool-deep text-paper scale-[1.03] shadow-md"
-                    : isToday
-                      ? "border-pool-blue/70 bg-pool-foam/30 text-pool-deep border-2 font-extrabold"
-                      : attendanceStatus === "absent"
-                        ? "border-danger/45 bg-danger/10 text-danger font-extrabold"
-                        : attendanceStatus === "present"
-                          ? "border-success/40 bg-success/10 text-pool-deep font-extrabold"
-                          : attendanceStatus === "mixed"
-                            ? "border-pool-blue/40 bg-pool-foam text-pool-deep font-extrabold"
-                            : hasMatch
-                              ? "border-ball-gold/40 bg-ball-gold/10 text-pool-deep hover:bg-ball-gold/20 font-extrabold"
-                              : hasTraining
-                                ? "border-pool-blue/15 bg-pool-foam/60 text-pool-deep hover:bg-pool-foam font-semibold"
-                                : hasCancelled
-                                  ? "border-goggle-red/25 bg-goggle-red/5 text-goggle-red hover:bg-goggle-red/10 font-semibold"
-                                  : unavailable
-                                    ? "border-ink-200/50 bg-ink-100/60 text-ink-400 opacity-65"
-                                    : "border-ink-200/60 bg-paper text-ink-900 hover:bg-ink-50/70",
+                  : attendanceStatus === "present"
+                    ? "border-emerald-300 bg-emerald-100 text-emerald-950"
+                    : attendanceStatus === "absent"
+                      ? "border-red-300 bg-red-100 text-red-950"
+                      : attendanceStatus === "mixed"
+                        ? "border-amber-300 bg-amber-100 text-amber-950"
+                        : "border-ink-200 bg-paper text-ink-900 hover:bg-pool-foam/40",
+                cell.inMonth && isToday && "border-pool-blue border-2",
+                cell.inMonth && isSelected && "ring-2 ring-pool-deep ring-inset",
               )}
             >
               <span className="font-mono text-sm font-extrabold select-none md:text-base">
                 {cell.day}
               </span>
-              {cell.inMonth && (hasItems || unavailable) ? (
-                <div className="mt-0.5 flex h-4 items-center justify-center gap-0.5 select-none">
-                  {hasTraining ? (
-                    <SilbatoActivo
-                      className="h-3 w-3 shrink-0"
-                      accent={isSelected ? "#fff" : "var(--pool-blue)"}
-                    />
-                  ) : null}
-                  {hasMatch ? (
-                    <Gorro
-                      className="h-3 w-3 shrink-0"
-                      accent={isSelected ? "#fff" : "var(--ball-gold)"}
-                    />
-                  ) : null}
-                  {hasCancelled ? (
-                    <span
-                      className={cn(
-                        "text-xs font-extrabold",
-                        isSelected ? "text-paper" : "text-goggle-red",
-                      )}
-                    >
-                      X
-                    </span>
-                  ) : null}
-                  {attendanceStatus === "present" ? (
-                    <Check
-                      className={cn("h-3.5 w-3.5", isSelected ? "text-paper" : "text-success")}
-                      aria-hidden="true"
-                    />
-                  ) : attendanceStatus === "absent" ? (
-                    <X
-                      className={cn("h-3.5 w-3.5", isSelected ? "text-paper" : "text-danger")}
-                      aria-hidden="true"
-                    />
-                  ) : attendanceStatus === "mixed" ? (
-                    <Minus
-                      className={cn("h-3.5 w-3.5", isSelected ? "text-paper" : "text-pool-blue")}
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  {unavailable && !hasItems ? (
-                    <span
-                      className={cn(
-                        "bg-ink-400 h-1.5 w-1.5 rounded-full",
-                        isSelected && "bg-paper",
-                      )}
-                    />
-                  ) : null}
-                </div>
-              ) : (
-                <div className="mt-0.5 h-4" />
-              )}
-              {teamDots.length > 0 ? (
-                <div className="absolute inset-x-1 bottom-1 flex gap-0.5">
-                  {teamDots.map((item) => (
-                    <span
-                      key={`${item.kind}-${item.id}`}
-                      className="h-0.5 flex-1 rounded-full"
-                      style={{ backgroundColor: isSelected ? "var(--paper)" : item.team_color }}
-                    />
-                  ))}
-                </div>
-              ) : null}
+              <span className="mt-0.5 flex h-3.5 items-center justify-center gap-0.5">
+                {cell.inMonth ? (
+                  <>
+                    {indicators.slice(0, indicators.length > 2 ? 1 : 2).map((kind) => <CalendarMarker key={kind} kind={kind} compact />)}
+                    {indicators.length > 2 ? <span className="text-[10px] font-bold" aria-label={`${indicators.length - 1} indicadores más`}>+{indicators.length - 1}</span> : null}
+                  </>
+                ) : null}
+              </span>
             </button>
           );
         })}

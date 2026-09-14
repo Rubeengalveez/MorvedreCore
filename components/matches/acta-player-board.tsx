@@ -41,7 +41,7 @@ export function ActaPlayerBoard({
   playing: boolean;
   onPlayer: (side: Side, cap: number) => void;
 }) {
-  const own = [...sheet.players].sort((a, b) => a.cap - b.cap);
+  const own = sheet.players.filter((p) => !p.retired).sort((a, b) => a.cap - b.cap);
   const rival = [...sheet.opponentCaps].sort((a, b) => a - b);
   return (
     <section aria-label="Goles y expulsiones por jugador" className="bg-white px-2 py-3 sm:px-3">
@@ -76,16 +76,25 @@ export function ActaPlayerBoard({
                   className={`${side === "them" ? "flex items-center justify-center" : "contents"}`}
                 >
                   <strong
-                    className={`grid shrink-0 place-items-center rounded-md tabular-nums ${side === "us" ? "col-start-1 row-start-1 row-span-2 h-10 min-w-8 border border-[#062048] bg-[#062048] text-2xl font-black text-white" : "h-10 min-w-8 border border-[#062048] bg-[#f4c430] text-2xl font-black text-[#062048]"}`}
+                    className={`relative grid shrink-0 place-items-center rounded-md tabular-nums ${side === "us" ? "col-start-1 row-span-2 row-start-1 h-10 min-w-8 border border-[#062048] bg-[#062048] text-2xl font-black text-white" : "h-10 min-w-8 border border-[#062048] bg-[#f4c430] text-2xl font-black text-[#062048]"}`}
                   >
                     {cap}
+                    {out && (
+                      <span
+                        className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs"
+                        title={totals.red ? "Expulsado por tarjeta roja" : "Fuera por 3 expulsiones"}
+                      >
+                        <span aria-hidden="true">✕</span>
+                        <span className="sr-only">Fuera</span>
+                      </span>
+                    )}
                   </strong>
                   {player && (
-                    <span className="col-start-2 row-start-1 min-w-0 overflow-hidden pl-1 text-sm leading-tight font-semibold">
+                    <span className="relative col-start-2 row-start-1 min-w-0 overflow-hidden pr-3 pl-1 text-sm leading-tight font-semibold">
                       <ActaPlayerName name={player.name} />
                       {keeper && cap === sheet.keeper && (
                         <span
-                          className="ml-1 inline-block h-2 w-2 rounded-full bg-blue-600"
+                          className="absolute top-1/2 right-0 h-2 w-2 -translate-y-1/2 rounded-full bg-blue-600"
                           title="En juego"
                         >
                           <span className="sr-only">En juego</span>
@@ -119,8 +128,8 @@ export function ActaPlayerBoard({
                         />
                       ))}
                     </span>
-                    <span className="min-w-0 text-xs leading-tight font-semibold text-center">
-                      <span className="whitespace-nowrap">{totals.exclusions}/3</span>{out ? <span className="block">Fuera</span> : side === "us" ? " exp." : ""}
+                    <span className="min-w-0 text-center text-xs leading-tight font-semibold">
+                      <span className="whitespace-nowrap">{totals.exclusions}/3{side === "us" ? " exp." : ""}</span>
                     </span>
                   </span>
                 </span>

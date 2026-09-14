@@ -79,7 +79,7 @@ describe("calendar event sheet cards", () => {
     render(<MatchRow match={match} isCoach activeProfileId="profile-1" onChanged={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "CN Terrassa contra Morvedre" })).toBeVisible();
-    expect(screen.getByText("Torneo")).toBeVisible();
+    expect(screen.getByText(/Partido · Torneo/)).toBeVisible();
     expect(screen.getByText("Piscina CN Terrassa")).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Abrir Piscina CN Terrassa en el mapa" }),

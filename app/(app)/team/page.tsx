@@ -128,9 +128,7 @@ export default async function TeamPage() {
             >
               {orderedTeams.length} {orderedTeams.length === 1 ? "equipo" : "equipos"}
             </h2>
-            <span className="text-ink-500 shrink-0 text-sm font-bold">
-              De menor a mayor
-            </span>
+            <span className="text-ink-500 shrink-0 text-sm font-bold">De menor a mayor</span>
           </div>
           <Card className="divide-ink-200 divide-y">
             {orderedTeams.map((team) => (

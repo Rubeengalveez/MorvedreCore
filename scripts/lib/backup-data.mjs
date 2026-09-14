@@ -27,6 +27,7 @@ export const BACKUP_TABLE_KEYS = {
   shop_product_images: ["id"],
   shop_products: ["id"],
   streaks: ["id"],
+  swim_time_entries: ["id"],
   team_rosters: ["team_id", "player_id"],
   team_staff: ["team_id", "profile_id", "role"],
   teams: ["id"],

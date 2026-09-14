@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { loadLiveMatch, syncLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
+import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
 import { sheetSchema, type LiveSheet } from "@/lib/domain/live-match";
 import {
   liveDevice,
@@ -60,6 +61,14 @@ export function useLiveMatch() {
         await writeQueue.current;
         await persist((latest) => ({
           ...latest,
+          sheet: saved.sheet
+            ? latest.mutation === flight.mutation
+              ? saved.sheet
+              : reconcileLiveRoster(
+                  latest.sheet,
+                  saved.sheet.players.filter((p) => !p.retired),
+                )
+            : latest.sheet,
           revision: saved.revision,
           owner: saved.owner,
           device: liveDevice(),
@@ -135,9 +144,7 @@ export function useLiveMatch() {
               throw new Error("No hay conexión. Abre el partido con internet para prepararlo.");
           }
           if (!next)
-            throw new Error(
-              "Abre este partido con conexión una vez para prepararlo en el móvil.",
-            );
+            throw new Error("Abre este partido con conexión una vez para prepararlo en el móvil.");
           if (stopped) return;
           current.current = next;
           setRecord(next);
@@ -240,12 +247,11 @@ export function useLiveMatch() {
         location.reload();
         return;
       }
-      const attempt =
-        previousAttempt ?? {
-          mutation: generateUuid(),
-          revision: remote.revision,
-          sheet: remote.sheet,
-        };
+      const attempt = previousAttempt ?? {
+        mutation: generateUuid(),
+        revision: remote.revision,
+        sheet: remote.sheet,
+      };
       if (!previousAttempt) {
         await persist((latest) => ({ ...latest, takeoverFlight: attempt }));
       }

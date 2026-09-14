@@ -6,7 +6,7 @@ import { LiveMatchEntryState } from "./live-match-entry-state";
 
 import * as Dialog from "@radix-ui/react-dialog";
 
-import { ChevronLeft, X } from "lucide-react";
+import { ArrowRightLeft, ChevronLeft, Download, Share2, X } from "lucide-react";
 
 import {
   actionLabels,
@@ -32,6 +32,7 @@ import { ActaScoreboard } from "./acta-scoreboard";
 import { ActaPlayerName } from "./acta-player-name";
 import { ActaPlayerBoard } from "./acta-player-board";
 import { ActaKeeperControl } from "./acta-keeper-control";
+import { keeperQuarters, selectMatchKeeper } from "@/lib/domain/live-match-keepers";
 import { ActaMatchControls } from "./acta-match-controls";
 
 type Panel =
@@ -51,6 +52,7 @@ type Panel =
   | "assist-edit"
   | "penalty-shooter"
   | "penalty-result"
+  | "penalty-miss"
   | "duplicate-penalty"
   | "assist-relation"
   | "penalty-relation"
@@ -90,12 +92,17 @@ export function LiveMatchClient() {
     correctedIsPenalty: boolean;
   } | null>(null);
   const localMutation = useRef(false);
+  const closingPanel = useRef(false);
   const dismissedPending = useRef<string | null>(null);
   const lastActivePanelRef = useRef<Exclude<Panel, null>>("players");
   if (panel !== null) {
     lastActivePanelRef.current = panel;
   }
   const activePanel = panel ?? lastActivePanelRef.current;
+
+  useEffect(() => {
+    if (panel !== null) closingPanel.current = false;
+  }, [panel]);
 
   const [notice, setNotice] = useState("");
 
@@ -122,6 +129,8 @@ export function LiveMatchClient() {
 
   const [benchKind, setBenchKind] = useState<"timeout" | "cards">("timeout");
   const [showAllKeepers, setShowAllKeepers] = useState(false);
+  const [keeperStart, setKeeperStart] = useState(false);
+  const [keeperMode, setKeeperMode] = useState<"change" | "correct">("change");
 
   useEffect(() => {
     if (!notice) return;
@@ -164,19 +173,25 @@ export function LiveMatchClient() {
   const closed = s.phase === "finished";
   const enabled = writable && !closed && !busy;
   const playing = enabled && s.phase === "playing";
-  const orderedPlayers = [...s.players].sort((a, b) => a.cap - b.cap);
+  const orderedPlayers = s.players.filter((p) => !p.retired).sort((a, b) => a.cap - b.cap);
 
   const currentPlayer = s.players.find((p) => p.cap === cap);
 
   const active = s.events.filter((e) => !e.deleted);
   const deletingHasPenaltyResult = Boolean(
-    deleting?.side === "them" &&
-    deleting.kind === "penalty" &&
+    deleting?.kind === "penalty" &&
     s.events.some(
       (event) =>
         !event.deleted && event.origin === "penalty_flow" && event.related_event_id === deleting.id,
     ),
   );
+
+  function openKeeper(start = false) {
+    setKeeperStart(start);
+    setKeeperMode("change");
+    setShowAllKeepers(false);
+    setPanel("keeper");
+  }
 
   function openPlayer(which: Side, n: number) {
     setSide(which);
@@ -197,6 +212,7 @@ export function LiveMatchClient() {
   }
 
   function closePanel() {
+    closingPanel.current = true;
     setPanel(null);
 
     setEditing(null);
@@ -210,6 +226,8 @@ export function LiveMatchClient() {
   }
 
   async function dismissPanel() {
+    if (closingPanel.current) return;
+    closingPanel.current = true;
     const continuationOpen =
       Boolean(s.pending) &&
       ["assist", "penalty-shooter", "penalty-result", "duplicate-penalty"].includes(panel ?? "");
@@ -223,6 +241,7 @@ export function LiveMatchClient() {
       const saved = await patch({ ...s, pending: null }, false);
       if (!saved) {
         dismissedPending.current = null;
+        closingPanel.current = false;
         return;
       }
     }
@@ -255,6 +274,10 @@ export function LiveMatchClient() {
     }
     if (panel === "penalty-result") {
       setPanel("penalty-shooter");
+      return;
+    }
+    if (panel === "penalty-miss") {
+      setPanel("shot");
       return;
     }
     if (panel === "duplicate-penalty" && duplicate) {
@@ -292,7 +315,7 @@ export function LiveMatchClient() {
     return ok;
   }
 
-  async function add(kind: ActionKind, eventSide: Side = side) {
+  async function add(kind: ActionKind, eventSide: Side = side, missOutcome?: "out" | "save") {
     if (!s || (!playing && !editing)) return;
 
     if (!editing && eventSide === "them" && isGoal(kind)) {
@@ -300,7 +323,7 @@ export function LiveMatchClient() {
       if (!currentKeeper || currentKeeper.red || currentKeeper.exclusions >= 3) {
         setNotice("Elige quién está de portero antes de apuntar el gol rival");
         setShowAllKeepers(false);
-        setPanel("keeper");
+        openKeeper();
         return;
       }
     }
@@ -308,7 +331,8 @@ export function LiveMatchClient() {
     const bench = kind === "timeout" || kind.startsWith("coach_");
 
     const keepPenaltyLink =
-      editing?.origin === "penalty_flow" && (kind === "goal_penalty" || kind === "penalty_missed");
+      editing?.origin === "penalty_flow" &&
+      ["goal_penalty", "penalty_missed", "goal", "penalty_save", "keeper_out"].includes(kind);
     const keepAssistLink = editing?.kind === "assist" && kind === "assist";
     const event: MatchEvent = {
       id: editing?.id ?? generateUuid(),
@@ -318,6 +342,7 @@ export function LiveMatchClient() {
       cap: bench ? null : cap,
 
       kind,
+      missOutcome: kind === "penalty_missed" ? missOutcome : undefined,
 
       period: editing?.period ?? s.period,
 
@@ -386,7 +411,7 @@ export function LiveMatchClient() {
     if (
       !editing &&
       eventSide === "us" &&
-      (kind === "save" || kind === "penalty_save") &&
+      (kind === "save" || kind === "penalty_save" || kind === "keeper_out") &&
       cap !== s.keeper
     ) {
       setKeeperAction(event);
@@ -432,7 +457,7 @@ export function LiveMatchClient() {
       if (await patch({ ...s, events }, false)) {
         setNotice(`${actionLabels[kind]} registrado · Elige nuevo portero`);
         setShowAllKeepers(false);
-        setPanel("keeper");
+        openKeeper();
       }
       return;
     }
@@ -445,10 +470,10 @@ export function LiveMatchClient() {
     }
   }
 
-  async function addRivalPenalty() {
+  async function addRivalPenalty(penaltySide: Side = "them") {
     const penalty: MatchEvent = {
       id: editing?.id ?? generateUuid(),
-      side: "them",
+      side: penaltySide,
       cap,
       kind: "penalty",
       period: editing?.period ?? s.period,
@@ -458,7 +483,7 @@ export function LiveMatchClient() {
       origin: "manual",
     };
     if (editing) {
-      await add("penalty", "them");
+      await add("penalty", penaltySide);
       return;
     }
     const next = {
@@ -471,7 +496,7 @@ export function LiveMatchClient() {
       },
     };
     if (await patch(next, false)) {
-      setNotice(`Penalti del rival #${cap} guardado`);
+      setNotice(`Penalti de ${penaltySide === "us" ? "Morvedre" : "rival"} #${cap} guardado`);
       setPanel("penalty-shooter");
     }
   }
@@ -483,13 +508,41 @@ export function LiveMatchClient() {
     }
   }
 
-  async function finishPenaltyShot(result: "goal" | "miss") {
+  async function finishPenaltyShot(result: "goal" | "save" | "out") {
     if (s.pending?.kind !== "penalty_shot" || s.pending.shooter_cap === null) return;
     const shooterCap = s.pending.shooter_cap;
     const penaltyEventId = s.pending.penalty_event_id;
     const penalty = s.events.find((event) => event.id === penaltyEventId && !event.deleted);
     if (!penalty) {
       setNotice("El penalti ya no está disponible. Revisa las jugadas.");
+      return;
+    }
+    if (penalty.side === "us") {
+      const keeper = s.keeper === null ? null : playerTotals(s, "us", s.keeper);
+      if (!keeper || keeper.red || keeper.exclusions >= 3) {
+        setNotice("Elige un portero disponible antes de registrar el lanzamiento.");
+        openKeeper();
+        return;
+      }
+      const event: MatchEvent = {
+        id: generateUuid(),
+        side: result === "goal" ? "them" : "us",
+        cap: result === "goal" ? shooterCap : s.keeper,
+        kind: result === "goal" ? "goal" : result === "save" ? "penalty_save" : "keeper_out",
+        period: penalty.period,
+        keeper: s.keeper,
+        deleted: false,
+        related_event_id: penalty.id,
+        origin: "penalty_flow",
+      };
+      if (await patch({ ...s, events: [...s.events, event], pending: null }))
+        setNotice(
+          result === "goal"
+            ? "Gol de penalti rival registrado"
+            : result === "save"
+              ? "Penalti parado registrado"
+              : "Penalti fuera registrado",
+        );
       return;
     }
     if (result === "goal") {
@@ -515,6 +568,7 @@ export function LiveMatchClient() {
       side: "us",
       cap: shooterCap,
       kind: result === "goal" ? "goal_penalty" : "penalty_missed",
+      missOutcome: result === "goal" ? undefined : result,
       period: penalty.period,
       keeper: null,
       deleted: false,
@@ -622,7 +676,7 @@ export function LiveMatchClient() {
     if (
       await patch({
         ...s,
-        keeper: changeKeeper ? keeperAction.cap : s.keeper,
+        ...(changeKeeper ? selectMatchKeeper(s, keeperAction.cap, "change") : s),
         events: [...s.events, keeperAction],
       })
     ) {
@@ -658,31 +712,45 @@ export function LiveMatchClient() {
     setDeleting(null);
   }
 
-  async function share() {
+  function downloadOrViewPdf() {
     if (!pdf) return;
+    setShareError("");
+    try {
+      const url = URL.createObjectURL(pdf);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = pdf.name;
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch {
+      setShareError("No se pudo descargar el PDF en este dispositivo.");
+    }
+  }
+
+  async function share() {
+    if (!pdf || !record) return;
     setShareError("");
 
     try {
       const file = pdf;
 
-      if (navigator.canShare?.({ files: [file] }))
-        await navigator.share({ files: [file], title: "Acta · Morvedre Core" });
-      else {
-        const url = URL.createObjectURL(file);
-
-        const a = document.createElement("a");
-
-        a.href = url;
-
-        a.download = file.name;
-
-        a.click();
-
-        setTimeout(() => URL.revokeObjectURL(url), 30000);
+      if (navigator.canShare?.({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: `Acta · ${record.team} vs ${record.opponent}`,
+        });
+      } else {
+        downloadOrViewPdf();
       }
     } catch (e) {
-      if (!(e instanceof DOMException && e.name === "AbortError"))
-        setShareError("No pudimos compartir el PDF. Vuelve a intentarlo.");
+      if (!(e instanceof DOMException && e.name === "AbortError")) {
+        setShareError(
+          "No pudimos compartir el PDF directamente. Puedes descargarlo con el botón de abajo.",
+        );
+      }
     }
   }
 
@@ -693,12 +761,13 @@ export function LiveMatchClient() {
     periods: s.phase === "playing" ? `Terminar cuarto ${s.period}` : "Cuartos del partido",
     history: "Corregir una jugada",
     "player-stats": "Estadísticas del jugador",
-    keeper: "Portero en juego",
+    keeper: keeperStart ? `Portero del cuarto ${s.period + 1}` : "Portero en juego",
     "keeper-action": "¿Quién estaba en portería?",
     assist: "¿Quién dio la asistencia?",
     "assist-edit": "Corregir asistencia",
     "penalty-shooter": "¿Quién tira el penalti?",
     "penalty-result": "Resultado del penalti",
+    "penalty-miss": "¿Cómo termina el penalti?",
     "duplicate-penalty": "¿Es el mismo gol de penalti?",
     "assist-relation": "Resolver la asistencia",
     "penalty-relation": "Resolver el penalti vinculado",
@@ -724,12 +793,20 @@ export function LiveMatchClient() {
     : record.dirty
       ? "Guardado · Enviando…"
       : notice || (!writable && !closed ? "Solo consulta" : "Guardado");
-  const panelContext = editing ? `Corrigiendo · Cuarto ${editing.period}` : `Cuarto ${s.period}`;
+  const panelContext = editing
+    ? `Corrigiendo · Cuarto ${editing.period}`
+    : activePanel === "share"
+      ? closed
+        ? "Acta final"
+        : "Acta"
+      : `Cuarto ${s.period}`;
 
   const isKeeperCap = side === "us" && (cap === 1 || cap === 13 || cap === s.keeper);
 
   const panelHeightClass = (() => {
     if (activePanel === "keeper") return styles.panelKeeper;
+    if (activePanel === "share") return styles.panelShare;
+    if (activePanel === "takeover") return styles.panelTakeover;
     if (
       [
         "players",
@@ -741,8 +818,6 @@ export function LiveMatchClient() {
         "assist-relation",
         "penalty-shooter",
         "rival-caps",
-        "share",
-        "takeover",
       ].includes(activePanel)
     ) {
       return styles.panelPlayers;
@@ -753,7 +828,7 @@ export function LiveMatchClient() {
     if (activePanel === "goal") {
       return styles.panelGoal;
     }
-    if (activePanel === "shot") {
+    if (activePanel === "shot" || activePanel === "penalty-miss") {
       return styles.panelShot;
     }
     if (activePanel === "sanction") {
@@ -858,16 +933,23 @@ export function LiveMatchClient() {
             </div>
 
             <button
+              type="button"
               className={styles.setupKeeper}
 
-              onClick={() => setPanel("keeper")}
+              onClick={() => openKeeper()}
 
               disabled={!enabled}
             >
-              Portero inicial:{" "}
-              {s.keeper
-                ? `#${s.keeper} ${s.players.find((p) => p.cap === s.keeper)?.name ?? ""}`
-                : "Elegir portero"}
+              <span className={styles.setupKeeperLabel}>Portero inicial</span>
+              <span className={styles.setupKeeperValue}>
+                <span className={styles.setupKeeperCap}>{s.keeper ?? "—"}</span>
+                <span className={styles.setupKeeperName}>
+                  {s.keeper
+                    ? (s.players.find((p) => p.cap === s.keeper)?.name ?? "Sin nombre")
+                    : "Elegir portero"}
+                </span>
+              </span>
+              <span className={styles.setupKeeperAction}>{s.keeper ? "Cambiar" : "Elegir"}</span>
             </button>
 
             <button
@@ -902,7 +984,7 @@ export function LiveMatchClient() {
             disabled={!enabled}
             onChange={() => {
               setShowAllKeepers(false);
-              setPanel("keeper");
+              openKeeper();
             }}
           />
         )}
@@ -915,7 +997,9 @@ export function LiveMatchClient() {
 
             disabled={!enabled || !s.keeper}
 
-            onClick={() => void change({ ...s, phase: "playing" })}
+            onClick={() =>
+              s.keeper !== null && void change(selectMatchKeeper(s, s.keeper, "start"))
+            }
           >
             Empezar partido
           </button>
@@ -925,7 +1009,7 @@ export function LiveMatchClient() {
 
             disabled={!enabled}
 
-            onClick={() => void change({ ...s, phase: "playing", period: s.period + 1 })}
+            onClick={() => openKeeper(true)}
           >
             Empezar cuarto {s.period + 1}
           </button>
@@ -973,7 +1057,7 @@ export function LiveMatchClient() {
           if (!open) void dismissPanel();
         }}
       >
-        <Dialog.Portal>
+        <>
           <Dialog.Overlay className={styles.overlay} />
 
           <Dialog.Content
@@ -1199,6 +1283,8 @@ export function LiveMatchClient() {
                     ["Expulsiones", totals.exclusions],
                     ...(isKeeperCap
                       ? [
+                          ["Tiros recibidos", totals.received],
+                          ["Tiros rivales fuera", totals.receivedOut],
                           ["Paradas", totals.saves],
                           ["Goles encajados", totals.conceded],
                         ]
@@ -1236,14 +1322,16 @@ export function LiveMatchClient() {
                         <div className={styles.actionGrid}>
                           {button("Parada", () => void add("save"), styles.actionSave)}
                           {button(
-                            "Penalti parado",
-                            () => void add("penalty_save"),
+                            "Tiro recibido",
+                            () => void add("keeper_out"),
                             styles.actionPenaltySave,
                           )}
                         </div>
                       )}
 
-                      <div className={styles.actionGrid}>
+                      <div
+                        className={`${styles.actionGrid} ${side === "them" ? styles.rivalActionGrid : ""}`}
+                      >
                         {button(
                           "Gol",
                           () => (side === "them" ? void add("goal") : setPanel("goal")),
@@ -1262,11 +1350,7 @@ export function LiveMatchClient() {
                         )}
 
                         {side === "them" &&
-                          button(
-                            "Penalti · +1 expulsión",
-                            () => void addRivalPenalty(),
-                            styles.actionPenalty,
-                          )}
+                          button("Penalti", () => void addRivalPenalty(), styles.actionPenalty)}
                       </div>
 
                       {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
@@ -1275,7 +1359,7 @@ export function LiveMatchClient() {
                           disabled={!enabled}
                           onClick={() => {
                             setShowAllKeepers(false);
-                            setPanel("keeper");
+                            openKeeper();
                           }}
                         >
                           Cambiar portero · Ahora juega el #{s.keeper}
@@ -1326,8 +1410,23 @@ export function LiveMatchClient() {
                   )}
                   {button(
                     actionLabels["penalty_missed"],
-                    () => void add("penalty_missed"),
+                    () => setPanel("penalty-miss"),
                     styles.actionShotMissed,
+                  )}
+                </div>
+              )}
+
+              {activePanel === "penalty-miss" && (
+                <div className={styles.actionList}>
+                  {button(
+                    "Fuera / palo",
+                    () => void add("penalty_missed", side, "out"),
+                    styles.actionShotOut,
+                  )}
+                  {button(
+                    "Parada del portero",
+                    () => void add("penalty_missed", side, "save"),
+                    styles.actionSave,
                   )}
                 </div>
               )}
@@ -1340,8 +1439,8 @@ export function LiveMatchClient() {
                     styles.actionSanctionExclusion,
                   )}
                   {button(
-                    "Penalti cometido · +1 expulsión",
-                    () => void add("penalty"),
+                    "Penalti",
+                    () => void addRivalPenalty("us"),
                     styles.actionSanctionPenalty,
                   )}
                   {button(
@@ -1466,48 +1565,71 @@ export function LiveMatchClient() {
 
               {activePanel === "penalty-shooter" && pending?.kind === "penalty_shot" && (
                 <div className="space-y-3">
-                  <p className="rounded-xl bg-amber-50 p-3 text-base font-semibold text-amber-950">
-                    La sanción del rival ya está guardada. Elige quién lanza.
+                  <p className={styles.penaltyNotice}>
+                    La sanción ya está guardada. Elige quién lanza.
                   </p>
-                  <div className={styles.playerList}>
-                    {orderedPlayers.map((player) => {
-                      const totals = playerTotals(s, "us", player.cap);
-                      const out = totals.red || totals.exclusions >= 3;
-                      return (
+                  {s.events.find((event) => event.id === pending.penalty_event_id)?.side ===
+                  "us" ? (
+                    <div className={styles.rivalGrid}>
+                      {s.opponentCaps.map((number) => (
                         <button
-                          key={player.cap}
+                          key={number}
                           type="button"
-                          disabled={!enabled || out}
-                          className={`${styles.playerCard} ${out ? styles.playerCardOut : ""}`}
-                          onClick={() => void choosePenaltyShooter(player.cap)}
+                          className={styles.action}
+                          disabled={
+                            !enabled ||
+                            playerTotals(s, "them", number).red ||
+                            playerTotals(s, "them", number).exclusions >= 3
+                          }
+                          onClick={() => void choosePenaltyShooter(number)}
                         >
-                          <div className={styles.cardTopRow}>
-                            <div className={styles.cardCapGroup}>
-                              <span className={styles.capBadge}>{player.cap}</span>
-                              {player.cap === s.keeper && (
-                                <span className={styles.keeperTag}>POR</span>
-                              )}
-                            </div>
-                            <span
-                              className={totals.goals > 0 ? styles.cardGoals : styles.cardGoalsZero}
-                            >
-                              {totals.goals} {totals.goals === 1 ? "gol" : "goles"}
-                            </span>
-                          </div>
-                          <div className={styles.cardNameRow}>
-                            <span className={styles.cardPlayerName}>{player.name}</span>
-                          </div>
-                          <div
-                            className={`${styles.cardFoulsBar} ${
-                              out ? styles.foulsOut : styles.foulsClean
-                            }`}
-                          >
-                            {out ? "FUERA" : "Elegir lanzador"}
-                          </div>
+                          #{number}
                         </button>
-                      );
-                    })}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className={styles.playerList}>
+                      {orderedPlayers.map((player) => {
+                        const totals = playerTotals(s, "us", player.cap);
+                        const out = totals.red || totals.exclusions >= 3;
+                        return (
+                          <button
+                            key={player.cap}
+                            type="button"
+                            disabled={!enabled || out}
+                            className={`${styles.playerCard} ${out ? styles.playerCardOut : ""}`}
+                            onClick={() => void choosePenaltyShooter(player.cap)}
+                          >
+                            <div className={styles.cardTopRow}>
+                              <div className={styles.cardCapGroup}>
+                                <span className={styles.capBadge}>{player.cap}</span>
+                                {player.cap === s.keeper && (
+                                  <span className={styles.keeperTag}>POR</span>
+                                )}
+                              </div>
+                              <span
+                                className={
+                                  totals.goals > 0 ? styles.cardGoals : styles.cardGoalsZero
+                                }
+                              >
+                                {totals.goals} {totals.goals === 1 ? "gol" : "goles"}
+                              </span>
+                            </div>
+                            <div className={styles.cardNameRow}>
+                              <span className={styles.cardPlayerName}>{player.name}</span>
+                            </div>
+                            <div
+                              className={`${styles.cardFoulsBar} ${
+                                out ? styles.foulsOut : styles.foulsClean
+                              }`}
+                            >
+                              {out ? "FUERA" : "Elegir lanzador"}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <button
                     type="button"
                     className="min-h-14 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
@@ -1522,22 +1644,32 @@ export function LiveMatchClient() {
                 <div className="space-y-3">
                   <p className="text-center text-lg font-bold">
                     Lanza el #{pending.shooter_cap}{" "}
-                    {s.players.find((player) => player.cap === pending.shooter_cap)?.name}
+                    {s.events.find((event) => event.id === pending.penalty_event_id)?.side ===
+                    "them"
+                      ? s.players.find((player) => player.cap === pending.shooter_cap)?.name
+                      : "· Rival"}
                   </p>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-3 gap-2">
                     <button
                       type="button"
-                      className="min-h-16 rounded-xl bg-emerald-700 px-4 text-lg font-extrabold text-white"
+                      className={`${styles.action} ${styles.penaltyOutcome} ${styles.penaltyGoal}`}
                       onClick={() => void finishPenaltyShot("goal")}
                     >
                       Gol
                     </button>
                     <button
                       type="button"
-                      className="min-h-16 rounded-xl border-2 border-slate-500 bg-white px-4 text-lg font-extrabold"
-                      onClick={() => void finishPenaltyShot("miss")}
+                      className={`${styles.action} ${styles.actionSave} ${styles.penaltyOutcome} ${styles.penaltySave}`}
+                      onClick={() => void finishPenaltyShot("save")}
                     >
-                      Fallo
+                      Parada
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.action} ${styles.actionShot} ${styles.penaltyOutcome}`}
+                      onClick={() => void finishPenaltyShot("out")}
+                    >
+                      Fuera / palo
                     </button>
                   </div>
                   <button
@@ -1746,8 +1878,30 @@ export function LiveMatchClient() {
 
               {activePanel === "keeper" && (
                 <div className="space-y-3">
+                  {" "}
+                  {!keeperStart && s.phase !== "ready" && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["change", "correct"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          aria-pressed={keeperMode === mode}
+                          onClick={() => setKeeperMode(mode)}
+                          className={`min-h-12 rounded-xl border-2 px-3 text-sm font-bold ${keeperMode === mode ? "border-[#062048] bg-[#062048] text-white" : "border-slate-300 bg-white text-[#062048]"}`}
+                        >
+                          {mode === "change" ? "Cambio real" : "Corregir selección"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <p className="rounded-xl border border-[#062048] bg-white p-3 text-base leading-relaxed text-[#062048]">
-                    Toca el portero que entra al agua. Los próximos goles rivales se le atribuirán.
+                    {keeperStart
+                      ? `¿Quién juega en portería el cuarto ${s.period + 1}? Toca su nombre para empezar.`
+                      : s.phase === "ready"
+                        ? "Elige el portero que empieza el partido."
+                        : keeperMode === "correct"
+                          ? "Sustituye al portero elegido por error en el último tramo. Sus paradas y goles recibidos de ese tramo se reasignarán."
+                          : "Elige quién entra ahora. Este cuarto contará para ambos porteros."}
                   </p>
                   <div className={styles.playerList}>
                     {orderedPlayers
@@ -1767,7 +1921,15 @@ export function LiveMatchClient() {
                             key={player.cap}
                             type="button"
                             disabled={!enabled || out}
-                            onClick={() => void patch({ ...s, keeper: player.cap })}
+                            onClick={() =>
+                              void patch(
+                                selectMatchKeeper(
+                                  s,
+                                  player.cap,
+                                  keeperStart ? "start" : keeperMode,
+                                ),
+                              )
+                            }
                             className={`${styles.playerCard} ${isCurrentKeeper ? styles.playerCardActive : ""} ${out ? styles.playerCardOut : ""}`}
                           >
                             <div className={styles.cardTopRow}>
@@ -1786,6 +1948,12 @@ export function LiveMatchClient() {
                             <div className={styles.cardNameRow}>
                               <span className={styles.cardPlayerName}>{player.name}</span>
                             </div>
+                            <p className="px-3 pb-2 text-sm font-semibold text-slate-700">
+                              Cuartos registrados:{" "}
+                              {keeperQuarters(s, player.cap)
+                                .map((q) => `${q}º`)
+                                .join(" · ") || "Ninguno"}
+                            </p>
                             <div
                               className={`${styles.cardFoulsBar} ${
                                 out
@@ -1798,8 +1966,14 @@ export function LiveMatchClient() {
                               {out
                                 ? "FUERA"
                                 : isCurrentKeeper
-                                  ? "Portero actual"
-                                  : "Poner de portero"}
+                                  ? keeperStart
+                                    ? "Seguir y empezar cuarto"
+                                    : "Portero actual"
+                                  : keeperStart
+                                    ? "Elegir y empezar cuarto"
+                                    : keeperMode === "correct"
+                                      ? "Corregir a este portero"
+                                      : "Poner de portero"}
                             </div>
                           </button>
                         );
@@ -2134,47 +2308,160 @@ export function LiveMatchClient() {
                 </div>
               )}
 
-              {activePanel === "share" && (
-                <>
-                  <p>
-                    {closed ? "Acta final" : "Acta provisional"} · {record.team} contra{" "}
-                    {record.opponent}
-                  </p>
+              {activePanel === "share" &&
+                (() => {
+                  const totalUs = score(s, "us");
+                  const totalThem = score(s, "them");
+                  const outcome =
+                    totalUs > totalThem ? "win" : totalUs === totalThem ? "draw" : "loss";
+                  const outcomeStyles = {
+                    win: {
+                      card: "border-emerald-200 bg-emerald-50/60",
+                      score: "text-emerald-900",
+                      badge: "bg-emerald-100/90 text-emerald-800 border-emerald-200",
+                      partials: "text-emerald-800/90",
+                      statusText: "Victoria",
+                    },
+                    draw: {
+                      card: "border-amber-200 bg-amber-50/60",
+                      score: "text-amber-900",
+                      badge: "bg-amber-100/90 text-amber-800 border-amber-200",
+                      partials: "text-amber-800/90",
+                      statusText: "Empate",
+                    },
+                    loss: {
+                      card: "border-rose-200 bg-rose-50/60",
+                      score: "text-rose-900",
+                      badge: "bg-rose-100/90 text-rose-800 border-rose-200",
+                      partials: "text-rose-800/90",
+                      statusText: "Derrota",
+                    },
+                  }[outcome];
 
-                  <p>
-                    El PDF incluye el resultado, los parciales, las estadísticas y las jugadas.
-                    Puedes enviarlo por WhatsApp o descargarlo.
-                  </p>
+                  return (
+                    <div className="space-y-3 pb-2">
+                      <div
+                        className={`rounded-xl border p-3.5 shadow-sm transition-colors ${outcomeStyles.card}`}
+                      >
+                        <div className="flex items-center justify-between text-xs font-bold tracking-wider uppercase">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-slate-600">
+                              {closed ? "Acta final" : "Acta provisional"}
+                            </span>
+                            <span
+                              className={`rounded border px-1.5 py-0.5 text-[10px] font-extrabold ${outcomeStyles.badge}`}
+                            >
+                              {outcomeStyles.statusText}
+                            </span>
+                          </div>
+                          <span
+                            className={`text-[11px] font-semibold tracking-normal ${outcomeStyles.partials}`}
+                          >
+                            {s.period > 0
+                              ? Array.from(
+                                  { length: s.period },
+                                  (_, i) => `${score(s, "us", i + 1)}-${score(s, "them", i + 1)}`,
+                                ).join(" | ")
+                              : ""}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex items-baseline justify-between gap-2">
+                          <span className="text-base font-extrabold text-[#062048]">
+                            {record.team}{" "}
+                            <span className="text-sm font-normal text-slate-500">vs</span>{" "}
+                            {record.opponent}
+                          </span>
+                          <span className={`font-mono text-2xl font-black ${outcomeStyles.score}`}>
+                            {totalUs}–{totalThem}
+                          </span>
+                        </div>
+                      </div>
 
-                  {record.dirty && (
-                    <p>Hay cambios guardados solo en este móvil. El PDF los incluye.</p>
-                  )}
+                      <p className="px-1 text-xs leading-relaxed text-slate-600">
+                        Genera el acta oficial en PDF con estadísticas por jugador, parciales
+                        federativos y desarrollo completo del partido.
+                      </p>
 
-                  <button
-                    className={`${styles.action} ${styles.goalAction}`}
-                    disabled={!pdf}
-                    onClick={() => void share()}
-                  >
-                    {pdf ? "Compartir o descargar PDF" : "Preparando PDF…"}
-                  </button>
+                      {record.dirty && (
+                        <p className="rounded-lg border border-amber-300 bg-amber-50 p-2 text-xs font-semibold text-amber-900">
+                          Hay cambios guardados solo en este móvil. El PDF los incluye.
+                        </p>
+                      )}
 
-                  {shareError && <p role="alert">{shareError}</p>}
-                </>
-              )}
+                      <div className="flex flex-col gap-2.5 pt-1 sm:flex-row">
+                        <button
+                          type="button"
+                          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#062048] bg-white px-4 py-2.5 text-sm font-extrabold text-[#062048] shadow-sm transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50"
+                          disabled={!pdf}
+                          onClick={() => downloadOrViewPdf()}
+                        >
+                          <Download size={18} aria-hidden="true" />
+                          <span>Ver o descargar PDF</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#062048] px-4 py-2.5 text-sm font-extrabold text-white shadow-md transition hover:bg-[#093574] active:scale-[0.99] disabled:opacity-50"
+                          disabled={!pdf}
+                          onClick={() => void share()}
+                        >
+                          <Share2 size={18} aria-hidden="true" />
+                          <span>{pdf ? "Compartir por WhatsApp" : "Preparando PDF…"}</span>
+                        </button>
+                      </div>
+
+                      {shareError && (
+                        <p role="alert" className="text-center text-xs font-semibold text-red-600">
+                          {shareError}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })()}
 
               {activePanel === "takeover" && (
-                <>
-                  <p>
-                    Confirma con el otro delegado que ha enviado todas sus jugadas. Su móvil dejará
-                    de poder sincronizar; conservará cualquier cambio pendiente.
-                  </p>
+                <div className="flex flex-col gap-4 pb-2">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 shadow-xs">
+                    <div className="flex items-start gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-800">
+                        <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0 flex-1 space-y-1 text-left">
+                        <p className="text-sm leading-tight font-extrabold text-slate-900">
+                          Confirma con el otro delegado
+                        </p>
+                        <p className="text-xs leading-relaxed text-slate-600 sm:text-sm">
+                          Asegúrate de que ha enviado todas sus jugadas antes de continuar. Su móvil
+                          dejará de sincronizar y conservará los cambios pendientes en local.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
 
-                  {button("Confirmar relevo", () => void takeover())}
-                </>
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#062048] px-4 py-2.5 text-sm font-extrabold text-white shadow-md transition hover:bg-[#093574] active:scale-[0.99] disabled:opacity-50 sm:text-base"
+                      disabled={busy}
+                      onClick={() => void takeover()}
+                    >
+                      <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
+                      <span>Confirmar relevo</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="flex min-h-10 w-full items-center justify-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-600 transition hover:bg-slate-50 sm:text-sm"
+                      onClick={closePanel}
+                    >
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
               )}
             </div>
           </Dialog.Content>
-        </Dialog.Portal>
+        </>
       </Dialog.Root>
     </main>
   );

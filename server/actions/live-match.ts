@@ -1,5 +1,6 @@
 "use server";
 
+import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -28,7 +29,9 @@ async function loadLiveMatchImpl(matchId: string): Promise<LiveRecord> {
   const db = await createClient();
   const { data: match, error } = await db
     .from("matches")
-    .select("id,team_id,opponent,scheduled_at,final_score_them,competition_type,is_home,pool_name,location,teams(label,category_code)")
+    .select(
+      "id,team_id,opponent,scheduled_at,final_score_them,competition_type,is_home,pool_name,location,teams(label,category_code)",
+    )
     .eq("id", matchId)
     .single();
   if (error || !match) throw new Error("No pudimos cargar el partido.");
@@ -155,6 +158,38 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
   if (!canUseLiveMatch(access, match.team_id))
     throw new Error("El acta en directo está reservada al delegado de este equipo.");
   const me = access.profile;
+  const previous = await db
+    .from("live_match_sheets")
+    .select("document,mutation_id,device_id,owner_id")
+    .eq("match_id", data.matchId)
+    .maybeSingle();
+  if (previous.error) throw new Error("No pudimos comprobar la versión del acta.");
+  const alreadySaved =
+    previous.data?.mutation_id === data.mutation &&
+    previous.data?.device_id === data.device &&
+    previous.data?.owner_id === me.id;
+  let canonical = data.sheet;
+  if (alreadySaved) canonical = sheetSchema.parse(previous.data!.document);
+  else if (
+    !data.takeover &&
+    (previous.data?.document as { phase?: string } | null)?.phase !== "finished"
+  ) {
+    const roster = await db
+      .from("match_callups")
+      .select("player_id,cap_number,profiles!match_callups_player_id_fkey(full_name)")
+      .eq("match_id", data.matchId)
+      .in("status", ["called", "confirmed"]);
+    if (roster.error)
+      throw new Error("No pudimos actualizar la convocatoria. Tus jugadas siguen guardadas.");
+    canonical = reconcileLiveRoster(
+      data.sheet,
+      roster.data.map((p) => ({
+        id: p.player_id,
+        cap: p.cap_number ?? 0,
+        name: p.profiles?.full_name ?? "Jugador",
+      })),
+    );
+  }
   const { data: revision, error: saveError } = await createAdminClient().rpc(
     "save_live_match_sheet",
     {
@@ -163,7 +198,7 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
       p_device: data.device,
       p_revision: data.revision,
       p_mutation: data.mutation,
-      p_document: data.sheet as unknown as Json,
+      p_document: canonical as unknown as Json,
       p_takeover: data.takeover,
     },
   );
@@ -180,13 +215,13 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
     if (seasonError)
       throw new Error("Acta guardada. Falta actualizar los rankings; reintenta el envío.");
     await recomputeSnapshotsForPlayers(
-      data.sheet.players.map((player) => player.id),
+      canonical.players.map((player) => player.id),
       seasonMatch.season_id,
     );
   }
   revalidatePath(`/matches/${data.matchId}`);
   revalidatePath(`/admin/matches/${data.matchId}`);
-  return { revision, owner: me.id };
+  return { revision, owner: me.id, sheet: canonical };
 }
 
 export async function loadLiveMatch(matchId: string) {

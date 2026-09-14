@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Loader2, ChevronRight, Check, X, Clock3 } from "lucide-react";
 import type { Route } from "next";
 
+import { CalendarMarker } from "./calendar-key";
 import { Gorro } from "@/components/brand/pictograms";
 import { Button } from "@/components/ui/button";
 import { MapLocationLink } from "@/components/ui/map-location-link";
@@ -45,11 +46,11 @@ const COMPETITION_LABELS: Record<string, string> = {
 
 function EventCardHeader({ teamLabel, children }: { teamLabel: string; children: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-start justify-between gap-3">
+    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
       <span className="text-pool-blue min-w-0 pt-1 text-xs leading-tight font-black tracking-[0.08em] uppercase">
         {teamLabel}
       </span>
-      <div className="flex shrink-0 flex-wrap justify-end gap-1.5">{children}</div>
+      <div className="flex min-w-0 flex-wrap justify-end gap-1.5">{children}</div>
     </div>
   );
 }
@@ -58,7 +59,7 @@ function EventBadge({ children, className }: { children: ReactNode; className?: 
   return (
     <span
       className={cn(
-        "inline-flex min-h-8 items-center rounded-lg border px-2.5 text-xs leading-tight font-black tracking-[0.05em] uppercase",
+        "inline-flex min-h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs leading-tight font-black tracking-[0.05em] uppercase",
         className,
       )}
     >
@@ -160,18 +161,18 @@ export function TrainingRow({
         )}
       >
         {compact ? (
-          <div className="flex min-w-0 items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
             <span className="text-pool-blue min-w-0 truncate text-xs font-black tracking-[0.08em] uppercase">
               {training.team_label}
             </span>
             <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep min-h-7 shrink-0 px-2 text-xs">
-              Entreno
+              <CalendarMarker kind="training" /> Entrenamiento
             </EventBadge>
           </div>
         ) : (
           <EventCardHeader teamLabel={training.team_label}>
             <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep">
-              Entrenamiento
+              <CalendarMarker kind="training" /> Entrenamiento
             </EventBadge>
           </EventCardHeader>
         )}
@@ -274,25 +275,38 @@ export function MatchRow({
               {match.team_label}
             </span>
             <EventBadge className="border-ink-300 bg-paper text-ink-600 min-h-7 shrink-0 px-2 text-xs">
+              <CalendarMarker kind="match" /> Partido ·{" "}
               {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
             </EventBadge>
           </div>
         ) : (
           <EventCardHeader teamLabel={match.team_label}>
             <EventBadge className="border-ink-300 bg-paper text-ink-600">
+              <CalendarMarker kind="match" /> Partido ·{" "}
               {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
             </EventBadge>
-            {match.status === "cancelled" ? (
-              <EventBadge className="bg-danger/10 border-danger/20 text-danger">
-                Cancelado
-              </EventBadge>
-            ) : match.status === "played" ? (
-              <EventBadge className="bg-success/10 border-success/20 text-success">
-                Jugado
-              </EventBadge>
-            ) : null}
           </EventCardHeader>
         )}
+
+        {match.status === "cancelled" ||
+        match.status === "postponed" ||
+        match.status === "played" ||
+        match.status === "in_progress" ? (
+          <div className="text-ink-700 flex items-center gap-2 text-sm font-bold">
+            {match.status === "cancelled" ? (
+              <CalendarMarker kind="cancelled" />
+            ) : match.status === "postponed" ? (
+              <CalendarMarker kind="postponed" />
+            ) : null}
+            {match.status === "cancelled"
+              ? "Partido cancelado"
+              : match.status === "postponed"
+                ? "Partido aplazado · pendiente de nueva fecha"
+                : match.status === "played"
+                  ? "Partido jugado"
+                  : "Partido en juego"}
+          </div>
+        ) : null}
 
         {compact ? (
           <div className="bg-paper-sunk/70 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 select-none">

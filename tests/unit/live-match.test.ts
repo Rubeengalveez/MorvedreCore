@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
 import {
   defaultPeriods,
   findPenaltyGoalCandidate,
@@ -163,10 +164,7 @@ describe("acta en directo", () => {
   it("rejects an assistance linked to a penalty goal", () => {
     const s = sampleSheet();
     const penaltyGoal = event("goal_penalty");
-    s.events = [
-      penaltyGoal,
-      event("assist", { cap: 1, related_event_id: penaltyGoal.id }),
-    ];
+    s.events = [penaltyGoal, event("assist", { cap: 1, related_event_id: penaltyGoal.id })];
     expect(sheetSchema.safeParse(s).success).toBe(false);
   });
   it("requires linked actions to stay in the same quarter", () => {
@@ -242,4 +240,51 @@ describe("acta en directo", () => {
     expect(file.name).toBe("acta-2026-10-15-infantil-rival-cf.pdf");
     expect(file.size).toBeGreaterThan(500);
   });
+});
+
+describe("recuperación de convocatoria y tiros recibidos", () => {
+  it("actualiza una convocatoria sin jugadas", () => {
+    const sheet = sampleSheet();
+    const current = [sheet.players[0]];
+    expect(reconcileLiveRoster(sheet, current).players).toHaveLength(1);
+  });
+  it("conserva estadísticas por identidad al cambiar gorros", () => {
+    const sheet = sampleSheet();
+    sheet.events = [event("goal")];
+    const updated = reconcileLiveRoster(
+      sheet,
+      sheet.players.map((p) => ({ ...p, cap: p.cap === 2 ? 3 : p.cap })),
+    );
+    expect(playerTotals(updated, "us", 3).goals).toBe(1);
+  });
+  it("conserva el historial de un jugador retirado", () => {
+    const sheet = sampleSheet();
+    sheet.events = [event("goal")];
+    const updated = reconcileLiveRoster(sheet, [sheet.players[0]]);
+    expect(updated.players.find((p) => p.cap === 2)?.retired).toBe(true);
+    expect(score(updated, "us")).toBe(1);
+  });
+  it.each(["goal", "penalty_save", "keeper_out"] as const)(
+    "registra el resultado de penalti rival %s una vez",
+    (kind) => {
+      const sheet = sampleSheet();
+      const penalty = event("penalty");
+      sheet.events = [
+        penalty,
+        event(kind, {
+          side: kind === "goal" ? "them" : "us",
+          cap: 1,
+          keeper: 1,
+          related_event_id: penalty.id,
+          origin: "penalty_flow",
+        }),
+      ];
+      expect(sheetSchema.safeParse(sheet).success).toBe(true);
+      const totals = playerTotals(sheet, "us", 1);
+      expect(totals.received).toBe(1);
+      expect(totals.saves).toBe(kind === "penalty_save" ? 1 : 0);
+      expect(totals.receivedOut).toBe(kind === "keeper_out" ? 1 : 0);
+      expect(score(sheet, "them")).toBe(kind === "goal" ? 1 : 0);
+    },
+  );
 });

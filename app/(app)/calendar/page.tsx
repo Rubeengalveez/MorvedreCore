@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import type { Route } from "next";
+
+
+
+
 import { redirect } from "next/navigation";
-import { CalendarCheck2, ChevronRight } from "lucide-react";
+
 
 import { Equipo, Silbato } from "@/components/brand/pictograms";
 import { CalendarView, type CalendarViewTeam } from "@/components/calendar/calendar-view";
@@ -177,18 +179,7 @@ export default async function CalendarPage() {
         />
       )}
 
-      {attendanceProfileIds.length > 0 ? (
-        <Link
-          href={"/attendance/history" as Route}
-          className="border-ink-200 bg-paper-card text-pool-deep hover:border-pool-blue/45 hover:bg-pool-foam focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center gap-3 rounded-xl border px-4 py-3 text-sm font-extrabold transition-[background-color,border-color] focus-visible:ring-2 focus-visible:outline-none"
-        >
-          <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
-            <CalendarCheck2 className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <span className="flex-1">Ver asistencia</span>
-          <ChevronRight className="text-ink-500 h-5 w-5 shrink-0" aria-hidden="true" />
-        </Link>
-      ) : null}
+
 
       {isCoach ? (
         <p className="text-ink-600 flex items-center gap-2 px-1 text-sm font-medium">

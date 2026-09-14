@@ -9,11 +9,10 @@ import { CapTile } from "@/components/ui/cap-tile";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/eyebrow";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
+import { CalendarMarker } from "./calendar-key";
 import { cn } from "@/lib/utils/cn";
 import { matchColor, trainingColor } from "@/lib/domain/event-colors";
 import { formatTimeOfDay, formatTimeRangeFromDuration } from "@/lib/domain/calendar";
-import { Gorro, SilbatoActivo } from "@/components/brand/pictograms";
 
 export interface CalendarEventBase {
   id: string;
@@ -107,34 +106,24 @@ function EventBody({
     <>
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <PictogramBadge
-            pictogram={event.kind === "match" ? Gorro : SilbatoActivo}
-            color={color}
-            size="md"
-          />
+          <CalendarMarker kind={event.kind} />
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-1.5">
-              {event.kind === "match" ? (
-                event.competition_type === "tournament" ? (
-                  <StatusBadge variant="brand">Torneo</StatusBadge>
-                ) : event.competition_type === "friendly" ? (
-                  <StatusBadge variant="info">Amistoso</StatusBadge>
-                ) : (
-                  <StatusBadge variant="gold">Liga/Copa</StatusBadge>
-                )
-              ) : (
-                <StatusBadge variant="info">Entreno</StatusBadge>
-              )}
+              <span className="text-pool-deep text-xs font-extrabold">
+                {event.kind === "match"
+                  ? `Partido · ${({ league: "Liga", cup: "Copa", tournament: "Torneo", friendly: "Amistoso" } as Record<string, string>)[event.competition_type ?? "league"] ?? "Competición"}`
+                  : "Entrenamiento"}
+              </span>
               {isCancelled ? <StatusBadge variant="danger">Cancelado</StatusBadge> : null}
               {isPostponed ? <StatusBadge variant="neutral">Aplazado</StatusBadge> : null}
               {showAttendance && userAttendance === true ? (
                 <StatusBadge variant="success" icon={<Check />}>
-                  Asistió
+                  Asistió al entrenamiento
                 </StatusBadge>
               ) : null}
               {showAttendance && userAttendance === false ? (
                 <StatusBadge variant="danger" icon={<X />}>
-                  Ausente
+                  Faltó al entrenamiento
                 </StatusBadge>
               ) : null}
             </div>
@@ -210,15 +199,7 @@ export function CalendarEventCard({
   userAttendance?: boolean | null;
   className?: string;
 }) {
-  const color =
-    event.kind === "match"
-      ? matchColor({
-          competitionType: event.competition_type ?? "league",
-          status: event.status ?? "scheduled",
-          isPast: !!isPast,
-          unavailable: false,
-        })
-      : trainingColor({ cancelled: !!event.cancelled, isPast: !!isPast, unavailable: false });
+  const color = event.kind === "match" ? "var(--ball-gold)" : "var(--pool-blue)";
   const timeStr = event.duration_minutes
     ? formatTimeRangeFromDuration(event.scheduled_at, event.duration_minutes)
     : formatTimeOfDay(event.scheduled_at);

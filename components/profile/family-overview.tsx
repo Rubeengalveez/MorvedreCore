@@ -1,6 +1,13 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { CalendarCheck2, ChevronRight, ReceiptText, ShoppingBag, UsersRound } from "lucide-react";
+import {
+  CalendarCheck2,
+  ChevronRight,
+  ReceiptText,
+  ShoppingBag,
+  Timer,
+  UsersRound,
+} from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { formatTreasuryCents } from "@/lib/domain/treasury";
@@ -111,6 +118,13 @@ function FamilyMemberRow({ member }: { member: FamilyMemberOverview }) {
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-1">
+        <Link
+          href={`/players/${member.id}/swim-times` as Route}
+          aria-label={`Ver tiempos de nado de ${member.display_name}`}
+          className="text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 touch-manipulation items-center justify-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <Timer className="h-5 w-5" aria-hidden="true" />
+        </Link>
         <Link
           href={`/attendance/history?player=${member.id}` as Route}
           aria-label={`Ver asistencia de ${member.display_name}`}

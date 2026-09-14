@@ -118,6 +118,12 @@
 }
 
 .setupKeeper {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 10px;
   min-height: 52px;
   width: 100%;
   margin-top: 12px;
@@ -128,6 +134,51 @@
   color: var(--acta-ink);
   text-align: left;
   font-size: 16px;
+  font-weight: 900;
+}
+
+.setupKeeperLabel {
+  grid-column: 1;
+  color: #52657d;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.setupKeeperValue {
+  grid-column: 1;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.setupKeeperCap {
+  display: inline-grid;
+  min-width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--acta-ink);
+  color: #fff;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.setupKeeperName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.setupKeeperAction {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  color: var(--acta-blue);
+  font-size: 14px;
   font-weight: 900;
 }
 
@@ -163,6 +214,18 @@
 .warning p {
   margin-bottom: 12px;
   line-height: 1.5;
+}
+
+.penaltyNotice {
+  margin: 0 0 6px;
+  border: 2px solid #8a5a00;
+  border-radius: 12px;
+  background: #f4c430;
+  padding: 12px;
+  color: #062048;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.4;
 }
 
 @keyframes overlayFadeIn {
@@ -308,6 +371,21 @@
 .panelCompact {
   height: min(52dvh, 420px);
   max-height: min(52dvh, 420px);
+}
+
+.panelShare {
+  height: auto;
+  max-height: min(72dvh, 480px);
+}
+
+.panelTakeover {
+  height: auto;
+  max-height: min(48dvh, 340px);
+}
+
+.panelTakeover .panelBody {
+  overflow-y: hidden;
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
 /* =========================================================
@@ -493,6 +571,17 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 8px;
+}
+
+.rivalActionGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rivalActionGrid .action {
+  min-height: 56px;
+  padding: 8px 4px;
+  font-size: 15px;
 }
 
 .action {
@@ -1502,6 +1591,27 @@
 .panelKeeper .panelBody {
   flex: 0 1 auto;
 }
+
+.panelPenaltyResult {
+  height: auto;
+  max-height: min(90dvh, 420px);
+}
+
+.panelPenaltyResult .panelBody {
+  flex: 0 1 auto;
+}
+
+.panelShare .panelBody {
+  flex: 0 1 auto;
+  padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
+}
+
+.penaltyOutcome {
+  min-height: 56px;
+  padding: 8px;
+  font-size: 16px;
+}
+
 .panel .action {
   --button-bg: #ffffff;
   --button-ink: #062048;
@@ -1606,4 +1716,25 @@
   background: #ffffff;
   color: #062048;
   font-size: 16px;
+}
+
+.panel .actionSave,
+.panel .actionPenaltySave {
+  --button-bg: #176579;
+  --button-ink: #ffffff;
+}
+
+.panel .penaltyGoal {
+  --button-bg: #062048;
+  --button-ink: #ffffff;
+}
+
+.panel .penaltySave {
+  --button-bg: #1657a8;
+  --button-ink: #ffffff;
+}
+@media (min-width: 640px) {
+  .panel {
+    max-width: 480px;
+  }
 }

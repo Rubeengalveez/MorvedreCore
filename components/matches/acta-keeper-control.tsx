@@ -36,6 +36,12 @@ export function ActaKeeperControl({
             {keeper ? keeper.name : "Elegir portero"}
           </strong>
         </span>
+        {keeper && (
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#b9d8e5] bg-[#eef8fa] px-2 py-1 text-xs font-black text-[#176579]">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#1d8793]" />
+            Ahora
+          </span>
+        )}
         <span
           data-acta-keeper-change
           className="flex items-center gap-1 text-sm font-extrabold text-[#062048]"

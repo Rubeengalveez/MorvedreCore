@@ -6,10 +6,12 @@ import { useTransition } from "react";
 
 import { cn } from "@/lib/utils/cn";
 import { type RankingMetric } from "@/lib/domain/rankings";
-import { Balon, Calendario, Exclusion, Trofeo } from "@/components/brand/pictograms";
+import { Balon, Calendario, Exclusion, Tiburon, Trofeo } from "@/components/brand/pictograms";
+
+export type RankingPageMetric = RankingMetric | "swim";
 
 const METRICS: ReadonlyArray<{
-  id: RankingMetric;
+  id: RankingPageMetric;
   label: string;
   Pictogram: ComponentType<{ className?: string; accent?: string }>;
 }> = [
@@ -17,10 +19,11 @@ const METRICS: ReadonlyArray<{
   { id: "exclusions", label: "Exp.", Pictogram: Exclusion },
   { id: "mvp", label: "MVP", Pictogram: Trofeo },
   { id: "attendance", label: "Asist.", Pictogram: Calendario },
+  { id: "swim", label: "Nado", Pictogram: Tiburon },
 ];
 
 export interface MetricTabsProps {
-  active: RankingMetric;
+  active: RankingPageMetric;
   extraParams?: Record<string, string>;
 }
 
@@ -28,7 +31,7 @@ export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  function navigate(metric: RankingMetric) {
+  function navigate(metric: RankingPageMetric) {
     if (metric === active) return;
     const params = new URLSearchParams();
     for (const [k, v] of Object.entries(extraParams)) {

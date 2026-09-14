@@ -1,4 +1,4 @@
-﻿export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
@@ -1622,6 +1622,109 @@ export type Database = {
             columns: ["team_id"];
             isOneToOne: false;
             referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      swim_time_entries: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          id: string;
+          operation_id: string;
+          player_id: string;
+          revision: number;
+          season_id: string;
+          start_type: string;
+          team_id: string;
+          test_date: string;
+          time_100_cs: number | null;
+          time_50_cs: number | null;
+          updated_at: string;
+          updated_by: string;
+          void_reason: string | null;
+          voided_at: string | null;
+          voided_by: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          operation_id: string;
+          player_id: string;
+          revision?: number;
+          season_id: string;
+          start_type: string;
+          team_id: string;
+          test_date: string;
+          time_100_cs?: number | null;
+          time_50_cs?: number | null;
+          updated_at?: string;
+          updated_by: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          operation_id?: string;
+          player_id?: string;
+          revision?: number;
+          season_id?: string;
+          start_type?: string;
+          team_id?: string;
+          test_date?: string;
+          time_100_cs?: number | null;
+          time_50_cs?: number | null;
+          updated_at?: string;
+          updated_by?: string;
+          void_reason?: string | null;
+          voided_at?: string | null;
+          voided_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "swim_time_entries_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "swim_time_entries_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "swim_time_entries_season_id_fkey";
+            columns: ["season_id"];
+            isOneToOne: false;
+            referencedRelation: "seasons";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "swim_time_entries_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "swim_time_entries_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "swim_time_entries_voided_by_fkey";
+            columns: ["voided_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
         ];

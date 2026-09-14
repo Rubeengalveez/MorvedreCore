@@ -3,13 +3,10 @@
 import { useMemo, useState } from "react";
 import {
   Calendar as CalendarIcon,
-  Check,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
   Grid3x3,
-  List,
-  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +24,7 @@ import {
 } from "@/lib/domain/calendar";
 import type { CalendarData } from "@/server/queries/calendar";
 
-import { AgendaView } from "./agenda-view";
+import { CalendarKey } from "./calendar-key";
 import { EventSheet } from "./event-sheet";
 import { MonthView } from "./month-view";
 import { WeekView } from "./week-view";
@@ -50,7 +47,7 @@ export interface CalendarViewProps {
   showAttendance?: boolean;
 }
 
-type ViewMode = "month" | "week" | "agenda";
+type ViewMode = "month" | "week";
 
 function startOfWeekIso(d: Date): string {
   const day = d.getDay();
@@ -89,10 +86,6 @@ export function CalendarView({
   }, [eventsByDay, teamFilter]);
 
   const selectedDay = selectedIso ? (filteredEvents.get(selectedIso) ?? null) : null;
-  const agendaStartIso = isoDateFromDate(new Date(yearMonth.year, yearMonth.month, 1));
-  const agendaEndIso = isoDateFromDate(
-    new Date(yearMonth.year, yearMonth.month + 1, daysInMonth(yearMonth.year, yearMonth.month)),
-  );
 
   const monthOptions = useMemo(() => {
     const list: Array<{ value: string; label: string }> = [];
@@ -150,18 +143,17 @@ export function CalendarView({
       : monthLabel(yearMonth);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-3">
         <div className="grid grid-cols-[1fr_auto] gap-2">
           <div
             role="tablist"
             aria-label="Modo de vista"
-            className="bg-paper-sunk grid min-h-12 grid-cols-3 gap-1 rounded-xl p-1"
+            className="bg-paper-sunk grid min-h-12 grid-cols-2 gap-1 rounded-xl p-1"
           >
             {[
               { id: "month" as const, Icon: Grid3x3, label: "Mes" },
               { id: "week" as const, Icon: CalendarIcon, label: "Semana" },
-              { id: "agenda" as const, Icon: List, label: "Agenda" },
             ].map(({ id, Icon, label }) => (
               <button
                 key={id}
@@ -257,6 +249,8 @@ export function CalendarView({
         </div>
       </div>
 
+      <CalendarKey showAttendance={!!showAttendance} />
+
       <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-2 sm:p-3">
         {viewMode === "month" ? (
           <MonthView
@@ -269,9 +263,9 @@ export function CalendarView({
             }}
             selectedIso={selectedIso}
             availabilityByDay={availabilityByDay}
-            userAttendanceBySession={userAttendanceBySession}
+            userAttendanceBySession={showAttendance ? userAttendanceBySession : undefined}
           />
-        ) : viewMode === "week" ? (
+        ) : (
           <WeekView
             startIso={weekStartIso}
             eventsByDay={filteredEvents}
@@ -293,50 +287,9 @@ export function CalendarView({
             isAdmin={isAdmin}
             activeProfileId={activeProfileId}
           />
-        ) : (
-          <AgendaView
-            eventsByDay={filteredEvents}
-            rangeStartIso={agendaStartIso}
-            rangeEndIso={agendaEndIso}
-            activeProfileId={activeProfileId}
-            showAttendance={showAttendance}
-            userAttendanceBySession={userAttendanceBySession}
-            emptyMessage="Tu mes en el club. Si hay convocatoria, aparece aquí. Si no, descansas."
-          />
         )}
       </div>
 
-      {viewMode !== "week" ? (
-        <section
-          aria-label="Leyenda del calendario"
-          className="border-ink-200 text-ink-600 flex w-full flex-nowrap items-center justify-between gap-1 border-t px-0.5 pt-2 text-xs font-bold min-[360px]:text-[0.8125rem]"
-        >
-          <span className="inline-flex shrink-0 items-center gap-0.5">
-            <span aria-hidden="true" className="bg-pool-blue h-1.5 w-1.5 rounded-full" />
-            Entreno
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-0.5">
-            <span aria-hidden="true" className="bg-ball-gold h-1.5 w-1.5 rounded-full" />
-            Partido
-          </span>
-          <span className="inline-flex shrink-0 items-center gap-0.5">
-            <span aria-hidden="true" className="bg-goggle-red h-1.5 w-1.5 rounded-full" />
-            Cancelado
-          </span>
-          {showAttendance ? (
-            <>
-              <span className="text-success inline-flex shrink-0 items-center gap-0.5">
-                <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
-                Asistió
-              </span>
-              <span className="text-danger inline-flex shrink-0 items-center gap-0.5">
-                <X className="h-3 w-3" strokeWidth={3} aria-hidden="true" />
-                Ausente
-              </span>
-            </>
-          ) : null}
-        </section>
-      ) : null}
 
       <EventSheet
         open={open}

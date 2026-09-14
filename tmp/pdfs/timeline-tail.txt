@@ -1,0 +1,123 @@
+  y = newPage("El partido, cuarto a cuarto");
+  const labels: Partial<Record<ActionKind, string>> = {
+    goal: "Gol",
+    goal_extra: "Gol de 1+",
+    goal_penalty: "Gol de penalti",
+    exclusion: "Expulsión",
+    penalty: "Penalti cometido",
+    yellow: "Amarilla",
+    red: "Roja",
+    coach_yellow: "Amarilla al entrenador",
+    coach_red: "Roja al entrenador",
+    timeout: "Tiempo muerto",
+    penalty_missed: "Penalti fallado",
+    penalty_save: "Penalti parado",
+  };
+  if (a.imported) {
+    text(`Marcador al iniciar el registro: ${a.baseUs} - ${a.baseThem}`, 14, y, 9, true);
+    y += 8;
+  }
+  if (!a.periods.length) text("El partido todavía no ha empezado.", 14, y, 11);
+  const timeWidths = [20, 20, 62, 80];
+  const timeHead = ["Marcador", "Equipo", "Jugador", "Qué ha pasado"];
+  const quarterHeader = (period: (typeof a.periods)[number], continuation = false) => {
+    fill(14, y, 182, 17, NAVY);
+    text(
+      `${period.period}º CUARTO${continuation ? " · continúa" : ""}`,
+      18,
+      y + 7,
+      12,
+      true,
+      WHITE,
+    );
+    text(`En este cuarto: ${period.us} - ${period.them}`, 18, y + 13, 9, false, WHITE);
+    text("MARCADOR GLOBAL", 192, y + 5, 7.5, true, WHITE, "right");
+    text(
+      `${period.cumulativeUs} - ${period.cumulativeThem}`,
+      192,
+      y + 13,
+      19,
+      true,
+      WHITE,
+      "right",
+    );
+    y += 20;
+  };
+  for (const period of a.periods) {
+    const rows = a.events.filter((e) => e.period === period.period && labels[e.kind]);
+    if (y + 36 > bottom()) y = newPage("El partido, cuarto a cuarto");
+    quarterHeader(period);
+    if (!rows.length) {
+      text("Sin acciones destacadas registradas.", 14, y + 3, 9);
+      y += 13;
+      continue;
+    }
+    y = tableRow(timeHead, timeWidths, 14, y, { header: true, height: 8, size: 8 });
+    for (const event of rows) {
+      const before = a.events.slice(0, a.events.indexOf(event) + 1);
+      const us = a.baseUs + before.filter((e) => e.side === "us" && isGoal(e.kind)).length;
+      const them = a.baseThem + before.filter((e) => e.side === "them" && isGoal(e.kind)).length;
+      const who =
+        event.cap === null
+          ? "Banquillo"
+          : event.side === "them"
+            ? `Gorro ${event.cap}`
+            : `${event.cap}  ${a.players.find((p) => p.cap === event.cap)?.name ?? "Jugador"}`;
+      const assist = a.events.find(
+        (e) => e.kind === "assist" && e.side === "us" && e.related_event_id === event.id,
+      );
+      const action =
+        event.kind === "goal" && event.origin === "penalty_flow"
+          ? "Gol de penalti"
+          : labels[event.kind]!;
+      const detail = `${action}${assist ? ` · Asistencia: ${assist.cap} ${a.players.find((p) => p.cap === assist.cap)?.name ?? ""}` : ""}`;
+      const values = [
+        isGoal(event.kind) ? `${us} - ${them}` : "-",
+        event.side === "us" ? "Morvedre" : "Rival",
+        who,
+        detail,
+      ];
+      doc.setFont("helvetica", isGoal(event.kind) ? "bold" : "normal");
+      doc.setFontSize(8);
+      const h = Math.max(
+        7,
+        ...values.map(
+          (v, i) => (doc.splitTextToSize(v, timeWidths[i] - 3) as string[]).length * 3.12 + 3,
+        ),
+      );
+      if (y + h > bottom()) {
+        y = newPage("El partido, cuarto a cuarto");
+        quarterHeader(period, true);
+        y = tableRow(timeHead, timeWidths, 14, y, { header: true, height: 8, size: 8 });
+      }
+      const color = event.side === "us" ? BLUE : ORANGE;
+      const startY = y;
+      y = tableRow(values, timeWidths, 14, y, {
+        left: [2, 3],
+        total: isGoal(event.kind),
+        accent: color,
+        height: h,
+      });
+      fill(14, startY, 1.2, y - startY, color);
+      if (isGoal(event.kind)) {
+        fill(14, startY, 20, y - startY, color);
+        text(`${us} - ${them}`, 24, startY + (y - startY) / 2 + 1, 10, true, WHITE, "center");
+      }
+    }
+    y += 8;
+  }
+  const pages = doc.getNumberOfPages();
+  for (let page = 1; page <= pages; page++) {
+    doc.setPage(page);
+    const w = doc.internal.pageSize.getWidth();
+    const h = doc.internal.pageSize.getHeight();
+    line(14, h - 10, w - 28);
+    text("Morvedre Core", 14, h - 5, 8, true, BLUE);
+    text(`${page} / ${pages}`, w - 14, h - 5, 8, true, NAVY, "right");
+  }
+  return new File(
+    [doc.output("arraybuffer")],
+    `acta-${record.date.slice(0, 10)}-${slug(record.team)}-${slug(record.opponent)}.pdf`,
+    { type: "application/pdf" },
+  );
+}

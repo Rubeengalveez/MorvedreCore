@@ -1,5 +1,14 @@
 # Log de decisiones
 
+## 2026-09-14 - Tiempos de nado
+
+- Se implementa [38-swim-times-design.md](38-swim-times-design.md) para registro de 50/100 m desde Equipo, por jugador y sin salir de la plantilla, con fecha automática, corrección, intentos repetidos e historial permanente accesible desde perfiles y familia. La migración queda preparada localmente y pendiente de despliegue.
+- Por indicación explícita de Rubén, el ranking de temporada muestra por defecto el tiempo actual de cada jugador por distancia, aunque sea peor que su récord; ofrece «Tiempo actual» y «Mejor tiempo». Ambos ordenan por duración ascendente y muestran una fila por jugador. El perfil compara actual y mejor con sus fechas. Registrar solo 50 m no reemplaza el último 100 m.
+- Leyendas clasifica cada intento histórico: un jugador puede ocupar diez filas si tiene las diez mejores marcas. Corregir no crea un intento nuevo. Categoría histórica derivada con temporada y nacimiento, sin almacenar el cálculo.
+- La piscina del club es siempre de 25 m, por lo que su longitud no se pregunta, no se muestra ni se almacena. Solo se distingue salida desde el agua o desde el poyete para no mezclar mediciones diferentes en rankings.
+- La escritura exige asignación al equipo como entrenador, sin atajo de administrador o permiso modular. El guardado por jugador usa reintentos idempotentes, auditoría y permisos equivalentes en interfaz, acciones y SQL.
+- Pendiente validar el recorrido con entrenador y móvil real. El diseño documenta captura, formatos, antigüedad de marcas, salida, pérdida de red, cambios simultáneos, anulación y conservación tras cambios de equipo y temporada.
+
 ## 2026-09-11 - Revisión del diseño del acta, sin implementar todavía
 
 - Rubén rechaza el acabado actual por acumulación de bloques, poca claridad y navegación de vuelta inconsistente. Solicita únicamente análisis y planificación antes de nuevos cambios de interfaz.
@@ -866,3 +875,60 @@ Sustituir el registro público por código de invitación por un flujo en el que
 - Los paneles comparten Atrás, contexto, título y Cerrar. Se elimina la navegación variable al pie de cada paso. Cerrar una continuación opcional no deshace la jugada ya registrada ni provoca que el panel se abra de nuevo.
 - Tiempo muerto indica expresamente «Pedidos» y comparte la zona fija con Morvedre, Rival, Corregir y Terminar cuarto. Con poca altura se permite scroll de página; con texto al 200 % los controles pasan al flujo y a una columna.
 - La misma versión pasa TypeScript, ESLint, 46 pruebas focalizadas y la auditoría completa con datos sintéticos: nueve viewports entre 320×568 y 768×1024 más paisaje, texto al 150 % y 200 %, objetivos táctiles de 48 px, offline, seis cuartos, corrección y PDF. Falta repetir la prueba sin ayuda con delegados; no se atribuye a esta versión la aceptación de una anterior.
+
+### 2026-09-11 — Continuidad del acta y portería
+
+- El penalti cometido por Morvedre guarda primero la sanción y permite seleccionar lanzador rival y resultado: gol, parado o fuera. Cada resultado registra un único tiro recibido para el portero activo; fuera no cuenta como parada.
+- La acción de portero «Tiro rival fuera / palo» sustituye al botón directo de penalti parado; los penaltis parados siguen disponibles mediante el flujo de penalti.
+- La sincronización concilia la convocatoria por identidad. Conserva el historial de jugadores retirados y adapta los gorros para evitar perder estadísticas. Migración `live_match_roster_recovery` aplicada.
+- Ajustes de nombres, expulsiones, separación de controles, confirmación de anulación, contraste y ancho de panel en tablet.
+- Comprobación breve: TypeScript sin errores y 45 pruebas del acta superadas. Pendiente validación visual en dispositivos reales; no se ha realizado una auditoría extensa.
+
+## 2026-09-14 — Rediseño profesional del acta en PDF y panel de compartir
+
+- **Panel "Compartir acta" (`live-match-client.tsx`)**:
+  - Se eliminan los espacios en blanco excesivos: el panel inferior abraza su contenido de manera compacta con safe-area insets (`pb-[max(1.25rem,env(safe-area-inset-bottom))]`).
+  - Se incorporan dos acciones diferenciadas con iconos dedicados: "Ver o descargar PDF" (descarga directa / apertura inmediata de blob sin intermediarios) y "Compartir por WhatsApp" (usando el menú nativo del sistema con fallback).
+  - El resultado y los parciales en el panel adoptan sutiles acentos cromáticos deportivos según el desenlace (verde para victoria, ámbar para empate, rojo para derrota).
+  - El texto explicativo se sintetiza para ser conciso y directo.
+
+- **Página 1 (Horizontal A4 — Acta Oficial Federativa en `acta-pdf.ts`)**:
+  - Eliminación total del espacio muerto en blanco inferior: las tablas y la sección inferior aprovechan armoniosamente toda la altura disponible de 210 mm.
+  - Se corrige el error tipográfico `(LOCAL/VISITANTE)`, mostrando explícitamente `CW MORVEDRE [EQUIPO] · LOCAL/VISITANTE` y `[RIVAL] · VISITANTE/LOCAL`.
+  - Se sustituye el encabezado ambiguo "Jugada" por el término reglamentario de waterpolo "Acción".
+  - Se amplía el ancho de la columna de jugadores a 48 mm para evitar truncamientos en nombres compuestos (ej. Oliver Torres Domínguez).
+  - Los jugadores con participación bajo palos se identifican inequívocamente con `(P)`.
+  - El bloque inferior se estructura en 3 componentes federativos alineados:
+    1. Marcador final destacado con badge de resultado y matriz tabular de parciales por cuarto (Morvedre vs Rival) con tiempos muertos solicitados.
+    2. Tabla completa de portería con lanzamientos a puerta, paradas (con desglose de penaltis), goles encajados y % de efectividad del equipo.
+    3. Resumen disciplinario federativo con desglose de faltas graves (20"), penaltis y tarjetas, junto al sello oficial del club.
+
+- **Página 2 (Vertical A4 — Informe Técnico y Analítica Deportiva)**:
+  - Eliminación estricta de métricas inventadas: se suprime la falsa estadística de "defensa en inferioridad" al no existir registro de goles rivales en exclusión propia.
+  - Se incorpora la barra comparativa bicolor de exclusiones solicitada por Rubén: reparto porcentual y total de expulsiones temporales (20") entre Morvedre (azul) y Rival (naranja).
+  - Se mantienen con exactitud la efectividad en superioridad numérica (+1) y la efectividad en penaltis de 5 metros a favor y en contra.
+  - Rediseño integral del rendimiento individual: se sustituyen las tarjetas informales por una tabla deportiva analítica de alto nivel para jugadores activos (ordenados por impacto ofensivo), con desglose táctico de goles (Acción / +1 / Penalti), tiros, % de acierto, % de contribución goleadora del equipo, asistencias, paradas de portero y sanciones disciplinarias.
+  - La leyenda del gráfico de evolución sustituye los glifos de viñeta por círculos vectoriales nativos para evitar artefactos de codificación `%Ï`.
+  - Se incluye al pie de la página un cuadro institucional de convocatoria y banquillo para aquellos jugadores convocados sin lanzamientos ni sanciones registradas.
+
+- **Página 3 (Vertical A4 — Cronología Oficial Jugada a Jugada)**:
+  - Secuencia cronológica limpia y legible organizada por cuartos, con marcador parcial y acumulado en cabecera y viñetas codificadas por tipo de jugada (goles, asistencias vinculadas, exclusiones, penaltis, tarjetas y tiempos muertos).
+
+- **Verificación**: 810 pruebas unitarias e integrales superadas en Vitest (93 suites). Renderizado e inspección visual de las páginas generado sin anomalías.
+
+### 2026-09-14 · Rediseño del PDF del acta
+
+El informe del club separa registro horizontal, análisis de equipos, aportación individual y cronología por partes. Paleta azul/gris con naranja para rival, gráficos vectoriales y etiquetas completas. No se presenta como acta arbitral. Los porcentajes de tiro usan solo acciones detalladas, excluyen marcadores importados y muestran sin datos cuando no hay denominador. Eficacia del portero = paradas / (paradas + goles asignados), excluyendo tiros fuera. No se calcula eficacia rival ni de superioridad sin registro completo de intentos/posesiones. La paginación conserva nombres y filas completos. La muestra reproducible usa datos ficticios: scripts/preview-acta-pdf.mjs.
+
+
+### 2026-09-14 · Ajustes del acta y cuartos de portería
+
+PDF informativo: expulsiones temporales y penaltis en columnas separadas; ambas siguen sumando para el límite de tres sanciones. Tiros rivales = goles + paradas + otros tiros recibidos de nuestra portería. Indicador 1+ = goles propios de superioridad / expulsiones rivales, excluyendo penaltis. Asistencias y goles con igual peso; orden individual por suma. Tiros a portería incluye goles, paradas, bloqueos y córner; penaltis fallados sin destino permanecen sin clasificar.
+
+La elección de portero inicia el siguiente cuarto. keeperStints, opcional en el documento del acta, registra tramos; cambio real conserva ambas participaciones, corregir selección sustituye el último tramo y reasigna sus acciones de portería. Sin temporizadores ni deducciones de duración. Compatible con sincronización y cambios de gorro. En documentos anteriores solo se infieren cuartos con acciones registradas. No requiere nuevas tablas.
+
+
+### 2026-09-15 · Lectura visual del acta y evolución gol a gol
+
+Primera hoja: columnas estadísticas iguales, ceros atenuados como guiones, goles de 1+ adicionales al total, goles de penalti y tarjetas condicionales. Resultado final en parciales; marcador previo separado cuando existe para que las sumas cuadren. Banda de resultado y datos del partido, sin declarar victoria/derrota hasta el cierre. Gráfico escalonado de cada gol, en orden dentro del cuarto, con cierre de cuartos marcado; no representa tiempos de reloj. La aportación individual incluye toda la convocatoria. Portería comparada en filas; goleadores rivales ordenados en bloques secundarios.
+
