@@ -10,6 +10,7 @@ const GRAY: Color = [55, 72, 92];
 const PALE: Color = [241, 245, 248];
 const LINE: Color = [177, 193, 207];
 const WHITE: Color = [255, 255, 255];
+const SECTION_TITLE_SIZE = 21;
 const pct = (value: number | null) => (value === null ? "Sin datos" : `${Math.round(value)}%`);
 const slug = (value: string) =>
   value
@@ -82,7 +83,7 @@ export function createActaPdf(record: LiveRecord): File {
   function header(title: string) {
     const w = doc.internal.pageSize.getWidth();
     fill(0, 0, w, 2, NAVY);
-    text(title, 14, 19, 21, true);
+    text(title, 14, 19, SECTION_TITLE_SIZE, true);
     text("MORVEDRE", w - 14, 18, 9, true, BLUE, "right");
     return 31;
   }
@@ -140,10 +141,6 @@ export function createActaPdf(record: LiveRecord): File {
       const left = options.left?.includes(i);
       const empty = options.quiet && (values[i] === "0" || values[i] === "-");
       const numeric = options.quiet && i > 0 && !left && !empty && /^\d/.test(values[i]);
-      if (empty && !options.header)
-        fill(cx, y, widths[i], h, options.striped ? [237, 243, 248] : [250, 252, 254]);
-      if (numeric && !options.header)
-        fill(cx + 0.8, y + 0.6, widths[i] - 1.6, h - 1.2, [226, 237, 247]);
       if (options.highlight?.includes(i) && !options.header)
         fill(cx, y, widths[i], h, [218, 230, 241]);
       if (i === 0 && options.cap && !options.header)
@@ -159,11 +156,7 @@ export function createActaPdf(record: LiveRecord): File {
             (i === 0 && options.cap) ||
             numeric ||
             options.emphasis?.includes(i),
-          options.header || (i === 0 && options.cap)
-            ? WHITE
-            : empty
-              ? [139, 150, 162]
-              : (options.accent ?? NAVY),
+          options.header || (i === 0 && options.cap) ? WHITE : (options.accent ?? NAVY),
           left ? "left" : "center",
         ),
       );
@@ -312,7 +305,7 @@ export function createActaPdf(record: LiveRecord): File {
     });
     y += h;
   }
-  y += 5;
+  y += 7;
   const kw = [12, 46, 22, 22, 22, 27];
   const keeperRows = keeperPlayers.map((p) => [
     String(p.cap),
@@ -409,7 +402,7 @@ export function createActaPdf(record: LiveRecord): File {
     py,
     { height: 7, size: 8, striped: true, emphasis: [pw.length - 1], highlight: [pw.length - 1] },
   );
-  y = Math.max(ky, py) + 5;
+  y = Math.max(ky, py) + 3;
   const time = new Date(record.date).toLocaleTimeString("es-ES", {
     timeZone: "Europe/Madrid",
     hour: "2-digit",
@@ -538,7 +531,7 @@ export function createActaPdf(record: LiveRecord): File {
       BLUE,
     );
     text(
-      i === 0 ? `${value} goles / ${shots.attempts} tiros` : `${value} de ${shots.attempts} tiros`,
+      i === 0 ? `${value} goles de ${shots.attempts} tiros` : `${value} de ${shots.attempts} tiros`,
       x + 4,
       sy + 27,
       11,
@@ -556,8 +549,8 @@ export function createActaPdf(record: LiveRecord): File {
       true,
     );
   }
-  y += shots.unclassified ? 66 : 57;
-  text("Así fue el marcador", 14, y, 15, true);
+  y += shots.unclassified ? 71 : 62;
+  text("Así fue el marcador", 14, y, SECTION_TITLE_SIZE, true);
   const highestScore = Math.max(1, a.goalsUs, a.goalsThem);
   const tick = Math.max(1, 2 ** Math.ceil(Math.log2(highestScore / 4)));
   const max = Math.max(tick, Math.ceil(highestScore / tick) * tick);
@@ -632,13 +625,13 @@ export function createActaPdf(record: LiveRecord): File {
     text(`${p.period}º cuarto`, gx(p.period), graphBottom + 10, 8, true, NAVY, "center"),
   );
 
-  y = newPage("Aportación individual");
+  y = newPage("Aportación individual") - 5;
   const participants = a.players
     .filter((p) => p.contribution > 0 || p.shooting.attempts > 0)
     .sort(
       (p, q) => q.contribution - p.contribution || q.totals.goals - p.totals.goals || p.cap - q.cap,
     );
-  const iw = [12, 66, 18, 16, 24, 24, 22];
+  const iw = [12, 66, 20.8, 20.8, 20.8, 20.8, 20.8];
   const ih = [
     "Gorro",
     "Jugador",
@@ -654,7 +647,7 @@ export function createActaPdf(record: LiveRecord): File {
     doc.setFont("helvetica", "normal");
     const h = Math.max(7.2, (doc.splitTextToSize(p.name, 63) as string[]).length * 3.51 + 3);
     if (y + h > bottom()) {
-      y = newPage("Aportación individual");
+      y = newPage("Aportación individual") - 5;
       y = tableRow(ih, iw, 14, y, { header: true, height: 10, size: 8.5 });
     }
     y = tableRow(
@@ -684,7 +677,7 @@ export function createActaPdf(record: LiveRecord): File {
   const otherPlayers = a.players.filter((p) => !participants.includes(p));
   if (otherPlayers.length) {
     y += 7;
-    if (y + 15 > bottom()) y = newPage("Aportación individual");
+    if (y + 15 > bottom()) y = newPage("Aportación individual") - 5;
     text("Sin goles, asistencias ni tiros", 14, y, 9, true);
     y += 5;
     for (let i = 0; i < otherPlayers.length; i += 3) {
@@ -692,7 +685,7 @@ export function createActaPdf(record: LiveRecord): File {
       doc.setFontSize(8);
       const nameRows = group.map((p) => doc.splitTextToSize(p.name, 49) as string[]);
       const h = Math.max(6, ...nameRows.map((rows) => rows.length * 3.2 + 2));
-      if (y + h > bottom()) y = newPage("Aportación individual");
+      if (y + h > bottom()) y = newPage("Aportación individual") - 5;
       group.forEach((p, j) => {
         const x = 14 + j * 62;
         fill(x, y, 7, h, PALE);
@@ -705,25 +698,35 @@ export function createActaPdf(record: LiveRecord): File {
   y += 10;
   if (y + 64 > bottom()) y = newPage("Nuestra portería");
   else {
-    text("Nuestra portería", 14, y, 16, true);
-    y += 8;
+    text("Nuestra portería", 14, y, SECTION_TITLE_SIZE, true);
+    y += 4;
   }
   for (const p of keeperPlayers) {
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    const nameLines = doc.splitTextToSize(p.name, 100) as string[];
-    const nameHeight = Math.max(17, nameLines.length * 4.2 + 5);
+    const nameHeight = 13;
     const h = nameHeight + 18;
     if (y + h > bottom()) y = newPage("Nuestra portería");
     fill(14, y, 182, nameHeight, NAVY);
     text(String(p.cap), 20, y + 9, 15, true, WHITE);
-    nameLines.forEach((name, i) => text(name, 30, y + 8 + i * 4.2, 11, true, WHITE));
-    text(`${p.quarters.length} cuartos jugados`, 192, y + 6, 9, true, WHITE, "right");
+    text(p.name, 30, y + 8, 10, true, WHITE);
+    const quarterWidth = sheet.periods <= 4 ? 7 : 4.7;
+    const quarterStart = 190 - sheet.periods * quarterWidth;
+    text(`${p.quarters.length} cuartos`, quarterStart - 2, y + 8, 9, true, WHITE, "right");
     for (let q = 1; q <= sheet.periods; q++) {
       const active = p.quarters.includes(q);
-      const x = 192 - (sheet.periods - q + 1) * 6;
-      fill(x, y + 9, 5, 5, active ? WHITE : BLUE);
-      text(`${q}º`, x + 2.5, y + 12.6, 8, active, active ? NAVY : WHITE, "center");
+      const x = quarterStart + (q - 1) * quarterWidth;
+      const square = quarterWidth - 0.8;
+      fill(x, y + 3, square, square, active ? WHITE : BLUE);
+      text(
+        `${q}º`,
+        x + square / 2,
+        y + 3 + square * 0.72,
+        sheet.periods <= 4 ? 8 : 6.5,
+        active,
+        active ? NAVY : WHITE,
+        "center",
+      );
     }
     const cells = [
       [String(p.totals.received), "Recibidos"],
@@ -763,11 +766,11 @@ export function createActaPdf(record: LiveRecord): File {
     y += 9;
   }
   if (a.rivalScorers.length) {
+    y += 6;
     if (y + 22 > bottom()) y = newPage("Goleadores rivales");
     else {
-      text("Goleadores rivales", 14, y + 4, 13, true);
-      text("Goles · % del total rival", 196, y + 4, 8, false, NAVY, "right");
-      y += 8;
+      text("Goleadores rivales", 14, y + 5, SECTION_TITLE_SIZE, true);
+      y += 11;
     }
     const widths = [23, 20, 45];
     const groups = a.rivalScorers.length > 7 ? 2 : 1;
@@ -776,14 +779,14 @@ export function createActaPdf(record: LiveRecord): File {
       for (let j = 0; j < groups; j++)
         tableRow(["Número", "Goles", "% de goles del equipo"], widths, 14 + j * 94, y, {
           header: true,
-          height: 7,
-          size: 8,
+          height: 8,
+          size: 9,
         });
-      y += 7;
+      y += 8;
     };
     rivalHeader();
     for (let i = 0; i < perGroup; i++) {
-      if (y + 6.2 > bottom()) {
+      if (y + 7.2 > bottom()) {
         y = newPage("Goleadores rivales");
         rivalHeader();
       }
@@ -791,16 +794,16 @@ export function createActaPdf(record: LiveRecord): File {
         const p = a.rivalScorers[j * perGroup + i];
         if (p)
           tableRow([String(p.cap), String(p.goals), pct(p.share)], widths, 14 + j * 94, y, {
-            height: 6.2,
-            size: 8,
+            height: 7.2,
+            size: 9,
             striped: i % 2 === 1,
             emphasis: [1],
           });
       }
-      y += 6.2;
+      y += 7.2;
     }
   }
-  y = newPage("El partido, cuarto a cuarto");
+  y = newPage("El partido, cuarto a cuarto") - 5;
   const labels: Partial<Record<ActionKind, string>> = {
     goal: "Gol",
     goal_extra: "Gol de 1+",
@@ -847,7 +850,7 @@ export function createActaPdf(record: LiveRecord): File {
   };
   for (const period of a.periods) {
     const rows = a.events.filter((e) => e.period === period.period && labels[e.kind]);
-    if (y + 36 > bottom()) y = newPage("El partido, cuarto a cuarto");
+    if (y + 36 > bottom()) y = newPage("El partido, cuarto a cuarto") - 5;
     quarterHeader(period);
     if (!rows.length) {
       text("Sin acciones destacadas registradas.", 14, y + 3, 9);
@@ -892,7 +895,7 @@ export function createActaPdf(record: LiveRecord): File {
         ),
       );
       if (y + h > bottom()) {
-        y = newPage("El partido, cuarto a cuarto");
+        y = newPage("El partido, cuarto a cuarto") - 5;
         quarterHeader(period, true);
         y = tableRow(timeHead, timeWidths, 14, y, { header: true, height: 8, size: 8 });
       }
