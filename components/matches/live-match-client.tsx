@@ -6,7 +6,7 @@ import { LiveMatchEntryState } from "./live-match-entry-state";
 
 import * as Dialog from "@radix-ui/react-dialog";
 
-import { ArrowRightLeft, ChevronLeft, Download, Share2, X } from "lucide-react";
+import { ArrowRightLeft, ChevronLeft, Download, MessageCircle, Share2, X } from "lucide-react";
 
 import {
   actionLabels,
@@ -107,14 +107,32 @@ export function LiveMatchClient() {
   const [notice, setNotice] = useState("");
 
   const [shareError, setShareError] = useState("");
-  const [preparedPdf, setPdf] = useState<{ record: typeof record; file: File } | null>(null);
-  const pdf = preparedPdf?.record === record ? preparedPdf?.file : null;
+  const [preparedPdf, setPdf] = useState<{
+    matchId: string;
+    revision: number;
+    mutation: string;
+    file: File;
+  } | null>(null);
+  const pdf =
+    preparedPdf &&
+    record &&
+    preparedPdf.matchId === record.matchId &&
+    preparedPdf.revision === record.revision &&
+    preparedPdf.mutation === record.mutation
+      ? preparedPdf.file
+      : null;
   useEffect(() => {
     if (panel !== "share" || !record) return;
     let cancelled = false;
     void import("@/lib/domain/acta-pdf")
       .then(({ createActaPdf }) => {
-        if (!cancelled) setPdf({ record, file: createActaPdf(record) });
+        if (!cancelled)
+          setPdf({
+            matchId: record.matchId,
+            revision: record.revision,
+            mutation: record.mutation,
+            file: createActaPdf(record),
+          });
       })
       .catch(() => {
         if (!cancelled)
@@ -123,7 +141,7 @@ export function LiveMatchClient() {
     return () => {
       cancelled = true;
     };
-  }, [panel, record]);
+  }, [panel, record?.matchId, record?.revision, record?.mutation]);
 
   const [outWarning, setOutWarning] = useState(false);
 
@@ -712,45 +730,74 @@ export function LiveMatchClient() {
     setDeleting(null);
   }
 
-  function downloadOrViewPdf() {
-    if (!pdf) return;
+  function downloadOrViewPdf(targetFile?: File) {
+    const file = targetFile ?? pdf;
+    if (!file) return;
     setShareError("");
     try {
-      const url = URL.createObjectURL(pdf);
+      const url = URL.createObjectURL(file);
       const a = document.createElement("a");
       a.href = url;
-      a.download = pdf.name;
-      a.target = "_blank";
+      a.download = file.name;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      try {
+        window.open(url, "_blank");
+      } catch {}
+      setTimeout(() => URL.revokeObjectURL(url), 120000);
     } catch {
       setShareError("No se pudo descargar el PDF en este dispositivo.");
     }
   }
 
   async function share() {
-    if (!pdf || !record) return;
+    if (!record) return;
     setShareError("");
 
-    try {
-      const file = pdf;
-
-      if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Acta · ${record.team} vs ${record.opponent}`,
+    let file = pdf;
+    if (!file) {
+      try {
+        const { createActaPdf } = await import("@/lib/domain/acta-pdf");
+        file = createActaPdf(record);
+        setPdf({
+          matchId: record.matchId,
+          revision: record.revision,
+          mutation: record.mutation,
+          file,
         });
-      } else {
-        downloadOrViewPdf();
+      } catch {
+        setShareError("No pudimos preparar el PDF para compartir.");
+        return;
       }
-    } catch (e) {
-      if (!(e instanceof DOMException && e.name === "AbortError")) {
-        setShareError(
-          "No pudimos compartir el PDF directamente. Puedes descargarlo con el botón de abajo.",
-        );
+    }
+
+    const shareData = { files: [file] };
+
+    if (
+      typeof navigator !== "undefined" &&
+      typeof navigator.canShare === "function" &&
+      navigator.canShare(shareData)
+    ) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") {
+          return;
+        }
       }
+    }
+
+    try {
+      downloadOrViewPdf(file);
+      const summary = `*Acta oficial Morvedre Core*\n${record.team} vs ${record.opponent}\nResultado: ${score(record.sheet, "us")}–${score(record.sheet, "them")}\n(Se ha descargado el PDF en tu dispositivo para adjuntarlo)`;
+      const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(summary)}`;
+      window.open(waUrl, "_blank");
+    } catch {
+      setShareError(
+        "No pudimos abrir WhatsApp directamente. El PDF se ha descargado en tu dispositivo.",
+      );
     }
   }
 
@@ -2405,7 +2452,7 @@ export function LiveMatchClient() {
                           disabled={!pdf}
                           onClick={() => void share()}
                         >
-                          <Share2 size={18} aria-hidden="true" />
+                          <MessageCircle size={18} aria-hidden="true" />
                           <span>{pdf ? "Compartir por WhatsApp" : "Preparando PDF…"}</span>
                         </button>
                       </div>

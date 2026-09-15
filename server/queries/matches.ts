@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { playerTotals, type LiveSheet } from "@/lib/domain/live-match";
 
 export interface CallupDetail {
   match_id: string;
@@ -36,6 +37,7 @@ export interface MatchScorer {
   goals: number;
   mvp: boolean;
   cap_number: number | null;
+  assists?: number;
 }
 
 function extractJoined<T>(value: T | T[] | null | undefined): T | null {
@@ -182,13 +184,20 @@ export async function getMatchTopScorers(matchId: string, limit = 3): Promise<Ma
 
 export async function getMatchMvp(matchId: string): Promise<MatchScorer | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("match_stats")
-    .select("player_id, goals, mvp, profiles!match_stats_player_id_fkey(full_name)")
-    .eq("match_id", matchId)
-    .eq("mvp", true)
-    .limit(1)
-    .maybeSingle();
+  const [{ data, error }, { data: sheetRow }] = await Promise.all([
+    supabase
+      .from("match_stats")
+      .select("player_id, goals, mvp, profiles!match_stats_player_id_fkey(full_name)")
+      .eq("match_id", matchId)
+      .eq("mvp", true)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("live_match_sheets")
+      .select("document")
+      .eq("match_id", matchId)
+      .maybeSingle(),
+  ]);
 
   if (error) {
     throw new Error("No pudimos cargar el MVP.");
@@ -201,7 +210,18 @@ export async function getMatchMvp(matchId: string): Promise<MatchScorer | null> 
     mvp: boolean;
     profiles: unknown;
   };
-  return toScorer(row, capMap);
+  const scorer = toScorer(row, capMap);
+  if (sheetRow?.document) {
+    const doc = sheetRow.document as LiveSheet;
+    if (Array.isArray(doc.players)) {
+      const player = doc.players.find((p) => p.id === row.player_id);
+      if (player) {
+        const totals = playerTotals(doc, "us", player.cap);
+        scorer.assists = totals.assists;
+      }
+    }
+  }
+  return scorer;
 }
 
 export async function isProfileCoachOfMatch(matchId: string, profileId: string): Promise<boolean> {

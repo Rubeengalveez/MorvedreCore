@@ -1,5 +1,11 @@
 # Log de decisiones
 
+## 2026-09-15 - Criterio de MVP del partido con acta (goles + asistencias)
+
+- Si el partido cuenta con acta en directo (`live_match_sheets`): el MVP se determina sumando **goles + asistencias**. En caso de empate a contribuciones totales, desempata quien tenga menos expulsiones.
+- Si el partido no cuenta con acta oficial y se registró mediante el modo rápido de solo goles y expulsiones: se mantiene la lógica actual (máximo goleador, desempatado por menos expulsiones).
+- La ficha del partido en `/matches/[id]` muestra el desglose correspondiente (`X goles · Y asistencias` cuando procede de acta en directo, o solo `X goles` en modo rápido).
+
 ## 2026-09-14 - Tiempos de nado
 
 - Se implementa [38-swim-times-design.md](38-swim-times-design.md) para registro de 50/100 m desde Equipo, por jugador y sin salir de la plantilla, con fecha automática, corrección, intentos repetidos e historial permanente accesible desde perfiles y familia. La migración queda preparada localmente y pendiente de despliegue.

@@ -256,9 +256,11 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                 MVP del partido
               </span>
               <span className="text-pool-deep truncate text-lg font-black">{mvp.full_name}</span>
-              {mvp.goals > 0 && (
+              {(mvp.goals > 0 || (mvp.assists ?? 0) > 0) && (
                 <span className="text-ink-700 text-sm font-semibold">
-                  {mvp.goals} {mvp.goals === 1 ? "gol" : "goles"}
+                  {mvp.assists !== undefined && mvp.assists > 0
+                    ? `${mvp.goals} ${mvp.goals === 1 ? "gol" : "goles"} · ${mvp.assists} ${mvp.assists === 1 ? "asistencia" : "asistencias"}`
+                    : `${mvp.goals} ${mvp.goals === 1 ? "gol" : "goles"}`}
                 </span>
               )}
             </div>

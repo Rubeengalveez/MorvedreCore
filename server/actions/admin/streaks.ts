@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin, requireAttendanceManagerOf, requireCoachOf } from "./_helpers";
 import { computeMvp, type MvpCandidate } from "@/lib/domain/mvp";
+import { playerTotals, type LiveSheet } from "@/lib/domain/live-match";
 import {
   applyStreak,
   emptyStreak,
@@ -65,6 +66,11 @@ interface MatchCallupLite {
   status: string;
 }
 
+interface LiveMatchSheetLite {
+  match_id: string;
+  document: unknown;
+}
+
 interface SeasonData {
   matches: MatchRowLite[];
   matchStats: MatchStatLite[];
@@ -72,11 +78,12 @@ interface SeasonData {
   attendance: TrainingAttendanceLite[];
   rosters: TeamRosterLite[];
   callups: MatchCallupLite[];
+  sheets: LiveMatchSheetLite[];
 }
 
 async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promise<SeasonData> {
   const supabase = client || (await createClient());
-  const [matchesRes, statsRes, sessionsRes, attendanceRes, rostersRes, callupsRes] =
+  const [matchesRes, statsRes, sessionsRes, attendanceRes, rostersRes, callupsRes, sheetsRes] =
     await Promise.all([
       supabase
         .from("matches")
@@ -108,6 +115,9 @@ async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promis
         .from("match_callups")
         .select("match_id, player_id, status, matches!match_callups_match_id_fkey(season_id)")
         .eq("matches.season_id", seasonId),
+      supabase
+        .from("live_match_sheets")
+        .select("match_id, document"),
     ]);
   return {
     matches: (matchesRes.data ?? []) as unknown as MatchRowLite[],
@@ -116,6 +126,7 @@ async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promis
     attendance: (attendanceRes.data ?? []) as unknown as TrainingAttendanceLite[],
     rosters: (rostersRes.data ?? []) as unknown as TeamRosterLite[],
     callups: (callupsRes.data ?? []) as unknown as MatchCallupLite[],
+    sheets: (sheetsRes.data ?? []) as unknown as LiveMatchSheetLite[],
   };
 }
 
@@ -198,14 +209,45 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
   const admin = createAdminClient();
   const data = await loadSeasonData(seasonId, admin);
 
-  // MVP automático: calcular y persistir en la base de datos
   const statsForMatch = data.matchStats.filter((s) => s.match_id === match.id);
-  const candidates: MvpCandidate[] = statsForMatch.map((s) => ({
-    player_id: s.player_id,
-    goals: s.goals,
-    exclusions: s.exclusions,
-  }));
-  const mvpResult = computeMvp(candidates);
+
+  let sheetDoc = (data.sheets.find((s) => s.match_id === match.id)?.document ?? null) as LiveSheet | null;
+  if (!sheetDoc) {
+    const { data: directSheet } = await admin
+      .from("live_match_sheets")
+      .select("document")
+      .eq("match_id", match.id)
+      .maybeSingle();
+    if (directSheet?.document) {
+      sheetDoc = directSheet.document as LiveSheet;
+    }
+  }
+
+  let candidates: MvpCandidate[];
+  let useAssists = false;
+
+  if (sheetDoc && Array.isArray(sheetDoc.players)) {
+    useAssists = true;
+    const assistsByPlayerId = new Map<string, number>();
+    for (const player of sheetDoc.players) {
+      const totals = playerTotals(sheetDoc, "us", player.cap);
+      assistsByPlayerId.set(player.id, totals.assists);
+    }
+    candidates = statsForMatch.map((s) => ({
+      player_id: s.player_id,
+      goals: s.goals,
+      exclusions: s.exclusions,
+      assists: assistsByPlayerId.get(s.player_id) ?? 0,
+    }));
+  } else {
+    candidates = statsForMatch.map((s) => ({
+      player_id: s.player_id,
+      goals: s.goals,
+      exclusions: s.exclusions,
+    }));
+  }
+
+  const mvpResult = computeMvp(candidates, { useAssists });
   const mvpPlayerIds = mvpResult.player_ids;
 
   // 1. Poner mvp = false para todos los jugadores del partido primero
