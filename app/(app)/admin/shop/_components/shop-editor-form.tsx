@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Save, Trash2, Upload, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
 import {
@@ -40,6 +41,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
   const fileRef = useRef<HTMLInputElement>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [coverImageIndex, setCoverImageIndex] = useState(0);
   const [sizesText, setSizesText] = useState((initial?.sizes ?? []).join(", "));
@@ -122,7 +124,12 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
 
   function remove() {
     if (!productId) return;
-    if (!confirm("¿Eliminar este producto? No se puede deshacer.")) return;
+    setError(null);
+    setRemoveConfirmOpen(true);
+  }
+
+  function confirmRemove() {
+    if (!productId) return;
     startTransition(async () => {
       try {
         await deleteShopProduct({ product_id: productId });
@@ -141,6 +148,16 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
       }}
       className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-md border p-4"
     >
+      <ConfirmActionSheet
+        open={removeConfirmOpen}
+        onOpenChange={setRemoveConfirmOpen}
+        title="Eliminar producto"
+        description="Esta acción no se puede deshacer."
+        confirmLabel="Sí, eliminar producto"
+        isPending={pending}
+        error={error}
+        onConfirm={confirmRemove}
+      />
       <Field label="Título">
         <Input value={form.title} onChange={(e) => update("title", e.target.value)} required />
       </Field>

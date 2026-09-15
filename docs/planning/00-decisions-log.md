@@ -938,3 +938,7 @@ La elección de portero inicia el siguiente cuarto. keeperStints, opcional en el
 
 Primera hoja: columnas estadísticas iguales, ceros atenuados como guiones, goles de 1+ adicionales al total, goles de penalti y tarjetas condicionales. Resultado final en parciales; marcador previo separado cuando existe para que las sumas cuadren. Banda de resultado y datos del partido, sin declarar victoria/derrota hasta el cierre. Gráfico escalonado de cada gol, en orden dentro del cuarto, con cierre de cuartos marcado; no representa tiempos de reloj. La aportación individual incluye toda la convocatoria. Portería comparada en filas; goleadores rivales ordenados en bloques secundarios.
 
+
+### 2026-09-15 · Auditoría y planificación del panel de administración
+
+A petición de Rubén se auditan funciones, organización, diseño y accesibilidad del panel antes de implementar su rediseño. Documento general y fichas por sección en [auditoría de administración](../audits/2026-09-15-admin/00-panel-general.md). Se distingue evidencia de código, observación local, problema reportado y propuesta pendiente de validar. La operación cotidiana debe centrarse en la temporada actual, con consulta histórica y preparación de curso separadas. Se priorizan integridad de entrenamientos/fichas, consultas fallidas, accesos a catálogo y solicitudes, ciclos completos de mantenimiento y accesibilidad. No se cambian funciones, datos ni permisos en esta fase; las nuevas propuestas no se consideran decisiones de producto cerradas.

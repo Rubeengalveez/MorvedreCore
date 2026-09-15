@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 import { Input } from "@/components/ui/input";
 import {
   formatSwimTime,
@@ -65,6 +66,7 @@ function HistoryEntry({
   const [startType, setStartType] = useState<"water" | "block">(entry.start_type);
   const [error, setError] = useState("");
   const [warningAccepted, setWarningAccepted] = useState(false);
+  const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
   function save() {
@@ -110,20 +112,34 @@ function HistoryEntry({
   }
 
   function voidEntry() {
-    if (!window.confirm("¿Anular esta anotación? Dejará de aparecer en el perfil y los rankings."))
-      return;
+    setError("");
+    setVoidConfirmOpen(true);
+  }
+
+  function confirmVoidEntry() {
     startTransition(async () => {
       const result = await voidSwimTime({ entryId: entry.id, revision: entry.revision });
       if (!result.ok) {
         setError(result.error);
         return;
       }
+      setVoidConfirmOpen(false);
       onVoid();
     });
   }
 
   return (
     <article className="border-ink-200 bg-paper-card overflow-hidden rounded-2xl border shadow-sm">
+      <ConfirmActionSheet
+        open={voidConfirmOpen}
+        onOpenChange={setVoidConfirmOpen}
+        title="Anular anotación"
+        description="Dejará de aparecer en el perfil y los rankings."
+        confirmLabel="Sí, anular anotación"
+        isPending={pending}
+        error={error}
+        onConfirm={confirmVoidEntry}
+      />
       <div className="flex items-start justify-between gap-3 px-4 py-3">
         <div>
           <time dateTime={entry.test_date} className="text-pool-deep font-extrabold">

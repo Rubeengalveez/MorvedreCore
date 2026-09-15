@@ -101,6 +101,7 @@ Un build correcto no acredita el cierre completo de la auditoría. Las verificac
 - **El cálculo de categoría nunca se almacena.** Se deriva de `birth_year` y la `season` actual.
 - **Lógica de negocio en `lib/domain/*` como funciones puras testeables.**
 - **Mobile-first.** Diseño a 320px, luego mejora. Touch targets ≥ 48×48px.
+- **Nunca uses `alert`, `confirm`, `prompt` ni sus variantes `window.*`.** Para confirmar acciones destructivas usa `ConfirmActionSheet`, la lámina inferior controlada de `components/ui/confirm-action-sheet.tsx`, con carga y una opción clara de cancelar.
 - **TypeScript strict siempre.**
 - **Cero comentarios en código** salvo que el usuario los pida explícitamente.
 - **Tono cercano, segunda persona.** Nunca "Se convoca al jugador..." en mensajes.

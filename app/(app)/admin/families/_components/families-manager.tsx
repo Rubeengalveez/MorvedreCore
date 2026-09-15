@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 import {
   Form,
   FormControl,
@@ -286,6 +287,7 @@ export interface FamiliesTableProps {
 export function FamiliesTable({ rows }: FamiliesTableProps) {
   const [pendingKey, setPendingKey] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  const [rowToRemove, setRowToRemove] = useState<FamilyRow | null>(null);
   const [, startTransition] = useTransition();
   const [search, setSearch] = useState("");
 
@@ -312,9 +314,13 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
   }, [filtered]);
 
   function handleRemove(row: FamilyRow) {
-    if (!window.confirm(`¿Eliminar el vínculo entre ${row.parent_name} y ${row.child_name}?`)) {
-      return;
-    }
+    setRemoveError(null);
+    setRowToRemove(row);
+  }
+
+  function confirmRemove() {
+    if (!rowToRemove) return;
+    const row = rowToRemove;
     const key = `${row.parent_id}-${row.child_id}`;
     setRemoveError(null);
     setPendingKey(key);
@@ -324,6 +330,7 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
           parent_profile_id: row.parent_id,
           child_profile_id: row.child_id,
         });
+        setRowToRemove(null);
       } catch (error) {
         setRemoveError(
           error instanceof Error ? error.message : "No pudimos eliminar el vínculo familiar.",
@@ -347,6 +354,22 @@ export function FamiliesTable({ rows }: FamiliesTableProps) {
 
   return (
     <div className="flex flex-col gap-3">
+      <ConfirmActionSheet
+        open={rowToRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) setRowToRemove(null);
+        }}
+        title="Eliminar vínculo familiar"
+        description={
+          rowToRemove
+            ? `¿Eliminar el vínculo entre ${rowToRemove.parent_name} y ${rowToRemove.child_name}?`
+            : ""
+        }
+        confirmLabel="Sí, eliminar vínculo"
+        isPending={pendingKey !== null}
+        error={removeError}
+        onConfirm={confirmRemove}
+      />
       <div className="relative">
         <Search
           className="text-ink-600 pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2"

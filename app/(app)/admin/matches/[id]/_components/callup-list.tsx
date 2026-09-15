@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import { Alert } from "@/components/ui/alert";
 import { Avatar } from "@/components/ui/avatar";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 
 import { updateCallupResult } from "@/server/actions/admin/matches";
 import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
@@ -72,6 +73,7 @@ function CallupRowItem({ entry, entries }: { entry: CallupEntry; entries: Callup
     entry.callup.cap_number != null ? String(entry.callup.cap_number) : "",
   );
   const [error, setError] = useState<string | null>(null);
+  const [removeConfirmOpen, setRemoveConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const categoryLabel = entry.player?.category_code
     ? (CATEGORY_LABELS[entry.player.category_code as CategoryCode] ?? entry.player.category_code)
@@ -108,11 +110,15 @@ function CallupRowItem({ entry, entries }: { entry: CallupEntry; entries: Callup
   }
 
   function remove() {
-    if (
-      !window.confirm(`¿Quitar a ${entry.player?.full_name ?? "este jugador"} de la convocatoria?`)
-    )
-      return;
-    run(() => deleteCallup(entry.callup.match_id, entry.callup.player_id));
+    setError(null);
+    setRemoveConfirmOpen(true);
+  }
+
+  function confirmRemove() {
+    run(async () => {
+      await deleteCallup(entry.callup.match_id, entry.callup.player_id);
+      setRemoveConfirmOpen(false);
+    });
   }
 
   function setStatus(status: "confirmed" | "declined") {
@@ -133,6 +139,16 @@ function CallupRowItem({ entry, entries }: { entry: CallupEntry; entries: Callup
         entry.hasConflict && "border-danger/35",
       )}
     >
+      <ConfirmActionSheet
+        open={removeConfirmOpen}
+        onOpenChange={setRemoveConfirmOpen}
+        title="Quitar de la convocatoria"
+        description={`¿Quitar a ${entry.player?.full_name ?? "este jugador"} de la convocatoria?`}
+        confirmLabel="Sí, quitar jugador"
+        isPending={pending}
+        error={error}
+        onConfirm={confirmRemove}
+      />
       <div className="flex items-center gap-3">
         <Avatar
           name={entry.player?.full_name ?? "?"}

@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 import {
   Form,
   FormControl,
@@ -141,12 +142,7 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
         </SheetHeader>
         <SheetBody>
           <Form {...form}>
-            <form
-              id={formId}
-              onSubmit={onSubmit}
-              className="flex flex-col gap-4 pb-2"
-              noValidate
-            >
+            <form id={formId} onSubmit={onSubmit} className="flex flex-col gap-4 pb-2" noValidate>
               {state?.error ? (
                 <p className="text-danger text-sm font-medium">{state.error}</p>
               ) : null}
@@ -178,7 +174,7 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
                               placeholder="Buscar por nombre..."
                               value={search}
                               onChange={(e) => setSearch(e.target.value)}
-                              className="h-12 pl-9 pr-9 text-base"
+                              className="h-12 pr-9 pl-9 text-base"
                             />
                             {search ? (
                               <button
@@ -195,10 +191,10 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
                           <div
                             role="listbox"
                             aria-label="Listado de jugadores disponibles"
-                            className="border-ink-200 bg-paper divide-ink-100 max-h-56 sm:max-h-64 overflow-y-auto rounded-xl border divide-y shadow-xs"
+                            className="border-ink-200 bg-paper divide-ink-100 max-h-56 divide-y overflow-y-auto rounded-xl border shadow-xs sm:max-h-64"
                           >
                             {filtered.length === 0 ? (
-                              <div className="p-6 text-center text-sm text-ink-500">
+                              <div className="text-ink-500 p-6 text-center text-sm">
                                 {candidates.length === 0
                                   ? "Todos los jugadores registrados ya forman parte de este equipo."
                                   : "No se encontraron jugadores que coincidan con la búsqueda."}
@@ -214,13 +210,13 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
                                     aria-selected={isSelected}
                                     onClick={() => field.onChange(c.id)}
                                     className={cn(
-                                      "flex w-full min-h-12 touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors focus-visible:ring-pool-blue focus-visible:ring-2 focus-visible:outline-none",
+                                      "focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
                                       isSelected
-                                        ? "bg-pool-foam border-l-4 border-l-pool-blue text-pool-deep"
+                                        ? "bg-pool-foam border-l-pool-blue text-pool-deep border-l-4"
                                         : "hover:bg-pool-foam/40 text-ink-900",
                                     )}
                                   >
-                                    <div className="flex items-center gap-3 min-w-0">
+                                    <div className="flex min-w-0 items-center gap-3">
                                       <span
                                         className={cn(
                                           "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
@@ -232,7 +228,7 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
                                         {c.full_name.slice(0, 2).toUpperCase()}
                                       </span>
                                       <div className="min-w-0">
-                                        <span className="block truncate text-sm font-semibold text-pool-deep">
+                                        <span className="text-pool-deep block truncate text-sm font-semibold">
                                           {c.full_name}
                                         </span>
                                         <span className="text-ink-500 text-xs">
@@ -255,9 +251,12 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
 
                           {selectedPlayer ? (
                             <div className="border-pool-blue/30 bg-pool-foam/60 flex items-center justify-between rounded-lg border px-3 py-2 text-xs">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Check className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
-                                <span className="truncate font-medium text-pool-deep">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Check
+                                  className="text-pool-blue h-4 w-4 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                <span className="text-pool-deep truncate font-medium">
                                   Seleccionado:{" "}
                                   <strong className="font-bold">{selectedPlayer.full_name}</strong>
                                   {selectedPlayer.birth_year
@@ -332,16 +331,27 @@ export interface RosterListProps {
 
 export function RosterList({ teamId, rows }: RosterListProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [playerToRemove, setPlayerToRemove] = useState<RosterRow | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
-  function handleRemove(playerId: string, name: string) {
-    if (!window.confirm(`¿Quitar a ${name} de este equipo?`)) {
-      return;
-    }
-    setPendingId(playerId);
+  function handleRemove(player: RosterRow) {
+    setRemoveError(null);
+    setPlayerToRemove(player);
+  }
+
+  function confirmRemove() {
+    if (!playerToRemove) return;
+    const player = playerToRemove;
+    setPendingId(player.player_id);
     startTransition(async () => {
       try {
-        await unrosterPlayer({ team_id: teamId, player_id: playerId });
+        await unrosterPlayer({ team_id: teamId, player_id: player.player_id });
+        setPlayerToRemove(null);
+      } catch (caught) {
+        setRemoveError(
+          caught instanceof Error ? caught.message : "No pudimos quitar al jugador del equipo.",
+        );
       } finally {
         setPendingId(null);
       }
@@ -357,37 +367,51 @@ export function RosterList({ teamId, rows }: RosterListProps) {
   }
 
   return (
-    <ul className="flex flex-col gap-2">
-      {rows.map((r) => (
-        <li
-          key={r.player_id}
-          className="border-ink-300 bg-paper flex items-center gap-3 rounded-md border px-4 py-3"
-        >
-          <span className="bg-pool-foam text-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded font-mono text-base font-bold">
-            {r.squad_number ?? "—"}
-          </span>
-          <div className="flex flex-1 flex-col">
-            <span className="font-display text-pool-deep text-base font-bold">{r.full_name}</span>
-            <span className="text-ink-600 text-xs">
-              {r.birth_year ?? "?"} · {r.categoryLabel}
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-danger hover:bg-danger/10 h-12 w-12 p-0"
-            aria-label={`Quitar a ${r.full_name}`}
-            disabled={pendingId === r.player_id}
-            onClick={() => handleRemove(r.player_id, r.full_name)}
+    <>
+      <ConfirmActionSheet
+        open={playerToRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) setPlayerToRemove(null);
+        }}
+        title="Quitar jugador del equipo"
+        description={playerToRemove ? `¿Quitar a ${playerToRemove.full_name} de este equipo?` : ""}
+        confirmLabel="Sí, quitar jugador"
+        isPending={pendingId !== null}
+        error={removeError}
+        onConfirm={confirmRemove}
+      />
+      <ul className="flex flex-col gap-2">
+        {rows.map((r) => (
+          <li
+            key={r.player_id}
+            className="border-ink-300 bg-paper flex items-center gap-3 rounded-md border px-4 py-3"
           >
-            {pendingId === r.player_id ? (
-              <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
-            ) : (
-              <MdDelete className="h-5 w-5" aria-hidden="true" />
-            )}
-          </Button>
-        </li>
-      ))}
-    </ul>
+            <span className="bg-pool-foam text-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded font-mono text-base font-bold">
+              {r.squad_number ?? "—"}
+            </span>
+            <div className="flex flex-1 flex-col">
+              <span className="font-display text-pool-deep text-base font-bold">{r.full_name}</span>
+              <span className="text-ink-600 text-xs">
+                {r.birth_year ?? "?"} · {r.categoryLabel}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-danger hover:bg-danger/10 h-12 w-12 p-0"
+              aria-label={`Quitar a ${r.full_name}`}
+              disabled={pendingId === r.player_id}
+              onClick={() => handleRemove(r)}
+            >
+              {pendingId === r.player_id ? (
+                <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
+              ) : (
+                <MdDelete className="h-5 w-5" aria-hidden="true" />
+              )}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }

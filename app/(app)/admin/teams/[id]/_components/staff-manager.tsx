@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 import {
   Form,
   FormControl,
@@ -142,12 +143,7 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
         </SheetHeader>
         <SheetBody>
           <Form {...form}>
-            <form
-              id={formId}
-              onSubmit={onSubmit}
-              className="flex flex-col gap-4 pb-2"
-              noValidate
-            >
+            <form id={formId} onSubmit={onSubmit} className="flex flex-col gap-4 pb-2" noValidate>
               {state?.error ? (
                 <p className="text-danger text-sm font-medium">{state.error}</p>
               ) : null}
@@ -205,7 +201,7 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
                               placeholder="Buscar por nombre..."
                               value={search}
                               onChange={(e) => setSearch(e.target.value)}
-                              className="h-12 pl-9 pr-9 text-base"
+                              className="h-12 pr-9 pl-9 text-base"
                             />
                             {search ? (
                               <button
@@ -222,10 +218,10 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
                           <div
                             role="listbox"
                             aria-label="Listado de personas disponibles"
-                            className="border-ink-200 bg-paper divide-ink-100 max-h-56 sm:max-h-64 overflow-y-auto rounded-xl border divide-y shadow-xs"
+                            className="border-ink-200 bg-paper divide-ink-100 max-h-56 divide-y overflow-y-auto rounded-xl border shadow-xs sm:max-h-64"
                           >
                             {filtered.length === 0 ? (
-                              <div className="p-6 text-center text-sm text-ink-500">
+                              <div className="text-ink-500 p-6 text-center text-sm">
                                 {candidates.length === 0
                                   ? "Todas las personas registradas ya están asignadas."
                                   : "No se encontraron personas que coincidan con la búsqueda."}
@@ -241,13 +237,13 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
                                     aria-selected={isSelected}
                                     onClick={() => field.onChange(c.id)}
                                     className={cn(
-                                      "flex w-full min-h-12 touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors focus-visible:ring-pool-blue focus-visible:ring-2 focus-visible:outline-none",
+                                      "focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center justify-between gap-3 px-3.5 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none",
                                       isSelected
-                                        ? "bg-pool-foam border-l-4 border-l-pool-blue text-pool-deep"
+                                        ? "bg-pool-foam border-l-pool-blue text-pool-deep border-l-4"
                                         : "hover:bg-pool-foam/40 text-ink-900",
                                     )}
                                   >
-                                    <div className="flex items-center gap-3 min-w-0">
+                                    <div className="flex min-w-0 items-center gap-3">
                                       <span
                                         className={cn(
                                           "flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold",
@@ -258,7 +254,7 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
                                       >
                                         {c.full_name.slice(0, 2).toUpperCase()}
                                       </span>
-                                      <span className="truncate text-sm font-semibold text-pool-deep">
+                                      <span className="text-pool-deep truncate text-sm font-semibold">
                                         {c.full_name}
                                       </span>
                                     </div>
@@ -275,9 +271,12 @@ export function StaffAssignSheet({ teamId, candidates, trigger }: StaffAssignShe
 
                           {selectedPerson ? (
                             <div className="border-pool-blue/30 bg-pool-foam/60 flex items-center justify-between rounded-lg border px-3 py-2 text-xs">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <Check className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
-                                <span className="truncate font-medium text-pool-deep">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <Check
+                                  className="text-pool-blue h-4 w-4 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                <span className="text-pool-deep truncate font-medium">
                                   Seleccionado:{" "}
                                   <strong className="font-bold">{selectedPerson.full_name}</strong>
                                 </span>
@@ -316,17 +315,36 @@ export interface StaffListProps {
 
 export function StaffList({ teamId, staff }: StaffListProps) {
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [staffToRemove, setStaffToRemove] = useState<{
+    profileId: string;
+    role: StaffValues["role"];
+    name: string;
+  } | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [, startTransition] = useTransition();
 
   function handleRemove(profileId: string, role: StaffValues["role"], name: string) {
-    if (!window.confirm(`¿Quitar a ${name} del equipo?`)) {
-      return;
-    }
-    const key = `${profileId}-${role}`;
+    setRemoveError(null);
+    setStaffToRemove({ profileId, role, name });
+  }
+
+  function confirmRemove() {
+    if (!staffToRemove) return;
+    const member = staffToRemove;
+    const key = `${member.profileId}-${member.role}`;
     setPendingId(key);
     startTransition(async () => {
       try {
-        await unassignStaff({ team_id: teamId, profile_id: profileId, role });
+        await unassignStaff({
+          team_id: teamId,
+          profile_id: member.profileId,
+          role: member.role,
+        });
+        setStaffToRemove(null);
+      } catch (caught) {
+        setRemoveError(
+          caught instanceof Error ? caught.message : "No pudimos quitar a esta persona del equipo.",
+        );
       } finally {
         setPendingId(null);
       }
@@ -340,37 +358,53 @@ export function StaffList({ teamId, staff }: StaffListProps) {
   }
 
   return (
-    <ul className="flex flex-col gap-2">
-      {staff.map((s) => {
-        const key = `${s.profile_id}-${s.role}`;
-        return (
-          <li
-            key={key}
-            className="border-ink-300 bg-paper flex items-center justify-between gap-3 rounded-md border px-4 py-3"
-          >
-            <div className="flex flex-col">
-              <span className="font-display text-pool-deep text-base font-bold">{s.full_name}</span>
-              <span className="text-ink-600 text-xs font-semibold tracking-wider uppercase">
-                {RELATION_OPTIONS[s.role]}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger hover:bg-danger/10 h-12 w-12 p-0"
-              aria-label={`Quitar ${s.full_name}`}
-              disabled={pendingId === key}
-              onClick={() => handleRemove(s.profile_id, s.role, s.full_name)}
+    <>
+      <ConfirmActionSheet
+        open={staffToRemove !== null}
+        onOpenChange={(open) => {
+          if (!open) setStaffToRemove(null);
+        }}
+        title="Quitar del equipo"
+        description={staffToRemove ? `¿Quitar a ${staffToRemove.name} del equipo?` : ""}
+        confirmLabel="Sí, quitar persona"
+        isPending={pendingId !== null}
+        error={removeError}
+        onConfirm={confirmRemove}
+      />
+      <ul className="flex flex-col gap-2">
+        {staff.map((s) => {
+          const key = `${s.profile_id}-${s.role}`;
+          return (
+            <li
+              key={key}
+              className="border-ink-300 bg-paper flex items-center justify-between gap-3 rounded-md border px-4 py-3"
             >
-              {pendingId === key ? (
-                <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
-              ) : (
-                <MdDelete className="h-5 w-5" aria-hidden="true" />
-              )}
-            </Button>
-          </li>
-        );
-      })}
-    </ul>
+              <div className="flex flex-col">
+                <span className="font-display text-pool-deep text-base font-bold">
+                  {s.full_name}
+                </span>
+                <span className="text-ink-600 text-xs font-semibold tracking-wider uppercase">
+                  {RELATION_OPTIONS[s.role]}
+                </span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-danger hover:bg-danger/10 h-12 w-12 p-0"
+                aria-label={`Quitar ${s.full_name}`}
+                disabled={pendingId === key}
+                onClick={() => handleRemove(s.profile_id, s.role, s.full_name)}
+              >
+                {pendingId === key ? (
+                  <MdAutorenew className="h-5 w-5 animate-spin" aria-hidden="true" />
+                ) : (
+                  <MdDelete className="h-5 w-5" aria-hidden="true" />
+                )}
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </>
   );
 }
