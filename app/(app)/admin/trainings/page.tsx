@@ -104,13 +104,14 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
       ? (teams.find((t) => t.season_id === currentSeason.id)?.id ?? null)
       : null;
 
-  const blocks = (blocksData ?? []) as TrainingBlockRow[];
+  const currentTeamIds = new Set(teams.filter((team) => team.season_id === currentSeason?.id).map((team) => team.id));
+  const blocks = ((blocksData ?? []) as TrainingBlockRow[]).filter((block) => currentTeamIds.has(block.team_id));
 
   if (firstError) {
     return {
       ok: false,
       seasons,
-      teams,
+      teams: teams.filter((team) => currentTeamIds.has(team.id)),
       currentSeasonId: null,
       defaultTeamId: null,
       blocks: [],
@@ -125,7 +126,7 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
     return {
       ok: true,
       seasons,
-      teams,
+      teams: teams.filter((team) => currentTeamIds.has(team.id)),
       currentSeasonId: currentSeason?.id ?? null,
       defaultTeamId,
       blocks: [],
@@ -270,7 +271,7 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
   return {
     ok: true,
     seasons,
-    teams,
+    teams: teams.filter((team) => currentTeamIds.has(team.id)),
     currentSeasonId: currentSeason?.id ?? null,
     defaultTeamId,
     blocks,
@@ -347,9 +348,9 @@ export default async function TrainingsPage() {
         description="Bloques, sesiones y listas de asistencia."
         icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
         action={
-          blocks.length > 0 ? (
+          currentSeasonId && teams.length > 0 ? (
             <TrainingScheduleFormSheet
-              seasons={seasons}
+              seasons={seasons.filter((season) => season.id === currentSeasonId)}
               teams={teams}
               defaultTeamId={defaultTeamId}
               defaultSeasonId={currentSeasonId}

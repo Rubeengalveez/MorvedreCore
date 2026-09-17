@@ -68,6 +68,23 @@ function throwIfError(error: { message: string } | null, fallback: string): void
   }
 }
 
+async function requireCurrentMatchSeason(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  teamId: string,
+  seasonId: string,
+): Promise<void> {
+  const [{ data: team, error: teamError }, { data: season, error: seasonError }] =
+    await Promise.all([
+      supabase.from("teams").select("season_id").eq("id", teamId).maybeSingle(),
+      supabase.from("seasons").select("id").eq("id", seasonId).eq("is_current", true).maybeSingle(),
+    ]);
+  throwIfError(teamError, "No pudimos comprobar el equipo del partido.");
+  throwIfError(seasonError, "No pudimos comprobar la temporada del partido.");
+  if (!team || team.season_id !== seasonId || !season) {
+    throw new Error("Solo puedes crear partidos para un equipo de la temporada actual.");
+  }
+}
+
 function notificationTitle(opponent: string, status: string): string {
   if (status === "confirmed") return "Convocatoria confirmada";
   if (status === "declined") return "Has rechazado la convocatoria";
@@ -139,9 +156,9 @@ export async function createMatch(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  await requireMatchManagerOf(parsed.data.team_id);
-
   const supabase = await createClient();
+  await requireMatchManagerOf(parsed.data.team_id);
+  await requireCurrentMatchSeason(supabase, parsed.data.team_id, parsed.data.season_id);
   const { data, error } = await supabase
     .from("matches")
     .insert({
@@ -448,7 +465,7 @@ const suggestedCallupsSchema = z
       .array(
         z.object({
           player_id: z.string().uuid("Jugador inválido."),
-          cap_number: z.number().int().min(1).max(99),
+          cap_number: z.number().int().min(1).max(14),
           source_team_id: z.string().uuid().nullable(),
         }),
       )
@@ -466,10 +483,9 @@ const suggestedCallupsSchema = z
     }
   });
 
-export async function createSuggestedCallups(input: unknown): Promise<
-  | { ok: true; created: number }
-  | { ok: false; created: number; error: string }
-> {
+export async function createSuggestedCallups(
+  input: unknown,
+): Promise<{ ok: true; created: number } | { ok: false; created: number; error: string }> {
   const parsed = suggestedCallupsSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false, created: 0, error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
@@ -986,10 +1002,7 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
       .eq("season_id", match.season_id)
       .eq("scope", "team")
       .eq("scope_key", match.team_id),
-    supabase
-      .from("match_callups")
-      .select("player_id, cap_number, status")
-      .eq("match_id", matchId),
+    supabase.from("match_callups").select("player_id, cap_number, status").eq("match_id", matchId),
   ]);
 
   throwIfError(teamsError, "No pudimos cargar los equipos.");
@@ -1059,12 +1072,24 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
   return prepareCallupProposal(suggestions, currentCallups ?? []);
 }
 
-export async function suggestCallupForMatchResult(matchId: string): Promise<
-  | { ok: true; data: CallupSuggestion[] }
-  | { ok: false; error: string }
+export async function suggestCallupForMatchResult(
+  matchId: string,
+): Promise<
+  { ok: true; data: CallupSuggestion[]; occupiedCaps: number[] } | { ok: false; error: string }
 > {
   try {
-    return { ok: true, data: await suggestCallupForMatch(matchId) };
+    const data = await suggestCallupForMatch(matchId);
+    const supabase = await createClient();
+    const { data: currentCallups, error } = await supabase
+      .from("match_callups")
+      .select("cap_number")
+      .eq("match_id", matchId)
+      .not("cap_number", "is", null);
+    throwIfError(error, "No pudimos revisar los gorros ocupados.");
+    const occupiedCaps = (currentCallups ?? [])
+      .map((callup) => callup.cap_number)
+      .filter((cap): cap is number => cap != null && cap >= 1 && cap <= 14);
+    return { ok: true, data, occupiedCaps };
   } catch (error) {
     return {
       ok: false,

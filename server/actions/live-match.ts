@@ -102,7 +102,7 @@ async function loadLiveMatchImpl(matchId: string): Promise<LiveRecord> {
     });
   }
   if (
-    players.some((p) => p.cap < 1 || p.cap > 99) ||
+    players.some((p) => p.cap < 1 || p.cap > 14) ||
     new Set(players.map((p) => p.cap)).size !== players.length
   ) {
     throw new PreparationRequired({
@@ -245,7 +245,7 @@ export async function prepareLiveMatch(input: {
       .object({
         matchId: z.uuid(),
         players: z
-          .array(z.object({ id: z.uuid(), cap: z.number().int().min(1).max(99) }))
+          .array(z.object({ id: z.uuid(), cap: z.number().int().min(1).max(14) }))
           .min(1)
           .max(14),
       })
@@ -277,7 +277,7 @@ export async function prepareLiveMatch(input: {
       ok: false as const,
       error:
         error instanceof z.ZodError
-          ? "Elige un gorro entre 1 y 99 para cada jugador."
+          ? "Elige un gorro entre 1 y 14 para cada jugador."
           : error instanceof Error
             ? error.message
             : "No pudimos guardar los gorros.",

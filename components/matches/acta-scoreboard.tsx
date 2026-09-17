@@ -1,5 +1,5 @@
 import { ArrowLeft, Share2 } from "lucide-react";
-import { score, type LiveRecord } from "@/lib/domain/live-match";
+import { finalScore, score, type LiveRecord, type Side } from "@/lib/domain/live-match";
 
 export function ActaScoreboard({
   record,
@@ -11,6 +11,8 @@ export function ActaScoreboard({
   onShare: () => void;
 }) {
   const s = record.sheet;
+  const left: Side = record.homeAway === "away" ? "them" : "us";
+  const right: Side = left === "us" ? "them" : "us";
   return (
     <header className="shrink-0 bg-[#062048] pt-[env(safe-area-inset-top)] text-white shadow-[0_4px_18px_rgba(6,32,72,0.2)]">
       <div data-acta-navigation className="flex min-h-12 items-center px-1.5">
@@ -22,39 +24,55 @@ export function ActaScoreboard({
           <ArrowLeft size={23} strokeWidth={2.25} aria-hidden="true" />
         </a>
         <h1 className="min-w-0 flex-1 text-base font-extrabold tracking-tight">Acta en directo</h1>
-        <button
-          type="button"
-          onClick={onShare}
-          aria-label="Compartir acta"
-          className="flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold active:bg-white/15"
-        >
-          <Share2 size={20} strokeWidth={2.25} aria-hidden="true" />
-          <span className="max-[359px]:sr-only">Compartir</span>
-        </button>
+        {s.phase === "finished" ? (
+          <button
+            type="button"
+            onClick={onShare}
+            aria-label="Compartir acta"
+            className="flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-xl px-3 text-sm font-bold active:bg-white/15"
+          >
+            <Share2 size={20} strokeWidth={2.25} aria-hidden="true" />
+            <span className="max-[359px]:sr-only">Compartir</span>
+          </button>
+        ) : (
+          <span className="h-12 w-12" aria-hidden="true" />
+        )}
       </div>
       <div
         data-acta-score
-        className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 px-3 pb-2"
+        className="px-4 pb-2"
+        aria-label={`Morvedre ${score(s, "us")}, ${record.opponent} ${score(s, "them")}`}
       >
-        <span className="truncate text-center text-sm font-bold min-[390px]:text-base">
-          Morvedre
-        </span>
-        <strong
-          data-acta-score-number
-          className="justify-self-center text-center font-mono text-[2.5rem] leading-none font-black tracking-tight whitespace-nowrap tabular-nums min-[390px]:text-5xl"
-          aria-label={`Morvedre ${score(s, "us")}, ${record.opponent} ${score(s, "them")}`}
-        >
-          {score(s, "us")}
-          <span className="px-2 text-xl font-medium text-blue-200">–</span>
-          {score(s, "them")}
-        </strong>
-        <span
-          data-acta-rival-name
-          className="line-clamp-2 text-center text-sm leading-tight font-bold min-[390px]:text-base"
-          title={record.opponent}
-        >
-          {record.opponent}
-        </span>
+        <div className="grid grid-cols-2 items-end gap-7 px-1 text-center">
+          <span
+            className="line-clamp-2 min-w-0 text-sm leading-4 font-bold text-blue-50 min-[390px]:text-[15px]"
+            title={left === "us" ? "Morvedre" : record.opponent}
+          >
+            {left === "us" ? "Morvedre" : record.opponent}
+          </span>
+          <span
+            className="line-clamp-2 min-w-0 text-sm leading-4 font-bold text-blue-50 min-[390px]:text-[15px]"
+            title={right === "us" ? "Morvedre" : record.opponent}
+          >
+            {right === "us" ? "Morvedre" : record.opponent}
+          </span>
+        </div>
+        <div className="mt-1.5 grid grid-cols-[1fr_1.5rem_1fr] items-center text-center">
+          <strong className="font-mono text-[3.25rem] leading-[0.95] font-black tracking-tighter tabular-nums min-[390px]:text-[3.5rem]">
+            {score(s, left)}
+          </strong>
+          <span className="pb-1 text-xl font-medium text-blue-300" aria-hidden="true">
+            –
+          </span>
+          <strong className="font-mono text-[3.25rem] leading-[0.95] font-black tracking-tighter tabular-nums min-[390px]:text-[3.5rem]">
+            {score(s, right)}
+          </strong>
+        </div>
+        {s.shootout && (
+          <div className="-mt-0.5 text-center text-base leading-none font-extrabold text-blue-100">
+            ({finalScore(s, left)}–{finalScore(s, right)})
+          </div>
+        )}
       </div>
       <div
         data-acta-meta
@@ -63,11 +81,13 @@ export function ActaScoreboard({
         <span className="font-bold">
           {s.phase === "finished"
             ? "Partido terminado"
-            : `Cuarto ${s.period}/${s.periods}${s.phase === "break" ? " · Descanso" : ""}`}
-          {s.phase !== "finished" && (
+            : s.phase === "shootout"
+              ? "Tanda de penaltis"
+              : `Cuarto ${s.period}/${s.periods}${s.phase === "break" ? " · Descanso" : ""}`}
+          {s.phase !== "finished" && s.phase !== "shootout" && (
             <span className="font-medium text-blue-200">
               {" "}
-              · Parcial {score(s, "us", s.period)}–{score(s, "them", s.period)}
+              · Parcial {score(s, left, s.period)}–{score(s, right, s.period)}
             </span>
           )}
         </span>

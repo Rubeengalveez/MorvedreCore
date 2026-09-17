@@ -63,7 +63,6 @@ function HistoryEntry({
   const [date, setDate] = useState(entry.test_date);
   const [time50, setTime50] = useState(entry.time_50_cs ? inputValue(entry.time_50_cs) : "");
   const [time100, setTime100] = useState(entry.time_100_cs ? inputValue(entry.time_100_cs) : "");
-  const [startType, setStartType] = useState<"water" | "block">(entry.start_type);
   const [error, setError] = useState("");
   const [warningAccepted, setWarningAccepted] = useState(false);
   const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
@@ -89,7 +88,6 @@ function HistoryEntry({
         entryId: entry.id,
         revision: entry.revision,
         testDate: date,
-        startType,
         time50Cs,
         time100Cs,
       });
@@ -101,7 +99,6 @@ function HistoryEntry({
         ...entry,
         revision: result.revision,
         test_date: date,
-        start_type: startType,
         time_50_cs: time50Cs,
         time_100_cs: time100Cs,
       });
@@ -145,10 +142,7 @@ function HistoryEntry({
           <time dateTime={entry.test_date} className="text-pool-deep font-extrabold">
             {formatDate(entry.test_date)}
           </time>
-          <p className="text-ink-600 mt-1 text-sm">
-            {entry.season_label} ·{" "}
-            {entry.start_type === "water" ? "Desde el agua" : "Desde el poyete"}
-          </p>
+          <p className="text-ink-600 mt-1 text-sm">{entry.season_label}</p>
         </div>
         {canEdit ? (
           <Button
@@ -206,17 +200,6 @@ function HistoryEntry({
                 max={madridToday()}
                 onChange={(event) => setDate(event.target.value)}
               />
-            </label>
-            <label className="text-pool-deep text-sm font-extrabold min-[390px]:col-span-2">
-              Salida
-              <select
-                className="border-ink-300 bg-paper mt-1.5 h-12 w-full rounded-md border px-4 text-base"
-                value={startType}
-                onChange={(event) => setStartType(event.target.value as "water" | "block")}
-              >
-                <option value="water">Desde el agua</option>
-                <option value="block">Desde el poyete</option>
-              </select>
             </label>
           </div>
           {error ? (

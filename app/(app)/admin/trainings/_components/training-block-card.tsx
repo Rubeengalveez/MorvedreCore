@@ -99,9 +99,9 @@ export function TrainingBlockCard({
       <ConfirmActionSheet
         open={deleteConfirmOpen}
         onOpenChange={setDeleteConfirmOpen}
-        title="Eliminar bloque de entrenamientos"
-        description={`Se borrarán las sesiones futuras de “${block.label}”.`}
-        confirmLabel="Sí, eliminar bloque"
+        title="Terminar horario"
+        description={`No se crearán más sesiones para “${block.label}”. Las sesiones y asistencias ya registradas se conservan.`}
+        confirmLabel="Sí, terminar horario"
         isPending={deleting}
         error={deleteError}
         onConfirm={confirmDelete}
@@ -194,7 +194,7 @@ export function TrainingBlockCard({
                   {deleting ? (
                     <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
                   ) : null}
-                  Eliminar bloque
+                  Terminar horario
                 </Button>
               </div>
               <p className="text-ink-600 text-xs">

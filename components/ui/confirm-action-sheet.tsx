@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +55,7 @@ export function ConfirmActionSheet({
       <SheetContent
         size="sm"
         showClose={!isPending}
+        className="bg-paper-card gap-3"
         onEscapeKeyDown={(event) => {
           if (isPending) event.preventDefault();
         }}
@@ -62,9 +63,16 @@ export function ConfirmActionSheet({
           if (isPending) event.preventDefault();
         }}
       >
-        <SheetHeader>
-          <SheetTitle>{title}</SheetTitle>
-          <SheetDescription>{description}</SheetDescription>
+        <SheetHeader className="pr-16">
+          <div className="flex items-start gap-3">
+            <span className="bg-danger/10 text-danger flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+              <Trash2 className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="min-w-0 pt-0.5">
+              <SheetTitle className="text-lg leading-tight">{title}</SheetTitle>
+              <SheetDescription className="mt-1 leading-5">{description}</SheetDescription>
+            </div>
+          </div>
         </SheetHeader>
         <SheetBody className="flex flex-col gap-3 pt-1">
           {error ? (
@@ -76,21 +84,25 @@ export function ConfirmActionSheet({
             </p>
           ) : null}
         </SheetBody>
-        <SheetFooter>
+        <SheetFooter className="border-t-0 pt-1">
           <Button
             type="button"
             variant={BUTTON_VARIANTS[variant]}
             size="lg"
-            className="w-full"
+            className="w-full rounded-xl shadow-sm"
             disabled={isPending}
             onClick={() => void onConfirm()}
           >
-            {isPending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
+            {isPending ? (
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            ) : variant === "danger" ? (
+              <Trash2 className="h-5 w-5" aria-hidden="true" />
+            ) : null}
             {isPending ? "Procesando…" : confirmLabel}
           </Button>
           <Button
             type="button"
-            variant="secondary"
+            variant="ghost"
             size="lg"
             className="w-full"
             disabled={isPending}

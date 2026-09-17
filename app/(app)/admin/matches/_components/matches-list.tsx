@@ -9,10 +9,9 @@ import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/utils/cn";
 import { isSafeMapsUrl } from "@/lib/domain/maps";
 import { formatLongDate, formatShortDate, formatTime } from "@/lib/utils/format";
-import type { Season, Team } from "@/server/actions/admin";
+import type { Team } from "@/server/actions/admin";
 
 export interface MatchRow {
   id: string;
@@ -32,7 +31,6 @@ export interface MatchRow {
 }
 
 export interface MatchesListProps {
-  seasons: Season[];
   teams: Array<Team & { season_label: string }>;
   matches: MatchRow[];
   defaultTeamId: string | null;
@@ -62,24 +60,17 @@ const STATUS_BADGE_VARIANT: Record<string, "info" | "warning" | "success" | "dan
     postponed: "neutral",
   };
 
-type TabValue = "all" | "scheduled" | "played" | "cancelled";
-
-const TABS: Array<{ value: TabValue; label: string }> = [
-  { value: "all", label: "Todos" },
-  { value: "scheduled", label: "Programados" },
-  { value: "played", label: "Jugados" },
-  { value: "cancelled", label: "Cancelados" },
-];
+type StatusFilter = "all" | "scheduled" | "played" | "cancelled";
 
 function scoreLabel(m: MatchRow): string {
   if (m.final_score_us == null || m.final_score_them == null) return "—";
   return `${m.final_score_us} - ${m.final_score_them}`;
 }
 
-export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesListProps) {
+export function MatchesList({ teams, matches, defaultTeamId }: MatchesListProps) {
   const [teamFilter, setTeamFilter] = useState<string>(defaultTeamId ?? "");
   const [competitionFilter, setCompetitionFilter] = useState<string>("");
-  const [tab, setTab] = useState<TabValue>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   const filtered = useMemo(() => {
     return matches.filter((m) => {
@@ -87,15 +78,15 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
       if (competitionFilter && m.competition_type !== competitionFilter) {
         return false;
       }
-      if (tab === "all") return true;
-      if (tab === "scheduled") {
+      if (statusFilter === "all") return true;
+      if (statusFilter === "scheduled") {
         return m.status === "scheduled" || m.status === "in_progress" || m.status === "postponed";
       }
-      if (tab === "played") return m.status === "played";
-      if (tab === "cancelled") return m.status === "cancelled";
+      if (statusFilter === "played") return m.status === "played";
+      if (statusFilter === "cancelled") return m.status === "cancelled";
       return true;
     });
-  }, [matches, teamFilter, competitionFilter, tab]);
+  }, [matches, teamFilter, competitionFilter, statusFilter]);
 
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)),
@@ -104,10 +95,10 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <section className="border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-1 gap-3 rounded-2xl border p-3 sm:grid-cols-3">
         <div className="flex flex-col gap-2">
-          <label htmlFor="match-team-filter" className="text-ink-600 text-sm font-semibold">
-            Filtrar por equipo
+          <label htmlFor="match-team-filter" className="text-pool-deep text-sm font-extrabold">
+            Equipo actual
           </label>
           <Select
             id="match-team-filter"
@@ -115,23 +106,16 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
             onChange={(e) => setTeamFilter(e.target.value)}
           >
             <option value="">Todos los equipos</option>
-            {seasons.map((s) => {
-              const seasonTeams = teams.filter((t) => t.season_id === s.id);
-              if (seasonTeams.length === 0) return null;
-              return (
-                <optgroup key={s.id} label={`${s.label}${s.is_current ? " (actual)" : ""}`}>
-                  {seasonTeams.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.label}
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.label}
+              </option>
+            ))}
           </Select>
+          <p className="text-ink-500 text-xs font-semibold">Solo temporada actual.</p>
         </div>
         <div className="flex flex-col gap-2">
-          <label htmlFor="match-comp-filter" className="text-ink-600 text-sm font-semibold">
+          <label htmlFor="match-comp-filter" className="text-pool-deep text-sm font-extrabold">
             Competición
           </label>
           <Select
@@ -147,37 +131,22 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
             ))}
           </Select>
         </div>
-      </div>
-
-      <div
-        role="tablist"
-        aria-label="Estado del partido"
-        className="border-ink-300 flex gap-1 overflow-x-auto border-b"
-      >
-        {TABS.map((t) => {
-          const isActive = tab === t.value;
-          return (
-            <button
-              key={t.value}
-              role="tab"
-              aria-selected={isActive}
-              onClick={() => setTab(t.value)}
-              className={cn(
-                "font-display focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative h-12 shrink-0 px-4 text-sm font-semibold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                isActive ? "text-pool-blue" : "text-ink-600 hover:text-pool-deep",
-              )}
-            >
-              {t.label}
-              {isActive ? (
-                <span
-                  aria-hidden="true"
-                  className="bg-pool-blue absolute inset-x-3 bottom-0 h-[3px] rounded-full"
-                />
-              ) : null}
-            </button>
-          );
-        })}
-      </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="match-status-filter" className="text-pool-deep text-sm font-extrabold">
+            Estado
+          </label>
+          <Select
+            id="match-status-filter"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+          >
+            <option value="all">Todos</option>
+            <option value="scheduled">Por jugar</option>
+            <option value="played">Jugados</option>
+            <option value="cancelled">Cancelados</option>
+          </Select>
+        </div>
+      </section>
 
       {sorted.length === 0 ? (
         <EmptyState
@@ -209,7 +178,7 @@ export function MatchesList({ seasons, teams, matches, defaultTeamId }: MatchesL
                     <div className="flex items-center justify-between gap-3">
                       <h3 className="font-display text-pool-deep text-xl leading-tight font-extrabold">
                         <Link
-                          href={`/admin/matches/${m.id}` as Route}
+                          href={`/admin/matches/${m.id}?from=admin` as Route}
                           className="focus-visible:ring-pool-blue before:absolute before:inset-0 before:rounded-2xl before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                         >
                           {m.is_home

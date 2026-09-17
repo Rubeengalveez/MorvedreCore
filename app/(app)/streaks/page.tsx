@@ -40,7 +40,7 @@ function parseScope(value?: string): RankingScope {
 }
 
 function parseType(value?: string): MotivationalStreakType {
-  return isMotivationalStreakType(value) ? value : "train_consec";
+  return isMotivationalStreakType(value) ? value : "goals_consec";
 }
 
 function parseOrder(value?: string): StreakOrder {

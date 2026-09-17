@@ -6,7 +6,6 @@ import {
   Star,
   Target,
   Trophy,
-  UserCheck,
   Waves,
   type LucideIcon,
 } from "lucide-react";
@@ -62,13 +61,6 @@ const METRICS: Array<{
     Icon: Star,
   },
   {
-    value: "attendance_pct",
-    label: "Asistencia",
-    title: "Mayor asistencia",
-    eyebrow: "Compromiso en entrenamientos",
-    Icon: UserCheck,
-  },
-  {
     value: "swim50",
     label: "50 m",
     title: "Mejores tiempos de 50 m",
@@ -91,14 +83,10 @@ function parseMetric(value?: string): LegendPageMetric {
 }
 
 function metricValue(row: LegendRow, metric: LegendMetric): string {
-  if (metric === "attendance_pct") return `${Math.round(row.attendance_pct)}%`;
   return row[metric].toLocaleString("es-ES");
 }
 
 function metricContext(row: LegendRow, metric: LegendMetric): string {
-  if (metric === "attendance_pct") {
-    return `${row.trainings_attended}/${row.trainings_total} entrenos`;
-  }
   if (metric === "matches_played") return `${row.seasons} temporadas`;
   return `${row.matches_played} partidos · ${row.seasons} temporadas`;
 }
@@ -157,12 +145,11 @@ function LegendList({ rows, metric }: { rows: LegendRow[]; metric: LegendMetric 
 export default async function LegendsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ metric?: string; scope?: string; start?: string }>;
+  searchParams: Promise<{ metric?: string; scope?: string }>;
 }) {
   const params = await searchParams;
   const metric = parseMetric(params.metric);
   const isSwim = metric === "swim50" || metric === "swim100";
-  const startType = params.start === "block" ? "block" : "water";
   const scope: RankingScope = params.scope?.startsWith("category:")
     ? {
         kind: "category",
@@ -174,7 +161,6 @@ export default async function LegendsPage({
     isSwim
       ? getSwimLegends({
           distance: metric === "swim100" ? 100 : 50,
-          startType,
           category: scope.kind === "category" ? scope.category_code : null,
         })
       : Promise.resolve(null),
@@ -201,9 +187,7 @@ export default async function LegendsPage({
         {METRICS.map(({ value, label, Icon }) => (
           <Link
             key={value}
-            href={
-              `/legends?metric=${value}${value === "swim50" || value === "swim100" ? `&start=${startType}` : ""}` as Route
-            }
+            href={`/legends?metric=${value}` as Route}
             aria-current={metric === value ? "page" : undefined}
             className={cn(
               "focus-visible:ring-pool-blue flex min-h-14 touch-manipulation flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2 text-sm font-extrabold transition-[background-color,border-color,color,box-shadow,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
@@ -224,18 +208,7 @@ export default async function LegendsPage({
             meta={rankingMeta}
             active={scope}
             basePath="/legends"
-            extraParams={{ metric, start: startType }}
-          />
-          <LegendFilterLinks
-            label="Salida"
-            values={[
-              { value: "water", label: "Agua" },
-              { value: "block", label: "Poyete" },
-            ]}
-            active={startType}
-            buildHref={(value) =>
-              `/legends?metric=${metric}&scope=${scopeParam(scope)}&start=${value}`
-            }
+            extraParams={{ metric }}
           />
           <p className="bg-pool-foam/60 text-pool-deep rounded-xl px-4 py-3 text-sm font-bold">
             Cada intento cuenta. Un jugador puede aparecer varias veces.
@@ -308,44 +281,7 @@ function SwimLegendList({ rows, distance }: { rows: SwimRankingRow[]; distance: 
   );
 }
 
-function LegendFilterLinks({
-  label,
-  values,
-  active,
-  buildHref,
-}: {
-  label: string;
-  values: Array<{ value: string; label: string }>;
-  active: string;
-  buildHref: (value: string) => string;
-}) {
-  return (
-    <fieldset className="border-ink-200 bg-paper-card rounded-xl border p-1.5">
-      <legend className="text-ink-600 px-1 text-xs font-extrabold">{label}</legend>
-      <div className="grid grid-cols-2 gap-1">
-        {values.map((item) => (
-          <Link
-            key={item.value}
-            href={buildHref(item.value) as Route}
-            aria-current={active === item.value ? "page" : undefined}
-            className={cn(
-              "flex min-h-12 items-center justify-center rounded-lg px-1 text-sm font-extrabold",
-              active === item.value
-                ? "bg-pool-deep text-paper"
-                : "text-pool-deep hover:bg-pool-foam",
-            )}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </div>
-    </fieldset>
-  );
-}
 
-function scopeParam(scope: RankingScope): string {
-  return scope.kind === "category" ? `category:${scope.category_code}` : "all";
-}
 
 function formatLegendDate(value: string): string {
   return new Intl.DateTimeFormat("es-ES", {

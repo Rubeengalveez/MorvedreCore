@@ -3,6 +3,7 @@ import type { Route } from "next";
 
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import { canAccessAdminArea } from "@/lib/domain/permissions";
+import { AdminBackLink } from "@/components/admin/admin-back-link";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -18,5 +19,5 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     redirect("/dashboard" as Route);
   }
 
-  return <div className="flex flex-col">{children}</div>;
+  return <div className="flex flex-col"><AdminBackLink />{children}</div>;
 }

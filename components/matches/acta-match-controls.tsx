@@ -7,6 +7,7 @@ export function ActaMatchControls({
   onBench,
   onHistory,
   onPeriods,
+  isAway = false,
 }: {
   sheet: LiveSheet;
   playing: boolean;
@@ -14,10 +15,11 @@ export function ActaMatchControls({
   onBench: () => void;
   onHistory: () => void;
   onPeriods: () => void;
+  isAway?: boolean;
 }) {
   return (
     <>
-      <div data-acta-teams className="grid grid-cols-2 gap-2">
+      <div data-acta-teams className={`grid grid-cols-2 gap-2 ${isAway ? "[&>button:first-child]:order-2" : ""}`}>
         <button
           type="button"
           disabled={!playing}

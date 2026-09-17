@@ -59,7 +59,7 @@ export async function createTeam(input: {
       category_code: parsed.data.category_code,
       label: parsed.data.label,
       gender: parsed.data.gender,
-      team_type: parsed.data.team_type ?? "competitive",
+      team_type: parsed.data.category_code === "escuela" ? "school" : "competitive",
       color: parsed.data.color ?? defaultTeamColor(parsed.data.category_code),
       home_pool: parsed.data.home_pool ?? null,
     })

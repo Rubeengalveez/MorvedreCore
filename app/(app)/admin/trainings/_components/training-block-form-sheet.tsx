@@ -38,7 +38,6 @@ import {
   generateSessionsFromBlockAction,
   resyncFutureTrainingSessionsAction,
   updateTrainingBlock,
-  type Season,
   type Team,
   type TrainingBlockRow,
 } from "@/server/actions/admin";
@@ -147,7 +146,6 @@ function WeekdaysField({ value, onChange }: { value: number[]; onChange: (v: num
 }
 
 export interface TrainingBlockFormSheetProps {
-  seasons: Season[];
   teams: TeamOption[];
   defaultTeamId: string | null;
   defaultSeasonId: string | null;
@@ -156,7 +154,6 @@ export interface TrainingBlockFormSheetProps {
 }
 
 export function TrainingBlockFormSheet({
-  seasons,
   teams,
   defaultTeamId,
   trigger,
@@ -253,24 +250,14 @@ export function TrainingBlockFormSheet({
                         ref={field.ref}
                         disabled={isEdit}
                       >
-                        {seasons.map((s) => {
-                          const seasonTeams = teams.filter((t) => t.season_id === s.id);
-                          if (seasonTeams.length === 0) return null;
-                          return (
-                            <optgroup
-                              key={s.id}
-                              label={`${s.label}${s.is_current ? " · actual" : ""}`}
-                            >
-                              {seasonTeams.map((t) => (
-                                <option key={t.id} value={t.id}>
-                                  {t.label} · {t.season_label}
-                                </option>
-                              ))}
-                            </optgroup>
-                          );
-                        })}
+                        {teams.map((team) => (
+                          <option key={team.id} value={team.id}>
+                            {team.label}
+                          </option>
+                        ))}
                       </Select>
                     </FormControl>
+                    <FormDescription>Solo puedes modificar equipos de la temporada actual.</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}

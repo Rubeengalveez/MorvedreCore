@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Route } from "next";
-import { MdAutoAwesome } from "react-icons/md";
+import { Plus, UsersRound } from "lucide-react";
 import { CarFront } from "lucide-react";
 
 import { AdminPageShell } from "@/components/admin/admin-page";
@@ -16,7 +16,8 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
+import { MatchEditorHeader } from "./_components/match-editor-header";
+import { sheetSchema, score } from "@/lib/domain/live-match";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
@@ -46,22 +47,6 @@ const COMPETITION_LABELS: Record<string, string> = {
   cup: "Copa",
   tournament: "Torneo",
   friendly: "Amistoso",
-};
-
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: "Programado",
-  in_progress: "En juego",
-  played: "Jugado",
-  cancelled: "Cancelado",
-  postponed: "Aplazado",
-};
-
-const STATUS_BADGE: Record<string, string> = {
-  scheduled: "bg-pool-teal/15 text-pool-deep",
-  in_progress: "bg-warning/15 text-warning",
-  played: "bg-success/15 text-success",
-  cancelled: "bg-danger/15 text-danger",
-  postponed: "bg-ink-300/40 text-ink-600",
 };
 
 type MatchWithTeam = MatchRow & {
@@ -193,11 +178,12 @@ export default async function MatchDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; from?: string }>;
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const tab: Tab = (TABS.find((t) => t.value === sp.tab)?.value ?? "convocatoria") as Tab;
+  const requestedTab = sp.tab;
+  const origin = sp.from === "match" ? "match" : "admin";
   const access = await getRenderAdminAccess();
   const teamScope = getTeamScope(access, "match_operations");
 
@@ -206,14 +192,24 @@ export default async function MatchDetailPage({
     notFound();
   }
   const { match, callups, stats, profileMeta, teamById, availability } = data;
+  const tabs = match.logistics_enabled ? TABS : TABS.filter((item) => item.value !== "logistica");
+  const tab: Tab = (tabs.find((item) => item.value === requestedTab)?.value ??
+    "convocatoria") as Tab;
+  const backHref = origin === "match" ? (`/matches/${match.id}` as Route) : "/admin/matches";
+  const backLabel = origin === "match" ? "Volver al partido" : "Partidos";
   const { data: liveSheet } = await (
     await createClient()
   )
     .from("live_match_sheets")
-    .select("match_id")
+    .select("match_id,document")
     .eq("match_id", match.id)
     .maybeSingle();
   const canEditMatch = canManageTeam(access, "match_schedule", match.team_id);
+  const parsedSheet = sheetSchema.safeParse(liveSheet?.document);
+  const regulationScore = parsedSheet.success && parsedSheet.data.shootout ? {
+    home: score(parsedSheet.data, match.is_home ? "us" : "them"),
+    away: score(parsedSheet.data, match.is_home ? "them" : "us"),
+  } : null;
 
   const conflicting = new Set(
     availability.filter((a) => a.available === false).map((a) => a.player_id),
@@ -263,106 +259,87 @@ export default async function MatchDetailPage({
     });
 
   return (
-    <AdminPageShell className="gap-4">
-      <PageBackLink href="/admin/matches">Partidos</PageBackLink>
+    <AdminPageShell className="gap-3">
+      <PageBackLink href={backHref}>{backLabel}</PageBackLink>
       <h1 className="sr-only">
         Gestionar {match.team?.label ?? "Morvedre"} contra {match.opponent}
       </h1>
 
-      <div className="relative">
-        <PoolScoreboard
-          mode={
-            match.status === "played" &&
-            match.final_score_us != null &&
-            match.final_score_them != null
-              ? "final"
-              : "preview"
-          }
-          homeTeam={{
-            label: match.is_home ? (match.team?.label ?? "Morvedre") : match.opponent,
-            color: match.is_home ? (match.team?.color ?? "var(--pool-blue)") : "#64748B",
-          }}
-          awayTeam={{
-            label: match.is_home ? match.opponent : (match.team?.label ?? "Morvedre"),
-            color: match.is_home ? "#64748B" : (match.team?.color ?? "var(--pool-blue)"),
-          }}
-          homeScore={match.is_home ? match.final_score_us : match.final_score_them}
-          awayScore={match.is_home ? match.final_score_them : match.final_score_us}
+      <div className="flex flex-col gap-2">
+        <MatchEditorHeader
+          regulationScore={regulationScore}
+          teamLabel={match.team?.label ?? "Morvedre"}
+          opponent={match.opponent}
+          isHome={match.is_home}
           scheduledAt={match.scheduled_at}
           competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-          isHome={match.is_home}
-          location={match.pool_name ?? match.location}
+          status={match.status}
+          scoreUs={match.final_score_us}
+          scoreThem={match.final_score_them}
         />
-        <span
-          className={cn(
-            "absolute top-3 right-3 inline-flex min-h-7 items-center rounded-full px-2.5 text-xs font-extrabold",
-            STATUS_BADGE[match.status] ?? "border-ink-300 text-ink-600 border",
-          )}
+        <nav
+          aria-label="Secciones del partido"
+          className="border-ink-200 bg-paper-card rounded-xl border p-1"
         >
-          {STATUS_LABELS[match.status] ?? match.status}
-        </span>
+          <ul className={cn("grid gap-1", tabs.length === 4 ? "grid-cols-4" : "grid-cols-3")}>
+            {tabs.map((t) => {
+              const isActive = tab === t.value;
+              return (
+                <li key={t.value} className="min-w-0">
+                  <Link
+                    href={`/admin/matches/${match.id}?tab=${t.value}&from=${origin}` as Route}
+                    aria-current={isActive ? "page" : undefined}
+                    className={cn(
+                      "focus-visible:outline-pool-blue flex min-h-11 items-center justify-center rounded-lg px-1 text-xs font-bold transition-colors focus-visible:outline-2 min-[360px]:text-sm",
+                      isActive
+                        ? "bg-pool-deep text-paper"
+                        : "text-ink-600 hover:bg-pool-ice hover:text-pool-deep",
+                    )}
+                  >
+                    {t.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
       </div>
 
-      <nav
-        aria-label="Secciones del partido"
-        className="border-ink-300 bg-paper sticky top-[var(--top-bar-height)] z-10 -mx-4 border-b px-4"
-      >
-        <ul role="tablist" className="no-scrollbar mx-auto flex max-w-2xl gap-1 overflow-x-auto">
-          {TABS.map((t) => {
-            const isActive = tab === t.value;
-            return (
-              <li key={t.value} className="shrink-0">
-                <Link
-                  href={`/admin/matches/${match.id}?tab=${t.value}` as Route}
-                  role="tab"
-                  aria-selected={isActive}
-                  className={cn(
-                    "font-display focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative inline-flex h-12 min-h-12 items-center justify-center px-4 text-sm font-semibold whitespace-nowrap transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                    isActive ? "text-pool-blue" : "text-ink-600 hover:text-pool-deep",
-                  )}
-                >
-                  {t.label}
-                  {isActive ? (
-                    <span
-                      aria-hidden="true"
-                      className="bg-pool-blue absolute inset-x-3 bottom-0 h-[3px] rounded-full"
-                    />
-                  ) : null}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
-
-      <section className="flex flex-col gap-4">
+      <section className="border-ink-200 bg-paper-card flex flex-col gap-4 rounded-2xl border p-3 sm:p-5">
         {tab === "convocatoria" ? (
           <>
-            <div className="border-pool-blue/20 bg-pool-foam/50 flex flex-col gap-3 rounded-xl border p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex flex-col">
-                <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-                  Paso 1
-                </p>
-                <h2 className="font-display text-pool-deep text-xl font-extrabold">
-                  Prepara el equipo
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <h2 className="font-display text-pool-deep text-lg font-extrabold sm:text-xl">
+                  Convocatoria
                 </h2>
-                <p className="text-ink-600 mt-0.5 text-sm leading-relaxed">
-                  Te proponemos los jugadores y sus gorros. Solo tienes que revisar y confirmar.
-                </p>
+                <span
+                  className="bg-pool-foam text-pool-blue inline-flex items-center gap-1 rounded-lg px-2 py-1 text-sm font-extrabold"
+                  aria-label={`${callups.length} convocados`}
+                >
+                  <UsersRound className="h-4 w-4" aria-hidden="true" />
+                  {callups.length}
+                </span>
               </div>
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button size="lg" className="w-full shrink-0 sm:w-auto">
-                    <MdAutoAwesome className="h-4 w-4" aria-hidden="true" />
-                    Crear convocatoria
+                  <Button
+                    size="sm"
+                    variant="deep"
+                    className="shrink-0 gap-1.5 rounded-xl px-3"
+                    aria-label="Añadir jugadores"
+                  >
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    Añadir
                   </Button>
                 </SheetTrigger>
-                <SheetContent size="full" className="sm:right-0 sm:left-auto sm:w-[42rem] sm:rounded-tl-xl">
+                <SheetContent
+                  size="full"
+                  className="sm:right-0 sm:left-auto sm:w-[42rem] sm:rounded-tl-xl"
+                >
                   <SheetHeader className="shrink-0 pr-14">
-                    <SheetTitle>Prepara la convocatoria</SheetTitle>
-                    <SheetDescription>
-                      Revisa los jugadores y confirma. Puedes cambiar cualquier gorro.
-                    </SheetDescription>
+                    <SheetTitle>Añadir jugadores</SheetTitle>
+                    <SheetDescription>Elige quién viene al partido.</SheetDescription>
                   </SheetHeader>
                   <SheetBody className="min-h-0 overflow-hidden px-0">
                     <SuggestCallupSheet matchId={match.id} />
@@ -377,9 +354,6 @@ export default async function MatchDetailPage({
         {tab === "acta" ? (
           <>
             <div>
-              <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-                Paso 2
-              </p>
               <h2 className="font-display text-pool-deep text-xl font-extrabold">
                 Completa el acta
               </h2>

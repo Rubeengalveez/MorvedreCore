@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { insertNotificationsWithPush } from "./notification-dispatch";
-import type { Tables } from "@/types/database";
+import type { Tables, TablesUpdate } from "@/types/database";
 import {
   cancelTrainingSessionSchema,
   createTrainingBlockSchema,
@@ -24,6 +24,22 @@ export type TrainingSessionRow = Tables<"training_sessions">;
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
     throw new Error(fallback);
+  }
+}
+
+async function requireCurrentTrainingTeam(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  teamId: string,
+): Promise<void> {
+  const { data: team, error } = await supabase
+    .from("teams")
+    .select("season_id, seasons!inner(is_current)")
+    .eq("id", teamId)
+    .maybeSingle();
+  throwIfError(error, "No pudimos comprobar la temporada del equipo.");
+  const season = Array.isArray(team?.seasons) ? team.seasons[0] : team?.seasons;
+  if (!team || !season?.is_current) {
+    throw new Error("Los horarios solo se gestionan en equipos de la temporada actual.");
   }
 }
 
@@ -63,6 +79,7 @@ export async function createTrainingBlock(input: {
   const admin = await requireTrainingManagerOf(parsed.data.team_id);
 
   const supabase = await createClient();
+  await requireCurrentTrainingTeam(supabase, parsed.data.team_id);
   const { data, error } = await supabase
     .from("training_blocks")
     .insert({
@@ -110,6 +127,7 @@ export async function createTrainingSchedule(input: {
 
   const admin = await requireTrainingManagerOf(parsed.data.team_id);
   const supabase = await createClient();
+  await requireCurrentTrainingTeam(supabase, parsed.data.team_id);
   const blockRows = parsed.data.groups.map((group) => ({
     team_id: parsed.data.team_id,
     label: parsed.data.label,
@@ -304,21 +322,14 @@ export async function updateTrainingBlock(
   if (parsed.data.team_id && parsed.data.team_id !== existing.team_id) {
     await requireTrainingManagerOf(parsed.data.team_id);
   }
+  await requireCurrentTrainingTeam(supabase, parsed.data.team_id ?? existing.team_id);
 
+  const updates = Object.fromEntries(
+    Object.entries(parsed.data).filter(([, value]) => value !== undefined),
+  ) as TablesUpdate<"training_blocks">;
   const { data, error } = await supabase
     .from("training_blocks")
-    .update({
-      team_id: parsed.data.team_id,
-      label: parsed.data.label,
-      weekdays: parsed.data.weekdays,
-      start_time: parsed.data.start_time,
-      end_time: parsed.data.end_time,
-      start_date: parsed.data.start_date,
-      end_date: parsed.data.end_date,
-      location: parsed.data.location ?? null,
-      maps_url: parsed.data.maps_url,
-      kind: parsed.data.kind,
-    })
+    .update(updates)
     .eq("id", parsedId.data.id)
     .select("*")
     .single();
@@ -329,6 +340,8 @@ export async function updateTrainingBlock(
   }
 
   revalidatePath("/admin/trainings");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
   revalidatePath(`/admin/trainings/${parsedId.data.id}`);
 
   return data;
@@ -353,12 +366,18 @@ export async function deleteTrainingBlock(id: string): Promise<void> {
   }
 
   await requireTrainingManagerOf(existing.team_id);
+  await requireCurrentTrainingTeam(supabase, existing.team_id);
 
-  const { error } = await supabase.from("training_blocks").delete().eq("id", parsedId.data.id);
+  const { error } = await supabase
+    .from("training_blocks")
+    .update({ is_active: false })
+    .eq("id", parsedId.data.id);
 
-  throwIfError(error, "No pudimos eliminar el bloque. Inténtalo de nuevo.");
+  throwIfError(error, "No pudimos cerrar el horario. Inténtalo de nuevo.");
 
   revalidatePath("/admin/trainings");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
 }
 
 export async function generateSessionsFromBlockAction(

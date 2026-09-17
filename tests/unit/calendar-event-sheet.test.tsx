@@ -75,7 +75,7 @@ describe("calendar event sheet cards", () => {
     expect(screen.queryByRole("link", { name: "Pasar lista" })).not.toBeInTheDocument();
   });
 
-  it("keeps match teams, venue and actions in a clear semantic structure", () => {
+  it("keeps match teams, venue and callup action in a clear semantic structure", () => {
     render(<MatchRow match={match} isCoach activeProfileId="profile-1" onChanged={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "CN Terrassa contra Morvedre" })).toBeVisible();
@@ -88,9 +88,6 @@ describe("calendar event sheet cards", () => {
       "href",
       `/matches/${match.id}`,
     );
-    expect(screen.getByRole("link", { name: "Gestionar convocatoria" })).toHaveAttribute(
-      "href",
-      `/admin/matches/${match.id}`,
-    );
+    expect(screen.queryByRole("link", { name: "Gestionar convocatoria" })).not.toBeInTheDocument();
   });
 });

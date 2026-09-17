@@ -120,6 +120,27 @@ function testRecord(sheet = testSheet()): LiveRecord {
 }
 
 describe("createActaPdf", () => {
+  it("continúa la tanda en la tabla de los cuartos y muestra el total sin el texto antiguo", async () => {
+    const base = testSheet();
+    const regular = createActaPdf(testRecord(base));
+    const withShootout = createActaPdf(testRecord({
+      ...base,
+      shootout: {
+        firstSide: "us",
+        shots: [
+          { id: "s1", side: "us", cap: 4, keeper: null, outcome: "goal" },
+          { id: "s2", side: "them", cap: 5, keeper: 1, outcome: "save" },
+        ],
+      },
+    }));
+    const original = Buffer.from(await regular.arrayBuffer()).toString("latin1");
+    const updated = Buffer.from(await withShootout.arrayBuffer()).toString("latin1");
+    expect(updated.match(/\/MediaBox/g)?.length).toBe(original.match(/\/MediaBox/g)?.length);
+    expect(updated).toContain("TANDA DE PENALTIS");
+    expect(updated).not.toContain("con penaltis");
+    expect(updated).toContain("En la tanda: 1 - 0");
+    expect(updated).toContain("Portero: 1");
+  });
   it("genera un PDF válido sin errores con acta horizontal y análisis vertical", async () => {
     const record = testRecord();
     const pdfFile = createActaPdf(record);

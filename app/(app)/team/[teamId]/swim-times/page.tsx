@@ -61,7 +61,6 @@ export default async function TeamSwimTimesPage({
           revision: entry.revision,
           player_id: entry.player_id,
           test_date: entry.test_date,
-          start_type: entry.start_type,
           time_50_cs: entry.time_50_cs,
           time_100_cs: entry.time_100_cs,
         }))}

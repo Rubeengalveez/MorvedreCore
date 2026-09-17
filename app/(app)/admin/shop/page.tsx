@@ -13,12 +13,14 @@ import {
 } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
+import { Alert } from "@/components/ui/alert";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { getShopOrdersForKanban } from "@/server/queries/shop";
+import { getShopOrdersForKanban, getShopProducts } from "@/server/queries/shop";
 import { SHOP_KANBAN_COLUMNS } from "@/lib/domain/shop";
 import type { ShopOrderStatus } from "@/lib/domain/shop";
 import type { ShopOrder } from "@/server/queries/shop";
 import { AdminKanbanCard } from "./_components/admin-kanban-card";
+import { ShopCatalogManager } from "./_components/shop-catalog-manager";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -42,7 +44,16 @@ export default async function AdminShopPage() {
   if (!ctx) redirect("/login");
 
   const kanbanStatuses: ShopOrderStatus[] = ["pending_admin", "ordered", "received", "delivered"];
-  const orders = await getShopOrdersForKanban(kanbanStatuses);
+  const [ordersResult, productsResult] = await Promise.allSettled([
+    getShopOrdersForKanban(kanbanStatuses),
+    getShopProducts(),
+  ]);
+  const orders = ordersResult.status === "fulfilled" ? ordersResult.value : [];
+  const products = productsResult.status === "fulfilled" ? productsResult.value : [];
+  const loadError = [ordersResult, productsResult]
+    .filter((result): result is PromiseRejectedResult => result.status === "rejected")
+    .map((result) => (result.reason instanceof Error ? result.reason.message : "Ha habido un problema."))
+    .join(" ");
 
   const ordersByStatus = new Map<ShopOrderStatus, ShopOrder[]>();
   for (const s of kanbanStatuses) ordersByStatus.set(s, []);
@@ -94,6 +105,19 @@ export default async function AdminShopPage() {
         ))}
       </ol>
 
+      {loadError ? (
+        <Alert variant="danger" title="No pudimos cargar toda la gestión de tienda">
+          {loadError}
+        </Alert>
+      ) : null}
+
+      <ShopCatalogManager products={products} />
+
+      <section aria-labelledby="pedidos-title" className="flex flex-col gap-3">
+        <div>
+          <p className="text-pool-blue text-xs font-extrabold tracking-wide uppercase">Gestión diaria</p>
+          <h2 id="pedidos-title" className="text-pool-deep text-xl font-extrabold">Pedidos en curso</h2>
+        </div>
       <div className="flex flex-col gap-3 pb-3 md:flex-row md:overflow-x-auto">
         {SHOP_KANBAN_COLUMNS.filter((col) => col.id !== "pending_parent").map((col) => {
           const list = ordersByStatus.get(col.id) ?? [];
@@ -130,6 +154,7 @@ export default async function AdminShopPage() {
           );
         })}
       </div>
+      </section>
     </AdminPageShell>
   );
 }

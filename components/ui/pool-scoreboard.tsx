@@ -9,27 +9,29 @@ export interface PoolScoreboardProps {
   awayTeam: { label: string; color: string };
   homeScore?: number | null;
   awayScore?: number | null;
+  regulationScore?: { home: number; away: number } | null;
   scheduledAt: string;
   competitionLabel: string;
   outcome?: PoolScoreboardOutcome | null;
   isHome?: boolean;
   period?: number | null;
   clock?: string | null;
-  mvp?: { name: string; cap?: number | null } | null;
+  mvp?: {
+    name: string;
+    cap?: number | null;
+    goals?: number;
+    assists?: number;
+  } | null;
   location?: string | null;
   className?: string;
 }
 
-function formatTime(iso: string): string {
-  const d = new Date(iso);
-  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-}
-
 function formatDate(iso: string): string {
   return new Intl.DateTimeFormat("es-ES", {
-    weekday: "short",
     day: "numeric",
     month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(new Date(iso));
 }
 
@@ -45,6 +47,7 @@ export function PoolScoreboard({
   awayTeam,
   homeScore,
   awayScore,
+  regulationScore,
   scheduledAt,
   competitionLabel,
   outcome = null,
@@ -52,7 +55,6 @@ export function PoolScoreboard({
   period = null,
   clock = null,
   mvp = null,
-  location = null,
   className,
 }: PoolScoreboardProps) {
   const showScore = mode === "final" || mode === "live";
@@ -71,64 +73,78 @@ export function PoolScoreboard({
             ? "loss"
             : "draw"
       : null);
+  const statusLabel =
+    mode === "live"
+      ? "En juego"
+      : mode === "final" && resolvedOutcome
+        ? outcomeCopy[resolvedOutcome]
+        : "Programado";
+  const statusTone =
+    mode === "final" && resolvedOutcome === "win"
+      ? "bg-success text-pool-deep"
+      : mode === "final" && resolvedOutcome === "loss"
+        ? "bg-goggle-red text-paper"
+        : mode === "final" && resolvedOutcome === "draw"
+          ? "bg-ball-gold text-pool-deep"
+          : "bg-paper/15 text-paper";
 
   return (
     <article
       data-pool-scoreboard
       data-mode={mode}
       className={cn(
-        "border-ink-200 bg-paper-card text-ink-900 shadow-elev-1 hover:shadow-elev-2 overflow-hidden rounded-2xl border transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 motion-reduce:transition-none",
+        "bg-paper-card text-ink-900 shadow-elev-1 overflow-hidden rounded-2xl",
         className,
       )}
     >
-      <header className="border-ink-200 flex min-h-14 items-center justify-between gap-3 border-b px-4 py-2.5">
-        <div className="min-w-0">
-          <p className="text-pool-deep text-xs font-extrabold tracking-wide uppercase">
-            {competitionLabel}
-          </p>
-          <p className="text-ink-600 mt-0.5 truncate text-sm font-medium">
-            {formatDate(scheduledAt)}
-            {location ? ` · ${location}` : ""}
-          </p>
-        </div>
-        {mode === "final" && resolvedOutcome ? (
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-3 py-1.5 text-xs font-extrabold tracking-wide uppercase",
-              resolvedOutcome === "win" && "bg-success/15 text-success",
-              resolvedOutcome === "draw" && "bg-ink-200 text-ink-700",
-              resolvedOutcome === "loss" && "bg-goggle-red/12 text-goggle-red",
-            )}
-          >
-            {outcomeCopy[resolvedOutcome]}
-          </span>
-        ) : null}
+      <header className="bg-pool-deep text-paper relative flex min-h-12 items-center justify-between gap-2 px-3 py-2.5">
+        <p className="font-display text-sm font-extrabold tracking-wide uppercase">
+          {competitionLabel}
+        </p>
+        <span
+          className={cn(
+            "absolute left-1/2 -translate-x-1/2 rounded-full px-2.5 py-0.5 text-sm font-bold",
+            statusTone,
+          )}
+        >
+          {statusLabel}
+        </span>
+        <time dateTime={scheduledAt} className="text-sm font-semibold whitespace-nowrap">
+          {formatDate(scheduledAt)}
+        </time>
       </header>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center px-4 py-4 sm:px-5">
+      <div className="grid grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)] items-center gap-x-2 px-3 py-3 text-center sm:px-5">
         <TeamScore
           label={homeTeam.label}
-          color={homeTeam.color}
           venue="Local"
-          score={homeScore}
+          score={regulationScore?.home ?? homeScore}
           showScore={showScore}
           align="left"
         />
-        <MatchCenter mode={mode} scheduledAt={scheduledAt} period={period} clock={clock} />
+        <MatchCenter mode={mode} period={period} clock={clock} />
         <TeamScore
           label={awayTeam.label}
-          color={awayTeam.color}
           venue="Visitante"
-          score={awayScore}
+          score={regulationScore?.away ?? awayScore}
           showScore={showScore}
           align="right"
         />
       </div>
 
+      {regulationScore && <p className="pb-3 text-center text-sm font-bold text-pool-deep">({homeScore}–{awayScore}) <span className="font-medium text-ink-600">con penaltis</span></p>}
       {mvp ? (
-        <footer className="border-ink-200 bg-pool-foam/45 text-ink-700 border-t px-4 py-2.5 text-sm">
-          MVP: <span className="text-pool-deep font-bold">{mvp.name}</span>
-          {mvp.cap != null ? ` #${mvp.cap}` : ""}
+        <footer className="border-ink-200 bg-paper-sunk/65 text-ink-600 flex min-w-0 items-center gap-1.5 overflow-hidden border-t px-4 py-2 text-xs whitespace-nowrap sm:text-sm">
+          <span className="min-w-0 truncate">
+            MVP: <strong className="text-pool-deep">{mvp.name}</strong>
+            {mvp.cap != null ? ` #${mvp.cap}` : ""}
+          </span>
+          {(mvp.goals ?? 0) > 0 || (mvp.assists ?? 0) > 0 ? (
+            <span className="text-ink-500 shrink-0 font-semibold">
+              · {mvp.goals ?? 0} {(mvp.goals ?? 0) === 1 ? "gol" : "goles"} · {mvp.assists ?? 0}{" "}
+              asist.
+            </span>
+          ) : null}
         </footer>
       ) : null}
     </article>
@@ -137,14 +153,12 @@ export function PoolScoreboard({
 
 function TeamScore({
   label,
-  color,
   venue,
   score,
   showScore,
   align,
 }: {
   label: string;
-  color: string;
   venue: string;
   score: number | null | undefined;
   showScore: boolean;
@@ -153,63 +167,38 @@ function TeamScore({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-1",
-        align === "left" ? "items-start text-left" : "items-end text-right",
+        "grid min-w-0 grid-rows-[auto_auto_auto] justify-items-center",
+        align === "left" ? "col-start-1" : "col-start-3",
       )}
     >
-      <span className="text-ink-600 text-xs font-bold tracking-wide uppercase">{venue}</span>
-      <span
-        className="flex max-w-full items-center gap-1.5 text-sm font-extrabold sm:text-base"
-        style={{ color }}
-      >
-        {align === "left" ? (
-          <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-current" />
-        ) : null}
-        <span className="truncate">{label}</span>
-        {align === "right" ? (
-          <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full bg-current" />
-        ) : null}
+      <span className="text-ink-600 text-sm">{venue}</span>
+      <span className="font-display text-pool-deep max-w-full truncate text-base leading-snug font-extrabold sm:text-lg">
+        {label}
       </span>
-      {showScore ? (
-        <span className="text-pool-deep font-mono text-5xl leading-none font-extrabold tabular-nums sm:text-6xl">
-          {score ?? 0}
-        </span>
-      ) : null}
+      <span className="text-pool-deep mt-1 font-mono text-6xl leading-none font-extrabold tracking-tight tabular-nums">
+        {showScore ? (score ?? 0) : "–"}
+      </span>
     </div>
   );
 }
 
 function MatchCenter({
   mode,
-  scheduledAt,
   period,
   clock,
 }: {
   mode: PoolScoreboardMode;
-  scheduledAt: string;
   period: number | null;
   clock: string | null;
 }) {
-  if (mode === "preview") {
-    return (
-      <div className="text-pool-deep flex min-w-14 flex-col items-center px-3 text-center">
-        <span className="text-ink-600 text-xs font-bold tracking-wide uppercase">Hora</span>
-        <span className="font-mono text-xl font-extrabold tabular-nums">
-          {formatTime(scheduledAt)}
-        </span>
-      </div>
-    );
-  }
-
   if (mode === "live") {
     return (
-      <div className="text-goggle-red flex min-w-14 flex-col items-center px-3 text-center">
-        <span className="text-xs font-extrabold tracking-wide uppercase">En vivo</span>
+      <div className="text-goggle-red col-start-2 flex flex-col items-center text-center">
         <span className="font-mono text-lg font-extrabold tabular-nums">{clock ?? "00:00"}</span>
         <span className="text-ink-600 text-xs font-bold">{period ?? 1}º periodo</span>
       </div>
     );
   }
 
-  return <span className="text-ink-400 px-3 text-sm font-extrabold">vs</span>;
+  return <span className="text-ink-400 col-start-2 text-xl">{mode === "final" ? "–" : "vs"}</span>;
 }

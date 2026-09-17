@@ -3,7 +3,6 @@ import type { Route } from "next";
 import { redirect } from "next/navigation";
 import {
   CalendarClock,
-  CalendarDays,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { AttendanceDatePicker } from "@/components/attendance/attendance-date-picker";
 import { AttendanceSectionNav } from "@/components/attendance/attendance-section-nav";
 import { getAttendanceDayKey } from "@/lib/domain/attendance";
 import { cn } from "@/lib/utils/cn";
@@ -86,8 +86,8 @@ export default async function AttendancePage({
     <PageShell width="sm" className="gap-4 pb-8">
       <PageHeader
         eyebrow="Entrenamientos"
-        title="Asistencia"
-        description="Pasa lista y corrige días anteriores."
+        title="Pasar lista"
+        description="Elige un entrenamiento para pasar lista."
         icon={<ClipboardCheck className="h-5 w-5" aria-hidden="true" />}
       />
 
@@ -122,35 +122,7 @@ export default async function AttendancePage({
               <ChevronRight className="h-7 w-7" aria-hidden="true" />
             </Link>
           </div>
-          <form action="/attendance" method="get" className="border-ink-200 mt-3 border-t pt-3">
-            <label htmlFor="attendance-date" className="text-pool-deep text-sm font-extrabold">
-              Ir a una fecha
-            </label>
-            <div className="mt-2 flex gap-2">
-              <input
-                id="attendance-date"
-                name="date"
-                type="date"
-                defaultValue={selectedDay}
-                className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-12 min-w-0 flex-1 rounded-xl border px-3 font-semibold focus-visible:ring-2 focus-visible:outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue inline-flex min-h-12 shrink-0 items-center justify-center gap-2 rounded-xl px-4 font-extrabold focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-              >
-                <CalendarDays className="h-5 w-5" aria-hidden="true" />
-                Ver
-              </button>
-            </div>
-          </form>
-          {selectedDay !== today ? (
-            <Link
-              href={"/attendance" as Route}
-              className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 touch-manipulation items-center rounded-xl px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-            >
-              Volver a hoy
-            </Link>
-          ) : null}
+          <AttendanceDatePicker selectedDay={selectedDay} isToday={selectedDay === today} />
           {isFutureDay ? (
             <div className="border-ink-200 bg-paper-sunk text-ink-700 mt-2 flex gap-2.5 rounded-xl border px-3 py-3 text-sm leading-5 font-semibold">
               <CalendarClock className="text-ink-500 mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
@@ -224,8 +196,8 @@ export default async function AttendancePage({
                         ? "Solo consulta"
                         : complete
                           ? session.absent_count > 0
-                            ? `${session.present_count} presentes · ${session.absent_count} ausentes`
-                            : "Todo el equipo presente"
+                            ? `${session.present_count} han venido · ${session.absent_count} han faltado`
+                            : "Han venido todos"
                           : "Sin revisar"}
                     </span>
                   </span>

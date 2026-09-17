@@ -1,7 +1,6 @@
 import type { StreakType } from "./streaks";
 
 export const MOTIVATIONAL_STREAK_TYPES = [
-  "train_consec",
   "goals_consec",
   "mvp_consec",
 ] as const satisfies readonly StreakType[];

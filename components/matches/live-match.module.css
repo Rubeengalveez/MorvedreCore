@@ -338,8 +338,8 @@
 }
 
 .panelBench {
-  height: min(48dvh, 370px);
-  max-height: min(48dvh, 370px);
+  height: auto;
+  max-height: min(90dvh, 430px);
 }
 
 .panelBenchActions {
@@ -348,8 +348,19 @@
 }
 
 .panelPeriods {
-  height: min(65dvh, 500px);
-  max-height: min(65dvh, 500px);
+  height: auto;
+  max-height: min(90dvh, 500px);
+}
+
+.panelChoice {
+  height: auto;
+  max-height: min(90dvh, 390px);
+}
+
+.panelBench .panelBody,
+.panelPeriods .panelBody,
+.panelChoice .panelBody {
+  flex: 0 1 auto;
 }
 
 .panelPenaltyResult {
@@ -375,7 +386,7 @@
 
 .panelShare {
   height: auto;
-  max-height: min(72dvh, 480px);
+  max-height: min(94dvh, 680px);
 }
 
 .panelTakeover {
@@ -1603,6 +1614,7 @@
 
 .panelShare .panelBody {
   flex: 0 1 auto;
+  overflow-y: hidden;
   padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
 }
 

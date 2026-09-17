@@ -28,7 +28,6 @@ function entry(overrides: Partial<SwimTimeEntryInput>): SwimTimeEntryInput {
     season_end_year: 2027,
     test_date: "2026-09-01",
     created_at: "2026-09-01T18:00:00Z",
-    start_type: "water",
     time_50_cs: null,
     time_100_cs: null,
     ...overrides,
@@ -179,7 +178,6 @@ describe("computeSwimLegends", () => {
         entry({ id: "try-3", test_date: "2026-09-03", time_50_cs: 3340 }),
       ],
       distance: 50,
-      startType: "water",
     });
     expect(rows).toHaveLength(3);
     expect(rows.map((row) => row.player_id)).toEqual(["player-1", "player-1", "player-1"]);
@@ -188,14 +186,13 @@ describe("computeSwimLegends", () => {
   it("filtra por las condiciones comparables de la prueba", () => {
     const rows = computeSwimLegends({
       entries: [
-        entry({ id: "water", time_100_cs: 7800 }),
-        entry({ id: "block", start_type: "block", time_100_cs: 7600 }),
-        entry({ id: "other-water", test_date: "2026-09-03", time_100_cs: null }),
+        entry({ id: "valid-1", time_100_cs: 7800 }),
+        entry({ id: "valid-2", time_100_cs: 7600 }),
+        entry({ id: "no-time", test_date: "2026-09-03", time_100_cs: null }),
       ],
       distance: 100,
-      startType: "water",
     });
-    expect(rows.map((row) => row.id)).toEqual(["water"]);
+    expect(rows.map((row) => row.id)).toEqual(["valid-2", "valid-1"]);
   });
 
   it("calcula la categoría en la temporada de la medición", () => {

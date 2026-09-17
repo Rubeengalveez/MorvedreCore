@@ -47,7 +47,7 @@ const COMPETITION_LABELS: Record<string, string> = {
 function EventCardHeader({ teamLabel, children }: { teamLabel: string; children: ReactNode }) {
   return (
     <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-      <span className="text-pool-blue min-w-0 pt-1 text-xs leading-tight font-black tracking-[0.08em] uppercase">
+      <span className="text-pool-blue min-w-0 pt-1 text-base leading-tight font-black tracking-[0.08em] uppercase">
         {teamLabel}
       </span>
       <div className="flex min-w-0 flex-wrap justify-end gap-1.5">{children}</div>
@@ -147,7 +147,7 @@ export function TrainingRow({
   const timeRange = formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes);
 
   return (
-    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
+    <article className="border-pool-blue/20 bg-pool-foam/30 hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
@@ -156,13 +156,13 @@ export function TrainingRow({
 
       <div
         className={cn(
-          "flex flex-col py-4 pr-4 pl-5 sm:p-5 sm:pl-6",
-          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-4",
+          "flex flex-col",
+          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-3.5 py-4 pr-4 pl-5 sm:p-4 sm:pl-5",
         )}
       >
         {compact ? (
           <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-            <span className="text-pool-blue min-w-0 truncate text-xs font-black tracking-[0.08em] uppercase">
+            <span className="text-pool-blue min-w-0 truncate text-base font-black tracking-[0.08em] uppercase">
               {training.team_label}
             </span>
             <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep min-h-7 shrink-0 px-2 text-xs">
@@ -177,7 +177,7 @@ export function TrainingRow({
           </EventCardHeader>
         )}
 
-        <div className="min-w-0">
+        <div className="border-ink-200/70 bg-paper-card/80 min-w-0 rounded-xl border px-3 py-3">
           <h3
             className={cn(
               "text-pool-deep leading-tight font-extrabold text-pretty",
@@ -188,7 +188,7 @@ export function TrainingRow({
             {training.cancelled ? "Sesión de entrenamiento" : "Sesión de agua y táctica"}
           </h3>
 
-          <div className={cn("flex flex-col gap-2.5", compact ? "mt-2" : "mt-3")}>
+          <div className={compact ? "mt-2" : "mt-2.5"}>
             <EventMetaRow icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                 <time className="text-pool-deep font-mono text-base font-black tracking-tight tabular-nums">
@@ -199,16 +199,12 @@ export function TrainingRow({
                 </span>
               </div>
             </EventMetaRow>
-
-            {training.location || training.maps_url ? (
-              <MapLocationLink
-                name={training.location}
-                mapsUrl={training.maps_url}
-                compact={compact}
-              />
-            ) : null}
           </div>
         </div>
+
+        {training.location || training.maps_url ? (
+          <MapLocationLink name={training.location} mapsUrl={training.maps_url} compact={compact} />
+        ) : null}
 
         {training.cancelled ? (
           <div className="bg-danger/10 border-danger/20 text-danger flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold">
@@ -221,10 +217,10 @@ export function TrainingRow({
         ) : null}
 
         {isCoach && !training.cancelled ? (
-          <div className="border-ink-200 border-t pt-3">
+          <div>
             <Link
               href={`/attendance/${training.id}` as Route}
-              className="bg-pool-foam text-pool-blue hover:bg-pool-blue hover:text-paper focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center justify-between rounded-xl px-3.5 text-sm font-extrabold transition-[background-color,color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+              className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center justify-between rounded-xl px-3.5 text-sm font-extrabold transition-[background-color,color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
             >
               <span>Pasar lista</span>
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
@@ -238,7 +234,6 @@ export function TrainingRow({
 
 export function MatchRow({
   match,
-  isCoach,
   activeProfileId,
   onChanged,
   compact = false,
@@ -256,7 +251,7 @@ export function MatchRow({
   const awayTeam = match.is_home ? match.opponent : "Morvedre";
 
   return (
-    <article className="border-ink-300 bg-paper-card hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
+    <article className="border-pool-blue/20 bg-pool-foam/30 hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
@@ -265,8 +260,8 @@ export function MatchRow({
 
       <div
         className={cn(
-          "flex flex-col py-4 pr-4 pl-5 sm:p-5 sm:pl-6",
-          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-4",
+          "flex flex-col",
+          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-3.5 py-4 pr-4 pl-5 sm:p-4 sm:pl-5",
         )}
       >
         {compact ? (
@@ -339,7 +334,7 @@ export function MatchRow({
               {homeTeam} contra {awayTeam}
             </h3>
 
-            <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 py-1 select-none">
+            <div className="border-ink-200/70 bg-paper-card/80 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl border px-3 py-3 select-none">
               <div className="flex min-w-0 items-center gap-1">
                 <Gorro
                   className="h-[18px] w-[18px] shrink-0"
@@ -398,18 +393,13 @@ export function MatchRow({
           </div>
         )}
 
-        <div
-          className={cn(
-            "border-ink-200/40 flex flex-col border-t select-none",
-            compact ? "gap-1.5 pt-2" : "mt-1 gap-2 pt-3",
-          )}
-        >
+        <div className="select-none">
           <Button
             asChild
             size="sm"
-            variant="secondary"
+            variant="deep"
             className={cn(
-              "hover:bg-ink-100/50 flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl font-extrabold",
+              "flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl font-extrabold",
               "min-h-12 text-sm",
             )}
           >
@@ -418,19 +408,6 @@ export function MatchRow({
               <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </Button>
-          {isCoach && (
-            <Button
-              asChild
-              size="sm"
-              variant="ghost"
-              className={cn(
-                "text-ink-600 hover:text-pool-deep w-full cursor-pointer text-sm font-extrabold",
-                "min-h-12",
-              )}
-            >
-              <Link href={`/admin/matches/${match.id}` as Route}>Gestionar convocatoria</Link>
-            </Button>
-          )}
         </div>
       </div>
     </article>

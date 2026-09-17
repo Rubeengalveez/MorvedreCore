@@ -55,6 +55,36 @@ const pendingSchema = z.discriminatedUnion("kind", [
   }),
 ]);
 
+export const shootoutSchema = z.object({
+  firstSide: z.enum(["us", "them"]),
+  shots: z.array(z.object({
+    id: z.string().uuid(),
+    side: z.enum(["us", "them"]),
+    cap: z.number().int().min(1).max(99),
+    keeper: z.number().int().min(1).max(99).nullable(),
+    outcome: z.enum(["goal", "save", "out", "post"]),
+  })).max(200),
+});
+
+export type Shootout = z.infer<typeof shootoutSchema>;
+
+export function shootoutState(tanda: Shootout) {
+  const us = tanda.shots.filter((shot) => shot.side === "us");
+  const them = tanda.shots.filter((shot) => shot.side === "them");
+  const goalsUs = us.filter((shot) => shot.outcome === "goal").length;
+  const goalsThem = them.filter((shot) => shot.outcome === "goal").length;
+  const decided = us.length <= 5 && them.length <= 5
+    ? goalsUs > goalsThem + Math.max(0, 5 - them.length) || goalsThem > goalsUs + Math.max(0, 5 - us.length)
+    : us.length === them.length && goalsUs !== goalsThem;
+  return {
+    goalsUs, goalsThem,
+    winner: decided ? (goalsUs > goalsThem ? "us" : "them") as Side : null,
+    nextSide: tanda.shots.length % 2 === 0 ? tanda.firstSide : tanda.firstSide === "us" ? "them" as const : "us" as const,
+  };
+}
+
+export const shootoutOutcomeLabels = { goal: "Gol", save: "Parado", out: "Fuera", post: "Al palo" } as const;
+
 export const sheetSchema = z
   .object({
     version: z.union([z.literal(1), z.literal(2)]),
@@ -62,7 +92,8 @@ export const sheetSchema = z
     opponentCaps: z.array(z.number().int().min(1).max(99)).min(1).max(30),
     periods: z.number().int().min(1).max(8),
     period: z.number().int().min(1).max(8),
-    phase: z.enum(["ready", "playing", "break", "finished"]),
+    phase: z.enum(["ready", "playing", "break", "shootout", "finished"]),
+    shootout: shootoutSchema.optional(),
     keeper: z.number().int().min(1).max(99).nullable(),
     keeperStints: z
       .array(
@@ -89,6 +120,23 @@ export const sheetSchema = z
   })
   .superRefine((s, ctx) => {
     const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+    if (s.phase === "shootout" && !s.shootout) fail("Falta preparar la tanda.");
+    if (s.shootout) {
+      if (s.period !== s.periods || !["shootout", "finished"].includes(s.phase) || s.pending || score(s as LiveSheet, "us") !== score(s as LiveSheet, "them")) {
+        fail("La tanda solo puede empezar al terminar el último cuarto con empate y sin jugadas pendientes.");
+      }
+      const previous: Shootout = { firstSide: s.shootout.firstSide, shots: [] };
+      const ids = new Set<string>();
+      for (const shot of s.shootout.shots) {
+        const state = shootoutState(previous);
+        if (state.winner || shot.side !== state.nextSide || ids.has(shot.id)) fail("Revisa el orden de los penaltis de la tanda.");
+        if (!(shot.side === "us" ? s.players.some((p) => p.cap === shot.cap) : s.opponentCaps.includes(shot.cap))) fail("El lanzador no está en el acta.");
+        if (shot.side === "them" && !s.players.some((p) => p.cap === shot.keeper)) fail("Selecciona el portero de la tanda.");
+        ids.add(shot.id);
+        previous.shots.push(shot);
+      }
+      if (s.phase === "finished" && !shootoutState(s.shootout).winner) fail("La tanda todavía no tiene ganador.");
+    }
     if (s.period > s.periods) fail("El periodo no es válido.");
     if (
       new Set(s.players.map((player) => player.cap)).size !== s.players.length ||
@@ -330,6 +378,10 @@ export function score(sheet: LiveSheet, side: Side, period?: number) {
 
 export function defaultPeriods(category: string) {
   return ["benjamin", "alevin", "infantil"].includes(category) ? 6 : 4;
+}
+
+export function finalScore(sheet: LiveSheet, side: Side) {
+  return score(sheet, side) + (sheet.shootout?.shots.filter((shot) => shot.side === side && shot.outcome === "goal").length ?? 0);
 }
 
 export function timeoutCount(sheet: LiveSheet, side: Side) {

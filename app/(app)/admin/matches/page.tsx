@@ -94,10 +94,12 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
   const seasons = (seasonsData ?? []) as SeasonRow[];
   const currentSeason = seasons.find((s) => s.is_current) ?? null;
   const teamsAll = (teamsData ?? []) as Array<Team & { created_at: string; updated_at: string }>;
-  const teams: TeamRow[] = teamsAll.map((t) => ({
+  const teams: TeamRow[] = teamsAll
+    .filter((team) => team.season_id === currentSeason?.id)
+    .map((t) => ({
     ...t,
     season_label: seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
-  }));
+    }));
 
   const teamById = new Map<string, TeamRow>();
   for (const t of teams) teamById.set(t.id, t);
@@ -105,6 +107,7 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
   const matches: MatchRow[] = (
     (matchesData ?? []) as Array<{
       id: string;
+      season_id: string;
       team_id: string;
       opponent: string;
       competition_type: string;
@@ -117,7 +120,7 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
       final_score_us: number | null;
       final_score_them: number | null;
     }>
-  ).map((m) => {
+  ).filter((match) => match.season_id === currentSeason?.id).map((m) => {
     const team = teamById.get(m.team_id);
     return {
       ...m,
@@ -145,8 +148,15 @@ export default async function MatchesPage() {
   const { seasons, teams, matches, defaultTeamId, defaultSeasonId, error } =
     await loadMatches(teamScope);
   const editableTeams = teams.filter((team) => canManageTeam(access, "match_schedule", team.id));
+  const currentSeasonId = seasons.find((season) => season.is_current)?.id ?? null;
+  const currentEditableTeams = editableTeams.filter((team) => team.season_id === currentSeasonId);
   const editableDefaultTeam =
-    editableTeams.find((team) => team.id === defaultTeamId) ?? editableTeams[0];
+    currentEditableTeams.find((team) => team.id === defaultTeamId) ?? currentEditableTeams[0];
+  const scheduledCount = matches.filter((match) =>
+    ["scheduled", "in_progress", "postponed"].includes(match.status),
+  ).length;
+  const playedCount = matches.filter((match) => match.status === "played").length;
+  const currentSeason = seasons.find((season) => season.is_current) ?? null;
 
   if (seasons.length === 0) {
     return (
@@ -177,10 +187,9 @@ export default async function MatchesPage() {
         description="Convocatorias, actas y logística de cada partido."
         icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
         action={
-          editableTeams.length > 0 ? (
+          currentEditableTeams.length > 0 ? (
             <MatchFormSheet
-              seasons={seasons}
-              teams={editableTeams}
+              teams={currentEditableTeams}
               defaultTeamId={editableDefaultTeam?.id ?? null}
               defaultSeasonId={editableDefaultTeam?.season_id ?? defaultSeasonId}
               trigger={
@@ -190,9 +199,32 @@ export default async function MatchesPage() {
                 </Button>
               }
             />
-          ) : null
+          ) : undefined
         }
       />
+
+      <section className="bg-pool-deep text-paper relative overflow-hidden rounded-2xl p-4 shadow-elev-1">
+        <span className="lane-pattern absolute inset-0 opacity-15" aria-hidden="true" />
+        <div className="relative flex flex-col gap-4">
+          <div>
+            <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">
+              {currentSeason?.label ?? "Temporada actual"}
+            </p>
+            <h2 className="mt-1 text-xl font-extrabold">Operativa de partidos</h2>
+            <p className="text-paper/75 mt-1 text-sm">Crea, convoca y registra solo los partidos en curso.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
+              <p className="text-paper/70 text-xs font-bold">Por jugar</p>
+              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{scheduledCount}</p>
+            </div>
+            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
+              <p className="text-paper/70 text-xs font-bold">Jugados</p>
+              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{playedCount}</p>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {error ? (
         <Alert variant="danger" title="No pudimos cargar los partidos">
@@ -200,8 +232,13 @@ export default async function MatchesPage() {
         </Alert>
       ) : null}
 
+      {!error && currentEditableTeams.length === 0 ? (
+        <Alert variant="info" title="No tienes equipos editables en la temporada actual">
+          Puedes consultar los partidos, pero para crear uno necesitas el permiso de gestión del equipo.
+        </Alert>
+      ) : null}
+
       <MatchesList
-        seasons={seasons}
         teams={teams}
         matches={matches}
         defaultTeamId={defaultTeamId}

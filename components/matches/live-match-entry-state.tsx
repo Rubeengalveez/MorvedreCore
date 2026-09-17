@@ -95,7 +95,9 @@ export function LiveMatchEntryState({
                 {preparation.team} · {preparation.opponent}
               </p>
               <h2 className="mt-2 text-2xl font-bold">
-                {preparation.reason === "too_many" ? "Elige los 14 que juegan" : "Revisa los gorros"}
+                {preparation.reason === "too_many"
+                  ? "Elige los 14 que juegan"
+                  : "Revisa los gorros"}
               </h2>
               <p className="mt-2 text-base leading-relaxed">
                 {preparation.reason === "too_many"
@@ -103,7 +105,10 @@ export function LiveMatchEntryState({
                   : `Tus ${preparation.players.length} jugadores ya están convocados. Solo falta que cada uno tenga un número diferente.`}
               </p>
               {preparation.reason === "too_many" && (
-                <p className="mt-3 inline-flex rounded-full bg-blue-100 px-3 py-1 text-base font-extrabold text-blue-950" role="status">
+                <p
+                  className="mt-3 inline-flex rounded-full bg-blue-100 px-3 py-1 text-base font-extrabold text-blue-950"
+                  role="status"
+                >
                   {selectedIds.size} de 14 elegidos
                 </p>
               )}
@@ -154,10 +159,10 @@ export function LiveMatchEntryState({
                         {!selected
                           ? "No juega este partido"
                           : duplicate
-                          ? "Gorro repetido"
-                          : !caps[i]
-                            ? "Elige su gorro"
-                            : "Gorro asignado"}
+                            ? "Gorro repetido"
+                            : !caps[i]
+                              ? "Elige su gorro"
+                              : "Gorro asignado"}
                       </span>
                     </label>
                     <select
@@ -173,20 +178,22 @@ export function LiveMatchEntryState({
                       className="min-h-12 min-w-20 rounded-lg border border-slate-400 bg-white px-3 text-lg font-bold focus-visible:outline-2 focus-visible:outline-blue-700"
                     >
                       <option value={0}>—</option>
-                      {Array.from({ length: 99 }, (_, n) => (
-                        <option
-                          key={n + 1}
-                          value={n + 1}
-                          disabled={caps.some(
-                            (cap, index) =>
-                              index !== i &&
-                              selectedIds.has(preparation.players[index]?.id ?? "") &&
-                              cap === n + 1,
-                          )}
-                        >
-                          {n + 1}
-                        </option>
-                      ))}
+                      {Array.from({ length: 14 }, (_, n) => n + 1)
+                        .filter(
+                          (candidate) =>
+                            candidate === caps[i] ||
+                            !caps.some(
+                              (cap, index) =>
+                                index !== i &&
+                                selectedIds.has(preparation.players[index]?.id ?? "") &&
+                                cap === candidate,
+                            ),
+                        )
+                        .map((candidate) => (
+                          <option key={candidate} value={candidate}>
+                            {candidate}
+                          </option>
+                        ))}
                     </select>
                   </div>
                 );

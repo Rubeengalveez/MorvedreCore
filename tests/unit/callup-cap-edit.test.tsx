@@ -22,9 +22,15 @@ it("valida la identidad real de la convocatoria al cambiar gorro", () => {
   expect(
     updateCallupSchema.safeParse({ match_id: mid, player_id: pid, cap_number: 0 }).success,
   ).toBe(false);
+  expect(
+    updateCallupSchema.safeParse({ match_id: mid, player_id: pid, cap_number: 15 }).success,
+  ).toBe(false);
+  expect(
+    updateCallupSchema.safeParse({ match_id: mid, player_id: pid, cap_number: null }).success,
+  ).toBe(true);
   expect(updateCallupSchema.safeParse({ match_id: mid, player_id: pid }).success).toBe(false);
 });
-it("los gorros ocupados están deshabilitados y un número libre se guarda", async () => {
+it("oculta los gorros ocupados y permite elegir un número libre o dejarlo sin gorro", async () => {
   const entries = [1, 2].map((cap) => ({
     callup: { match_id: mid, player_id: cap === 1 ? pid : mid, cap_number: cap, status: "called" },
     player: {
@@ -38,8 +44,14 @@ it("los gorros ocupados están deshabilitados y un número libre se guarda", asy
     hasConflict: false,
   })) as CallupEntry[];
   render(<CallupList entries={entries} />);
-  const select = screen.getByRole("combobox", { name: "Gorro de Jugador 1" });
-  expect(select.querySelector('option[value="2"]')).toBeDisabled();
-  fireEvent.change(select, { target: { value: "3" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cambiar gorro de Jugador 1" }));
+  expect(screen.queryByRole("button", { name: "2" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "3" }));
   await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(mid, pid, { cap_number: 3 }));
+
+  const capButton = screen.getByRole("button", { name: "Cambiar gorro de Jugador 1" });
+  await waitFor(() => expect(capButton).toBeEnabled());
+  fireEvent.click(capButton);
+  fireEvent.click(screen.getByRole("button", { name: "Sin gorro" }));
+  await waitFor(() => expect(mocks.update).toHaveBeenCalledWith(mid, pid, { cap_number: null }));
 });

@@ -11,6 +11,7 @@ import { ArrowRightLeft, ChevronLeft, Download, MessageCircle, Share2, X } from 
 import {
   actionLabels,
   describeEvent,
+  finalScore,
   findPenaltyGoalCandidate,
   isGoal,
   playerTotals,
@@ -28,6 +29,7 @@ import { generateUuid } from "@/lib/utils/uuid";
 import styles from "./live-match.module.css";
 
 import { ActaScoreboard } from "./acta-scoreboard";
+import { ActaShootout } from "./acta-shootout";
 
 import { ActaPlayerName } from "./acta-player-name";
 import { ActaPlayerBoard } from "./acta-player-board";
@@ -45,6 +47,7 @@ type Panel =
   | "bench"
   | "bench-actions"
   | "periods"
+  | "shootout-start"
   | "history"
   | "keeper"
   | "keeper-action"
@@ -92,6 +95,7 @@ export function LiveMatchClient() {
     correctedIsPenalty: boolean;
   } | null>(null);
   const localMutation = useRef(false);
+  const lastAction = useRef<{ key: string; at: number } | null>(null);
   const closingPanel = useRef(false);
   const dismissedPending = useRef<string | null>(null);
   const lastActivePanelRef = useRef<Exclude<Panel, null>>("players");
@@ -333,8 +337,21 @@ export function LiveMatchClient() {
     return ok;
   }
 
+  function acceptAction(key: string) {
+    const now = Date.now();
+    if (lastAction.current?.key === key && now - lastAction.current.at < 800) return false;
+    lastAction.current = { key, at: now };
+    return true;
+  }
+
   async function add(kind: ActionKind, eventSide: Side = side, missOutcome?: "out" | "save") {
     if (!s || (!playing && !editing)) return;
+    if (
+      !acceptAction(
+        `${editing?.id ?? "new"}:${s.period}:${eventSide}:${cap}:${kind}:${missOutcome ?? ""}`,
+      )
+    )
+      return;
 
     if (!editing && eventSide === "them" && isGoal(kind)) {
       const currentKeeper = s.keeper === null ? null : playerTotals(s, "us", s.keeper);
@@ -489,6 +506,7 @@ export function LiveMatchClient() {
   }
 
   async function addRivalPenalty(penaltySide: Side = "them") {
+    if (!acceptAction(`penalty:${s.period}:${penaltySide}:${cap}`)) return;
     const penalty: MatchEvent = {
       id: editing?.id ?? generateUuid(),
       side: penaltySide,
@@ -730,7 +748,7 @@ export function LiveMatchClient() {
     setDeleting(null);
   }
 
-  function downloadOrViewPdf(targetFile?: File) {
+  function downloadPdf(targetFile?: File) {
     const file = targetFile ?? pdf;
     if (!file) return;
     setShareError("");
@@ -742,9 +760,6 @@ export function LiveMatchClient() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      try {
-        window.open(url, "_blank");
-      } catch {}
       setTimeout(() => URL.revokeObjectURL(url), 120000);
     } catch {
       setShareError("No se pudo descargar el PDF en este dispositivo.");
@@ -790,7 +805,7 @@ export function LiveMatchClient() {
     }
 
     try {
-      downloadOrViewPdf(file);
+      downloadPdf(file);
       const summary = `*Acta oficial Morvedre Core*\n${record.team} vs ${record.opponent}\nResultado: ${score(record.sheet, "us")}–${score(record.sheet, "them")}\n(Se ha descargado el PDF en tu dispositivo para adjuntarlo)`;
       const waUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(summary)}`;
       window.open(waUrl, "_blank");
@@ -806,6 +821,7 @@ export function LiveMatchClient() {
     bench: benchKind === "timeout" ? "¿Quién pide tiempo muerto?" : "Tarjeta al entrenador",
     "bench-actions": `${side === "us" ? "Morvedre" : "Rival"} · Banquillo`,
     periods: s.phase === "playing" ? `Terminar cuarto ${s.period}` : "Cuartos del partido",
+    "shootout-start": "¿Quién lanza primero?",
     history: "Corregir una jugada",
     "player-stats": "Estadísticas del jugador",
     keeper: keeperStart ? `Portero del cuarto ${s.period + 1}` : "Portero en juego",
@@ -889,6 +905,9 @@ export function LiveMatchClient() {
     }
     if (activePanel === "periods") {
       return styles.panelPeriods;
+    }
+    if (activePanel === "shootout-start") {
+      return styles.panelChoice;
     }
     if (activePanel === "penalty-result" || activePanel === "duplicate-penalty") {
       return styles.panelPenaltyResult;
@@ -1017,15 +1036,26 @@ export function LiveMatchClient() {
           </section>
         )}
 
-        <ActaPlayerBoard
-          sheet={s}
-          playing={playing}
-          onPlayer={(which, n) => {
-            setEditing(null);
-            openPlayer(which, n);
-          }}
-        />
-        {s.phase !== "ready" && (
+        {s.shootout ? (
+          <ActaShootout
+            key={`${record.matchId}-${s.shootout.shots.length}`}
+            record={record}
+            enabled={enabled}
+            change={change}
+            onShare={() => setPanel("share")}
+          />
+        ) : (
+          <ActaPlayerBoard
+            sheet={s}
+            isAway={record.homeAway === "away"}
+            playing={playing}
+            onPlayer={(which, n) => {
+              setEditing(null);
+              openPlayer(which, n);
+            }}
+          />
+        )}
+        {s.phase !== "ready" && !s.shootout && (
           <ActaKeeperControl
             sheet={s}
             disabled={!enabled}
@@ -1037,65 +1067,68 @@ export function LiveMatchClient() {
         )}
       </div>
 
-      <footer className="relative shrink-0 border-t border-[#062048] bg-[#062048] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-        {s.phase === "ready" ? (
-          <button
-            className={styles.start}
+      {s.phase !== "shootout" && !(s.shootout && closed) && (
+        <footer className="relative shrink-0 border-t border-[#062048] bg-[#062048] p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          {s.phase === "ready" ? (
+            <button
+              className={styles.start}
 
-            disabled={!enabled || !s.keeper}
+              disabled={!enabled || !s.keeper}
 
-            onClick={() =>
-              s.keeper !== null && void change(selectMatchKeeper(s, s.keeper, "start"))
-            }
-          >
-            Empezar partido
-          </button>
-        ) : s.phase === "break" ? (
-          <button
-            className={styles.start}
+              onClick={() =>
+                s.keeper !== null && void change(selectMatchKeeper(s, s.keeper, "start"))
+              }
+            >
+              Empezar partido
+            </button>
+          ) : s.phase === "break" ? (
+            <button
+              className={styles.start}
 
-            disabled={!enabled}
+              disabled={!enabled}
 
-            onClick={() => openKeeper(true)}
-          >
-            Empezar cuarto {s.period + 1}
-          </button>
-        ) : closed ? (
-          <button className={styles.start} onClick={() => setPanel("share")}>
-            Ver y compartir acta
-          </button>
-        ) : (
-          <>
-            <ActaMatchControls
-              sheet={s}
-              playing={playing}
-              onTeam={(nextSide) => {
-                setSide(nextSide);
-                setEditing(null);
-                setPanel("players");
-              }}
-              onBench={() => {
-                setBenchKind("timeout");
-                setPanel("bench");
-              }}
-              onHistory={() => setPanel("history")}
-              onPeriods={() => setPanel("periods")}
-            />
-          </>
-        )}
+              onClick={() => openKeeper(true)}
+            >
+              Empezar cuarto {s.period + 1}
+            </button>
+          ) : closed ? (
+            <button className={styles.start} onClick={() => setPanel("share")}>
+              Ver y compartir acta
+            </button>
+          ) : (
+            <>
+              <ActaMatchControls
+                sheet={s}
+                isAway={record.homeAway === "away"}
+                playing={playing}
+                onTeam={(nextSide) => {
+                  setSide(nextSide);
+                  setEditing(null);
+                  setPanel("players");
+                }}
+                onBench={() => {
+                  setBenchKind("timeout");
+                  setPanel("bench");
+                }}
+                onHistory={() => setPanel("history")}
+                onPeriods={() => setPanel("periods")}
+              />
+            </>
+          )}
 
-        {!writable && record.canEdit && !closed && (
-          <button
-            className={styles.takeover}
+          {!writable && record.canEdit && !closed && (
+            <button
+              className={styles.takeover}
 
-            disabled={busy || !online || record.dirty}
+              disabled={busy || !online || record.dirty}
 
-            onClick={() => setPanel("takeover")}
-          >
-            Tomar el relevo en este móvil
-          </button>
-        )}
-      </footer>
+              onClick={() => setPanel("takeover")}
+            >
+              Tomar el relevo en este móvil
+            </button>
+          )}
+        </footer>
+      )}
 
       <Dialog.Root
         open={panel !== null}
@@ -1439,7 +1472,7 @@ export function LiveMatchClient() {
               )}
 
               {activePanel === "shot" && (
-                <div className={styles.actionList}>
+                <div className={styles.actionGrid}>
                   {button(
                     actionLabels["shot_out"],
                     () => void add("shot_out"),
@@ -1479,7 +1512,7 @@ export function LiveMatchClient() {
               )}
 
               {activePanel === "sanction" && (
-                <div className={styles.actionList}>
+                <div className={styles.actionGrid}>
                   {button(
                     actionLabels["exclusion"],
                     () => void add("exclusion"),
@@ -1501,25 +1534,47 @@ export function LiveMatchClient() {
 
               {activePanel === "bench" && (
                 <div className="space-y-3">
-                  <div className={styles.actionGrid}>
-                    {button(`Morvedre · ${timeoutCount(s, "us")} pedidos`, () => {
-                      setSide("us");
-
-                      if (benchKind === "timeout") void add("timeout", "us");
-                      else setPanel("bench-actions");
-                    })}
-
-                    {button(`Rival · ${timeoutCount(s, "them")} pedidos`, () => {
-                      setSide("them");
-
-                      if (benchKind === "timeout") void add("timeout", "them");
-                      else setPanel("bench-actions");
-                    })}
+                  <div className="rounded-2xl bg-[#062048] p-3 text-white shadow-sm">
+                    <p className="mb-3 text-center text-sm font-bold text-blue-100">
+                      Toca el equipo que pide el tiempo muerto
+                    </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="flex min-h-24 flex-col items-center justify-center rounded-xl bg-[#1657a8] px-2 text-center text-white active:bg-[#0b4d86] disabled:opacity-50"
+                        onClick={() => {
+                          setSide("us");
+                          if (benchKind === "timeout") void add("timeout", "us");
+                          else setPanel("bench-actions");
+                        }}
+                      >
+                        <strong className="text-lg">Morvedre</strong>
+                        <span className="mt-1 rounded-full bg-white/15 px-2.5 py-1 text-sm font-bold">
+                          {timeoutCount(s, "us")} pedidos
+                        </span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        className="flex min-h-24 flex-col items-center justify-center rounded-xl bg-[#f4c430] px-2 text-center text-[#062048] active:bg-[#e4b520] disabled:opacity-50"
+                        onClick={() => {
+                          setSide("them");
+                          if (benchKind === "timeout") void add("timeout", "them");
+                          else setPanel("bench-actions");
+                        }}
+                      >
+                        <strong className="text-lg">Rival</strong>
+                        <span className="mt-1 rounded-full bg-white/45 px-2.5 py-1 text-sm font-bold">
+                          {timeoutCount(s, "them")} pedidos
+                        </span>
+                      </button>
+                    </div>
                   </div>
                   {benchKind === "timeout" && (
                     <button
                       type="button"
-                      className="min-h-12 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+                      className="min-h-14 w-full rounded-xl border-2 border-[#8aa6bf] bg-[#e8f1fc] px-4 text-base font-bold text-[#062048]"
                       onClick={() => {
                         setBenchKind("cards");
                         setPanel("bench");
@@ -1544,9 +1599,12 @@ export function LiveMatchClient() {
 
               {activePanel === "assist" && pending?.kind === "assist" && (
                 <div className="space-y-3">
-                  <p className="rounded-xl bg-emerald-50 p-3 text-base font-semibold text-emerald-900">
-                    El gol ya está guardado. Elige quién dio la asistencia.
-                  </p>
+                  <div className="rounded-xl border-l-4 border-emerald-400 bg-[#062048] px-4 py-3 text-white shadow-sm">
+                    <p className="text-sm font-black tracking-wide text-emerald-300 uppercase">
+                      Gol guardado
+                    </p>
+                    <p className="mt-0.5 text-base font-bold">Elige quién dio la asistencia.</p>
+                  </div>
                   <div className={styles.playerList}>
                     {orderedPlayers
                       .filter(
@@ -2148,6 +2206,46 @@ export function LiveMatchClient() {
                 </div>
               )}
 
+              {activePanel === "shootout-start" && (
+                <div className="space-y-3">
+                  <div className="rounded-xl bg-[#e8f1fc] p-3 text-center text-[#062048]">
+                    <p className="font-extrabold">Elige quién tira primero</p>
+                    <p className="mt-1 text-sm font-medium text-slate-600">
+                      Después los turnos se alternan automáticamente.
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      className="min-h-24 rounded-xl bg-[#1657a8] px-3 text-lg font-black text-white disabled:opacity-50"
+                      disabled={busy || !enabled}
+                      onClick={() =>
+                        void patch({
+                          ...s,
+                          phase: "shootout",
+                          pending: null,
+                          shootout: { firstSide: "us", shots: [] },
+                        })
+                      }
+                    >
+                      Morvedre
+                    </button>
+                    <button
+                      className="min-h-24 rounded-xl bg-[#f4c430] px-3 text-lg font-black text-[#062048] disabled:opacity-50"
+                      disabled={busy || !enabled}
+                      onClick={() =>
+                        void patch({
+                          ...s,
+                          phase: "shootout",
+                          pending: null,
+                          shootout: { firstSide: "them", shots: [] },
+                        })
+                      }
+                    >
+                      {record.opponent}
+                    </button>
+                  </div>
+                </div>
+              )}
               {activePanel === "periods" && (
                 <>
                   <p className="text-center text-sm font-semibold text-slate-600">
@@ -2155,60 +2253,85 @@ export function LiveMatchClient() {
                   </p>
 
                   <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 rounded-xl bg-[#062048] p-4 text-center text-white">
-                    <span className="text-sm font-bold">Morvedre</span>
+                    <span className="text-sm font-bold">
+                      {record.homeAway === "away" ? "Rival" : "Morvedre"}
+                    </span>
                     <strong className="font-mono text-4xl font-extrabold">
-                      {score(s, "us")}–{score(s, "them")}
+                      {score(s, record.homeAway === "away" ? "them" : "us")}–
+                      {score(s, record.homeAway === "away" ? "us" : "them")}
                     </strong>
-                    <span className="text-sm font-bold">Rival</span>
+                    <span className="text-sm font-bold">
+                      {record.homeAway === "away" ? "Morvedre" : "Rival"}
+                    </span>
                   </div>
 
                   <p className="my-4 text-center text-base">
                     Este cuarto:{" "}
                     <strong>
-                      {score(s, "us", s.period)}–{score(s, "them", s.period)}
+                      {score(s, record.homeAway === "away" ? "them" : "us", s.period)}–
+                      {score(s, record.homeAway === "away" ? "us" : "them", s.period)}
                     </strong>
                   </p>
 
                   {playing && (
                     <div className="space-y-2">
-                      <button
-                        type="button"
-                        className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-lg font-bold text-white disabled:opacity-50"
-                        disabled={busy}
-                        onClick={() =>
-                          void patch({ ...s, phase: s.period === s.periods ? "finished" : "break" })
-                        }
-                      >
-                        {s.period === s.periods
-                          ? "Sí, terminar partido"
-                          : `Sí, terminar cuarto ${s.period}`}
-                      </button>
-
-                      <button
-                        type="button"
-                        className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold"
-                        onClick={closePanel}
-                      >
-                        Seguir anotando
-                      </button>
+                      {s.period === s.periods && score(s, "us") === score(s, "them") && (
+                        <p className="text-center text-lg font-bold">
+                          El partido ha terminado en empate
+                        </p>
+                      )}
+                      {s.pending && (
+                        <p className="text-center text-red-700">
+                          Completa la jugada pendiente antes de terminar el cuarto.
+                        </p>
+                      )}
+                      {s.period === s.periods && score(s, "us") === score(s, "them") ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            className="min-h-16 rounded-xl border-2 border-[#8aa6bf] bg-white px-3 text-base font-extrabold text-[#062048] disabled:opacity-50"
+                            disabled={busy || Boolean(s.pending)}
+                            onClick={() => void patch({ ...s, phase: "finished" })}
+                          >
+                            Terminar partido
+                          </button>
+                          <button
+                            type="button"
+                            className="min-h-16 rounded-xl bg-[#f4c430] px-3 text-base font-extrabold text-[#062048] disabled:opacity-50"
+                            disabled={busy || Boolean(s.pending)}
+                            onClick={() => setPanel("shootout-start")}
+                          >
+                            Tanda de penaltis
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-lg font-bold text-white disabled:opacity-50"
+                            disabled={busy || Boolean(s.pending)}
+                            onClick={() =>
+                              void patch({
+                                ...s,
+                                phase: s.period === s.periods ? "finished" : "break",
+                              })
+                            }
+                          >
+                            {s.period === s.periods
+                              ? "Sí, terminar partido"
+                              : `Sí, terminar cuarto ${s.period}`}
+                          </button>
+                          <button
+                            type="button"
+                            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold"
+                            onClick={closePanel}
+                          >
+                            Seguir anotando
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
-
-                  <details className="mt-3 border-t border-slate-300">
-                    <summary className="flex min-h-12 cursor-pointer items-center text-sm font-semibold">
-                      Ver todos los parciales
-                    </summary>
-                    <div className={styles.partials}>
-                      {Array.from({ length: s.period }, (_, i) => (
-                        <div key={i}>
-                          <span>Cuarto {i + 1}</span>
-                          <strong>
-                            {score(s, "us", i + 1)}–{score(s, "them", i + 1)}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
-                  </details>
                 </>
               )}
 
@@ -2359,74 +2482,72 @@ export function LiveMatchClient() {
                 (() => {
                   const totalUs = score(s, "us");
                   const totalThem = score(s, "them");
+                  const finalUs = finalScore(s, "us");
+                  const finalThem = finalScore(s, "them");
+                  const homeSide: Side = record.homeAway === "away" ? "them" : "us";
+                  const awaySide: Side = homeSide === "us" ? "them" : "us";
                   const outcome =
-                    totalUs > totalThem ? "win" : totalUs === totalThem ? "draw" : "loss";
+                    finalUs > finalThem ? "win" : finalUs === finalThem ? "draw" : "loss";
                   const outcomeStyles = {
                     win: {
-                      card: "border-emerald-200 bg-emerald-50/60",
-                      score: "text-emerald-900",
-                      badge: "bg-emerald-100/90 text-emerald-800 border-emerald-200",
-                      partials: "text-emerald-800/90",
+                      badge: "bg-emerald-100 text-emerald-800",
                       statusText: "Victoria",
                     },
                     draw: {
-                      card: "border-amber-200 bg-amber-50/60",
-                      score: "text-amber-900",
-                      badge: "bg-amber-100/90 text-amber-800 border-amber-200",
-                      partials: "text-amber-800/90",
+                      badge: "bg-slate-100 text-slate-700",
                       statusText: "Empate",
                     },
                     loss: {
-                      card: "border-rose-200 bg-rose-50/60",
-                      score: "text-rose-900",
-                      badge: "bg-rose-100/90 text-rose-800 border-rose-200",
-                      partials: "text-rose-800/90",
+                      badge: "bg-rose-100 text-rose-800",
                       statusText: "Derrota",
                     },
                   }[outcome];
 
                   return (
                     <div className="space-y-3 pb-2">
-                      <div
-                        className={`rounded-xl border p-3.5 shadow-sm transition-colors ${outcomeStyles.card}`}
-                      >
-                        <div className="flex items-center justify-between text-xs font-bold tracking-wider uppercase">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-slate-600">
-                              {closed ? "Acta final" : "Acta provisional"}
-                            </span>
-                            <span
-                              className={`rounded border px-1.5 py-0.5 text-[10px] font-extrabold ${outcomeStyles.badge}`}
-                            >
-                              {outcomeStyles.statusText}
-                            </span>
+                      <div className="overflow-hidden rounded-2xl border border-[#c7d6e4] bg-white shadow-sm">
+                        <div className="flex min-h-11 items-center justify-between gap-3 bg-[#062048] px-3 py-2 text-white">
+                          <span className="min-w-0 text-sm font-extrabold">{record.team}</span>
+                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold ${outcomeStyles.badge}`}>
+                            {outcomeStyles.statusText}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-[minmax(0,1fr)_1rem_minmax(0,1fr)] items-end gap-x-2 gap-y-2 px-3 py-3 text-center text-[#062048]">
+                          <p className="min-w-0 break-words text-sm leading-tight font-extrabold">
+                            {homeSide === "us" ? "Morvedre" : record.opponent}
+                          </p>
+                          <p className="col-start-3 min-w-0 break-words text-sm leading-tight font-extrabold">
+                            {awaySide === "us" ? "Morvedre" : record.opponent}
+                          </p>
+                          <strong className="font-mono text-5xl leading-none font-black tabular-nums">
+                            {homeSide === "us" ? totalUs : totalThem}
+                          </strong>
+                          <span className="self-center text-xl text-slate-400">–</span>
+                          <strong className="font-mono text-5xl leading-none font-black tabular-nums">
+                            {awaySide === "us" ? totalUs : totalThem}
+                          </strong>
+                          {s.shootout && (
+                            <p className="col-span-3 -mt-2 text-base leading-none font-extrabold">
+                              ({finalScore(s, homeSide)}–{finalScore(s, awaySide)})
+                            </p>
+                          )}
+                        </div>
+                        {s.period > 0 && (
+                          <div className="flex flex-wrap justify-evenly gap-3 border-t border-[#dce6ef] bg-[#edf3f8] px-3 py-2">
+                            {Array.from({ length: s.period }, (_, i) => (
+                              <div key={i} className="text-center">
+                                <span className="block text-[11px] font-semibold text-slate-500">{i + 1}º cuarto</span>
+                                <span className="text-sm font-extrabold text-[#062048] tabular-nums">
+                                  {score(s, homeSide, i + 1)}–{score(s, awaySide, i + 1)}
+                                </span>
+                              </div>
+                            ))}
                           </div>
-                          <span
-                            className={`text-[11px] font-semibold tracking-normal ${outcomeStyles.partials}`}
-                          >
-                            {s.period > 0
-                              ? Array.from(
-                                  { length: s.period },
-                                  (_, i) => `${score(s, "us", i + 1)}-${score(s, "them", i + 1)}`,
-                                ).join(" | ")
-                              : ""}
-                          </span>
-                        </div>
-                        <div className="mt-2 flex items-baseline justify-between gap-2">
-                          <span className="text-base font-extrabold text-[#062048]">
-                            {record.team}{" "}
-                            <span className="text-sm font-normal text-slate-500">vs</span>{" "}
-                            {record.opponent}
-                          </span>
-                          <span className={`font-mono text-2xl font-black ${outcomeStyles.score}`}>
-                            {totalUs}–{totalThem}
-                          </span>
-                        </div>
+                        )}
                       </div>
 
                       <p className="px-1 text-xs leading-relaxed text-slate-600">
-                        Genera el acta oficial en PDF con estadísticas por jugador, parciales
-                        federativos y desarrollo completo del partido.
+                        El PDF incluye estadísticas, parciales y todas las jugadas.
                       </p>
 
                       {record.dirty && (
@@ -2435,25 +2556,25 @@ export function LiveMatchClient() {
                         </p>
                       )}
 
-                      <div className="flex flex-col gap-2.5 pt-1 sm:flex-row">
+                      <div className="grid gap-2.5 pt-1">
                         <button
                           type="button"
-                          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#062048] bg-white px-4 py-2.5 text-sm font-extrabold text-[#062048] shadow-sm transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50"
+                          className="flex min-h-14 items-center justify-center gap-3 rounded-xl bg-[#062048] px-4 text-base font-extrabold text-white active:bg-[#0b4d86] disabled:opacity-50"
                           disabled={!pdf}
-                          onClick={() => downloadOrViewPdf()}
+                          onClick={() => downloadPdf()}
                         >
                           <Download size={18} aria-hidden="true" />
-                          <span>Ver o descargar PDF</span>
+                          <span>{pdf ? "Descargar PDF del acta" : "Preparando PDF…"}</span>
                         </button>
 
                         <button
                           type="button"
-                          className="flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-[#062048] px-4 py-2.5 text-sm font-extrabold text-white shadow-md transition hover:bg-[#093574] active:scale-[0.99] disabled:opacity-50"
+                          className="flex min-h-14 items-center justify-center gap-3 rounded-xl border-2 border-[#062048] bg-white px-4 text-base font-extrabold text-[#062048] active:bg-[#e8f1fc] disabled:opacity-50"
                           disabled={!pdf}
                           onClick={() => void share()}
                         >
                           <MessageCircle size={18} aria-hidden="true" />
-                          <span>{pdf ? "Compartir por WhatsApp" : "Preparando PDF…"}</span>
+                          <span>Compartir por WhatsApp</span>
                         </button>
                       </div>
 

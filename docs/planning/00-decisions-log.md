@@ -926,19 +926,20 @@ Sustituir el registro público por código de invitación por un flujo en el que
 
 El informe del club separa registro horizontal, análisis de equipos, aportación individual y cronología por partes. Paleta azul/gris con naranja para rival, gráficos vectoriales y etiquetas completas. No se presenta como acta arbitral. Los porcentajes de tiro usan solo acciones detalladas, excluyen marcadores importados y muestran sin datos cuando no hay denominador. Eficacia del portero = paradas / (paradas + goles asignados), excluyendo tiros fuera. No se calcula eficacia rival ni de superioridad sin registro completo de intentos/posesiones. La paginación conserva nombres y filas completos. La muestra reproducible usa datos ficticios: scripts/preview-acta-pdf.mjs.
 
-
 ### 2026-09-14 · Ajustes del acta y cuartos de portería
 
 PDF informativo: expulsiones temporales y penaltis en columnas separadas; ambas siguen sumando para el límite de tres sanciones. Tiros rivales = goles + paradas + otros tiros recibidos de nuestra portería. Indicador 1+ = goles propios de superioridad / expulsiones rivales, excluyendo penaltis. Asistencias y goles con igual peso; orden individual por suma. Tiros a portería incluye goles, paradas, bloqueos y córner; penaltis fallados sin destino permanecen sin clasificar.
 
 La elección de portero inicia el siguiente cuarto. keeperStints, opcional en el documento del acta, registra tramos; cambio real conserva ambas participaciones, corregir selección sustituye el último tramo y reasigna sus acciones de portería. Sin temporizadores ni deducciones de duración. Compatible con sincronización y cambios de gorro. En documentos anteriores solo se infieren cuartos con acciones registradas. No requiere nuevas tablas.
 
-
 ### 2026-09-15 · Lectura visual del acta y evolución gol a gol
 
 Primera hoja: columnas estadísticas iguales, ceros atenuados como guiones, goles de 1+ adicionales al total, goles de penalti y tarjetas condicionales. Resultado final en parciales; marcador previo separado cuando existe para que las sumas cuadren. Banda de resultado y datos del partido, sin declarar victoria/derrota hasta el cierre. Gráfico escalonado de cada gol, en orden dentro del cuarto, con cierre de cuartos marcado; no representa tiempos de reloj. La aportación individual incluye toda la convocatoria. Portería comparada en filas; goleadores rivales ordenados en bloques secundarios.
 
-
 ### 2026-09-15 · Auditoría y planificación del panel de administración
 
 A petición de Rubén se auditan funciones, organización, diseño y accesibilidad del panel antes de implementar su rediseño. Documento general y fichas por sección en [auditoría de administración](../audits/2026-09-15-admin/00-panel-general.md). Se distingue evidencia de código, observación local, problema reportado y propuesta pendiente de validar. La operación cotidiana debe centrarse en la temporada actual, con consulta histórica y preparación de curso separadas. Se priorizan integridad de entrenamientos/fichas, consultas fallidas, accesos a catálogo y solicitudes, ciclos completos de mantenimiento y accesibilidad. No se cambian funciones, datos ni permisos en esta fase; las nuevas propuestas no se consideran decisiones de producto cerradas.
+
+### 2026-09-16 · Gorras de partido del 1 al 14
+
+Las convocatorias admiten únicamente gorros del 1 al 14. Un jugador puede quedar temporalmente «Sin gorro» para facilitar intercambios; los números ocupados no se ofrecen al editar. La misma regla se aplica en la interfaz, las Server Actions, las funciones de dominio y la base de datos.

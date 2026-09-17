@@ -267,12 +267,13 @@ export function defaultCapForPlayer(
 ): number | null {
   const startCap = playerProfile.cap_number;
   if (startCap == null) return null;
+  if (startCap < 1 || startCap > 14) return null;
 
   const taken = new Set(existingCallupsInMatch.map((c) => c.cap_number));
   if (!taken.has(startCap)) return startCap;
 
-  for (let i = 1; i <= 99; i++) {
-    const candidate = ((startCap - 1 + i) % 99) + 1;
+  for (let i = 1; i <= 14; i++) {
+    const candidate = ((startCap - 1 + i) % 14) + 1;
     if (!taken.has(candidate)) return candidate;
   }
   return null;
@@ -296,19 +297,21 @@ export function prepareCallupProposal(
   const usedCaps = new Set(
     existingCallups
       .map((callup) => callup.cap_number)
-      .filter((cap): cap is number => cap != null && cap >= 1 && cap <= 99),
+      .filter((cap): cap is number => cap != null && cap >= 1 && cap <= 14),
   );
 
   return suggestions
-    .filter((suggestion) => !existingPlayerIds.has(suggestion.player_id))
+    .filter(
+      (suggestion) => !existingPlayerIds.has(suggestion.player_id) && !suggestion.has_conflict,
+    )
     .map((suggestion) => {
       const preferredCap =
-        suggestion.cap_number != null && suggestion.cap_number >= 1 && suggestion.cap_number <= 99
+        suggestion.cap_number != null && suggestion.cap_number >= 1 && suggestion.cap_number <= 14
           ? suggestion.cap_number
           : 1;
       let capNumber: number | null = null;
-      for (let offset = 0; offset < 99; offset += 1) {
-        const candidate = ((preferredCap - 1 + offset) % 99) + 1;
+      for (let offset = 0; offset < 14; offset += 1) {
+        const candidate = ((preferredCap - 1 + offset) % 14) + 1;
         if (!usedCaps.has(candidate)) {
           capNumber = candidate;
           usedCaps.add(candidate);

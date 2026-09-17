@@ -1,15 +1,9 @@
 "use client";
 
 import type { Route } from "next";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  CalendarClock,
-  Check,
-  CheckCircle2,
-  RefreshCw,
-  UsersRound,
-  X,
-} from "lucide-react";
+import { CalendarClock, Check, CheckCircle2, RefreshCw, UsersRound, X } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
 import { PageBackLink } from "@/components/ui/page-back-link";
@@ -69,6 +63,7 @@ export function AttendanceSheet({
   session: DashboardCoachSession;
   canEdit: boolean;
 }) {
+  const router = useRouter();
   const initialValues = useMemo(() => buildValues(session, canEdit), [canEdit, session]);
   const initialSavedValues = useMemo(() => buildSavedValues(session), [session]);
   const [values, setValues] = useState<AttendanceValues>(initialValues);
@@ -77,6 +72,7 @@ export function AttendanceSheet({
     sameValues(initialValues, initialSavedValues) ? "saved" : "saving",
   );
   const [error, setError] = useState<string | null>(null);
+  const [isFinishing, setIsFinishing] = useState(false);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
   const requestVersionRef = useRef(0);
   const initialSaveButtonRef = useRef<HTMLButtonElement>(null);
@@ -139,15 +135,18 @@ export function AttendanceSheet({
     queueSave(nextValues);
   }
 
-  function markEveryonePresent() {
-    if (counts.absent === 0) return;
-    const nextValues = Object.fromEntries(session.players.map((player) => [player.id, true]));
-    setValues(nextValues);
-    queueSave(nextValues);
-  }
-
   function retrySave() {
     queueSave(values);
+  }
+
+  async function finishAttendance() {
+    setIsFinishing(true);
+    try {
+      await queueRef.current;
+      router.push(`/attendance?date=${sessionDay}` as Route);
+    } catch {
+      setIsFinishing(false);
+    }
   }
 
   return (
@@ -235,24 +234,19 @@ export function AttendanceSheet({
             <div className="flex items-center justify-between gap-3">
               <h2 id="attendance-summary-heading" className="text-pool-deep font-extrabold">
                 {counts.absent === 0
-                  ? "Todo el equipo está presente"
-                  : `${counts.absent} ${counts.absent === 1 ? "ausente" : "ausentes"}`}
+                  ? "Han venido todos"
+                  : `${counts.absent === 1 ? "Falta 1 jugador" : `Faltan ${counts.absent} jugadores`}`}
               </h2>
               <span className="text-ink-600 shrink-0 font-mono text-sm font-extrabold tabular-nums">
                 {counts.present}/{session.roster_count}
               </span>
             </div>
-            <button
-              type="button"
-              onClick={markEveryonePresent}
-              className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue mt-4 inline-flex min-h-14 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
-            >
-              <Check className="h-6 w-6" aria-hidden="true" />
-              Marcar todos como presentes
-            </button>
-            <p className="text-ink-600 mt-2 text-center text-sm leading-relaxed font-semibold">
-              Si ha faltado alguien, pulsa «Ausente» junto a su nombre.
-            </p>
+            <div className="bg-pool-foam mt-3 flex items-start gap-2.5 rounded-xl px-3 py-2.5">
+              <Check className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <p className="text-ink-700 text-sm leading-5 font-semibold">
+                Todos están marcados como «Ha venido». Si falta alguien, pulsa «No ha venido».
+              </p>
+            </div>
           </section>
 
           <ol className="flex flex-col gap-3" aria-label={`Jugadores de ${session.team_label}`}>
@@ -291,7 +285,7 @@ export function AttendanceSheet({
                       )}
                     >
                       <Check className="h-6 w-6" aria-hidden="true" />
-                      Presente
+                      Ha venido
                     </button>
                     <button
                       type="button"
@@ -305,7 +299,7 @@ export function AttendanceSheet({
                       )}
                     >
                       <X className="h-6 w-6" aria-hidden="true" />
-                      Ausente
+                      No ha venido
                     </button>
                   </div>
                 </li>
@@ -317,46 +311,81 @@ export function AttendanceSheet({
             className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3"
             aria-live="polite"
           >
-            <div className="flex items-center justify-center gap-4 text-sm font-extrabold">
-              <span className="text-success inline-flex items-center gap-1.5">
-                <Check className="h-4 w-4" aria-hidden="true" />
-                {counts.present} presentes
-              </span>
-              <span className="text-danger inline-flex items-center gap-1.5">
-                <X className="h-4 w-4" aria-hidden="true" />
-                {counts.absent} ausentes
-              </span>
+            <p className="text-ink-600 px-1 pb-2 text-xs font-extrabold tracking-[0.08em] uppercase">
+              Resumen de asistencia
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="border-success/25 bg-success/8 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
+                <span className="bg-success text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+                  <Check className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0">
+                  <strong className="text-success block font-mono text-2xl leading-none font-extrabold tabular-nums">
+                    {counts.present}
+                  </strong>
+                  <span className="text-ink-700 mt-1 block text-sm leading-tight font-bold">
+                    Han venido
+                  </span>
+                </span>
+              </div>
+              <div className="border-danger/25 bg-danger/7 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
+                <span className="bg-danger text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0">
+                  <strong className="text-danger block font-mono text-2xl leading-none font-extrabold tabular-nums">
+                    {counts.absent}
+                  </strong>
+                  <span className="text-ink-700 mt-1 block text-sm leading-tight font-bold">
+                    Han faltado
+                  </span>
+                </span>
+              </div>
             </div>
-            <div className="border-ink-200 mt-2 border-t pt-2">
-              {syncState === "saving" ? (
-                <p className="text-pool-blue flex items-center justify-center gap-2 font-extrabold">
-                  <span
-                    className="border-pool-blue h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none"
-                    aria-hidden="true"
-                  />
-                  Guardando cambios…
-                </p>
-              ) : syncState === "saved" ? (
-                <p className="text-success flex items-center justify-center gap-2 font-extrabold">
-                  <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
-                  Guardado automáticamente
-                </p>
-              ) : (
-                <div role="alert" className="text-center">
-                  <p className="text-danger font-extrabold">No se han guardado los cambios</p>
-                  <p className="text-ink-600 mt-1 text-xs">{error}</p>
-                  <button
-                    type="button"
-                    onClick={retrySave}
-                    className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-                  >
-                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                    Reintentar
-                  </button>
-                </div>
-              )}
-            </div>
+            {syncState !== "saved" ? (
+              <div className="border-ink-200 mt-3 border-t pt-3">
+                {syncState === "saving" ? (
+                  <p className="text-pool-blue flex items-center justify-center gap-2 font-extrabold">
+                    <span
+                      className="border-pool-blue h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none"
+                      aria-hidden="true"
+                    />
+                    Guardando cambios…
+                  </p>
+                ) : (
+                  <div role="alert" className="text-center">
+                    <p className="text-danger font-extrabold">No se han guardado los cambios</p>
+                    <p className="text-ink-600 mt-1 text-xs">{error}</p>
+                    <button
+                      type="button"
+                      onClick={retrySave}
+                      className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                      Reintentar
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : null}
           </div>
+
+          <button
+            type="button"
+            onClick={finishAttendance}
+            disabled={isFinishing || syncState === "error"}
+            className="bg-pool-deep text-paper shadow-elev-1 hover:bg-pool-blue focus-visible:ring-pool-blue inline-flex min-h-16 w-full touch-manipulation items-center justify-center gap-2.5 rounded-xl px-5 text-lg font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
+          >
+            {isFinishing ? (
+              <span
+                className="border-paper h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+            ) : (
+              <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
+            )}
+            {isFinishing ? "Guardando…" : "Aceptar y guardar cambios"}
+          </button>
         </>
       ) : (
         <section className="border-ink-200 bg-paper-card rounded-2xl border px-4 py-10 text-center">

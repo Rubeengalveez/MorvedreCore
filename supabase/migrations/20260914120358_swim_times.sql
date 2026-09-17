@@ -4,7 +4,6 @@ create table public.swim_time_entries (
   team_id uuid not null references public.teams(id) on delete restrict,
   season_id uuid not null references public.seasons(id) on delete restrict,
   test_date date not null,
-  start_type text not null check (start_type in ('water', 'block')),
   time_50_cs integer check (time_50_cs is null or time_50_cs between 1 and 359999),
   time_100_cs integer check (time_100_cs is null or time_100_cs between 1 and 359999),
   operation_id uuid not null,
@@ -27,10 +26,10 @@ create table public.swim_time_entries (
 create index swim_time_entries_player_date_idx
   on public.swim_time_entries (player_id, test_date desc, created_at desc);
 create index swim_time_entries_season_50_idx
-  on public.swim_time_entries (season_id, start_type, time_50_cs, test_date)
+  on public.swim_time_entries (season_id, time_50_cs, test_date)
   where voided_at is null and time_50_cs is not null;
 create index swim_time_entries_season_100_idx
-  on public.swim_time_entries (season_id, start_type, time_100_cs, test_date)
+  on public.swim_time_entries (season_id, time_100_cs, test_date)
   where voided_at is null and time_100_cs is not null;
 create index swim_time_entries_team_date_idx
   on public.swim_time_entries (team_id, test_date desc)

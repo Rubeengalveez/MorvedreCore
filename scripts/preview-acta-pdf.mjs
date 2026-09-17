@@ -105,14 +105,30 @@ const record = {
   sheet,
   dirty: false,
 };
+if (process.argv.includes("--shootout")) {
+  add(4, "us", 2, "goal");
+  for (let i = 0; i < 5; i++) add(4, "them", 2 + i, "goal");
+  const ours = ["out", "goal", "goal", "goal", "save", "goal", "post", "goal", "out", "save"];
+  const theirs = ["goal", "goal", "save", "goal", "out", "goal", "post", "goal", "save", "goal"];
+  sheet.shootout = {
+    firstSide: "us",
+    shots: ours.flatMap((outcome, i) => [
+      { id: `shootout-us-${i}`, side: "us", cap: 2 + i % 5, keeper: null, outcome },
+      { id: `shootout-them-${i}`, side: "them", cap: 2 + i % 5, keeper: 13, outcome: theirs[i] },
+    ]),
+  };
+}
+const outputPath = process.argv.includes("--shootout")
+  ? "output/pdf/acta-tanda-penaltis.pdf"
+  : "output/pdf/acta-redisenada.pdf";
 mkdirSync("output/pdf", { recursive: true });
 writeFileSync(
-  "output/pdf/acta-redisenada.pdf",
+  outputPath,
   Buffer.from(await createActaPdf(record).arrayBuffer()),
 );
 mkdirSync("tmp/pdfs", { recursive: true });
 writeFileSync("tmp/pdfs/record.json", JSON.stringify(record));
-console.log("output/pdf/acta-redisenada.pdf");
+console.log(outputPath);
 
 if (process.argv.includes("--stress")) {
   const allScorers = {

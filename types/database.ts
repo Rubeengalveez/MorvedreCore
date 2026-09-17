@@ -1635,7 +1635,6 @@ export type Database = {
           player_id: string;
           revision: number;
           season_id: string;
-          start_type: string;
           team_id: string;
           test_date: string;
           time_100_cs: number | null;
@@ -1654,7 +1653,6 @@ export type Database = {
           player_id: string;
           revision?: number;
           season_id: string;
-          start_type: string;
           team_id: string;
           test_date: string;
           time_100_cs?: number | null;
@@ -1673,7 +1671,6 @@ export type Database = {
           player_id?: string;
           revision?: number;
           season_id?: string;
-          start_type?: string;
           team_id?: string;
           test_date?: string;
           time_100_cs?: number | null;

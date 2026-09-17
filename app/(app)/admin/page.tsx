@@ -12,6 +12,7 @@ import {
   MdEuro,
   MdNewspaper,
   MdStorefront,
+  MdHowToReg,
 } from "react-icons/md";
 
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -70,6 +71,7 @@ interface AdminTile {
   description: string;
   Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   permission: AdminPermission | "admin";
+  group: "Hoy" | "Personas" | "Configuración";
 }
 
 const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
@@ -79,6 +81,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Crea y archiva.",
     Icon: MdCalendarMonth,
     permission: "admin",
+    group: "Configuración",
   },
   {
     href: "/admin/teams",
@@ -86,6 +89,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Configura plantillas.",
     Icon: MdGroups,
     permission: "manage_teams",
+    group: "Configuración",
   },
   {
     href: "/admin/players",
@@ -93,6 +97,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Altas y ediciones.",
     Icon: MdPerson,
     permission: "manage_players",
+    group: "Personas",
   },
   {
     href: "/admin/families",
@@ -100,6 +105,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Tutores vinculados.",
     Icon: MdFamilyRestroom,
     permission: "manage_families",
+    group: "Personas",
   },
   {
     href: "/admin/staff",
@@ -107,6 +113,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Entrenadores y más.",
     Icon: MdBadge,
     permission: "manage_staff",
+    group: "Personas",
   },
   {
     href: "/admin/trainings",
@@ -114,6 +121,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Bloques y asistencia.",
     Icon: MdSports,
     permission: "manage_trainings",
+    group: "Hoy",
   },
   {
     href: "/admin/matches",
@@ -121,6 +129,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Convocatorias y actas.",
     Icon: MdSportsVolleyball,
     permission: "manage_matches",
+    group: "Hoy",
   },
   {
     href: "/admin/treasury",
@@ -128,6 +137,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Cierres y pagos.",
     Icon: MdEuro,
     permission: "manage_treasury",
+    group: "Hoy",
   },
   {
     href: "/admin/players/import",
@@ -135,6 +145,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Carga desde Excel.",
     Icon: MdUploadFile,
     permission: "manage_players",
+    group: "Personas",
   },
   {
     href: "/admin/news",
@@ -142,6 +153,7 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Publica avisos del club.",
     Icon: MdNewspaper,
     permission: "manage_news",
+    group: "Hoy",
   },
   {
     href: "/admin/shop",
@@ -149,6 +161,15 @@ const ADMIN_MODULES: ReadonlyArray<AdminTile> = [
     description: "Gestiona pedidos y productos.",
     Icon: MdStorefront,
     permission: "manage_shop",
+    group: "Hoy",
+  },
+  {
+    href: "/admin/access-requests",
+    label: "Solicitudes de acceso",
+    description: "Revisa altas pendientes.",
+    Icon: MdHowToReg,
+    permission: "admin",
+    group: "Personas",
   },
 ];
 
@@ -203,10 +224,15 @@ export default async function AdminHomePage() {
           </section>
         ) : null}
 
-        <section aria-labelledby="admin-modules-heading" className="flex flex-col gap-2">
-          <SectionHeader id="admin-modules-heading" title="Secciones" />
-          <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-            {modules.map((m) => {
+        <section aria-labelledby="admin-modules-heading" className="flex flex-col gap-6">
+          <h2 id="admin-modules-heading" className="sr-only">Secciones administrativas</h2>
+          {(["Hoy", "Personas", "Configuración"] as const).map((group) => {
+            const groupModules = modules.filter((module) => module.group === group);
+            if (groupModules.length === 0) return null;
+            return <div key={group} className="flex flex-col gap-2">
+              <SectionHeader title={group} />
+              <ul className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            {groupModules.map((m) => {
               const { Icon } = m;
               return (
                 <li key={m.href} className="h-full">
@@ -232,7 +258,9 @@ export default async function AdminHomePage() {
                 </li>
               );
             })}
-          </ul>
+              </ul>
+            </div>;
+          })}
         </section>
       </PageShell>
     </div>

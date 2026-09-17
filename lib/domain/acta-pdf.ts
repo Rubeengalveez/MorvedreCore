@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
-import { actaAnalysis } from "./acta-analysis";
-import { isGoal, playerTotals, type LiveRecord, type ActionKind } from "./live-match";
+import { actaAnalysis, actaPlayerTotals } from "./acta-analysis";
+import { finalScore, isGoal, playerTotals, type LiveRecord, type ActionKind } from "./live-match";
 
 type Color = [number, number, number];
 const NAVY: Color = [10, 46, 92];
@@ -175,34 +175,38 @@ export function createActaPdf(record: LiveRecord): File {
     [yellow ? "Amarilla" : "", red ? "Roja" : ""].filter(Boolean).join(" / ") || "-";
 
   const finished = sheet.phase === "finished";
+  const totalUs = finalScore(sheet, "us");
+  const totalThem = finalScore(sheet, "them");
   const resultColor: Color = !finished
     ? NAVY
-    : a.goalsUs > a.goalsThem
+    : totalUs > totalThem
       ? [24, 104, 65]
-      : a.goalsUs < a.goalsThem
+      : totalUs < totalThem
         ? [165, 40, 49]
         : [160, 114, 12];
   const resultLabel = !finished
     ? status
-    : a.goalsUs > a.goalsThem
+    : totalUs > totalThem
       ? "VICTORIA"
-      : a.goalsUs < a.goalsThem
+      : totalUs < totalThem
         ? "DERROTA"
         : "EMPATE";
   fill(0, 0, 297, 4, resultColor);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(15);
-  const ownName = doc.splitTextToSize(team, 94) as string[];
-  const rivalName = doc.splitTextToSize(record.opponent, 94) as string[];
+  const away = record.homeAway === "away";
+  const ownName = doc.splitTextToSize(away ? record.opponent : team, 94) as string[];
+  const rivalName = doc.splitTextToSize(away ? team : record.opponent, 94) as string[];
   ownName.forEach((name, i) => text(name, 14, 22 + i * 5.7, 15, true));
   rivalName.forEach((name, i) => text(name, 283, 22 + i * 5.7, 15, true, NAVY, "right"));
-  text(`${a.goalsUs} - ${a.goalsThem}`, 148.5, 27, 52, true, NAVY, "center");
+  text(`${away ? a.goalsThem : a.goalsUs} - ${away ? a.goalsUs : a.goalsThem}`, 148.5, 27, 52, true, NAVY, "center");
+  if (sheet.shootout) text(`(${away ? totalThem : totalUs} - ${away ? totalUs : totalThem})`, 148.5, 32, 10, true, NAVY, "center");
   const ownCards = a.players.some((p) => p.totals.yellow || p.totals.red);
   const rivalCards = sheet.opponentCaps.some((cap) => {
     const t = playerTotals(sheet, "them", cap);
     return t.yellow || t.red;
   });
-  const penaltyGoalColumn = a.events.some(
+  const penaltyGoalColumn = Boolean(sheet.shootout?.shots.length) || a.events.some(
     (e) => e.kind === "goal_penalty" || (e.kind === "goal" && e.origin === "penalty_flow"),
   );
   const ownHead = [
@@ -249,7 +253,7 @@ export function createActaPdf(record: LiveRecord): File {
   for (let i = 0; i < Math.max(a.players.length, rivalCaps.length); i++) {
     const p = a.players[i];
     const cap = rivalCaps[i];
-    const t = cap === undefined ? null : playerTotals(sheet, "them", cap);
+    const t = cap === undefined ? null : actaPlayerTotals(sheet, "them", cap);
     const own = p
       ? [
           String(p.cap),
@@ -357,8 +361,8 @@ export function createActaPdf(record: LiveRecord): File {
   const pw = [
     20,
     ...Array.from(
-      { length: sheet.periods + (baseColumn ? 1 : 0) },
-      () => 75 / (sheet.periods + (baseColumn ? 1 : 0)),
+      { length: sheet.periods + (baseColumn ? 1 : 0) + (sheet.shootout ? 1 : 0) },
+      () => 75 / (sheet.periods + (baseColumn ? 1 : 0) + (sheet.shootout ? 1 : 0)),
     ),
     15,
   ];
@@ -367,6 +371,7 @@ export function createActaPdf(record: LiveRecord): File {
       "Cuarto",
       ...(baseColumn ? ["Previo"] : []),
       ...Array.from({ length: sheet.periods }, (_, i) => String(i + 1)),
+      ...(sheet.shootout ? ["Tanda"] : []),
       "Final",
     ],
     pw,
@@ -381,7 +386,8 @@ export function createActaPdf(record: LiveRecord): File {
       ...Array.from({ length: sheet.periods }, (_, i) =>
         a.periods[i] ? String(a.periods[i].us) : "-",
       ),
-      String(a.goalsUs),
+      ...(sheet.shootout ? [String(totalUs - a.goalsUs)] : []),
+      String(totalUs),
     ],
     pw,
     173,
@@ -395,7 +401,8 @@ export function createActaPdf(record: LiveRecord): File {
       ...Array.from({ length: sheet.periods }, (_, i) =>
         a.periods[i] ? String(a.periods[i].them) : "-",
       ),
-      String(a.goalsThem),
+      ...(sheet.shootout ? [String(totalThem - a.goalsThem)] : []),
+      String(totalThem),
     ],
     pw,
     173,
@@ -424,7 +431,7 @@ export function createActaPdf(record: LiveRecord): File {
 
   newPage("Lectura del partido");
   const comparisons: [string, number, number][] = [
-    ["Goles", a.goalsUs, a.goalsThem],
+    ["Goles", totalUs, totalThem],
     ["Tiros totales", a.ownShooting.attempts + a.baseUs, a.rivalShots],
     ["Tiros fallados", a.ownShooting.misses, a.rivalMisses],
     ["Expulsiones", a.count("us", "exclusion"), a.count("them", "exclusion")],
@@ -825,20 +832,20 @@ export function createActaPdf(record: LiveRecord): File {
   if (!a.periods.length) text("El partido todavía no ha empezado.", 14, y, 11);
   const timeWidths = [20, 20, 62, 80];
   const timeHead = ["Marcador", "Equipo", "Jugador", "Qué ha pasado"];
-  const quarterHeader = (period: (typeof a.periods)[number], continuation = false) => {
+  const segmentHeader = (title: string, detail: string, us: number, them: number) => {
     fill(14, y, 182, 17, NAVY);
     text(
-      `${period.period}º CUARTO${continuation ? " · continúa" : ""}`,
+      title,
       18,
       y + 7,
       12,
       true,
       WHITE,
     );
-    text(`En este cuarto: ${period.us} - ${period.them}`, 18, y + 13, 9, false, WHITE);
+    text(detail, 18, y + 13, 9, false, WHITE);
     text("MARCADOR GLOBAL", 192, y + 5, 7.5, true, WHITE, "right");
     text(
-      `${period.cumulativeUs} - ${period.cumulativeThem}`,
+      `${us} - ${them}`,
       192,
       y + 13,
       19,
@@ -848,6 +855,13 @@ export function createActaPdf(record: LiveRecord): File {
     );
     y += 20;
   };
+  const quarterHeader = (period: (typeof a.periods)[number], continuation = false) =>
+    segmentHeader(
+      `${period.period}º CUARTO${continuation ? " · continúa" : ""}`,
+      `En este cuarto: ${period.us} - ${period.them}`,
+      period.cumulativeUs,
+      period.cumulativeThem,
+    );
   for (const period of a.periods) {
     const rows = a.events.filter((e) => e.period === period.period && labels[e.kind]);
     if (y + 36 > bottom()) y = newPage("El partido, cuarto a cuarto") - 5;
@@ -914,6 +928,63 @@ export function createActaPdf(record: LiveRecord): File {
       }
     }
     y += 8;
+  }
+  if (sheet.shootout) {
+    const shootoutHeader = (continuation = false) => {
+      segmentHeader(
+        `TANDA DE PENALTIS${continuation ? " · continúa" : ""}`,
+        `En la tanda: ${totalUs - a.goalsUs} - ${totalThem - a.goalsThem}`,
+        totalUs,
+        totalThem,
+      );
+      y = tableRow(timeHead, timeWidths, 14, y, { header: true, height: 8, size: 8 });
+    };
+    if (y + 36 > bottom()) y = newPage("El partido, cuarto a cuarto") - 5;
+    shootoutHeader();
+    let us = a.goalsUs;
+    let them = a.goalsThem;
+    sheet.shootout.shots.forEach((shot, index) => {
+      const goal = shot.outcome === "goal";
+      if (goal) {
+        if (shot.side === "us") us++;
+        else them++;
+      }
+      const who = shot.side === "us"
+        ? `${shot.cap}  ${a.players.find((p) => p.cap === shot.cap)?.name ?? "Jugador"}`
+        : `Gorro ${shot.cap}`;
+      const action = {
+        goal: "Gol de penalti",
+        save: "Penalti parado",
+        out: "Penalti fuera / palo",
+        post: "Penalti al palo",
+      }[shot.outcome];
+      const keeper = shot.side === "them" && shot.keeper !== null ? ` · Portero: ${shot.keeper}` : "";
+      const values = [
+        goal ? `${us} - ${them}` : "-",
+        shot.side === "us" ? "Morvedre" : "Rival",
+        who,
+        `${index + 1}. ${action}${keeper}`,
+      ];
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      const h = Math.max(7, ...values.map(
+        (value, i) => (doc.splitTextToSize(value, timeWidths[i] - 3) as string[]).length * 3.12 + 3,
+      ));
+      if (y + h > bottom()) {
+        y = newPage("El partido, cuarto a cuarto") - 5;
+        shootoutHeader(true);
+      }
+      const color = shot.side === "us" ? BLUE : ORANGE;
+      const startY = y;
+      y = tableRow(values, timeWidths, 14, y, {
+        left: [2, 3], striped: index % 2 === 1, accent: color, height: h,
+      });
+      fill(14, startY, 1.2, y - startY, color);
+      if (goal) {
+        fill(14, startY, 20, y - startY, color);
+        text(`${us} - ${them}`, 24, startY + (y - startY) / 2 + 1, 10, true, WHITE, "center");
+      }
+    });
   }
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page++) {

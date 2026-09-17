@@ -19,7 +19,9 @@ import { RankingsContent } from "@/components/rankings/rankings-content";
 import { SwimRankingsContent } from "@/components/rankings/swim-rankings-content";
 import type { RankingPageMetric } from "@/components/rankings/metric-tabs";
 import { getSwimRanking } from "@/server/queries/swim-times";
-import type { SwimDistance, SwimRankingMode, SwimStartType } from "@/lib/domain/swim-times";
+import type { SwimDistance, SwimRankingMode } from "@/lib/domain/swim-times";
+
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,6 +30,23 @@ export const metadata: Metadata = {
   title: "Rankings - Morvedre Core",
   description: "Goles, MVP, expulsiones y asistencia de la temporada.",
 };
+
+async function loadCoachOrAdmin(profileId: string): Promise<boolean> {
+  const supabase = await createClient();
+  const [{ data: roles }, { data: staff }] = await Promise.all([
+    supabase
+      .from("user_roles")
+      .select("role")
+      .eq("profile_id", profileId)
+      .in("role", ["admin", "coach"]),
+    supabase
+      .from("team_staff")
+      .select("role")
+      .eq("profile_id", profileId)
+      .in("role", ["head_coach", "assistant_coach"]),
+  ]);
+  return (roles?.length ?? 0) > 0 || (staff?.length ?? 0) > 0;
+}
 
 function parseScope(scopeStr: string | undefined): RankingScope {
   if (!scopeStr || scopeStr === "all") return { kind: "all" };
@@ -76,20 +95,25 @@ export default async function RankingsPage({
     page?: string;
     distance?: string;
     mode?: string;
-    start?: string;
   }>;
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
   const { activeProfile, ownProfile, linkedProfiles } = ctx;
 
+  const [isCoachOrAdminOwn, isCoachOrAdminActive] = await Promise.all([
+    loadCoachOrAdmin(ownProfile.id),
+    ownProfile.id === activeProfile.id ? Promise.resolve(false) : loadCoachOrAdmin(activeProfile.id),
+  ]);
+  const canViewAttendance = isCoachOrAdminOwn || isCoachOrAdminActive;
+
   const sp = await searchParams;
   const scope = parseScope(sp.scope);
-  const metric = parseMetric(sp.metric);
+  const requestedMetric = parseMetric(sp.metric);
+  const metric = !canViewAttendance && requestedMetric === "attendance" ? "goals" : requestedMetric;
   const page = parsePage(sp.page);
   const distance: SwimDistance = sp.distance === "100" ? 100 : 50;
   const mode: SwimRankingMode = sp.mode === "best" ? "best" : "latest";
-  const startType: SwimStartType = sp.start === "block" ? "block" : "water";
 
   const meta = await getRankingsMeta();
   if (!meta.season.id) {
@@ -120,7 +144,6 @@ export default async function RankingsPage({
           seasonId: meta.season.id,
           distance,
           mode,
-          startType,
           category: scope.kind === "category" ? scope.category_code : null,
           teamId: scope.kind === "team" ? scope.team_id : null,
         })
@@ -146,8 +169,9 @@ export default async function RankingsPage({
           scope={scope}
           distance={distance}
           mode={mode}
-          startType={startType}
           page={page}
+          myPlayerId={activeProfile.id}
+          canViewAttendance={canViewAttendance}
         />
       ) : ranking ? (
         <RankingsContent
@@ -161,6 +185,7 @@ export default async function RankingsPage({
             new Set([ownProfile.id, ...linkedProfiles.map((profile) => profile.id)]),
           )}
           page={page}
+          canViewAttendance={canViewAttendance}
         />
       ) : null}
     </PageShell>

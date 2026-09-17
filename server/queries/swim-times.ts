@@ -7,7 +7,6 @@ import {
   computeSwimRanking,
   type SwimDistance,
   type SwimRankingMode,
-  type SwimStartType,
   type SwimTimeEntryInput,
 } from "@/lib/domain/swim-times";
 import type { CategoryCode } from "@/lib/domain/categories";
@@ -126,7 +125,6 @@ export async function getSwimTimeEntries(filters?: {
         season_end_year: Number(season.end_date.slice(0, 4)),
         test_date: row.test_date,
         created_at: row.created_at,
-        start_type: row.start_type as SwimStartType,
         time_50_cs: row.time_50_cs,
         time_100_cs: row.time_100_cs,
       },
@@ -142,8 +140,12 @@ export async function getPlayerSwimHistory(playerId: string) {
       .select("id, full_name, photo_url, birth_year")
       .eq("id", playerId)
       .maybeSingle(),
-    supabase.from("team_rosters").select("team_id").eq("player_id", playerId).is("left_at", null),
-    getSwimTimeEntries({ playerId }),
+    supabase
+      .from("team_rosters")
+      .select("team_id")
+      .eq("player_id", playerId)
+      .is("left_at", null),
+    getSwimTimeEntries({ playerId, includeVoided: true }),
   ]);
   if (profileResult.error || !profileResult.data) return null;
   const recent = [...entries].sort((a, b) => {
@@ -181,13 +183,10 @@ export async function getSwimRanking(input: {
   seasonId: string;
   distance: SwimDistance;
   mode: SwimRankingMode;
-  startType: SwimStartType;
   category?: CategoryCode | null;
   teamId?: string | null;
 }) {
-  const entries = (await getSwimTimeEntries({ seasonId: input.seasonId })).filter(
-    (entry) => entry.start_type === input.startType,
-  );
+  const entries = await getSwimTimeEntries({ seasonId: input.seasonId });
   return computeSwimRanking({
     entries,
     distance: input.distance,
@@ -199,23 +198,8 @@ export async function getSwimRanking(input: {
 
 export async function getSwimLegends(input: {
   distance: SwimDistance;
-  startType: SwimStartType;
   category?: CategoryCode | null;
 }) {
   const entries = await getSwimTimeEntries();
   return computeSwimLegends({ entries, ...input });
-}
-
-export async function getLatestTeamSwimStartType(teamId: string): Promise<SwimStartType> {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("swim_time_entries")
-    .select("start_type")
-    .eq("team_id", teamId)
-    .is("voided_at", null)
-    .order("test_date", { ascending: false })
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  return data?.start_type === "block" ? "block" : "water";
 }

@@ -13,6 +13,7 @@ import type { ShopOrder } from "@/server/queries/shop";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/ui/badge";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 
 export interface AdminKanbanCardProps {
   order: ShopOrder;
@@ -65,6 +66,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
 
   const next = NEXT_STATUS[order.status];
   const badgeConfig = STATUS_BADGE_CONFIG[order.status];
@@ -87,6 +89,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
     startTransition(async () => {
       try {
         await updateShopOrderStatus({ order_id: order.id, status: "cancelled" });
+        setCancelOpen(false);
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Ha habido un problema.");
@@ -98,6 +101,16 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
 
   return (
     <Card data-kanban-card={order.id} className="gap-3 p-4">
+      <ConfirmActionSheet
+        open={cancelOpen}
+        onOpenChange={setCancelOpen}
+        title="Cancelar pedido"
+        description="El pedido quedará cancelado y dejará de avanzar en la gestión."
+        confirmLabel="Sí, cancelar pedido"
+        isPending={pending}
+        error={error}
+        onConfirm={cancel}
+      />
       <div className="flex items-start justify-between gap-3">
         <div className="flex flex-col gap-1">
           <Link
@@ -172,7 +185,7 @@ export function AdminKanbanCard({ order }: AdminKanbanCardProps) {
             type="button"
             variant="outline"
             size="icon"
-            onClick={cancel}
+            onClick={() => setCancelOpen(true)}
             disabled={pending}
             className="text-goggle-red hover:bg-goggle-red/5 border-ink-300"
             aria-label="Cancelar pedido"

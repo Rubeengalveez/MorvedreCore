@@ -30,7 +30,7 @@ export default async function PlayerSwimTimesPage({
     getPlayerSwimHistory(playerId),
     getSwimCoachTeamIds(ctx.ownProfile.id),
   ]);
-  if (!history) notFound();
+  if (!history || !history.profile) notFound();
   const addTeamId =
     history.currentTeamIds.find((teamId) => coachTeamIds.includes(teamId)) ??
     history.entries.find((entry) => coachTeamIds.includes(entry.team_id))?.team_id ??
@@ -152,9 +152,7 @@ function SummaryValue({
       <div>
         <dt className="text-ink-600 text-sm font-bold">{label}</dt>
         {entry ? (
-          <p className="text-ink-500 mt-1 text-xs">
-            {formatShortDate(entry.test_date)} · {entry.start_type === "water" ? "agua" : "poyete"}
-          </p>
+          <p className="text-ink-500 mt-1 text-xs">{formatShortDate(entry.test_date)}</p>
         ) : null}
       </div>
       <dd className="text-pool-deep font-mono text-xl font-extrabold tabular-nums">

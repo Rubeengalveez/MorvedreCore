@@ -25,11 +25,16 @@ const METRICS: ReadonlyArray<{
 export interface MetricTabsProps {
   active: RankingPageMetric;
   extraParams?: Record<string, string>;
+  canViewAttendance?: boolean;
 }
 
-export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
+export function MetricTabs({ active, extraParams = {}, canViewAttendance = false }: MetricTabsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+
+  const metrics = canViewAttendance
+    ? METRICS
+    : METRICS.filter((m) => m.id !== "attendance");
 
   function navigate(metric: RankingPageMetric) {
     if (metric === active) return;
@@ -50,7 +55,7 @@ export function MetricTabs({ active, extraParams = {} }: MetricTabsProps) {
       aria-busy={isPending}
       className="flex items-center gap-1.5 pb-1"
     >
-      {METRICS.map((m) => {
+      {metrics.map((m) => {
         const Icon = m.Pictogram;
         const isActive = active === m.id;
         return (

@@ -511,8 +511,8 @@ export const createCallupSchema = z.object({
   cap_number: z
     .number()
     .int("Dorsal entero.")
-    .min(1, "El gorro debe estar entre 1 y 99.")
-    .max(99, "Máximo 99.")
+    .min(1, "El gorro debe estar entre 1 y 14.")
+    .max(14, "Máximo 14.")
     .nullable()
     .optional(),
   source_team_id: z.string().uuid("Equipo de origen inválido.").nullable().optional(),
@@ -525,8 +525,8 @@ export const updateCallupSchema = z
     cap_number: z
       .number()
       .int("Dorsal entero.")
-      .min(1, "El gorro debe estar entre 1 y 99.")
-      .max(99, "Máximo 99.")
+      .min(1, "El gorro debe estar entre 1 y 14.")
+      .max(14, "Máximo 14.")
       .nullable()
       .optional(),
     status: callupStatusSchema.optional(),

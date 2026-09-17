@@ -47,29 +47,50 @@ export function TrainingsList({
     for (const t of teams) map.set(t.id, t);
     return map;
   }, [teams]);
+  const nextSessions = useMemo(
+    () => Object.values(sessionsByBlock).reduce((total, sessions) => total + sessions.length, 0),
+    [sessionsByBlock],
+  );
+  const currentSeason = seasons.find((season) => season.id === currentSeasonId) ?? null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <label htmlFor="team-filter" className="text-ink-600 text-sm font-semibold">
-          Filtrar por equipo
+    <div className="flex flex-col gap-5">
+      <section className="bg-pool-deep text-paper relative overflow-hidden rounded-2xl p-4 shadow-elev-1">
+        <span className="lane-pattern absolute inset-0 opacity-15" aria-hidden="true" />
+        <div className="relative flex flex-col gap-4">
+          <div>
+            <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">
+              {currentSeason?.label ?? "Temporada actual"}
+            </p>
+            <h2 className="mt-1 text-xl font-extrabold">Planificación de entrenamientos</h2>
+            <p className="text-paper/75 mt-1 text-sm">Aquí solo se trabaja con los equipos activos esta temporada.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
+              <p className="text-paper/70 text-xs font-bold">Horarios activos</p>
+              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{blocks.length}</p>
+            </div>
+            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
+              <p className="text-paper/70 text-xs font-bold">Próximas sesiones</p>
+              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{nextSessions}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="border-ink-200 bg-paper-card flex flex-col gap-2 rounded-2xl border p-3 shadow-elev-1">
+        <label htmlFor="team-filter" className="text-pool-deep text-sm font-extrabold">
+          Ver planificación de
         </label>
         <Select id="team-filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="">Todos los equipos</option>
-          {seasons.map((s) => {
-            const seasonTeams = teams.filter((t) => t.season_id === s.id);
-            if (seasonTeams.length === 0) return null;
-            return (
-              <optgroup key={s.id} label={`${s.label}${s.is_current ? " (actual)" : ""}`}>
-                {seasonTeams.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.label}
-                  </option>
-                ))}
-              </optgroup>
-            );
-          })}
+          <option value="">Todos los equipos activos</option>
+          {teams.map((team) => (
+            <option key={team.id} value={team.id}>
+              {team.label}
+            </option>
+          ))}
         </Select>
+        <p className="text-ink-500 text-xs font-semibold">No se muestran equipos de temporadas anteriores.</p>
       </div>
 
       {filteredBlocks.length === 0 ? (
@@ -121,7 +142,6 @@ export function TrainingsList({
               attendanceBySession: attendanceBySession,
               editAction: (
                 <TrainingBlockFormSheet
-                  seasons={seasons}
                   teams={teams}
                   defaultTeamId={b.team_id}
                   defaultSeasonId={currentSeasonId}

@@ -36,17 +36,20 @@ export function ActaPlayerBoard({
   sheet,
   playing,
   onPlayer,
+  isAway = false,
 }: {
   sheet: LiveSheet;
   playing: boolean;
   onPlayer: (side: Side, cap: number) => void;
+  isAway?: boolean;
 }) {
   const own = sheet.players.filter((p) => !p.retired).sort((a, b) => a.cap - b.cap);
   const rival = [...sheet.opponentCaps].sort((a, b) => a - b);
+  const sides = isAway ? ["them", "us"] as const : ["us", "them"] as const;
   return (
     <section aria-label="Goles y expulsiones por jugador" className="bg-white px-2 py-3 sm:px-3">
-      <div className="grid grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-x-px overflow-hidden rounded-xl border border-[#062048] bg-[#062048]">
-        {(["us", "them"] as const).map((side) => (
+      <div className={`grid ${isAway ? "grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]" : "grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"} gap-x-px overflow-hidden rounded-xl border border-[#062048] bg-[#062048]`}>
+        {sides.map((side) => (
           <div
             key={side}
             className={`flex min-h-11 flex-wrap items-center justify-center gap-x-2 px-1 py-2 ${side === "us" ? "bg-[#062048] text-white" : "bg-[#f4c430] text-[#062048]"}`}
@@ -56,7 +59,7 @@ export function ActaPlayerBoard({
           </div>
         ))}
         {Array.from({ length: Math.max(own.length, rival.length) }, (_, index) =>
-          (["us", "them"] as const).map((side) => {
+          sides.map((side) => {
             const cap = side === "us" ? own[index]?.cap : rival[index];
             if (cap === undefined) return <div key={`${side}-${index}`} />;
             const player = side === "us" ? own[index] : undefined;

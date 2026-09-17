@@ -5,7 +5,7 @@ export function reconcileLiveRoster(sheet: LiveSheet, current: LivePlayer[]): Li
     !current.length ||
     current.length > 14 ||
     new Set(current.map((p) => p.cap)).size !== current.length ||
-    current.some((p) => p.cap < 1 || p.cap > 99)
+    current.some((p) => p.cap < 1 || p.cap > 14)
   )
     throw new Error("Revisa los gorros de la convocatoria: deben ser distintos y válidos.");
   const used = new Set(current.map((p) => p.cap));
@@ -20,7 +20,8 @@ export function reconcileLiveRoster(sheet: LiveSheet, current: LivePlayer[]): Li
     const referenced =
       sheet.events.some((e) => (e.side === "us" && e.cap === old.cap) || e.keeper === old.cap) ||
       sheet.baseline.some((b) => b.cap === old.cap && (b.goals > 0 || b.exclusions > 0)) ||
-      sheet.keeperStints?.some((stint) => stint.cap === old.cap);
+      sheet.keeperStints?.some((stint) => stint.cap === old.cap) ||
+      sheet.shootout?.shots.some((shot) => (shot.side === "us" && shot.cap === old.cap) || shot.keeper === old.cap);
     if (!referenced) continue;
     let cap = old.cap;
     if (used.has(cap))
@@ -52,6 +53,7 @@ export function reconcileLiveRoster(sheet: LiveSheet, current: LivePlayer[]): Li
       keeper: remap(e.keeper),
     })),
     keeperStints: sheet.keeperStints?.map((stint) => ({ ...stint, cap: mapping.get(stint.cap)! })),
+    shootout: sheet.shootout ? { ...sheet.shootout, shots: sheet.shootout.shots.map((shot) => ({ ...shot, cap: shot.side === "us" ? mapping.get(shot.cap)! : shot.cap, keeper: remap(shot.keeper) })) } : undefined,
     baseline: sheet.baseline
       .filter((b) => mapping.has(b.cap))
       .map((b) => ({ ...b, cap: mapping.get(b.cap)! })),

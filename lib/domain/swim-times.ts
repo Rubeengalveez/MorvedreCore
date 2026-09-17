@@ -122,7 +122,6 @@ export interface SwimTimeEntryInput {
   season_end_year: number;
   test_date: string;
   created_at: string;
-  start_type: SwimStartType;
   time_50_cs: number | null;
   time_100_cs: number | null;
 }
@@ -205,11 +204,9 @@ export function computeSwimLegends(input: {
   entries: SwimTimeEntryInput[];
   distance: SwimDistance;
   category?: CategoryCode | null;
-  startType: SwimStartType;
 }): SwimRankingRow[] {
   const selected = input.entries.filter((entry) => {
     if (timeForDistance(entry, input.distance) == null) return false;
-    if (entry.start_type !== input.startType) return false;
     return !input.category || categoryForSwimEntry(entry) === input.category;
   });
   return rankSwimEntries(selected, input.distance);

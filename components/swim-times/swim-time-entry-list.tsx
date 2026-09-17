@@ -19,7 +19,6 @@ type ExistingEntry = {
   revision: number;
   player_id: string;
   test_date: string;
-  start_type: "water" | "block";
   time_50_cs: number | null;
   time_100_cs: number | null;
 };
@@ -144,7 +143,6 @@ export function SwimTimeEntryList({
         playerId: selectedPlayer.player_id,
         operationId: (operationId.current = crypto.randomUUID()),
         testDate: today,
-        startType: "water",
         time50Cs,
         time100Cs,
       });
@@ -160,7 +158,6 @@ export function SwimTimeEntryList({
           revision: result.revision,
           player_id: selectedPlayer.player_id,
           test_date: today,
-          start_type: "water",
           time_50_cs: time50Cs,
           time_100_cs: time100Cs,
         },

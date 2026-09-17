@@ -30,6 +30,36 @@ const sheet = (events: MatchEvent[], extra: Partial<LiveSheet> = {}): LiveSheet 
 });
 
 describe("actaAnalysis", () => {
+  it("incluye la tanda en tiros, goles y portería sin alterar los cuartos ni duplicar penaltis cometidos", () => {
+    const result = actaAnalysis(sheet([
+      event("goal_penalty"),
+      event("penalty_missed", { missOutcome: "save" }),
+      event("goal", { side: "them", cap: 3, keeper: 10 }),
+    ], {
+      keeperStints: [{ period: 1, cap: 10, afterEventId: null }],
+      shootout: {
+        firstSide: "us",
+        shots: [
+          { id: "s1", side: "us", cap: 2, keeper: null, outcome: "goal" },
+          { id: "s2", side: "them", cap: 3, keeper: 10, outcome: "save" },
+          { id: "s3", side: "us", cap: 2, keeper: null, outcome: "save" },
+          { id: "s4", side: "them", cap: 3, keeper: 10, outcome: "goal" },
+          { id: "s5", side: "us", cap: 2, keeper: null, outcome: "post" },
+          { id: "s6", side: "them", cap: 3, keeper: 10, outcome: "out" },
+          { id: "s7", side: "us", cap: 2, keeper: null, outcome: "out" },
+        ],
+      },
+    }));
+    expect(result.ownShooting).toMatchObject({ attempts: 6, goals: 2, penaltyGoals: 2, penaltyMisses: 4, outside: 2, onTarget: 4 });
+    expect(result.players[0].totals).toMatchObject({ goals: 2, shots: 6, goalsPenalty: 2, penaltiesMissed: 4, penaltiesCommitted: 0 });
+    expect(result.players[1].totals).toMatchObject({ received: 4, saves: 1, penaltySaves: 1, conceded: 2, receivedOut: 1 });
+    expect(result.players[1].saveRate).toBeCloseTo(100 / 3);
+    expect(result.players[1].concededPerQuarter).toBe(1);
+    expect(result.rivalScorers[0]).toMatchObject({ goals: 2, share: 100 });
+    expect(result.rivalShots).toBe(4);
+    expect(result.periods[0]).toMatchObject({ us: 1, them: 1 });
+    expect([result.goalsUs, result.goalsThem]).toEqual([1, 1]);
+  });
   it("clasifica el destino de los penaltis sin duplicar tiros y conserva los antiguos sin destino", () => {
     const result = actaAnalysis(
       sheet([

@@ -39,6 +39,7 @@ export interface RankingsContentProps {
   ownProfileId: string;
   trackedPlayerIds: string[];
   page: number;
+  canViewAttendance?: boolean;
 }
 
 function buildBaseParams(input: { scope: RankingScope; metric: RankingMetric }): string {
@@ -74,6 +75,7 @@ export function RankingsContent({
   ownProfileId,
   trackedPlayerIds,
   page,
+  canViewAttendance = false,
 }: RankingsContentProps) {
   const metricMeta = METRICS.find((m) => m.id === activeMetric) ?? METRICS[0]!;
   const paged = paginateRankingWithPodium({ ranking: ranking.rows, page, page_size: 10 });
@@ -106,7 +108,11 @@ export function RankingsContent({
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
-        <MetricTabs active={activeMetric} extraParams={metricExtraParams} />
+        <MetricTabs
+          active={activeMetric}
+          extraParams={metricExtraParams}
+          canViewAttendance={canViewAttendance}
+        />
         <ScopeTabs meta={meta} active={activeScope} extraParams={scopeExtraParams} />
       </div>
 

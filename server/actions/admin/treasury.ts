@@ -123,6 +123,38 @@ export async function assignTreasuryConcept(input: {
   revalidatePath("/admin/treasury");
 }
 
+export async function setTreasuryConceptActive(input: {
+  concept_id: string;
+  active: boolean;
+}): Promise<void> {
+  await requirePermission("manage_treasury");
+  const parsed = z.object({ concept_id: z.string().uuid(), active: z.boolean() }).safeParse(input);
+  if (!parsed.success) throw new Error("Concepto inválido.");
+  const admin = createAdminClient();
+  const raw = db(admin);
+  const { error } = await (raw.from("treasury_concepts").update({ active: parsed.data.active }) as {
+    eq: (column: string, value: string) => Promise<{ error: Error | null }>;
+  }).eq("id", parsed.data.concept_id);
+  if (error) throw new Error("No pudimos actualizar el concepto: " + errorMessage(error));
+  revalidatePath("/admin/treasury");
+}
+
+export async function setTreasuryAssignmentActive(input: {
+  assignment_id: string;
+  active: boolean;
+}): Promise<void> {
+  await requirePermission("manage_treasury");
+  const parsed = z.object({ assignment_id: z.string().uuid(), active: z.boolean() }).safeParse(input);
+  if (!parsed.success) throw new Error("Asignación inválida.");
+  const admin = createAdminClient();
+  const raw = db(admin);
+  const { error } = await (raw.from("treasury_profile_concepts").update({ active: parsed.data.active }) as {
+    eq: (column: string, value: string) => Promise<{ error: Error | null }>;
+  }).eq("id", parsed.data.assignment_id);
+  if (error) throw new Error("No pudimos actualizar la asignación: " + errorMessage(error));
+  revalidatePath("/admin/treasury");
+}
+
 export async function upsertTreasuryProfileSettings(input: {
   profile_id: string;
   monthly_fee_eur: number;

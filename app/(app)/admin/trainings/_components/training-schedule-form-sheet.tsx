@@ -152,20 +152,15 @@ export function TrainingScheduleFormSheet({
                 <label className="block">
                   <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">Equipo</span>
                   <Select value={teamId} onChange={(event) => setTeamId(event.target.value)}>
-                    {seasons.map((season) => {
-                      const seasonTeams = teams.filter((team) => team.season_id === season.id);
-                      if (seasonTeams.length === 0) return null;
-                      return (
-                        <optgroup key={season.id} label={season.label}>
-                          {seasonTeams.map((team) => (
-                            <option key={team.id} value={team.id}>
-                              {team.label}
-                            </option>
-                          ))}
-                        </optgroup>
-                      );
-                    })}
+                    {teams.map((team) => (
+                      <option key={team.id} value={team.id}>
+                        {team.label}
+                      </option>
+                    ))}
                   </Select>
+                  <span className="text-ink-500 mt-1 block text-xs">
+                    Solo aparecen equipos de la temporada actual.
+                  </span>
                 </label>
                 <label className="block">
                   <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">

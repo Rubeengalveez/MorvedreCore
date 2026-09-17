@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarPlus, ChevronDown, Loader2 } from "lucide-react";
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/sheet";
 import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
 import { mapsUrlInputSchema } from "@/lib/domain/maps";
-import { createMatch, type Season, type Team } from "@/server/actions/admin";
+import { createMatch, type Team } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
   { value: "league", label: "Liga" },
@@ -91,10 +91,9 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
   }
 }
 
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
+function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+    <Button type="submit" form="match-form-new" size="lg" className="w-full" disabled={pending}>
       {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
       {pending ? "Guardando..." : label}
     </Button>
@@ -102,7 +101,6 @@ function SubmitButton({ label }: { label: string }) {
 }
 
 export interface MatchFormSheetProps {
-  seasons: Season[];
   teams: TeamOption[];
   defaultTeamId: string | null;
   defaultSeasonId: string | null;
@@ -110,15 +108,15 @@ export interface MatchFormSheetProps {
 }
 
 export function MatchFormSheet({
-  seasons,
   teams,
   defaultTeamId,
   defaultSeasonId,
   trigger,
 }: MatchFormSheetProps) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
-  const [, startTransition] = useTransition();
+  const [isSaving, startTransition] = useTransition();
 
   const defaultTeam = defaultTeamId ? (teams.find((t) => t.id === defaultTeamId) ?? null) : null;
   const form = useForm<FormValues>({
@@ -140,20 +138,17 @@ export function MatchFormSheet({
   useEffect(() => {
     if (state?.ok) {
       form.reset();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOpen(false);
+      router.refresh();
     }
-  }, [state, form]);
+  }, [state, form, router]);
 
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
     const selectedTeam = teams.find((team) => team.id === values.team_id);
     fd.append(
       "season_id",
-      selectedTeam?.season_id ??
-        defaultSeasonId ??
-        seasons.find((season) => season.is_current)?.id ??
-        "",
+      selectedTeam?.season_id ?? defaultSeasonId ?? "",
     );
     fd.append("team_id", values.team_id);
     fd.append("opponent", values.opponent);
@@ -205,10 +200,11 @@ export function MatchFormSheet({
                 </Alert>
               ) : null}
 
-              <section className="border-ink-200 bg-paper-card rounded-2xl border p-4">
-                <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-                  1 · Enfrentamiento
-                </p>
+              <section className="border-ink-200 bg-paper-card rounded-2xl border p-4 shadow-elev-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="text-pool-deep text-base font-extrabold">Partido</h3>
+                  <p className="text-ink-600 text-xs">Lo necesario para publicarlo</p>
+                </div>
                 <div className="mt-3 space-y-4">
                   <FormField
                     control={form.control}
@@ -230,26 +226,14 @@ export function MatchFormSheet({
                             name={field.name}
                             ref={field.ref}
                           >
-                            {seasons.map((season) => {
-                              const seasonTeams = teams.filter(
-                                (team) => team.season_id === season.id,
-                              );
-                              if (seasonTeams.length === 0) return null;
-                              return (
-                                <optgroup
-                                  key={season.id}
-                                  label={`${season.label}${season.is_current ? " · actual" : ""}`}
-                                >
-                                  {seasonTeams.map((team) => (
-                                    <option key={team.id} value={team.id}>
-                                      {team.label}
-                                    </option>
-                                  ))}
-                                </optgroup>
-                              );
-                            })}
+                            {teams.map((team) => (
+                              <option key={team.id} value={team.id}>
+                                {team.label}
+                              </option>
+                            ))}
                           </Select>
                         </FormControl>
+                        <FormDescription>Solo aparecen equipos de la temporada actual.</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -315,10 +299,11 @@ export function MatchFormSheet({
                 </div>
               </section>
 
-              <section className="border-ink-200 bg-paper-card rounded-2xl border p-4">
-                <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-                  2 · Fecha y competición
-                </p>
+              <section className="border-ink-200 bg-paper-card rounded-2xl border p-4 shadow-elev-1">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h3 className="text-pool-deep text-base font-extrabold">Cuándo se juega</h3>
+                  <p className="text-ink-600 text-xs">Fecha y competición</p>
+                </div>
                 <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <FormField
                     control={form.control}
@@ -504,7 +489,7 @@ export function MatchFormSheet({
           </Form>
         </SheetBody>
         <SheetFooter>
-          <SubmitButton label="Crear partido" />
+          <SubmitButton label="Crear partido" pending={isSaving} />
         </SheetFooter>
       </SheetContent>
     </Sheet>

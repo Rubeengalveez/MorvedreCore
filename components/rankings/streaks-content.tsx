@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { Dumbbell, Flame, Goal, Star, type LucideIcon } from "lucide-react";
+import { Flame, Goal, Star, type LucideIcon } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { SectionHeader } from "@/components/ui/page-shell";
@@ -36,14 +36,6 @@ const STREAK_OPTIONS: Array<{
   unit: string;
   icon: LucideIcon;
 }> = [
-  {
-    id: "train_consec",
-    label: "Entrenamientos",
-    shortLabel: "Entrenos",
-    description: "Entrenamientos consecutivos a los que has asistido.",
-    unit: "entrenos seguidos",
-    icon: Dumbbell,
-  },
   {
     id: "goals_consec",
     label: "Partidos marcando",
@@ -79,7 +71,7 @@ function buildHref({
 }): string {
   const params = new URLSearchParams();
   params.set("scope", scopeParam(scope));
-  if (type !== "train_consec") params.set("type", type);
+  if (type !== "goals_consec") params.set("type", type);
   if (order !== "current") params.set("order", order);
   return `/streaks?${params.toString()}`;
 }
@@ -130,7 +122,7 @@ export function StreaksContent({
     order: activeOrder,
   });
   const filterParams: Record<string, string> = {};
-  if (activeType !== "train_consec") filterParams.type = activeType;
+  if (activeType !== "goals_consec") filterParams.type = activeType;
   if (activeOrder !== "current") filterParams.order = activeOrder;
 
   return (
@@ -154,7 +146,7 @@ export function StreaksContent({
         <div
           role="tablist"
           aria-label="Tipo de racha"
-          className="border-ink-200 grid grid-cols-3 border-y"
+          className="border-ink-200 grid grid-cols-2 border-y"
         >
           {STREAK_OPTIONS.map(({ id, shortLabel, icon: Icon }) => {
             const isActive = id === activeType;
@@ -253,9 +245,7 @@ export function StreaksContent({
           isSchool={isSchool}
           description={
             isSchool
-              ? activeType === "train_consec"
-                ? "Cuando se registre asistencia en los entrenamientos de la Escuela, aparecerán aquí las rachas."
-                : "La Escuela es formativa y no disputa partidos de competición ni genera actas."
+              ? "La Escuela es formativa y no disputa partidos de competición ni genera actas."
               : undefined
           }
         />

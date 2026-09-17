@@ -319,7 +319,7 @@ export async function getShopOrdersForKanban(statuses: ShopOrderStatus[]): Promi
     .select(ORDER_FIELDS)
     .in("status", statuses)
     .order("requested_at", { ascending: false });
-  if (error) return [];
+  if (error) throw new Error("No pudimos cargar los pedidos de tienda: " + error.message);
   return hydrateOrders(data ?? [], supabase);
 }
 
@@ -344,7 +344,7 @@ async function hydrateOrders(
     itemRows = legacyItemsResult.data as unknown as Array<Record<string, unknown>> | null;
     itemsError = legacyItemsResult.error;
   }
-  if (itemsError) return [];
+  if (itemsError) throw new Error("No pudimos cargar las líneas de pedido: " + itemsError.message);
 
   const items = await hydrateOrderItems(normalizeItemRows(itemRows ?? []), supabase);
   const itemsByOrder = new Map<string, ShopOrderItem[]>();

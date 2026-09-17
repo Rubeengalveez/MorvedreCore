@@ -12,7 +12,6 @@ const timeValue = z.number().int().min(1).max(359_999).nullable();
 const baseSchema = z
   .object({
     testDate: z.iso.date({ error: "Elige una fecha válida." }).optional(),
-    startType: z.enum(["water", "block"]).default("water"),
     time50Cs: timeValue,
     time100Cs: timeValue,
   })
@@ -93,7 +92,6 @@ export async function createSwimTime(
   }
   try {
     const rawTestDate = parsed.data.testDate ?? madridToday();
-    const startType = parsed.data.startType ?? "water";
     if (rawTestDate > madridToday()) {
       throw new Error("La fecha no puede estar en el futuro.");
     }
@@ -108,7 +106,7 @@ export async function createSwimTime(
     const supabase = await createClient();
     const existing = await supabase
       .from("swim_time_entries")
-      .select("id, revision, player_id, team_id, test_date, start_type, time_50_cs, time_100_cs")
+      .select("id, revision, player_id, team_id, test_date, time_50_cs, time_100_cs")
       .eq("created_by", profile.id)
       .eq("operation_id", parsed.data.operationId)
       .maybeSingle();
@@ -123,7 +121,6 @@ export async function createSwimTime(
         existing.data.player_id === parsed.data.playerId &&
         existing.data.team_id === parsed.data.teamId &&
         existing.data.test_date === testDate &&
-        existing.data.start_type === startType &&
         existing.data.time_50_cs === parsed.data.time50Cs &&
         existing.data.time_100_cs === parsed.data.time100Cs;
       return same
@@ -137,7 +134,6 @@ export async function createSwimTime(
         team_id: parsed.data.teamId,
         season_id: context.seasonId,
         test_date: testDate,
-        start_type: startType,
         time_50_cs: parsed.data.time50Cs,
         time_100_cs: parsed.data.time100Cs,
         operation_id: parsed.data.operationId,
@@ -170,7 +166,6 @@ export async function updateSwimTime(
     return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa los tiempos." };
   try {
     const testDate = parsed.data.testDate ?? madridToday();
-    const startType = parsed.data.startType ?? "water";
     if (testDate > madridToday()) {
       throw new Error("La fecha no puede estar en el futuro.");
     }
@@ -189,7 +184,6 @@ export async function updateSwimTime(
       .from("swim_time_entries")
       .update({
         test_date: context.testDate,
-        start_type: startType,
         time_50_cs: parsed.data.time50Cs,
         time_100_cs: parsed.data.time100Cs,
         updated_by: profile.id,

@@ -5,12 +5,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { Award, FileText, UserCheck, CarFront } from "lucide-react";
+import { FileText, UserCheck, CarFront, Pencil, UsersRound } from "lucide-react";
 
 import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
+import { sheetSchema, score } from "@/lib/domain/live-match";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
@@ -136,9 +137,15 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     await createClient()
   )
     .from("live_match_sheets")
-    .select("match_id")
+    .select("match_id,document")
     .eq("match_id", id)
     .maybeSingle();
+
+  const parsedSheet = sheetSchema.safeParse(liveSheet?.document);
+  const regulationScore = parsedSheet.success && parsedSheet.data.shootout ? {
+    home: score(parsedSheet.data, match.is_home ? "us" : "them"),
+    away: score(parsedSheet.data, match.is_home ? "them" : "us"),
+  } : null;
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
@@ -150,9 +157,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
         {match.team_label} contra {match.opponent}
       </h1>
 
-      {/* ─── HERO SCOREBOARD ─── */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3">
         <PoolScoreboard
+          regulationScore={regulationScore}
           mode={hasScore ? "final" : "preview"}
           homeTeam={{
             label: match.is_home ? "Morvedre" : match.opponent,
@@ -167,23 +174,30 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           scheduledAt={match.scheduled_at}
           competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
           isHome={match.is_home}
-          location={match.pool_name}
-          mvp={isPlayed && mvp ? { name: mvp.full_name, cap: mvp.cap_number ?? null } : null}
+          location={null}
+          mvp={
+            isPlayed && mvp
+              ? {
+                  name: mvp.full_name,
+                  cap: mvp.cap_number ?? null,
+                  goals: mvp.goals,
+                  assists: mvp.assists ?? 0,
+                }
+              : null
+          }
         />
-        <p className="text-ink-600 text-center text-sm font-medium">
-          {formatLongDate(match.scheduled_at)}
-        </p>
         {match.pool_name || match.location || match.maps_url ? (
           <MapLocationLink
             name={match.pool_name || match.location}
             address={match.location}
             mapsUrl={match.maps_url}
+            compact
+            className="border-ink-200 bg-paper-card border"
           />
         ) : null}
       </div>
 
-      {/* ─── CONTENT ─── */}
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         {!match.is_home && match.logistics_enabled && !isPlayed ? (
           <section className="bg-paper-card border-ink-200 shadow-elev-1 flex items-center gap-4 rounded-2xl border p-4">
             <div className="bg-ball-gold text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-md">
@@ -198,12 +212,13 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             </Button>
           </section>
         ) : null}
-        {/* RSVP (only upcoming matches) */}
         {managedCallups.length > 0 &&
           (match.status === "scheduled" || match.status === "in_progress") && (
-            <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-4 rounded-2xl border p-5">
-              <h2 className="text-ink-900 flex items-center gap-2 text-sm font-black">
-                <UserCheck className="text-pool-blue h-5 w-5" />
+            <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-4">
+              <h2 className="text-pool-deep flex items-center gap-2 text-base font-black">
+                <span className="bg-pool-foam text-pool-blue flex h-9 w-9 items-center justify-center rounded-xl">
+                  <UserCheck className="h-5 w-5" aria-hidden="true" />
+                </span>
                 {ctx.linkedProfiles.length > 0
                   ? "Asistencia de tu familia"
                   : "Confirmar asistencia"}
@@ -245,125 +260,110 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             </section>
           )}
 
-        {/* MVP (only played matches) */}
-        {isPlayed && mvp && (
-          <section className="border-ball-gold/40 bg-ball-gold/10 shadow-elev-1 flex items-center gap-4 rounded-2xl border p-5 select-none">
-            <div className="bg-ball-gold/25 text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
-              <Award className="h-6 w-6" aria-hidden="true" />
-            </div>
-            <div className="flex min-w-0 flex-col">
-              <span className="text-pool-deep text-xs font-bold tracking-wider uppercase">
-                MVP del partido
-              </span>
-              <span className="text-pool-deep truncate text-lg font-black">{mvp.full_name}</span>
-              {(mvp.goals > 0 || (mvp.assists ?? 0) > 0) && (
-                <span className="text-ink-700 text-sm font-semibold">
-                  {mvp.assists !== undefined && mvp.assists > 0
-                    ? `${mvp.goals} ${mvp.goals === 1 ? "gol" : "goles"} · ${mvp.assists} ${mvp.assists === 1 ? "asistencia" : "asistencias"}`
-                    : `${mvp.goals} ${mvp.goals === 1 ? "gol" : "goles"}`}
-                </span>
+        <section className="bg-paper-card border-ink-200 shadow-elev-1 overflow-hidden rounded-2xl border">
+          <div className="bg-pool-deep text-paper flex min-h-14 items-center gap-3 px-4 py-2.5">
+            <h2 className="text-xl font-black">Convocatoria</h2>
+            <span
+              className="bg-paper/15 text-paper inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-extrabold"
+              aria-label={`${callups.length} ${callups.length === 1 ? "jugador" : "jugadores"}`}
+              title={`${callups.length} ${callups.length === 1 ? "jugador" : "jugadores"}`}
+            >
+              <UsersRound className="h-4 w-4" aria-hidden="true" />
+              {callups.length}
+            </span>
+            <div className="ml-auto">
+              {isCoach && (
+                <Button
+                  asChild
+                  size="sm"
+                  variant="outline"
+                  className="border-paper/30 text-paper hover:bg-paper/15 hover:border-paper/50 h-9 min-h-9 cursor-pointer rounded-xl px-3 text-xs font-extrabold transition-colors"
+                >
+                  <Link
+                    href={`/admin/matches/${match.id}?from=match` as Route}
+                    className="flex items-center gap-1.5"
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                    <span>Editar</span>
+                  </Link>
+                </Button>
               )}
             </div>
-          </section>
-        )}
-
-        {/* ROSTER */}
-        <section className="flex flex-col gap-4">
-          <div className="border-ink-200 flex items-end justify-between gap-3 border-b pb-3">
-            <div>
-              <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-                Equipo para el partido
-              </p>
-              <h2 className="text-pool-deep mt-0.5 text-xl font-black">Convocatoria</h2>
-              <p className="text-ink-500 mt-0.5 text-sm">
-                {callups.length} {callups.length === 1 ? "jugador" : "jugadores"}
-              </p>
-            </div>
-            {isCoach && (
-              <Button
-                asChild
-                size="sm"
-                variant="secondary"
-                className="cursor-pointer rounded-md text-xs font-bold"
-              >
-                <Link href={`/admin/matches/${match.id}` as Route}>Editar</Link>
-              </Button>
-            )}
           </div>
 
-          {callups.length === 0 ? (
-            <EmptyState
-              icon={<UserCheck className="h-6 w-6" aria-hidden="true" />}
-              title="Convocatoria pendiente"
-              description="Cuando el entrenador la publique, aparecerá aquí."
-            />
-          ) : (
-            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {callups.map((c) => {
-                const stats = statsMap.get(c.player_id);
-                const isConfirmed = c.status === "confirmed";
-                const isDeclined =
-                  c.status === "declined" || c.status === "withdrawn" || c.status === "no_show";
+          <div className="p-2.5 sm:p-3">
+            {callups.length === 0 ? (
+              <EmptyState
+                icon={<UserCheck className="h-6 w-6" aria-hidden="true" />}
+                title="Convocatoria pendiente"
+                description="Cuando el entrenador la publique, aparecerá aquí."
+              />
+            ) : (
+              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {callups.map((c) => {
+                  const stats = statsMap.get(c.player_id);
+                  const isConfirmed = c.status === "confirmed";
+                  const isDeclined =
+                    c.status === "declined" || c.status === "withdrawn" || c.status === "no_show";
 
-                return (
-                  <li
-                    key={c.player_id}
-                    className="bg-paper-card border-ink-200 shadow-elev-1 flex min-h-16 items-center gap-3 rounded-xl border px-3 py-3 select-none"
-                  >
-                    {/* Avatar with status dot */}
-                    <div className="relative shrink-0">
-                      <Avatar src={c.photo_url} name={c.full_name} size={40} />
-                      {/* Status dot overlay (bottom-right) */}
-                      {!isPlayed && (
-                        <span
-                          className={cn(
-                            "border-paper-card absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2",
-                            isConfirmed
-                              ? "bg-emerald-500"
-                              : isDeclined
-                                ? "bg-red-500"
-                                : "bg-ink-300",
-                          )}
-                        />
+                  return (
+                    <li
+                      key={c.player_id}
+                      className={cn(
+                        "bg-paper-sunk/55 border-ink-200 flex items-center gap-3 rounded-xl border px-3.5 select-none",
+                        isPlayed ? "min-h-14 py-2.5" : "min-h-16 py-3",
                       )}
-                    </div>
-
-                    {/* Name & Cap */}
-                    <div className="flex min-w-0 flex-1 flex-col">
-                      <span className="text-ink-900 truncate text-sm font-bold">{c.full_name}</span>
-                      <span
-                        className={cn(
-                          "mt-0.5 text-xs font-semibold",
-                          isConfirmed
-                            ? "text-success"
-                            : isDeclined
-                              ? "text-danger"
-                              : "text-ink-500",
+                    >
+                      {/* Cap number circle with status dot */}
+                      <div className="relative shrink-0">
+                        <div
+                          className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-base font-black shadow-sm"
+                          aria-label={c.cap_number != null ? `Gorro ${c.cap_number}` : "Sin dorsal"}
+                        >
+                          {c.cap_number != null ? c.cap_number : "–"}
+                        </div>
+                        {!isPlayed && (
+                          <span
+                            className={cn(
+                              "border-paper-card absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2",
+                              isConfirmed
+                                ? "bg-emerald-500"
+                                : isDeclined
+                                  ? "bg-red-500"
+                                  : "bg-ink-300",
+                            )}
+                          />
                         )}
-                      >
-                        {isPlayed
-                          ? c.cap_number != null
-                            ? `Gorro ${c.cap_number}`
-                            : "Sin dorsal"
-                          : isConfirmed
-                            ? "Asistencia confirmada"
-                            : isDeclined
-                              ? "No puede asistir"
-                              : "Pendiente de respuesta"}
-                      </span>
-                    </div>
+                      </div>
 
-                    {/* Stats badges (only played matches) */}
-                    {isPlayed &&
-                      stats &&
-                      (stats.goals > 0 || stats.exclusions > 0 || stats.mvp) && (
+                      {/* Name (single line when played) */}
+                      <div className="flex min-w-0 flex-1 flex-col justify-center">
+                        <span className="text-ink-900 truncate text-sm font-bold">
+                          {c.full_name}
+                        </span>
+                        {!isPlayed && (
+                          <span
+                            className={cn(
+                              "mt-0.5 text-xs font-semibold",
+                              isConfirmed
+                                ? "text-success"
+                                : isDeclined
+                                  ? "text-danger"
+                                  : "text-ink-500",
+                            )}
+                          >
+                            {isConfirmed
+                              ? "Asistencia confirmada"
+                              : isDeclined
+                                ? "No puede asistir"
+                                : "Pendiente de respuesta"}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Stats badges (only played matches) */}
+                      {isPlayed && stats && (stats.goals > 0 || stats.exclusions > 0) && (
                         <div className="flex shrink-0 items-center gap-1.5">
-                          {stats.mvp && (
-                            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-900">
-                              <Award className="h-3.5 w-3.5" />
-                              MVP
-                            </span>
-                          )}
                           {stats.goals > 0 && (
                             <span className="bg-pool-foam text-pool-deep rounded-full px-2.5 py-1 text-xs font-bold">
                               {stats.goals} {stats.goals === 1 ? "gol" : "goles"}
@@ -376,14 +376,14 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                           )}
                         </div>
                       )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </section>
 
-        {/* Notes */}
         {match.notes && (
           <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-5">
             <h2 className="text-ink-900 flex items-center gap-2 text-sm font-bold">

@@ -1,14 +1,20 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { EyeOff, Pencil, Power, PowerOff } from "lucide-react";
+import Link from "next/link";
+import type { Route } from "next";
+import { useRouter } from "next/navigation";
+import { Edit3, EyeOff, Power, PowerOff, Search, UsersRound } from "lucide-react";
+import { useState, useTransition } from "react";
 
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils/cn";
 import { setPlayerActive } from "@/server/actions/admin/players";
+
 import { PlayerFormSheet } from "./player-form-sheet";
 
 export interface PlayerRow {
@@ -21,234 +27,312 @@ export interface PlayerRow {
   phone_e164: string | null;
   email_contact: string | null;
   notes: string | null;
+  school_enrolled: boolean;
+  school_payment_paid: boolean;
   is_active: boolean;
   currentTeam: string | null;
   categoryLabel: string;
 }
 
-export interface PlayersTableProps {
+type PlayersTableProps = {
   players: PlayerRow[];
+  teams: Array<{ id: string; label: string }>;
+  total: number;
+  totalPages: number;
+  filters: {
+    page: number;
+    query: string;
+    status: "active" | "inactive" | "all";
+    teamId: string;
+  };
+};
+
+function queryForPage(filters: PlayersTableProps["filters"], page: number): string {
+  const params = new URLSearchParams();
+  if (filters.query) params.set("query", filters.query);
+  if (filters.status !== "active") params.set("status", filters.status);
+  if (filters.teamId) params.set("team", filters.teamId);
+  if (page > 1) params.set("page", String(page));
+  const query = params.toString();
+  return query ? `/admin/players?${query}` : "/admin/players";
 }
 
-export function PlayersTable({ players }: PlayersTableProps) {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<"active" | "inactive" | "all">("active");
-  const [localPlayers, setLocalPlayers] = useState(players);
+function playerMeta(player: PlayerRow): string {
+  return [player.categoryLabel, player.birth_year?.toString()].filter(Boolean).join(" · ");
+}
+
+export function PlayersTable({ players, teams, total, totalPages, filters }: PlayersTableProps) {
+  const router = useRouter();
+  const [editingPlayer, setEditingPlayer] = useState<PlayerRow | null>(null);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    const byStatus = localPlayers.filter((player) =>
-      status === "all" ? true : status === "active" ? player.is_active : !player.is_active,
-    );
-    if (!q) return byStatus;
-    return byStatus.filter(
-      (p) => p.full_name.toLowerCase().includes(q) || p.currentTeam?.toLowerCase().includes(q),
-    );
-  }, [localPlayers, search, status]);
+  const firstResult = total === 0 ? 0 : (filters.page - 1) * 24 + 1;
+  const lastResult = Math.min(filters.page * 24, total);
 
   function toggleActive(player: PlayerRow) {
-    const active = !player.is_active;
     setPendingId(player.id);
-    setLocalPlayers((current) =>
-      current.map((item) => (item.id === player.id ? { ...item, is_active: active } : item)),
-    );
     startTransition(async () => {
       try {
-        await setPlayerActive({ profile_id: player.id, active });
-      } catch {
-        setLocalPlayers((current) =>
-          current.map((item) =>
-            item.id === player.id ? { ...item, is_active: player.is_active } : item,
-          ),
-        );
+        await setPlayerActive({ profile_id: player.id, active: !player.is_active });
+        router.refresh();
       } finally {
         setPendingId(null);
       }
     });
   }
 
-  if (players.length === 0) {
-    return (
-      <div className="border-ink-300 bg-paper rounded-md border border-dashed p-6 text-center">
-        <p className="text-pool-deep text-base font-semibold">Plantilla vacía.</p>
-        <p className="text-ink-600 mt-1 text-sm">
-          Crea el primer jugador o importa el Excel que tenías en el Drive.
-        </p>
-      </div>
-    );
-  }
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_12rem]">
-        <Input
-          type="search"
-          placeholder="Buscar por nombre o equipo…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <Select
-          aria-label="Filtrar jugadores por estado"
-          value={status}
-          onChange={(event) => setStatus(event.target.value as typeof status)}
-        >
-          <option value="active">Activos</option>
-          <option value="inactive">Desactivados</option>
-          <option value="all">Todos</option>
-        </Select>
-      </div>
-      <div className="sm:hidden">
-        <ul className="flex flex-col gap-2">
-          {filtered.map((p) => (
-            <li
-              key={p.id}
-              className={cn(
-                "border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3",
-                !p.is_active && "opacity-75",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <Avatar
-                  name={p.full_name}
-                  src={p.photo_url}
-                  size={52}
-                  teamColor="var(--pool-blue)"
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="font-display text-pool-deep truncate text-sm font-bold">
-                    {p.full_name}
-                  </p>
-                  <p className="text-ink-600 text-xs">
-                    {p.cap_number != null ? `Dorsal ${p.cap_number} · ` : null}
-                    {p.categoryLabel}
-                    {p.birth_year ? ` · ${p.birth_year}` : null}
-                  </p>
-                  <p className="text-ink-600 truncate text-xs">
-                    {p.currentTeam ?? <span className="text-ink-600/70 italic">Sin equipo</span>}
-                  </p>
-                </div>
-                {!p.is_active ? (
-                  <EyeOff
-                    className="text-ink-500 h-5 w-5 shrink-0"
-                    aria-label="Jugador desactivado"
-                  />
-                ) : null}
-              </div>
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <PlayerFormSheet
-                  player={p}
-                  trigger={
-                    <Button type="button" variant="secondary" size="sm">
-                      <Pencil className="h-4 w-4" aria-hidden="true" />
-                      Editar
-                    </Button>
-                  }
-                />
-                <Button
-                  type="button"
-                  variant={p.is_active ? "ghost" : "success"}
-                  size="sm"
-                  className={p.is_active ? "text-goggle-red" : undefined}
-                  disabled={pendingId === p.id}
-                  onClick={() => toggleActive(p)}
-                >
-                  {p.is_active ? (
-                    <PowerOff className="h-4 w-4" aria-hidden="true" />
-                  ) : (
-                    <Power className="h-4 w-4" aria-hidden="true" />
-                  )}
-                  {p.is_active ? "Desactivar" : "Activar"}
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {filtered.length === 0 ? (
-        <div className="border-ink-300 bg-paper text-ink-600 rounded-md border border-dashed p-6 text-center text-sm italic">
-          No hay coincidencias.
+    <div className="flex flex-col gap-4">
+      <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3 sm:p-4">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <div>
+            <h2 className="text-pool-deep font-extrabold">Plantilla</h2>
+            <p className="text-ink-600 text-sm">
+              Busca y gestiona sin cargar toda la base de jugadores.
+            </p>
+          </div>
+          <p className="text-pool-blue font-mono text-sm font-extrabold tabular-nums">
+            {total} {total === 1 ? "jugador" : "jugadores"}
+          </p>
         </div>
-      ) : null}
+        <form
+          action="/admin/players"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]"
+        >
+          <div className="relative">
+            <Search
+              className="text-ink-500 pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              type="search"
+              name="query"
+              defaultValue={filters.query}
+              placeholder="Buscar por nombre"
+              className="pl-10"
+            />
+          </div>
+          <Select name="team" defaultValue={filters.teamId} aria-label="Filtrar por equipo">
+            <option value="">Todos los equipos</option>
+            {teams.map((team) => (
+              <option key={team.id} value={team.id}>
+                {team.label}
+              </option>
+            ))}
+          </Select>
+          <Select name="status" defaultValue={filters.status} aria-label="Filtrar por estado">
+            <option value="active">Activos</option>
+            <option value="inactive">Desactivados</option>
+            <option value="all">Todos</option>
+          </Select>
+          <Button type="submit" variant="secondary" className="w-full sm:w-auto">
+            Aplicar
+          </Button>
+        </form>
+        {filters.query || filters.teamId || filters.status !== "active" ? (
+          <Link
+            href="/admin/players"
+            className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue mt-3 inline-flex min-h-10 items-center rounded-lg px-1 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+          >
+            Limpiar filtros
+          </Link>
+        ) : null}
+      </section>
 
-      <div className="hidden sm:block">
-        <table className="w-full border-separate border-spacing-0 text-left">
-          <thead>
-            <tr className="text-ink-600 text-xs tracking-wider uppercase">
-              <th className="border-ink-300 border-b px-3 py-2 font-semibold">Jugador</th>
-              <th className="border-ink-300 border-b px-3 py-2 font-semibold">Año</th>
-              <th className="border-ink-300 border-b px-3 py-2 font-semibold">Categoría</th>
-              <th className="border-ink-300 border-b px-3 py-2 font-semibold">Equipo</th>
-              <th className="border-ink-300 border-b px-3 py-2 text-right font-semibold">
-                <span className="sr-only">Acciones</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className="text-base">
-                <td className="border-ink-300 border-b px-3 py-3">
+      {players.length === 0 ? (
+        <EmptyState
+          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+          title="No hay jugadores con estos filtros"
+          description="Cambia los filtros o da de alta a un jugador para continuar."
+        />
+      ) : (
+        <>
+          <ul className="grid grid-cols-1 gap-3 md:hidden">
+            {players.map((player) => (
+              <li key={player.id}>
+                <Card className={cn("p-3", !player.is_active && "opacity-70")}>
                   <div className="flex items-center gap-3">
-                    <Avatar name={p.full_name} src={p.photo_url} />
-                    <div className="flex flex-col">
-                      <span className="font-display text-pool-deep font-bold">{p.full_name}</span>
-                      {p.cap_number != null ? (
-                        <span className="text-ink-600 font-mono text-xs">
-                          Dorsal {p.cap_number}
-                        </span>
-                      ) : null}
+                    <Avatar
+                      name={player.full_name}
+                      src={player.photo_url}
+                      size={48}
+                      teamColor="var(--pool-blue)"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-display text-pool-deep truncate text-base font-extrabold">
+                          {player.full_name}
+                        </h3>
+                        {!player.is_active ? (
+                          <EyeOff
+                            className="text-ink-500 h-4 w-4 shrink-0"
+                            aria-label="Desactivado"
+                          />
+                        ) : null}
+                      </div>
+                      <p className="text-ink-600 text-xs">{playerMeta(player)}</p>
+                      <p className="text-pool-blue mt-1 truncate text-xs font-bold">
+                        {player.currentTeam ?? "Sin equipo"}
+                      </p>
                     </div>
                   </div>
-                </td>
-                <td className="border-ink-300 text-ink-600 border-b px-3 py-3 font-mono text-sm">
-                  {p.birth_year ?? "—"}
-                </td>
-                <td className="border-ink-300 text-ink-600 border-b px-3 py-3 text-sm">
-                  {p.categoryLabel}
-                </td>
-                <td className="border-ink-300 text-ink-600 border-b px-3 py-3 text-sm">
-                  {p.currentTeam ?? <span className="text-ink-600/70 italic">Sin equipo</span>}
-                </td>
-                <td className="border-ink-300 border-b px-3 py-3 text-right">
-                  <div className="flex justify-end gap-2">
-                    <PlayerFormSheet
-                      player={p}
-                      trigger={
-                        <Button type="button" variant="secondary" size="sm">
-                          <Pencil className="h-4 w-4" aria-hidden="true" />
-                          Editar
-                        </Button>
-                      }
-                    />
+                  <div className="border-ink-200 mt-3 grid grid-cols-2 gap-2 border-t pt-3">
                     <Button
                       type="button"
-                      variant="ghost"
                       size="sm"
-                      className={p.is_active ? "text-goggle-red" : "text-success"}
-                      disabled={pendingId === p.id}
-                      onClick={() => toggleActive(p)}
-                      aria-label={
-                        p.is_active ? `Desactivar a ${p.full_name}` : `Activar a ${p.full_name}`
-                      }
+                      variant="secondary"
+                      onClick={() => setEditingPlayer(player)}
                     >
-                      {p.is_active ? (
+                      <Edit3 className="h-4 w-4" aria-hidden="true" />
+                      Editar ficha
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={player.is_active ? "ghost" : "success"}
+                      className={player.is_active ? "text-goggle-red" : undefined}
+                      disabled={pendingId === player.id}
+                      onClick={() => toggleActive(player)}
+                    >
+                      {player.is_active ? (
                         <PowerOff className="h-4 w-4" aria-hidden="true" />
                       ) : (
                         <Power className="h-4 w-4" aria-hidden="true" />
                       )}
+                      {player.is_active ? "Desactivar" : "Activar"}
                     </Button>
                   </div>
-                </td>
-              </tr>
+                </Card>
+              </li>
             ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="text-ink-600 text-xs">
-        {filtered.length} de {localPlayers.length} jugadores
-      </p>
+          </ul>
+
+          <div className="border-ink-200 bg-paper-card shadow-elev-1 hidden overflow-hidden rounded-2xl border md:block">
+            <table className="w-full text-left">
+              <thead className="bg-pool-foam/70 text-pool-deep text-xs tracking-wide uppercase">
+                <tr>
+                  <th className="px-4 py-3 font-extrabold">Jugador</th>
+                  <th className="px-4 py-3 font-extrabold">Categoría</th>
+                  <th className="px-4 py-3 font-extrabold">Equipo actual</th>
+                  <th className="px-4 py-3 text-right font-extrabold">
+                    <span className="sr-only">Acciones</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {players.map((player) => (
+                  <tr
+                    key={player.id}
+                    className={cn(
+                      "border-ink-200 border-t",
+                      !player.is_active && "bg-ink-100/40 text-ink-600",
+                    )}
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <Avatar
+                          name={player.full_name}
+                          src={player.photo_url}
+                          size={40}
+                          teamColor="var(--pool-blue)"
+                        />
+                        <div>
+                          <p className="font-display text-pool-deep font-extrabold">
+                            {player.full_name}
+                          </p>
+                          <p className="text-ink-600 text-xs">
+                            {player.cap_number != null ? `Dorsal ${player.cap_number} · ` : ""}
+                            {player.birth_year ?? "Sin año"}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="text-ink-700 px-4 py-3 text-sm">{player.categoryLabel}</td>
+                    <td className="text-ink-700 px-4 py-3 text-sm">
+                      {player.currentTeam ?? "Sin equipo"}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => setEditingPlayer(player)}
+                        >
+                          <Edit3 className="h-4 w-4" aria-hidden="true" />
+                          Editar
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className={player.is_active ? "text-goggle-red" : "text-success"}
+                          disabled={pendingId === player.id}
+                          onClick={() => toggleActive(player)}
+                          aria-label={
+                            player.is_active
+                              ? `Desactivar a ${player.full_name}`
+                              : `Activar a ${player.full_name}`
+                          }
+                        >
+                          {player.is_active ? (
+                            <PowerOff className="h-4 w-4" aria-hidden="true" />
+                          ) : (
+                            <Power className="h-4 w-4" aria-hidden="true" />
+                          )}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {total > 0 ? (
+        <nav
+          aria-label="Paginación de jugadores"
+          className="border-ink-200 bg-paper-card shadow-elev-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
+        >
+          <p className="text-ink-600 text-sm">
+            Mostrando {firstResult}–{lastResult} de {total}
+          </p>
+          <div className="flex gap-2">
+            <Button asChild variant="secondary" size="sm" disabled={filters.page <= 1}>
+              <Link
+                href={queryForPage(filters, filters.page - 1) as Route}
+                aria-disabled={filters.page <= 1}
+              >
+                Anterior
+              </Link>
+            </Button>
+            <span className="text-pool-deep inline-flex min-h-12 items-center px-2 text-sm font-extrabold">
+              Página {filters.page} de {totalPages}
+            </span>
+            <Button asChild variant="secondary" size="sm" disabled={filters.page >= totalPages}>
+              <Link
+                href={queryForPage(filters, filters.page + 1) as Route}
+                aria-disabled={filters.page >= totalPages}
+              >
+                Siguiente
+              </Link>
+            </Button>
+          </div>
+        </nav>
+      ) : null}
+
+      {editingPlayer ? (
+        <PlayerFormSheet
+          key={editingPlayer.id}
+          player={editingPlayer}
+          open
+          onOpenChange={(open) => {
+            if (!open) setEditingPlayer(null);
+          }}
+        />
+      ) : null}
     </div>
   );
 }

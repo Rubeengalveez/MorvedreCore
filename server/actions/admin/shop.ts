@@ -251,8 +251,36 @@ export async function deleteShopProduct(input: { product_id: string }): Promise<
   if (!parsed.success) throw new Error(toError(parsed.error));
 
   const admin = createAdminClient();
+  const { count, error: orderItemsError } = await admin
+    .from("shop_order_items")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", parsed.data.product_id);
+  if (orderItemsError) {
+    throw new Error("No pudimos comprobar si el producto tiene pedidos: " + orderItemsError.message);
+  }
+  if ((count ?? 0) > 0) {
+    throw new Error("Este producto ya tiene pedidos. Ocúltalo del catálogo en lugar de eliminarlo.");
+  }
   const { error } = await admin.from("shop_products").delete().eq("id", input.product_id);
   if (error) throw new Error("No pudimos eliminar el producto: " + error.message);
+  revalidatePath("/shop");
+  revalidatePath("/admin/shop");
+}
+
+export async function setShopProductAvailability(input: {
+  product_id: string;
+  available: boolean;
+}): Promise<void> {
+  await requirePermission("manage_shop");
+  const parsed = deleteShopProductSchema.safeParse({ product_id: input.product_id });
+  if (!parsed.success) throw new Error(toError(parsed.error));
+
+  const admin = createAdminClient();
+  const { error } = await admin
+    .from("shop_products")
+    .update({ available: input.available })
+    .eq("id", parsed.data.product_id);
+  if (error) throw new Error("No pudimos actualizar la visibilidad: " + error.message);
   revalidatePath("/shop");
   revalidatePath("/admin/shop");
 }

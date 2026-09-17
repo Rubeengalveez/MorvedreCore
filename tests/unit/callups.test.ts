@@ -405,16 +405,16 @@ describe("defaultCapForPlayer", () => {
     ).toBe(6);
   });
 
-  it("wraps around past 99 back to 1", () => {
+  it("rechaza un gorro de perfil fuera del rango 1 a 14", () => {
     const taken = [
-      { player_id: "a", cap_number: 99 },
+      { player_id: "a", cap_number: 14 },
       { player_id: "b", cap_number: 1 },
     ];
-    expect(defaultCapForPlayer("p-1", { cap_number: 99 }, CADETE_A.id, taken)).toBe(2);
+    expect(defaultCapForPlayer("p-1", { cap_number: 99 }, CADETE_A.id, taken)).toBeNull();
   });
 
-  it("returns null when all caps from 1 to 99 are taken", () => {
-    const taken = Array.from({ length: 99 }, (_, i) => ({
+  it("returns null when all caps from 1 to 14 are taken", () => {
+    const taken = Array.from({ length: 14 }, (_, i) => ({
       player_id: `p-${i}`,
       cap_number: i + 1,
     }));
@@ -423,6 +423,38 @@ describe("defaultCapForPlayer", () => {
 });
 
 describe("prepareCallupProposal", () => {
+  it("excluye jugadores que han indicado que no están disponibles", () => {
+    const result = prepareCallupProposal(
+      [
+        {
+          player_id: "available",
+          full_name: "Disponible",
+          cap_number: 1,
+          category_code: "cadete" as const,
+          source_team_id: null,
+          is_ascending: false,
+          has_conflict: false,
+          is_substitute: false,
+          reason: null,
+        },
+        {
+          player_id: "unavailable",
+          full_name: "No disponible",
+          cap_number: 2,
+          category_code: "cadete" as const,
+          source_team_id: null,
+          is_ascending: false,
+          has_conflict: true,
+          is_substitute: false,
+          reason: null,
+        },
+      ],
+      [],
+    );
+
+    expect(result.map((item) => item.player_id)).toEqual(["available"]);
+  });
+
   it("excluye jugadores ya convocados y completa solo las plazas libres", () => {
     const suggestions = [1, 2, 3, 4].map((cap) => ({
       player_id: `p-${cap}`,
@@ -435,10 +467,14 @@ describe("prepareCallupProposal", () => {
       is_substitute: false,
       reason: null,
     }));
-    const result = prepareCallupProposal(suggestions, [
-      { player_id: "p-1", cap_number: 1, status: "confirmed" },
-      { player_id: "existing", cap_number: 9, status: "called" },
-    ], 3);
+    const result = prepareCallupProposal(
+      suggestions,
+      [
+        { player_id: "p-1", cap_number: 1, status: "confirmed" },
+        { player_id: "existing", cap_number: 9, status: "called" },
+      ],
+      3,
+    );
     expect(result.map((item) => item.player_id)).toEqual(["p-2", "p-3", "p-4"]);
     expect(result.filter((item) => !item.is_substitute)).toHaveLength(1);
   });

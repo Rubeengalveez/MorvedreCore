@@ -14,6 +14,7 @@ import {
   LinesPreview,
 } from "./_components/treasury-forms";
 import { TreasuryProfileManager } from "./_components/treasury-profile-manager";
+import { TreasuryMaintenance } from "./_components/treasury-maintenance";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -58,6 +59,8 @@ export default async function AdminTreasuryPage() {
         <AssignmentForm concepts={data.concepts} profiles={data.playerOptions} />
         <ClosureForm seasonId={season?.id ?? null} />
       </section>
+
+      <TreasuryMaintenance concepts={data.concepts} assignments={data.assignments} />
 
       <section className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4">
