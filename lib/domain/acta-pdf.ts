@@ -109,10 +109,11 @@ export function createActaPdf(record: LiveRecord): File {
       highlight?: number[];
       quiet?: boolean;
       singleLine?: number[];
+      bold?: boolean;
     } = {},
   ) {
     const size = options.size ?? 8;
-    doc.setFont("helvetica", options.header || options.total ? "bold" : "normal");
+    doc.setFont("helvetica", options.header || options.total || options.bold ? "bold" : "normal");
     doc.setFontSize(size);
     const cellSizes = values.map((v, i) =>
       options.header && (!v.includes(" ") || options.singleLine?.includes(i))
@@ -153,6 +154,7 @@ export function createActaPdf(record: LiveRecord): File {
           cellSizes[i],
           options.header ||
             options.total ||
+            options.bold ||
             (i === 0 && options.cap) ||
             numeric ||
             options.emphasis?.includes(i),
@@ -719,19 +721,19 @@ export function createActaPdf(record: LiveRecord): File {
     text(p.name, 30, y + 8, 10, true, WHITE);
     const quarterWidth = sheet.periods <= 4 ? 7 : 4.7;
     const quarterStart = 190 - sheet.periods * quarterWidth;
-    text(`${p.quarters.length} cuartos`, quarterStart - 2, y + 8, 9, true, WHITE, "right");
+    text(`Jugó ${p.quarters.length} cuartos`, quarterStart - 2, y + 8, 9, true, WHITE, "right");
     for (let q = 1; q <= sheet.periods; q++) {
       const active = p.quarters.includes(q);
       const x = quarterStart + (q - 1) * quarterWidth;
       const square = quarterWidth - 0.8;
-      fill(x, y + 3, square, square, active ? WHITE : BLUE);
+      fill(x, y + 3, square, square, active ? BLUE : WHITE);
       text(
         `${q}º`,
         x + square / 2,
         y + 3 + square * 0.72,
         sheet.periods <= 4 ? 8 : 6.5,
         active,
-        active ? NAVY : WHITE,
+        active ? WHITE : NAVY,
         "center",
       );
     }
@@ -920,6 +922,7 @@ export function createActaPdf(record: LiveRecord): File {
         striped: rowIndex % 2 === 1,
         accent: color,
         height: h,
+        bold: true,
       });
       fill(14, startY, 1.2, y - startY, color);
       if (isGoal(event.kind)) {
@@ -953,17 +956,16 @@ export function createActaPdf(record: LiveRecord): File {
         ? `${shot.cap}  ${a.players.find((p) => p.cap === shot.cap)?.name ?? "Jugador"}`
         : `Gorro ${shot.cap}`;
       const action = {
-        goal: "Gol de penalti",
-        save: "Penalti parado",
-        out: "Penalti fuera / palo",
-        post: "Penalti al palo",
+        goal: "Gol",
+        save: "Parado",
+        out: "Fuera / palo",
+        post: "Al palo",
       }[shot.outcome];
-      const keeper = shot.side === "them" && shot.keeper !== null ? ` · Portero: ${shot.keeper}` : "";
       const values = [
         goal ? `${us} - ${them}` : "-",
         shot.side === "us" ? "Morvedre" : "Rival",
         who,
-        `${index + 1}. ${action}${keeper}`,
+        action,
       ];
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
@@ -977,7 +979,7 @@ export function createActaPdf(record: LiveRecord): File {
       const color = shot.side === "us" ? BLUE : ORANGE;
       const startY = y;
       y = tableRow(values, timeWidths, 14, y, {
-        left: [2, 3], striped: index % 2 === 1, accent: color, height: h,
+        left: [2, 3], striped: index % 2 === 1, accent: color, height: h, bold: true,
       });
       fill(14, startY, 1.2, y - startY, color);
       if (goal) {

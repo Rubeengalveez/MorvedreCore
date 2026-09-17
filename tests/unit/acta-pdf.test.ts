@@ -139,7 +139,8 @@ describe("createActaPdf", () => {
     expect(updated).toContain("TANDA DE PENALTIS");
     expect(updated).not.toContain("con penaltis");
     expect(updated).toContain("En la tanda: 1 - 0");
-    expect(updated).toContain("Portero: 1");
+    expect(updated).toContain("Parado");
+    expect(updated).not.toContain("Portero: 1");
   });
   it("genera un PDF válido sin errores con acta horizontal y análisis vertical", async () => {
     const record = testRecord();
