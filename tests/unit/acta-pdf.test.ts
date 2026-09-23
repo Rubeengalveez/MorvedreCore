@@ -381,4 +381,46 @@ describe("createActaPdf", () => {
     expect(pdfString).toContain("Asistencias");
     expect(pdfString).toContain("Oliver Torres Dom");
   });
+
+  it("abrevia Expulsiones a Exp. en la tabla rival cuando hay columna de tarjetas", async () => {
+    const sheet = testSheet();
+    sheet.events.push({
+      id: "ev-card",
+      side: "them",
+      cap: 9,
+      kind: "red",
+      period: 2,
+      keeper: null,
+      deleted: false,
+    });
+    const record = testRecord(sheet);
+    const pdfFile = createActaPdf(record);
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const pdfString = Buffer.from(arrayBuffer).toString("latin1");
+    expect(pdfString).toContain("Tarjetas");
+    expect(pdfString).toContain("Exp.");
+  });
+
+  it("organiza goleadores rivales en dos tablas por fila cuando hay múltiples goleadores", async () => {
+    const sheet = testSheet();
+    const rivalScorerCaps = [2, 5, 3, 4, 6, 9, 12];
+    rivalScorerCaps.forEach((cap, i) => {
+      sheet.events.push({
+        id: `ev-goal-them-${i}`,
+        side: "them",
+        cap,
+        kind: "goal",
+        period: 1 + (i % 4),
+        keeper: 1,
+        deleted: false,
+      });
+    });
+    const record = testRecord(sheet);
+    const pdfFile = createActaPdf(record);
+    const arrayBuffer = await pdfFile.arrayBuffer();
+    const pdfString = Buffer.from(arrayBuffer).toString("latin1");
+    const matches = [...pdfString.matchAll(/Goleadores rivales/g)];
+    expect(matches.length).toBe(1);
+  });
 });
+

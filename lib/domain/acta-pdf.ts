@@ -222,7 +222,7 @@ export function createActaPdf(record: LiveRecord): File {
   const rivalHead = [
     "Gorro",
     "Goles",
-    "Expulsiones",
+    rivalCards ? "Exp." : "Expulsiones",
     "Penaltis",
     ...(rivalCards ? ["Tarjetas"] : []),
   ];
@@ -780,7 +780,7 @@ export function createActaPdf(record: LiveRecord): File {
       y += 11;
     }
     const widths = [23, 20, 45];
-    const groups = a.rivalScorers.length > 7 ? 2 : 1;
+    const groups = a.rivalScorers.length > 1 ? 2 : 1;
     const perGroup = Math.ceil(a.rivalScorers.length / groups);
     const rivalHeader = () => {
       for (let j = 0; j < groups; j++)
