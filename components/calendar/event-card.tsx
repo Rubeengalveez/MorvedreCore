@@ -142,7 +142,7 @@ function EventBody({
       </div>
       {event.callup_name ? (
         <div
-          className="border-ink-300 bg-pool-foam/40 flex items-center gap-2 rounded-md border p-2"
+          className="border-ink-300 bg-pool-foam flex items-center gap-2 rounded-md border p-2"
           style={{ borderLeftWidth: "3px", borderLeftColor: color }}
         >
           {event.callup_cap_number != null ? (
@@ -236,8 +236,8 @@ export function CalendarEventCard({
         className={cn(
           "group",
           isPast && !isCancelled && !isPostponed && "opacity-80",
-          isCancelled && "border-danger/30 bg-danger/5",
-          isPostponed && "bg-paper/50",
+          isCancelled && "border-danger bg-red-50",
+          isPostponed && "bg-paper",
           className,
         )}
       >
@@ -252,8 +252,8 @@ export function CalendarEventCard({
       accentColor={color}
       className={cn(
         isPast && !isCancelled && !isPostponed && "opacity-80",
-        isCancelled && "border-danger/30 bg-danger/5",
-        isPostponed && "bg-paper/50",
+        isCancelled && "border-danger bg-red-50",
+        isPostponed && "bg-paper",
         className,
       )}
     >
@@ -272,7 +272,7 @@ export function CalendarEmptyState({
   cta?: { href: string; label: string };
 }) {
   return (
-    <div className="border-ink-300 bg-paper/50 flex flex-col items-center gap-2 rounded-md border-2 border-dashed p-6 text-center">
+    <div className="border-ink-300 bg-paper flex flex-col items-center gap-2 rounded-md border-2 border-dashed p-6 text-center">
       <div className="bg-pool-foam text-ink-600 flex h-12 w-12 items-center justify-center rounded-full">
         {icon ?? <Calendar className="h-5 w-5" />}
       </div>
@@ -297,9 +297,9 @@ export function CalendarAlert({
   message: string;
 }) {
   const styles = {
-    info: "border-pool-teal/30 bg-pool-teal/10 text-pool-deep",
-    warning: "border-warning/20 bg-warning/5 text-warning",
-    error: "border-danger/20 bg-danger/5 text-danger",
+    info: "border-pool-teal bg-cyan-50 text-pool-deep",
+    warning: "border-warning bg-amber-50 text-warning",
+    error: "border-danger bg-red-50 text-danger",
   };
   return (
     <div

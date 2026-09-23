@@ -45,12 +45,12 @@ export function ActaMatchControls({
           type="button"
           disabled={!playing}
           onClick={onBench}
-          aria-label="Entrenador: tiempos muertos y tarjetas"
+          aria-label={`Entrenador: tiempos muertos Morvedre ${timeoutCount(sheet, "us")}, rival ${timeoutCount(sheet, "them")}; tarjetas`}
           className="flex min-h-14 flex-col items-center justify-center rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold active:bg-slate-200 disabled:opacity-45"
         >
           <span>Entrenador</span>
-          <span className="mt-0.5 text-xs font-bold text-slate-600 tabular-nums">
-            Tiempos: M {timeoutCount(sheet, "us")} · R {timeoutCount(sheet, "them")}
+          <span className="mt-0.5 text-sm font-bold text-slate-700 tabular-nums">
+            M {timeoutCount(sheet, "us")} · R {timeoutCount(sheet, "them")}
           </span>
         </button>
         <button

@@ -7,6 +7,11 @@ import { cn } from "@/lib/utils/cn";
 
 type DayStatus = "present" | "absent" | "mixed";
 
+interface AttendanceProfile {
+  id: string;
+  full_name: string;
+}
+
 function getDayStatus(records: AttendanceHistoryRecord[]): DayStatus | null {
   if (records.length === 0) return null;
   const attended = records.filter((record) => record.present).length;
@@ -19,10 +24,12 @@ export function AttendanceHistoryCalendar({
   year,
   month,
   records,
+  profiles,
 }: {
   year: number;
   month: number;
   records: AttendanceHistoryRecord[];
+  profiles: AttendanceProfile[];
 }) {
   const recordsByDay = new Map<string, AttendanceHistoryRecord[]>();
   for (const record of records) {
@@ -46,14 +53,31 @@ export function AttendanceHistoryCalendar({
         {getMonthCells(year, month).map((cell) => {
           const dayRecords = recordsByDay.get(cell.iso) ?? [];
           const status = getDayStatus(dayRecords);
+          const profileStatuses = profiles
+            .map((profile) => ({
+              profile,
+              status: getDayStatus(dayRecords.filter((record) => record.player_id === profile.id)),
+            }))
+            .filter((entry) => entry.status !== null);
+          const profileLabel = profileStatuses
+            .map(({ profile, status: profileStatus }) =>
+              profileStatus === "present"
+                ? `${profile.full_name}: asistió`
+                : profileStatus === "absent"
+                  ? `${profile.full_name}: no asistió`
+                  : `${profile.full_name}: asistencia parcial`,
+            )
+            .join(", ");
           const label =
-            status === "present"
-              ? `${cell.iso}: asistió`
-              : status === "absent"
-                ? `${cell.iso}: no asistió`
-                : status === "mixed"
-                  ? `${cell.iso}: asistencia parcial`
-                  : `${cell.iso}: sin lista registrada`;
+            profiles.length > 1 && profileLabel
+              ? `${cell.iso}: ${profileLabel}`
+              : status === "present"
+                ? `${cell.iso}: asistió`
+                : status === "absent"
+                  ? `${cell.iso}: no asistió`
+                  : status === "mixed"
+                    ? `${cell.iso}: asistencia parcial`
+                    : `${cell.iso}: sin lista registrada`;
           return (
             <div
               key={cell.iso}
@@ -65,8 +89,8 @@ export function AttendanceHistoryCalendar({
                 cell.inMonth && !status && "border-ink-200/70 bg-paper text-ink-700",
                 cell.inMonth &&
                   status === "present" &&
-                  "border-success/40 bg-success/10 text-pool-deep",
-                cell.inMonth && status === "absent" && "border-danger/45 bg-danger/10 text-danger",
+                  "border-success bg-emerald-50 text-pool-deep",
+                cell.inMonth && status === "absent" && "border-danger bg-red-50 text-danger",
                 cell.inMonth &&
                   status === "mixed" &&
                   "border-pool-blue/40 bg-pool-foam text-pool-deep",
@@ -76,8 +100,25 @@ export function AttendanceHistoryCalendar({
                 {cell.day}
               </span>
               {cell.inMonth ? (
-                <span className="mt-1 flex h-4 items-center justify-center" aria-hidden="true">
-                  {status === "present" ? (
+                <span
+                  className="mt-1 flex h-4 items-center justify-center gap-0.5"
+                  aria-hidden="true"
+                >
+                  {profiles.length > 1 ? (
+                    profileStatuses.map(({ profile, status: profileStatus }) => (
+                      <span
+                        key={profile.id}
+                        className={cn(
+                          "flex h-4 min-w-4 items-center justify-center rounded px-0.5 text-[8px] leading-none font-black uppercase",
+                          profileStatus === "present" && "bg-success text-paper",
+                          profileStatus === "absent" && "bg-danger text-paper",
+                          profileStatus === "mixed" && "bg-pool-blue text-paper",
+                        )}
+                      >
+                        {getProfileInitials(profile.full_name)}
+                      </span>
+                    ))
+                  ) : status === "present" ? (
                     <Check className="text-success h-4 w-4" />
                   ) : status === "absent" ? (
                     <X className="text-danger h-4 w-4" />
@@ -92,4 +133,11 @@ export function AttendanceHistoryCalendar({
       </div>
     </div>
   );
+}
+
+function getProfileInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  const first = parts[0]?.[0] ?? "";
+  const surname = parts.length > 1 ? (parts[1]?.[0] ?? "") : "";
+  return `${first}${surname}`;
 }

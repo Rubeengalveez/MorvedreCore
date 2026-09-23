@@ -65,7 +65,7 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "border-ink-200/90 bg-paper-card/95 relative overflow-hidden rounded-xl border px-3 py-2.5 shadow-[0_3px_12px_rgba(6,32,72,0.07)] sm:px-3.5 sm:py-3",
+        "border-ink-200/90 bg-paper-card relative overflow-hidden rounded-xl border px-3 py-2.5 shadow-[0_3px_12px_rgba(6,32,72,0.07)] sm:px-3.5 sm:py-3",
         className,
       )}
       data-page-header
@@ -93,7 +93,7 @@ export function PageHeader({
                 {title}
               </h1>
               {eyebrow ? (
-                <span className="border-pool-blue/15 bg-pool-foam/75 text-pool-deep inline-flex min-h-6 max-w-full items-center rounded-full border px-2 text-[0.8125rem] leading-[1.125rem] font-bold">
+                <span className="border-pool-blue/15 bg-pool-foam text-pool-deep inline-flex min-h-6 max-w-full items-center rounded-full border px-2 text-[0.8125rem] leading-[1.125rem] font-bold">
                   {eyebrow}
                 </span>
               ) : null}

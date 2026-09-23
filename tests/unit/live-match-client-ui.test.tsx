@@ -103,7 +103,14 @@ describe("interfaz del acta", () => {
     await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
     fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
     expect(mock.change).not.toHaveBeenCalled();
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByRole("alert")).toHaveTextContent(
+      "Termina el lanzamiento antes de seguir.",
+    );
+    expect(
+      document.getElementById(dialog.getAttribute("aria-describedby") ?? ""),
+    ).toBeInTheDocument();
     expect(current.sheet.pending).toMatchObject({
       penalty_event_id: penalty.id,
       shooter_cap: shooter,
@@ -240,10 +247,10 @@ describe("interfaz del acta", () => {
   it("muestra entrenador, tiempos y tarjetas en pasos claros", () => {
     render(<LiveMatchClient />);
     expect(
-      screen.getByRole("button", { name: /Entrenador: tiempos muertos y tarjetas/ }),
-    ).toHaveTextContent("Tiempos: M 0 · R 0");
+      screen.getByRole("button", { name: /Entrenador: tiempos muertos Morvedre/ }),
+    ).toHaveTextContent("M 0 · R 0");
     expect(screen.getByRole("button", { name: "Corregir jugadas" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Entrenador: tiempos muertos y tarjetas/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Entrenador: tiempos muertos Morvedre/ }));
     expect(screen.getByRole("button", { name: "Tiempo muerto" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Tarjeta al entrenador" }));
     expect(
@@ -291,11 +298,13 @@ describe("interfaz del acta", () => {
     fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Corregir" })[1]);
     fireEvent.click(screen.getByRole("button", { name: "Cambiar jugador" }));
-    fireEvent.click(screen.getByRole("button", { name: /3Pablo Torres/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Morvedre, gorro 3, Pablo Torres/ }));
     fireEvent.click(screen.getByRole("button", { name: "Gol" }));
     fireEvent.click(screen.getByRole("button", { name: "Gol normal" }));
     expect(screen.getByRole("heading", { name: "Resolver la asistencia" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /1Álex GarcíaNueva asistencia/ }));
+    fireEvent.click(
+      screen.getByRole("button", { name: /Nueva asistencia de Álex García, gorro 1/ }),
+    );
     const saved = mock.change.mock.calls[0][0] as LiveSheet;
     expect(saved.events.find((item) => item.id === goal.id)?.cap).toBe(3);
     expect(saved.events.find((item) => item.id === assist.id)?.cap).toBe(1);

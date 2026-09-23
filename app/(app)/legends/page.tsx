@@ -92,9 +92,9 @@ function metricContext(row: LegendRow, metric: LegendMetric): string {
 }
 
 function legendRowTone(rank: number): string {
-  if (rank === 1) return "border-ball-gold/60 bg-ball-gold/10 shadow-elev-2";
-  if (rank === 2) return "border-pool-blue/30 bg-pool-foam/45 shadow-elev-1";
-  if (rank === 3) return "border-action/25 bg-action/5 shadow-elev-1";
+  if (rank === 1) return "border-ball-gold bg-amber-50 shadow-elev-2";
+  if (rank === 2) return "border-pool-blue bg-blue-50 shadow-elev-1";
+  if (rank === 3) return "border-action bg-orange-50 shadow-elev-1";
   return "border-ink-200 bg-paper-card shadow-sm";
 }
 
@@ -210,7 +210,7 @@ export default async function LegendsPage({
             basePath="/legends"
             extraParams={{ metric }}
           />
-          <p className="bg-pool-foam/60 text-pool-deep rounded-xl px-4 py-3 text-sm font-bold">
+          <p className="bg-pool-foam text-pool-deep rounded-xl px-4 py-3 text-sm font-bold">
             Cada intento cuenta. Un jugador puede aparecer varias veces.
           </p>
         </div>

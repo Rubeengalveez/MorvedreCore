@@ -313,7 +313,7 @@ function PersonalProgress({
   return (
     <section
       aria-labelledby="personal-streak-title"
-      className="border-pool-blue/20 bg-pool-foam/45 overflow-hidden rounded-2xl border"
+      className="border-pool-blue/20 bg-pool-ice overflow-hidden rounded-2xl border"
     >
       <div className="flex items-center justify-between gap-3 px-4 py-3">
         <div>
@@ -335,7 +335,7 @@ function PersonalProgress({
           return (
             <article
               key={streak.playerId}
-              className="bg-paper-card/85 flex items-center gap-3 px-4 py-3"
+              className="bg-paper-card flex items-center gap-3 px-4 py-3"
             >
               <Avatar
                 name={streak.name}

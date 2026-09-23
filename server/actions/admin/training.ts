@@ -11,6 +11,7 @@ import {
   createTrainingScheduleSchema,
   idSchema,
   markAttendanceSchema,
+  updateTrainingSessionSchema,
   updateTrainingBlockSchema,
 } from "@/lib/domain/admin-schemas";
 import { generateSessionsFromBlock, type TrainingBlock } from "@/lib/domain/training";
@@ -636,6 +637,50 @@ export async function uncancelTrainingSession(sessionId: string): Promise<void> 
     .eq("id", parsedId.data.id);
 
   throwIfError(error, "No pudimos reactivar la sesión. Inténtalo de nuevo.");
+
+  revalidatePath("/admin/trainings");
+  revalidatePath("/calendar");
+  revalidatePath("/dashboard");
+}
+
+export async function updateTrainingSession(input: {
+  session_id: string;
+  scheduled_at: string;
+  duration_minutes: number;
+  location?: string | null;
+}): Promise<void> {
+  const parsed = updateTrainingSessionSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
+  }
+
+  const supabase = await createClient();
+  const { data: session, error: sessionError } = await supabase
+    .from("training_sessions")
+    .select("team_id, cancelled")
+    .eq("id", parsed.data.session_id)
+    .maybeSingle();
+
+  throwIfError(sessionError, "No pudimos cargar el entrenamiento.");
+  if (!session) {
+    throw new Error("El entrenamiento no existe.");
+  }
+  if (session.cancelled) {
+    throw new Error("Reactiva el entrenamiento antes de editarlo.");
+  }
+
+  await requireTrainingManagerOf(session.team_id);
+
+  const { error } = await supabase
+    .from("training_sessions")
+    .update({
+      scheduled_at: parsed.data.scheduled_at,
+      duration_minutes: parsed.data.duration_minutes,
+      location: parsed.data.location ?? null,
+    })
+    .eq("id", parsed.data.session_id);
+
+  throwIfError(error, "No pudimos guardar este entrenamiento.");
 
   revalidatePath("/admin/trainings");
   revalidatePath("/calendar");

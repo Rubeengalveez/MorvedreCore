@@ -41,6 +41,7 @@ export function ActaScoreboard({
       <div
         data-acta-score
         className="px-4 pb-2"
+        role="group"
         aria-label={`Morvedre ${score(s, "us")}, ${record.opponent} ${score(s, "them")}`}
       >
         <div className="grid grid-cols-2 items-end gap-7 px-1 text-center">

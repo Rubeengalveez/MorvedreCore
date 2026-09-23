@@ -8,13 +8,13 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        success: "border-success/25 bg-success/10 text-emerald-800",
+        success: "border-success bg-emerald-50 text-emerald-800",
         warning: "border-warning/30 bg-amber-50 text-amber-800",
         danger: "border-goggle-red/25 bg-goggle-red/10 text-goggle-red",
-        info: "border-pool-blue/20 bg-pool-foam/80 text-pool-deep",
+        info: "border-pool-blue bg-pool-foam text-pool-deep",
         neutral: "border-ink-200 bg-ink-100/70 text-ink-700",
         brand: "border-pool-deep bg-pool-deep text-paper shadow-sm",
-        gold: "border-ball-gold/40 bg-ball-gold/20 text-pool-deep",
+        gold: "border-ball-gold bg-amber-100 text-pool-deep",
       },
       size: {
         sm: "px-2 py-0.5 text-[0.75rem] leading-none",

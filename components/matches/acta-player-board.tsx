@@ -45,10 +45,15 @@ export function ActaPlayerBoard({
 }) {
   const own = sheet.players.filter((p) => !p.retired).sort((a, b) => a.cap - b.cap);
   const rival = [...sheet.opponentCaps].sort((a, b) => a - b);
-  const sides = isAway ? ["them", "us"] as const : ["us", "them"] as const;
+  const sides = isAway ? (["them", "us"] as const) : (["us", "them"] as const);
   return (
-    <section aria-label="Goles y expulsiones por jugador" className="bg-white px-2 py-3 sm:px-3">
-      <div className={`grid ${isAway ? "grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]" : "grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"} gap-x-px overflow-hidden rounded-xl border border-[#062048] bg-[#062048]`}>
+    <section
+      aria-label="Jugadores y estadísticas del partido"
+      className="bg-white px-2 py-3 sm:px-3"
+    >
+      <div
+        className={`grid ${isAway ? "grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]" : "grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"} gap-x-px overflow-hidden rounded-xl border border-[#062048] bg-[#062048]`}
+      >
         {sides.map((side) => (
           <div
             key={side}
@@ -85,7 +90,9 @@ export function ActaPlayerBoard({
                     {out && (
                       <span
                         className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs"
-                        title={totals.red ? "Expulsado por tarjeta roja" : "Fuera por 3 expulsiones"}
+                        title={
+                          totals.red ? "Expulsado por tarjeta roja" : "Fuera por 3 expulsiones"
+                        }
                       >
                         <span aria-hidden="true">✕</span>
                         <span className="sr-only">Fuera</span>
@@ -132,7 +139,9 @@ export function ActaPlayerBoard({
                       ))}
                     </span>
                     <span className="min-w-0 text-center text-xs leading-tight font-semibold">
-                      <span className="whitespace-nowrap">{totals.exclusions}/3{side === "us" ? " exp." : ""}</span>
+                      <span className="whitespace-nowrap">
+                        {totals.exclusions}/3{side === "us" ? " exp." : ""}
+                      </span>
                     </span>
                   </span>
                 </span>

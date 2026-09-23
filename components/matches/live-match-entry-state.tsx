@@ -132,21 +132,23 @@ export function LiveMatchEntryState({
                     className={`flex items-center justify-between gap-3 p-3 ${invalid ? "bg-amber-50" : selected ? "" : "bg-slate-100 text-slate-600"}`}
                   >
                     {preparation.reason === "too_many" && (
-                      <input
-                        type="checkbox"
-                        aria-label={`${selected ? "Quitar" : "Elegir"} a ${p.name}`}
-                        checked={selected}
-                        disabled={saving || (!selected && selectedIds.size >= 14)}
-                        onChange={(event) =>
-                          setSelectedIds((current) => {
-                            const next = new Set(current);
-                            if (event.target.checked) next.add(p.id);
-                            else next.delete(p.id);
-                            return next;
-                          })
-                        }
-                        className="h-6 w-6 shrink-0 accent-blue-800"
-                      />
+                      <label className="grid h-12 w-12 shrink-0 place-items-center rounded-lg focus-within:outline-2 focus-within:outline-blue-700">
+                        <span className="sr-only">{`${selected ? "Quitar" : "Elegir"} a ${p.name}`}</span>
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          disabled={saving || (!selected && selectedIds.size >= 14)}
+                          onChange={(event) =>
+                            setSelectedIds((current) => {
+                              const next = new Set(current);
+                              if (event.target.checked) next.add(p.id);
+                              else next.delete(p.id);
+                              return next;
+                            })
+                          }
+                          className="h-6 w-6 shrink-0 accent-blue-800"
+                        />
+                      </label>
                     )}
                     <label
                       htmlFor={`cap-${p.id}`}

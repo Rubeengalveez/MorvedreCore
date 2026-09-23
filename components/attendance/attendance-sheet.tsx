@@ -257,7 +257,7 @@ export function AttendanceSheet({
                   key={player.id}
                   className={cn(
                     "rounded-2xl border-2 p-3 transition-[background-color,border-color] motion-reduce:transition-none",
-                    attendance ? "border-success/45 bg-success/5" : "border-danger/45 bg-danger/5",
+                    attendance ? "border-success bg-emerald-50" : "border-danger bg-red-50",
                   )}
                 >
                   <div className="flex min-h-12 items-center gap-3 px-1">
@@ -315,7 +315,7 @@ export function AttendanceSheet({
               Resumen de asistencia
             </p>
             <div className="grid grid-cols-2 gap-2">
-              <div className="border-success/25 bg-success/8 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
+              <div className="border-success bg-emerald-50 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
                 <span className="bg-success text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
                   <Check className="h-5 w-5" aria-hidden="true" />
                 </span>
@@ -328,7 +328,7 @@ export function AttendanceSheet({
                   </span>
                 </span>
               </div>
-              <div className="border-danger/25 bg-danger/7 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
+              <div className="border-danger bg-red-50 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
                 <span className="bg-danger text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
                   <X className="h-5 w-5" aria-hidden="true" />
                 </span>

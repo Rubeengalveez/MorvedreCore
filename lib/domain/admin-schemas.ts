@@ -414,6 +414,16 @@ export const cancelTrainingSessionSchema = z.object({
   reason: z.string().trim().min(2, "Indica un motivo.").max(500, "Máximo 500 caracteres."),
 });
 
+export const updateTrainingSessionSchema = z.object({
+  session_id: z.string().uuid("Sesión inválida."),
+  scheduled_at: z.string().datetime({ offset: true, message: "Fecha u hora inválida." }),
+  duration_minutes: z.number().int().min(15, "La duración mínima es de 15 minutos.").max(480),
+  location: z.preprocess(
+    emptyToNull,
+    z.string().trim().max(200, "Máximo 200 caracteres.").nullable().optional(),
+  ),
+});
+
 export const competitionTypeSchema = z.enum(["league", "cup", "tournament", "friendly"]);
 
 export const matchStatusSchema = z.enum([

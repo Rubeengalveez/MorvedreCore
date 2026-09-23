@@ -1,25 +1,11 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2 } from "lucide-react";
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { useState, useTransition } from "react";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import {
   Sheet,
   SheetBody,
@@ -31,439 +17,176 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
-import { formatWeekdayLetter } from "@/lib/utils/format";
-import { mapsUrlInputSchema } from "@/lib/domain/maps";
 import {
-  createTrainingBlock,
-  generateSessionsFromBlockAction,
   resyncFutureTrainingSessionsAction,
   updateTrainingBlock,
   type Team,
   type TrainingBlockRow,
 } from "@/server/actions/admin";
 
-const KIND_OPTIONS = [
-  { value: "water", label: "Agua" },
-  { value: "dry", label: "Seco" },
-  { value: "physical", label: "Físico" },
-  { value: "technical", label: "Técnico" },
-  { value: "mixed", label: "Mixto" },
-] as const;
-
-const WEEKDAYS = [1, 2, 3, 4, 5, 6, 7] as const;
-
-const formSchema = z.object({
-  team_id: z.string().uuid("Selecciona un equipo."),
-  label: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
-  weekdays: z.array(z.number().int().min(1).max(7)).min(1, "Selecciona al menos un día."),
-  start_date: z.string().min(1, "Fecha de inicio obligatoria."),
-  end_date: z.string().min(1, "Fecha de fin obligatoria."),
-  start_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora de inicio inválida."),
-  end_time: z.string().regex(/^\d{2}:\d{2}$/, "Hora de fin inválida."),
-  location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
-  maps_url: mapsUrlInputSchema.optional(),
-  kind: z.enum(["water", "dry", "physical", "technical", "mixed"]),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-type ActionState =
-  { ok: true; blockId: string; generated: number } | { ok?: false; error: string } | null;
-
 type TeamOption = Team & { season_label: string };
 
-async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  try {
-    const weekdaysRaw = formData.getAll("weekdays").map((v) => Number(v));
-    const weekdays = weekdaysRaw.filter((n) => Number.isInteger(n) && n >= 1 && n <= 7);
-    const input = {
-      team_id: String(formData.get("team_id") ?? ""),
-      label: String(formData.get("label") ?? ""),
-      weekdays,
-      start_date: String(formData.get("start_date") ?? ""),
-      end_date: String(formData.get("end_date") ?? ""),
-      start_time: String(formData.get("start_time") ?? ""),
-      end_time: String(formData.get("end_time") ?? ""),
-      location: String(formData.get("location") ?? "") || null,
-      maps_url: String(formData.get("maps_url") ?? "") || null,
-      kind: String(formData.get("kind") ?? "water") as
-        "water" | "dry" | "physical" | "technical" | "mixed",
-    };
-    const blockId = String(formData.get("block_id") ?? "");
-    const block = blockId
-      ? await updateTrainingBlock(blockId, input)
-      : await createTrainingBlock(input);
-    const generated = blockId
-      ? await resyncFutureTrainingSessionsAction(block.id)
-      : await generateSessionsFromBlockAction(block.id);
-    return { ok: true, blockId: block.id, generated: generated.created };
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : "No pudimos guardar." };
-  }
-}
+const WEEKDAYS = [
+  { value: 1, short: "L", label: "Lunes" },
+  { value: 2, short: "M", label: "Martes" },
+  { value: 3, short: "X", label: "Miércoles" },
+  { value: 4, short: "J", label: "Jueves" },
+  { value: 5, short: "V", label: "Viernes" },
+  { value: 6, short: "S", label: "Sábado" },
+  { value: 7, short: "D", label: "Domingo" },
+] as const;
 
-function SubmitButton({ label }: { label: string }) {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
-      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
-      {pending ? "Guardando..." : label}
-    </Button>
-  );
-}
-
-function WeekdaysField({ value, onChange }: { value: number[]; onChange: (v: number[]) => void }) {
-  function toggle(day: number) {
-    if (value.includes(day)) {
-      onChange(value.filter((v) => v !== day));
-    } else {
-      onChange([...value, day].sort((a, b) => a - b));
-    }
-  }
-  return (
-    <div role="group" aria-label="Días de la semana" className="flex flex-wrap gap-2">
-      {WEEKDAYS.map((d) => {
-        const active = value.includes(d);
-        return (
-          <button
-            key={d}
-            type="button"
-            onClick={() => toggle(d)}
-            aria-pressed={active}
-            className={cn(
-              "font-display focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex h-12 min-h-12 w-12 items-center justify-center rounded border text-base font-bold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-              active
-                ? "border-pool-blue bg-pool-blue text-paper"
-                : "border-ink-300 bg-paper text-ink-600 hover:border-pool-blue hover:text-pool-deep",
-            )}
-          >
-            {formatWeekdayLetter(d)}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-export interface TrainingBlockFormSheetProps {
+export function TrainingBlockFormSheet({
+  teams,
+  trigger,
+  initial,
+}: {
   teams: TeamOption[];
   defaultTeamId: string | null;
   defaultSeasonId: string | null;
   trigger: React.ReactNode;
   initial?: TrainingBlockRow | null;
-}
-
-export function TrainingBlockFormSheet({
-  teams,
-  defaultTeamId,
-  trigger,
-  initial,
-}: TrainingBlockFormSheetProps) {
+}) {
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
-  const [, startTransition] = useTransition();
-  const isEdit = initial != null;
+  const [weekdays, setWeekdays] = useState(initial?.weekdays ?? []);
+  const [startDate, setStartDate] = useState(initial?.start_date ?? "");
+  const [endDate, setEndDate] = useState(initial?.end_date ?? "");
+  const [startTime, setStartTime] = useState(initial?.start_time.slice(0, 5) ?? "");
+  const [endTime, setEndTime] = useState(initial?.end_time.slice(0, 5) ?? "");
+  const [location, setLocation] = useState(initial?.location ?? "");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const team = teams.find((item) => item.id === initial?.team_id);
 
-  const initialTeamId = initial?.team_id ?? defaultTeamId ?? teams[0]?.id ?? "";
+  function toggleDay(day: number) {
+    setWeekdays((current) =>
+      current.includes(day)
+        ? current.filter((value) => value !== day)
+        : [...current, day].sort((a, b) => a - b),
+    );
+  }
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      team_id: initialTeamId,
-      label: initial?.label ?? "",
-      weekdays: initial?.weekdays ?? [],
-      start_date: initial?.start_date ?? "",
-      end_date: initial?.end_date ?? "",
-      start_time: initial?.start_time?.slice(0, 5) ?? "",
-      end_time: initial?.end_time?.slice(0, 5) ?? "",
-      location: initial?.location ?? "",
-      maps_url: initial?.maps_url ?? "",
-      kind: (initial?.kind as FormValues["kind"]) ?? "water",
-    },
-  });
-
-  useEffect(() => {
-    if (state && "ok" in state && state.ok) {
-      form.reset();
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setOpen(false);
+  function save(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError(null);
+    if (!initial || weekdays.length === 0) {
+      setError("Selecciona al menos un día.");
+      return;
     }
-  }, [state, form]);
-
-  const onSubmit = form.handleSubmit((values) => {
-    const fd = new FormData();
-    if (initial?.id) fd.append("block_id", initial.id);
-    fd.append("team_id", values.team_id);
-    fd.append("label", values.label);
-    values.weekdays.forEach((d) => fd.append("weekdays", String(d)));
-    fd.append("start_date", values.start_date);
-    fd.append("end_date", values.end_date);
-    fd.append("start_time", values.start_time);
-    fd.append("end_time", values.end_time);
-    fd.append("location", values.location ?? "");
-    fd.append("maps_url", values.maps_url ?? "");
-    fd.append("kind", values.kind);
-    startTransition(() => {
-      formAction(fd);
+    startTransition(async () => {
+      try {
+        await updateTrainingBlock(initial.id, {
+          weekdays,
+          start_date: startDate,
+          end_date: endDate,
+          start_time: startTime,
+          end_time: endTime,
+          location: location.trim() || null,
+        });
+        await resyncFutureTrainingSessionsAction(initial.id);
+        setOpen(false);
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "No pudimos guardar el horario.");
+      }
     });
-  });
-
-  const errorMessage = state && "error" in state ? state.error : null;
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetContent size="lg">
+      <SheetContent size="lg" className="mx-auto max-w-xl">
         <SheetHeader>
-          <SheetTitle>{isEdit ? "Editar bloque" : "Nuevo bloque de entrenamientos"}</SheetTitle>
-          <SheetDescription>
-            Define los días, horario y lugar. Al guardar, se generarán las sesiones
-            correspondientes.
-          </SheetDescription>
+          <SheetTitle>Editar horario</SheetTitle>
+          <SheetDescription>{team?.label ?? "Categoría"}</SheetDescription>
         </SheetHeader>
         <SheetBody>
-          <Form {...form}>
-            <form
-              id="training-block-form"
-              onSubmit={onSubmit}
-              className="flex flex-col gap-5 pb-2"
-              noValidate
-            >
-              {errorMessage ? (
-                <Alert variant="danger" title="No pudimos guardar">
-                  {errorMessage}
-                </Alert>
-              ) : null}
-
-              <FormField
-                control={form.control}
-                name="team_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Equipo</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                        disabled={isEdit}
-                      >
-                        {teams.map((team) => (
-                          <option key={team.id} value={team.id}>
-                            {team.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <FormDescription>Solo puedes modificar equipos de la temporada actual.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="label"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre del bloque</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Pretemporada"
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="weekdays"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Días de la semana</FormLabel>
-                    <FormControl>
-                      <WeekdaysField value={field.value} onChange={field.onChange} />
-                    </FormControl>
-                    <FormDescription>Toca los días que se entrena en este bloque.</FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="start_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Inicio</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="end_date"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fin</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="date"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+          <form
+            id={`edit-block-${initial?.id ?? "new"}`}
+            onSubmit={save}
+            className="space-y-5 py-3"
+          >
+            {error ? (
+              <Alert variant="danger" title="Revisa el horario">
+                {error}
+              </Alert>
+            ) : null}
+            <fieldset>
+              <legend className="text-pool-deep mb-2 text-sm font-extrabold">Días</legend>
+              <div className="grid grid-cols-7 gap-1" role="group" aria-label="Días del horario">
+                {WEEKDAYS.map((day) => {
+                  const selected = weekdays.includes(day.value);
+                  return (
+                    <button
+                      key={day.value}
+                      type="button"
+                      aria-pressed={selected}
+                      aria-label={day.label}
+                      onClick={() => toggleDay(day.value)}
+                      className={cn(
+                        "focus-visible:ring-pool-blue flex min-h-12 min-w-0 items-center justify-center rounded-lg border text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
+                        selected
+                          ? "border-pool-blue bg-pool-blue text-paper"
+                          : "border-ink-300 text-ink-700",
+                      )}
+                    >
+                      {day.short}
+                    </button>
+                  );
+                })}
               </div>
-
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <FormField
-                  control={form.control}
-                  name="start_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hora de inicio</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="time"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+            </fieldset>
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">Empieza</span>
+                <Input
+                  type="time"
+                  value={startTime}
+                  onChange={(event) => setStartTime(event.target.value)}
                 />
-                <FormField
-                  control={form.control}
-                  name="end_time"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Hora de fin</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="time"
-                          value={field.value}
-                          onChange={field.onChange}
-                          onBlur={field.onBlur}
-                          name={field.name}
-                          ref={field.ref}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+              </label>
+              <label>
+                <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">Termina</span>
+                <Input
+                  type="time"
+                  value={endTime}
+                  onChange={(event) => setEndTime(event.target.value)}
                 />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Lugar (opcional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="Piscina del Puerto"
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="maps_url"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="url"
-                        inputMode="url"
-                        autoCapitalize="none"
-                        autoCorrect="off"
-                        placeholder="https://maps.app.goo.gl/..."
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Se copiará a todos los entrenamientos que genere este bloque.
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="kind"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tipo</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      >
-                        {KIND_OPTIONS.map((k) => (
-                          <option key={k.value} value={k.value}>
-                            {k.label}
-                          </option>
-                        ))}
-                      </Select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </form>
-          </Form>
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <label>
+                <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">Desde</span>
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                />
+              </label>
+              <label>
+                <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">Hasta</span>
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(event) => setEndDate(event.target.value)}
+                />
+              </label>
+            </div>
+            <label className="block">
+              <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">Lugar</span>
+              <Input value={location} onChange={(event) => setLocation(event.target.value)} />
+            </label>
+          </form>
         </SheetBody>
         <SheetFooter>
-          <SubmitButton label={isEdit ? "Guardar cambios" : "Crear y generar sesiones"} />
+          <Button
+            type="submit"
+            form={`edit-block-${initial?.id ?? "new"}`}
+            size="lg"
+            disabled={pending}
+          >
+            {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
+            {pending ? "Guardando…" : "Guardar horario"}
+          </Button>
         </SheetFooter>
       </SheetContent>
     </Sheet>

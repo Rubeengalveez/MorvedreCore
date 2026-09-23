@@ -69,37 +69,37 @@ const KIND_META: Record<
     label: "Recordatorio",
     Icon: Calendar,
     color: "var(--pool-blue)",
-    tone: "border-pool-blue/30 bg-pool-blue/5",
+    tone: "border-pool-blue bg-blue-50",
   },
   training_cancelled: {
     label: "Entreno cancelado",
     Icon: XCircle,
     color: "var(--danger)",
-    tone: "border-danger/30 bg-danger/5",
+    tone: "border-danger bg-red-50",
   },
   training_absence: {
     label: "Ausencia",
     Icon: UserX,
     color: "var(--danger)",
-    tone: "border-danger/30 bg-danger/5",
+    tone: "border-danger bg-red-50",
   },
   training_attendance_corrected: {
     label: "Corrección",
     Icon: UserCheck,
     color: "var(--success)",
-    tone: "border-success/30 bg-success/5",
+    tone: "border-success bg-emerald-50",
   },
   news_pinned: {
     label: "Noticia",
     Icon: Megaphone,
     color: "var(--pool-teal)",
-    tone: "border-pool-teal/30 bg-pool-teal/5",
+    tone: "border-pool-teal bg-cyan-50",
   },
   result_published: {
     label: "Resultado",
     Icon: Trophy,
     color: "var(--success)",
-    tone: "border-success/30 bg-success/5",
+    tone: "border-success bg-emerald-50",
   },
   monthly_close: {
     label: "Cierre mensual",
@@ -330,7 +330,7 @@ function NotificationRow({
       <Card
         asChild
         accentColor={meta.color}
-        className={cn("transition-shadow", isUnread ? "bg-pool-foam/20" : "bg-paper-card")}
+        className={cn("transition-shadow", isUnread ? "bg-pool-ice" : "bg-paper-card")}
       >
         <NotificationCardAction
           id={item.id}

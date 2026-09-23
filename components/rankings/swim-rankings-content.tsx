@@ -7,14 +7,18 @@ import { useTransition } from "react";
 import { Waves } from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
-import { hexToRgba } from "@/lib/utils/color";
+import { mixHexWithWhite } from "@/lib/utils/color";
 import { PositionChip } from "@/components/ui/position-chip";
 import { MetricTabs } from "@/components/rankings/metric-tabs";
 import { Pagination } from "@/components/rankings/pagination";
 import { ScopeTabs } from "@/components/rankings/scope-tabs";
 import { SwimPodium } from "@/components/rankings/swim-podium";
 import { useRankingAnchor } from "@/components/rankings/use-ranking-anchor";
-import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/domain/categories";
+import {
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  CATEGORY_SURFACE_COLORS,
+} from "@/lib/domain/categories";
 import {
   formatSwimTime,
   type SwimDistance,
@@ -24,7 +28,7 @@ import {
 import type { RankingScope } from "@/lib/domain/rankings";
 import type { RankingsPageMeta } from "@/server/queries/rankings";
 
-const ME_TINT = "rgba(244, 196, 48, 0.14)";
+const ME_TINT = mixHexWithWhite("#F4C430", 0.22);
 
 export function SwimRankingsContent({
   meta,
@@ -151,8 +155,13 @@ export function SwimRankingsContent({
                   const isTop10 = row.position <= 10;
                   const isMe = row.player_id === myPlayerId;
                   const isJumpTarget = row.player_id === jumpTargetPlayerId;
-                  const baseAlpha = isJumpTarget ? 0.18 : isTop10 ? 0.14 : 0.07;
-                  const backgroundColor = isMe ? ME_TINT : hexToRgba(teamColor, baseAlpha);
+                  const backgroundColor = isMe
+                    ? ME_TINT
+                    : isJumpTarget
+                      ? mixHexWithWhite(teamColor, 0.24)
+                      : row.category_code
+                        ? CATEGORY_SURFACE_COLORS[row.category_code]
+                        : mixHexWithWhite(teamColor, 0.18);
                   const tone = isMe ? "me" : isTop10 ? "top" : "default";
 
                   return (

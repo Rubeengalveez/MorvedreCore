@@ -24,7 +24,7 @@ export function DelegateMatchEntry({
       <p className="px-4 py-3 text-base text-slate-600">
         {finished
           ? "Consulta el acta y compártela con el equipo."
-          : "Anota desde aquí los goles y las expulsiones."}
+          : "Registra desde aquí las jugadas del partido."}
       </p>
       <a
         href={`/acta?match=${matchId}`}

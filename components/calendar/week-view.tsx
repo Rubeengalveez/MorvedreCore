@@ -84,7 +84,7 @@ export function WeekView({
 
               <div className="border-ink-200/50 flex-1 border-b py-3 pl-2 last:border-b-0">
                 {!hasEvents ? (
-                  <div className="bg-pool-ice/30 border-ink-200/30 text-ink-500 font-display flex items-center gap-2.5 rounded-xl border px-4 py-3.5 text-sm font-semibold select-none">
+                  <div className="bg-pool-ice border-ink-200/30 text-ink-500 font-display flex items-center gap-2.5 rounded-xl border px-4 py-3.5 text-sm font-semibold select-none">
                     <span className="bg-ink-400 h-1.5 w-1.5 rounded-full opacity-60" />
                     <span>Sin actividades · Descanso</span>
                   </div>

@@ -1,7 +1,11 @@
 import { PositionChip } from "@/components/ui/position-chip";
-import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/domain/categories";
+import {
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  CATEGORY_SURFACE_COLORS,
+} from "@/lib/domain/categories";
 import { cn } from "@/lib/utils/cn";
-import { hexToRgba } from "@/lib/utils/color";
+import { mixHexWithWhite } from "@/lib/utils/color";
 import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
 
 export interface RankingRowItemProps {
@@ -14,7 +18,7 @@ export interface RankingRowItemProps {
   showMedal?: boolean;
 }
 
-const ME_TINT = "rgba(244, 196, 48, 0.14)";
+const ME_TINT = mixHexWithWhite("#F4C430", 0.22);
 
 export function RankingRowItem({
   row,
@@ -28,8 +32,11 @@ export function RankingRowItem({
   const isTop10 = row.position <= 10;
   const tone = isMe ? "me" : isTop10 ? "top" : "default";
   const teamColor = CATEGORY_COLORS[row.category_code] ?? row.team_color ?? "#1E5AA8";
-  const baseAlpha = isJumpTarget ? 0.18 : isTop10 ? 0.14 : 0.07;
-  const backgroundColor = isMe ? ME_TINT : hexToRgba(teamColor, baseAlpha);
+  const backgroundColor = isMe
+    ? ME_TINT
+    : isJumpTarget
+      ? mixHexWithWhite(teamColor, 0.24)
+      : CATEGORY_SURFACE_COLORS[row.category_code] ?? mixHexWithWhite(teamColor, 0.18);
   const categoryLabel = CATEGORY_LABELS[row.category_code];
 
   return (

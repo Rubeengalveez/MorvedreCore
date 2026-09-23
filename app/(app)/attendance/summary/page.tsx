@@ -199,7 +199,7 @@ export default async function AttendanceSummaryPage({
         <Metric value={absent} label="Ausencias" tone="danger" />
       </section>
 
-      <div className="border-pool-blue/20 bg-pool-foam/60 text-ink-700 flex gap-3 rounded-xl border p-3 text-sm leading-5">
+      <div className="border-pool-blue bg-pool-ice text-ink-700 flex gap-3 rounded-xl border p-3 text-sm leading-5">
         <Info className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <p>
           Los porcentajes solo usan listas guardadas. Las sesiones todavía sin revisar aparecen en
@@ -305,10 +305,10 @@ function TeamReport({ report }: { report: AttendanceTeamReport }) {
                     player.percentage == null && "bg-ink-100 text-ink-600",
                     player.percentage != null &&
                       player.percentage >= 80 &&
-                      "bg-success/12 text-success",
+                      "border border-success bg-emerald-50 text-success",
                     player.percentage != null &&
                       player.percentage < 80 &&
-                      "bg-danger/10 text-danger",
+                      "border border-danger bg-red-50 text-danger",
                   )}
                 >
                   {player.percentage == null ? "—" : `${player.percentage} %`}
@@ -316,11 +316,11 @@ function TeamReport({ report }: { report: AttendanceTeamReport }) {
               </div>
               {player.total > 0 ? (
                 <div className="mt-2 grid grid-cols-2 gap-2 pl-14">
-                  <span className="bg-success/8 text-success inline-flex min-h-9 items-center justify-center gap-1 rounded-lg px-2 text-sm font-extrabold">
+                  <span className="border-success bg-emerald-50 text-success inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2 text-sm font-extrabold">
                     <Check className="h-4 w-4" aria-hidden="true" />
                     {player.attended} asistencias
                   </span>
-                  <span className="bg-danger/8 text-danger inline-flex min-h-9 items-center justify-center gap-1 rounded-lg px-2 text-sm font-extrabold">
+                  <span className="border-danger bg-red-50 text-danger inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2 text-sm font-extrabold">
                     <X className="h-4 w-4" aria-hidden="true" />
                     {player.absent} ausencias
                   </span>

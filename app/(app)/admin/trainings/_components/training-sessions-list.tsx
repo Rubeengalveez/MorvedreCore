@@ -1,6 +1,6 @@
 "use client";
 
-import { MdCheckCircle, MdAssignment, MdAutorenew, MdCancel } from "react-icons/md";
+import { CalendarX2, CheckCircle2, ClipboardCheck, Pencil, RotateCcw } from "lucide-react";
 import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -13,36 +13,25 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import { canEditAttendanceForDay } from "@/lib/domain/attendance";
+import { cn } from "@/lib/utils/cn";
+import { formatShortDate, formatTime, isPast } from "@/lib/utils/format";
 import { uncancelTrainingSession } from "@/server/actions/admin";
 
 import { AttendanceSheet, getSessionLabel, type AttendancePlayer } from "./attendance-sheet";
-export type { AttendancePlayer } from "./attendance-sheet";
 import { CancelSessionSheet } from "./cancel-session-sheet";
-import {
-  formatShortDate,
-  formatTime,
-  formatRelativeFromNow,
-  isPast,
-  formatWeekdayLetter,
-} from "@/lib/utils/format";
-import { cn } from "@/lib/utils/cn";
-import { canEditAttendanceForDay } from "@/lib/domain/attendance";
+import { TrainingSessionEditSheet } from "./training-session-edit-sheet";
 
 export interface TrainingSessionRow {
   id: string;
   block_id: string | null;
   team_id: string;
   scheduled_at: string;
+  duration_minutes: number;
   location: string | null;
+  maps_url?: string | null;
   cancelled: boolean;
   cancellation_reason: string | null;
-}
-
-export interface TrainingSessionsListProps {
-  blockLabel: string;
-  sessions: TrainingSessionRow[];
-  roster: AttendancePlayer[];
-  attendanceBySession: Record<string, Record<string, { present: boolean; reason: string | null }>>;
 }
 
 export function TrainingSessionsList({
@@ -50,201 +39,189 @@ export function TrainingSessionsList({
   sessions,
   roster,
   attendanceBySession,
-}: TrainingSessionsListProps) {
-  const sorted = [...sessions].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
-
-  if (sorted.length === 0) {
-    return (
-      <p className="text-ink-600 text-sm italic">
-        No hay sesiones generadas todavía para este bloque.
-      </p>
-    );
-  }
-
+}: {
+  blockLabel: string;
+  sessions: TrainingSessionRow[];
+  roster: AttendancePlayer[];
+  attendanceBySession: Record<string, Record<string, { present: boolean; reason: string | null }>>;
+}) {
+  if (sessions.length === 0) return null;
   return (
-    <ul className="flex flex-col gap-2">
-      {sorted.map((s) => {
-        const past = isPast(s.scheduled_at);
-        const canEditAttendance = canEditAttendanceForDay(s.scheduled_at);
-        return (
-          <li
-            key={s.id}
-            className={cn(
-              "bg-paper flex items-center gap-3 rounded-md border p-3",
-              s.cancelled
-                ? "border-danger/30 bg-danger/5"
-                : past
-                  ? "border-ink-300"
-                  : "border-pool-teal/40 bg-pool-foam/30",
-            )}
-          >
-            <div className="bg-paper text-pool-deep flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded">
-              <span className="text-ink-600 font-mono text-xs leading-none uppercase">
-                {formatWeekdayLetter(((new Date(s.scheduled_at).getDay() + 6) % 7) + 1)}
-              </span>
-              <span className="font-display text-base leading-none font-extrabold">
-                {new Date(s.scheduled_at).getDate()}
-              </span>
-            </div>
-            <div className="flex flex-1 flex-col">
-              <span className="font-display text-pool-deep text-sm font-bold">{blockLabel}</span>
-              <span className="text-ink-600 font-mono text-xs">
-                {formatTime(s.scheduled_at)}
-                {s.location ? ` · ${s.location}` : ""}
-              </span>
-              <span className="text-ink-600 text-xs">
-                {s.cancelled
-                  ? `Cancelada: ${s.cancellation_reason ?? "sin motivo"}`
-                  : formatRelativeFromNow(s.scheduled_at)}
-              </span>
-            </div>
-            <div className="flex shrink-0 flex-col gap-1">
-              {s.cancelled ? (
-                <UncancelButton sessionId={s.id} />
-              ) : (
-                <SessionActions
-                  sessionId={s.id}
-                  scheduledAt={s.scheduled_at}
-                  location={s.location}
-                  blockLabel={blockLabel}
-                  roster={applyAttendance(roster, attendanceBySession[s.id])}
-                  past={past}
-                  canEditAttendance={canEditAttendance}
-                />
-              )}
-            </div>
-          </li>
-        );
-      })}
+    <ul className="divide-ink-200 divide-y">
+      {[...sessions]
+        .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at))
+        .map((session) => (
+          <SessionRow
+            key={session.id}
+            session={session}
+            label={blockLabel}
+            roster={applyAttendance(roster, attendanceBySession[session.id])}
+          />
+        ))}
     </ul>
   );
 }
 
-function applyAttendance(
-  roster: AttendancePlayer[],
-  attendance: Record<string, { present: boolean; reason: string | null }> | undefined,
-): AttendancePlayer[] {
-  if (!attendance) return roster;
-  return roster.map((p) => {
-    const row = attendance[p.id];
-    if (!row) return { ...p, present: true, reason: null };
-    return { ...p, present: row.present, reason: row.reason };
-  });
+function SessionRow({
+  session,
+  label,
+  roster,
+}: {
+  session: TrainingSessionRow;
+  label: string;
+  roster: AttendancePlayer[];
+}) {
+  const past = isPast(session.scheduled_at);
+  const canEditAttendance = canEditAttendanceForDay(session.scheduled_at);
+  return (
+    <li className={cn("bg-paper-card px-4 py-4", session.cancelled && "bg-red-50/70")}>
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-pool-deep font-mono text-xl font-extrabold tabular-nums">
+            {formatTime(session.scheduled_at)}
+          </p>
+          <p className="text-ink-600 text-sm">{session.duration_minutes} min</p>
+        </div>
+        <p className="text-ink-700 mt-1 text-sm font-semibold">
+          {session.location || "Lugar sin indicar"}
+        </p>
+        {session.cancelled ? (
+          <p className="text-goggle-red mt-1 text-sm font-bold">
+            Cancelado · {session.cancellation_reason ?? "Sin motivo"}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-2">
+        {session.cancelled ? (
+          <UncancelButton sessionId={session.id} />
+        ) : (
+          <>
+            {!past ? (
+              <TrainingSessionEditSheet
+                session={session}
+                trigger={
+                  <Button variant="secondary" size="sm" className="min-h-12 flex-1">
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                    Editar día
+                  </Button>
+                }
+              />
+            ) : null}
+            <AttendanceAction
+              session={session}
+              label={label}
+              roster={roster}
+              canEdit={canEditAttendance}
+            />
+            {!past ? <CancelAction session={session} /> : null}
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function AttendanceAction({
+  session,
+  label,
+  roster,
+  canEdit,
+}: {
+  session: TrainingSessionRow;
+  label: string;
+  roster: AttendancePlayer[];
+  canEdit: boolean;
+}) {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant={canEdit ? "primary" : "ghost"} size="sm" className="min-h-12 flex-1">
+          {canEdit ? (
+            <ClipboardCheck className="h-4 w-4" aria-hidden="true" />
+          ) : (
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+          )}
+          {canEdit ? "Pasar lista" : "Ver lista"}
+        </Button>
+      </SheetTrigger>
+      <SheetContent size="lg">
+        <SheetHeader>
+          <SheetTitle>{canEdit ? "Pasar lista" : "Plantilla prevista"}</SheetTitle>
+          <SheetDescription>
+            {formatShortDate(session.scheduled_at)} · {formatTime(session.scheduled_at)} · {label}
+          </SheetDescription>
+        </SheetHeader>
+        <SheetBody>
+          <AttendanceSheet
+            sessionId={session.id}
+            sessionLabel={getSessionLabel(session.scheduled_at, session.location)}
+            players={roster}
+            canEdit={canEdit}
+            onClose={closeOpenSheet}
+          />
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function CancelAction({ session }: { session: TrainingSessionRow }) {
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-goggle-red min-h-12 px-3"
+          aria-label="Cancelar este entrenamiento"
+        >
+          <CalendarX2 className="h-5 w-5" aria-hidden="true" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent size="md">
+        <SheetHeader>
+          <SheetTitle>Cancelar este entrenamiento</SheetTitle>
+          <SheetDescription>
+            Solo se cancela este día. El resto del horario continúa igual.
+          </SheetDescription>
+        </SheetHeader>
+        <SheetBody>
+          <CancelSessionSheet sessionId={session.id} trigger={null} onDone={closeOpenSheet} />
+        </SheetBody>
+      </SheetContent>
+    </Sheet>
+  );
 }
 
 function UncancelButton({ sessionId }: { sessionId: string }) {
   const [pending, startTransition] = useTransition();
   return (
     <Button
-      variant="ghost"
+      variant="secondary"
       size="sm"
-      className="text-success hover:bg-success/10 h-12 w-12 min-w-12 p-0"
-      aria-label="Reactivar sesión"
+      className="min-h-12"
       disabled={pending}
-      onClick={() =>
-        startTransition(async () => {
-          await uncancelTrainingSession(sessionId);
-        })
-      }
+      onClick={() => startTransition(() => uncancelTrainingSession(sessionId))}
     >
-      {pending ? (
-        <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
-      ) : (
-        <MdCheckCircle className="h-4 w-4" aria-hidden="true" />
-      )}
+      <RotateCcw className={cn("h-4 w-4", pending && "animate-spin")} aria-hidden="true" />
+      {pending ? "Reactivando…" : "Reactivar"}
     </Button>
   );
 }
 
-function SessionActions({
-  sessionId,
-  scheduledAt,
-  location,
-  blockLabel,
-  roster,
-  past,
-  canEditAttendance,
-}: {
-  sessionId: string;
-  scheduledAt: string;
-  location: string | null;
-  blockLabel: string;
-  roster: AttendancePlayer[];
-  past: boolean;
-  canEditAttendance: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <Sheet>
-        <SheetTrigger asChild>
-          <Button
-            variant={past || !canEditAttendance ? "secondary" : "primary"}
-            size="sm"
-            className="h-12 px-3"
-            aria-label={canEditAttendance ? "Pasar lista" : "Ver plantilla prevista"}
-          >
-            <MdAssignment className="h-4 w-4" aria-hidden="true" />
-            {canEditAttendance ? "Lista" : "Ver"}
-          </Button>
-        </SheetTrigger>
-        <SheetContent size="lg">
-          <SheetHeader>
-            <SheetTitle>{canEditAttendance ? "Pasar lista" : "Plantilla prevista"}</SheetTitle>
-            <SheetDescription>
-              {formatShortDate(scheduledAt)} · {formatTime(scheduledAt)} · {blockLabel}
-            </SheetDescription>
-          </SheetHeader>
-          <SheetBody>
-            <AttendanceSheet
-              sessionId={sessionId}
-              sessionLabel={getSessionLabel(scheduledAt, location)}
-              players={roster}
-              canEdit={canEditAttendance}
-              onClose={() => {
-                const close = document.querySelector<HTMLButtonElement>(
-                  'button[aria-label="Cerrar"]',
-                );
-                close?.click();
-              }}
-            />
-          </SheetBody>
-        </SheetContent>
-      </Sheet>
+function applyAttendance(
+  players: AttendancePlayer[],
+  attendance: Record<string, { present: boolean; reason: string | null }> | undefined,
+) {
+  if (!attendance) return players;
+  return players.map((player) => ({
+    ...player,
+    present: attendance[player.id]?.present ?? true,
+    reason: attendance[player.id]?.reason ?? null,
+  }));
+}
 
-      {!past ? (
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-danger hover:bg-danger/10 h-12 w-12 min-w-12 p-0"
-              aria-label="Cancelar sesión"
-            >
-              <MdCancel className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent size="md">
-            <SheetHeader>
-              <SheetTitle>Cancelar sesión</SheetTitle>
-              <SheetDescription>
-                Indica el motivo. Los jugadores recibirán un aviso.
-              </SheetDescription>
-            </SheetHeader>
-            <SheetBody>
-              <CancelSessionSheet
-                sessionId={sessionId}
-                trigger={null}
-                onDone={() => {
-                  const close = document.querySelector<HTMLButtonElement>(
-                    'button[aria-label="Cerrar"]',
-                  );
-                  close?.click();
-                }}
-              />
-            </SheetBody>
-          </SheetContent>
-        </Sheet>
-      ) : null}
-    </div>
-  );
+function closeOpenSheet() {
+  document.querySelector<HTMLButtonElement>('button[aria-label="Cerrar"]')?.click();
 }

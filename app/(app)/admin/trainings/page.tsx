@@ -1,9 +1,8 @@
-import { MdAdd } from "react-icons/md";
 import Link from "next/link";
 import type { Route } from "next";
-import { Dumbbell } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
+import { Calendario } from "@/components/brand/pictograms/calendario";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,7 +12,6 @@ import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import { getTeamScope } from "@/lib/domain/permissions";
 
 import { TrainingsList } from "./_components/trainings-list";
-import { TrainingScheduleFormSheet } from "./_components/training-schedule-form-sheet";
 import type { AttendancePlayer } from "./_components/attendance-sheet";
 
 export const dynamic = "force-dynamic";
@@ -104,8 +102,12 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
       ? (teams.find((t) => t.season_id === currentSeason.id)?.id ?? null)
       : null;
 
-  const currentTeamIds = new Set(teams.filter((team) => team.season_id === currentSeason?.id).map((team) => team.id));
-  const blocks = ((blocksData ?? []) as TrainingBlockRow[]).filter((block) => currentTeamIds.has(block.team_id));
+  const currentTeamIds = new Set(
+    teams.filter((team) => team.season_id === currentSeason?.id).map((team) => team.id),
+  );
+  const blocks = ((blocksData ?? []) as TrainingBlockRow[]).filter((block) =>
+    currentTeamIds.has(block.team_id),
+  );
 
   if (firstError) {
     return {
@@ -302,11 +304,11 @@ export default async function TrainingsPage() {
       <AdminPageShell>
         <AdminPageHeader
           title="Entrenamientos"
-          description="Bloques, sesiones y listas de asistencia."
-          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+          description="Crea el horario por categoría y corrige días sueltos."
+          icon={<Calendario className="h-6 w-6" aria-hidden="true" />}
         />
         <EmptyState
-          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+          icon={<Calendario className="h-6 w-6" aria-hidden="true" />}
           title="Primero crea una temporada"
           description="Los bloques de entrenamiento pertenecen a un equipo de una temporada activa."
           action={
@@ -324,11 +326,11 @@ export default async function TrainingsPage() {
       <AdminPageShell>
         <AdminPageHeader
           title="Entrenamientos"
-          description="Bloques, sesiones y listas de asistencia."
-          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+          description="Crea el horario por categoría y corrige días sueltos."
+          icon={<Calendario className="h-6 w-6" aria-hidden="true" />}
         />
         <EmptyState
-          icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
+          icon={<Calendario className="h-6 w-6" aria-hidden="true" />}
           title="Primero crea un equipo"
           description="Cada bloque de entrenamiento debe estar asignado a un equipo."
           action={
@@ -345,24 +347,9 @@ export default async function TrainingsPage() {
     <AdminPageShell>
       <AdminPageHeader
         title="Entrenamientos"
-        description="Bloques, sesiones y listas de asistencia."
-        icon={<Dumbbell className="h-6 w-6" aria-hidden="true" />}
-        action={
-          currentSeasonId && teams.length > 0 ? (
-            <TrainingScheduleFormSheet
-              seasons={seasons.filter((season) => season.id === currentSeasonId)}
-              teams={teams}
-              defaultTeamId={defaultTeamId}
-              defaultSeasonId={currentSeasonId}
-              trigger={
-                <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-                  <MdAdd className="h-6 w-6" aria-hidden="true" />
-                  <span>Crear horario</span>
-                </Button>
-              }
-            />
-          ) : undefined
-        }
+        description={null}
+        icon={<Calendario className="h-6 w-6" aria-hidden="true" />}
+        eyebrow={null}
       />
 
       {error ? (

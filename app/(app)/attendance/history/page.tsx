@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Info,
   Minus,
+  UsersRound,
   X,
 } from "lucide-react";
 
@@ -79,6 +80,9 @@ export default async function AttendanceHistoryPage({
   const candidates = profilesWithTeams
     .filter((entry) => entry.teams.length > 0)
     .map((entry) => entry.profile);
+  const childCandidates = candidates.filter((profile) =>
+    ctx.linkedProfiles.some((linkedProfile) => linkedProfile.id === profile.id),
+  );
 
   if (candidates.length === 0) {
     return (
@@ -93,13 +97,19 @@ export default async function AttendanceHistoryPage({
     );
   }
 
-  const selectedProfile =
-    candidates.find((profile) => profile.id === params.player) ?? candidates[0]!;
+  const showFamilySelector = childCandidates.length > 1;
+  const requestedProfile = childCandidates.find((profile) => profile.id === params.player);
+  const selectedProfiles = showFamilySelector
+    ? requestedProfile
+      ? [requestedProfile]
+      : childCandidates
+    : [childCandidates[0] ?? candidates[0]!];
+  const selectedProfile = selectedProfiles.length === 1 ? selectedProfiles[0] : null;
   const month = isMonthKey(params.month) ? params.month : monthKeyFromDate();
   const { from, to } = getMonthRange(month);
   const records = await getAttendanceHistory({
     seasonId: season.id,
-    playerIds: [selectedProfile.id],
+    playerIds: selectedProfiles.map((profile) => profile.id),
     from,
     to,
   });
@@ -108,7 +118,20 @@ export default async function AttendanceHistoryPage({
   const monthDate = new Date(Date.UTC(year ?? 2000, (monthNumber ?? 1) - 1, 1, 12));
   const previousMonth = shiftMonthKey(month, -1);
   const nextMonth = shiftMonthKey(month, 1);
-  const playerQuery = `player=${selectedProfile.id}`;
+  const playerQuery = `player=${selectedProfile?.id ?? "all"}`;
+  const selectedNames = selectedProfiles.map(
+    (profile) => profile.full_name.split(/\s+/)[0] ?? profile.full_name,
+  );
+  const profileById = new Map(selectedProfiles.map((profile) => [profile.id, profile]));
+  const recordsByDay = Array.from(
+    records.reduce((groups, record) => {
+      const day = dayFormatter.format(new Date(record.scheduled_at));
+      const entries = groups.get(day);
+      if (entries) entries.push(record);
+      else groups.set(day, [record]);
+      return groups;
+    }, new Map<string, typeof records>()),
+  );
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
@@ -117,25 +140,39 @@ export default async function AttendanceHistoryPage({
       <PageHeader
         eyebrow="Temporada actual"
         title="Historial de asistencia"
-        description={`Días registrados de ${selectedProfile.full_name}.`}
+        description={`Días registrados de ${selectedNames.join(" y ")}.`}
         icon={<CalendarCheck2 className="h-5 w-5" aria-hidden="true" />}
-        teamColor={selectedProfile.team_color}
+        teamColor={selectedProfile?.team_color}
       />
 
-      {candidates.length > 1 ? (
+      {showFamilySelector ? (
         <nav
           aria-label="Elegir jugador"
-          className="border-ink-200 bg-paper-card grid gap-2 rounded-2xl border p-2 sm:grid-cols-2"
+          className="border-ink-200 bg-paper-card grid grid-cols-3 gap-2 rounded-2xl border p-2"
         >
-          {candidates.map((profile) => {
-            const selected = profile.id === selectedProfile.id;
+          <Link
+            href={`/attendance/history?player=all&month=${month}` as Route}
+            aria-current={selectedProfile === null ? "page" : undefined}
+            className={cn(
+              "focus-visible:ring-pool-blue flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+              selectedProfile === null
+                ? "bg-pool-deep text-paper shadow-elev-1"
+                : "bg-paper-sunk text-pool-deep hover:bg-pool-foam",
+            )}
+          >
+            <UsersRound className="h-5 w-5" aria-hidden="true" />
+            Todos
+          </Link>
+          {childCandidates.map((profile) => {
+            const selected = profile.id === selectedProfile?.id;
             return (
               <Link
                 key={profile.id}
                 href={`/attendance/history?player=${profile.id}&month=${month}` as Route}
                 aria-current={selected ? "page" : undefined}
+                aria-label={`Ver asistencia de ${profile.full_name}`}
                 className={cn(
-                  "focus-visible:ring-pool-blue flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
+                  "focus-visible:ring-pool-blue flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2 transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
                   selected
                     ? "bg-pool-deep text-paper shadow-elev-1"
                     : "bg-paper-sunk text-pool-deep hover:bg-pool-foam",
@@ -144,10 +181,12 @@ export default async function AttendanceHistoryPage({
                 <Avatar
                   name={profile.full_name}
                   src={profile.photo_url}
-                  size={38}
+                  size={28}
                   teamColor={profile.team_color ?? undefined}
                 />
-                <span className="min-w-0 truncate text-sm font-extrabold">{profile.full_name}</span>
+                <span className="min-w-0 truncate text-sm font-extrabold">
+                  {profile.full_name.split(/\s+/)[0] ?? profile.full_name}
+                </span>
               </Link>
             );
           })}
@@ -192,6 +231,7 @@ export default async function AttendanceHistoryPage({
           year={year ?? 2000}
           month={(monthNumber ?? 1) - 1}
           records={records}
+          profiles={selectedProfiles}
         />
 
         <div className="text-ink-700 flex flex-wrap gap-x-4 gap-y-2 px-1 text-sm font-semibold">
@@ -201,8 +241,10 @@ export default async function AttendanceHistoryPage({
         </div>
       </section>
 
-      <div className="border-pool-blue/20 bg-pool-foam/60 text-ink-700 flex gap-3 rounded-xl border p-3 text-sm leading-5">
-        <Info className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+      <div className="border-ink-300 bg-paper-card text-ink-900 shadow-elev-1 flex items-start gap-3 rounded-xl border p-3 text-sm leading-5">
+        <span className="bg-pool-deep text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+          <Info className="h-5 w-5" aria-hidden="true" />
+        </span>
         <p>
           Solo cuentan las listas guardadas por un entrenador. Un entrenamiento sin lista no se
           muestra como ausencia.
@@ -217,43 +259,59 @@ export default async function AttendanceHistoryPage({
           Detalle del mes
         </h2>
         {records.length > 0 ? (
-          <ol className="flex flex-col gap-2">
-            {records.map((record) => (
-              <li
-                key={`${record.session_id}-${record.player_id}`}
-                className={cn(
-                  "border-ink-200 bg-paper-card shadow-elev-1 flex min-h-18 items-center gap-3 rounded-xl border p-3",
-                  record.present ? "border-l-success border-l-4" : "border-l-danger border-l-4",
-                )}
-              >
-                <span
-                  className={cn(
-                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl",
-                    record.present ? "bg-success/12 text-success" : "bg-danger/12 text-danger",
-                  )}
-                  aria-hidden="true"
-                >
-                  {record.present ? <Check className="h-6 w-6" /> : <X className="h-6 w-6" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-pool-deep text-base leading-tight font-extrabold capitalize">
-                    {dayFormatter.format(new Date(record.scheduled_at))}
-                  </p>
-                  <p className="text-ink-600 mt-1 text-sm font-semibold">
-                    {record.team_label} · {timeFormatter.format(new Date(record.scheduled_at))}
-                  </p>
-                  {!record.present && record.reason ? (
-                    <p className="text-ink-700 mt-1 text-sm">Motivo: {record.reason}</p>
-                  ) : null}
-                </div>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-lg px-2 py-1 text-xs font-extrabold",
-                    record.present ? "bg-success/12 text-success" : "bg-danger/12 text-danger",
-                  )}
-                >
-                  {record.present ? "Asistió" : "Ausente"}
-                </span>
+          <ol className="flex flex-col gap-2.5">
+            {recordsByDay.map(([day, dayRecords]) => (
+              <li key={day}>
+                <section className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-xl border">
+                  <h3 className="bg-pool-ice text-pool-deep border-ink-200 border-b px-3 py-2 text-sm leading-none font-extrabold first-letter:uppercase">
+                    {day}
+                  </h3>
+                  <ol className="divide-ink-200 divide-y">
+                    {dayRecords.map((record) => {
+                      const profileName =
+                        profileById.get(record.player_id)?.full_name ?? "Jugador";
+                      return (
+                        <li
+                          key={`${record.session_id}-${record.player_id}`}
+                          className="grid min-h-14 grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-2.5 px-3 py-2"
+                        >
+                          <span
+                            className={cn(
+                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                              record.present
+                                ? "bg-emerald-50 text-success"
+                                : "bg-red-50 text-danger",
+                            )}
+                          >
+                            {record.present ? (
+                              <Check className="h-5 w-5" aria-hidden="true" />
+                            ) : (
+                              <X className="h-5 w-5" aria-hidden="true" />
+                            )}
+                            <span className="sr-only">
+                              {record.present ? "Asistió" : "Ausente"}
+                            </span>
+                          </span>
+                          <div className="min-w-0">
+                            <p className="text-pool-deep truncate text-sm leading-tight font-extrabold">
+                              {selectedProfiles.length > 1 ? profileName : record.team_label}
+                            </p>
+                            <p className="text-ink-600 mt-0.5 truncate text-xs leading-tight font-semibold">
+                              {selectedProfiles.length > 1 ? record.team_label : "Entrenamiento"}
+                              {!record.present && record.reason ? ` · ${record.reason}` : ""}
+                            </p>
+                          </div>
+                          <time
+                            dateTime={record.scheduled_at}
+                            className="text-pool-deep font-mono text-sm font-extrabold tabular-nums"
+                          >
+                            {timeFormatter.format(new Date(record.scheduled_at))}
+                          </time>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                </section>
               </li>
             ))}
           </ol>
@@ -281,10 +339,10 @@ function SummaryCard({
   return (
     <div
       className={cn(
-        "flex min-h-20 flex-col items-center justify-center rounded-xl border px-2 py-3 text-center",
-        tone === "success" && "border-success/30 bg-success/8",
-        tone === "danger" && "border-danger/30 bg-danger/8",
-        tone === "brand" && "border-pool-blue/25 bg-pool-foam",
+        "border-ink-300 bg-paper-card shadow-elev-1 flex min-h-20 flex-col items-center justify-center rounded-xl border border-t-4 px-2 py-3 text-center",
+        tone === "success" && "border-t-success",
+        tone === "danger" && "border-t-danger",
+        tone === "brand" && "border-t-pool-blue",
       )}
     >
       <strong
@@ -297,7 +355,7 @@ function SummaryCard({
       >
         {value}
       </strong>
-      <span className="text-ink-700 mt-2 text-xs leading-tight font-extrabold">{label}</span>
+      <span className="text-ink-900 mt-2 text-xs leading-tight font-extrabold">{label}</span>
     </div>
   );
 }

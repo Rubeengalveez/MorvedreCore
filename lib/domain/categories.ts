@@ -23,6 +23,16 @@ export const CATEGORY_COLORS: Record<CategoryCode, string> = {
   escuela: "#16A34A",
 };
 
+export const CATEGORY_SURFACE_COLORS: Record<CategoryCode, string> = {
+  benjamin: "#D8F5EA",
+  alevin: "#FFF0B8",
+  infantil: "#FFD09A",
+  cadete: "#ADD4FF",
+  juvenil: "#F6B4BC",
+  absoluto: "#BFC0C4",
+  escuela: "#D9F2DF",
+};
+
 export const CATEGORY_DEFAULT_GENDER: Record<CategoryCode, TeamGender> = {
   benjamin: "mixed",
   alevin: "mixed",

@@ -16,10 +16,10 @@ import styles from "./live-match.module.css";
 import { ActaPlayerName } from "./acta-player-name";
 
 const outcomeTone: Record<Shootout["shots"][number]["outcome"], string> = {
-  goal: "bg-emerald-500 text-white",
-  save: "bg-red-500 text-white",
-  out: "bg-red-500 text-white",
-  post: "bg-red-500 text-white",
+  goal: "bg-[#062048] text-white",
+  save: "bg-red-800 text-white",
+  out: "bg-red-800 text-white",
+  post: "bg-red-800 text-white",
 };
 
 export function ActaShootout({
@@ -317,14 +317,14 @@ export function ActaShootout({
                             setCap(player.cap);
                             setMissed(false);
                           }}
-                          className="flex min-h-16 items-center gap-3 rounded-xl border-2 border-[#b8cada] bg-white px-3 text-left active:border-[#1657a8] active:bg-blue-50 disabled:opacity-40"
+                          className="flex min-h-16 items-center gap-2 rounded-xl border-2 border-[#b8cada] bg-white px-2 text-left active:border-[#1657a8] active:bg-blue-50 disabled:opacity-40"
                         >
                           <span
                             className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl font-mono text-xl font-black ${turnIsUs ? "bg-[#062048] text-white" : "bg-[#f4c430] text-[#062048]"}`}
                           >
                             {player.cap}
                           </span>
-                          <span className="min-w-0 flex-1 text-sm leading-tight font-extrabold">
+                          <span className="min-w-0 flex-1 text-base leading-tight font-extrabold">
                             <ActaPlayerName name={player.name} />
                             {alreadyShot.has(player.cap) && (
                               <span className="block text-xs font-semibold text-slate-600">
@@ -371,7 +371,7 @@ export function ActaShootout({
                           </button>
                           <button
                             type="button"
-                            className={`${styles.action} ${styles.actionShotMissed} !border-2 !border-[#b91c1c] !bg-white !text-[#991b1b]`}
+                            className={`${styles.action} ${styles.actionDangerOutline}`}
                             disabled={!enabled}
                             onClick={() => setMissed(true)}
                           >
@@ -389,7 +389,7 @@ export function ActaShootout({
                           </p>
                           <button
                             type="button"
-                            className={`${styles.action} ${styles.actionShotOut} !border-[#062048] !bg-[#f4c430] !text-[#062048]`}
+                            className={`${styles.action} ${styles.actionShotOut}`}
                             disabled={!enabled}
                             onClick={() => void recordShot("out")}
                           >
@@ -397,7 +397,7 @@ export function ActaShootout({
                           </button>
                           <button
                             type="button"
-                            className={`${styles.action} ${styles.actionSave} !border-[#062048] !bg-[#062048] !text-white`}
+                            className={`${styles.action} ${styles.actionSave}`}
                             disabled={!enabled}
                             onClick={() => void recordShot("save")}
                           >

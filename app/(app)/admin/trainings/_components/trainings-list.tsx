@@ -1,18 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { CalendarDays, CalendarPlus, Pencil, Repeat2 } from "lucide-react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
+import { cn } from "@/lib/utils/cn";
+import { formatDayMonth, formatTimeRange, formatWeekdaysLong } from "@/lib/utils/format";
+import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
 
-import { TrainingBlockCard, type TrainingBlockCardProps } from "./training-block-card";
+import type { AttendancePlayer } from "./attendance-sheet";
 import { TrainingBlockFormSheet } from "./training-block-form-sheet";
 import { TrainingScheduleFormSheet } from "./training-schedule-form-sheet";
-import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
-import type { AttendancePlayer } from "./attendance-sheet";
-import { MdEdit, MdSports } from "react-icons/md";
+import { TrainingSessionsList } from "./training-sessions-list";
 
 type TeamOption = Team & { season_label: string };
+type View = "sessions" | "schedule";
 
 export interface TrainingsListProps {
   seasons: Season[];
@@ -25,6 +28,19 @@ export interface TrainingsListProps {
   attendanceBySession: Record<string, Record<string, { present: boolean; reason: string | null }>>;
 }
 
+const dayKey = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Europe/Madrid",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+const dayLabel = new Intl.DateTimeFormat("es-ES", {
+  timeZone: "Europe/Madrid",
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
 export function TrainingsList({
   seasons,
   teams,
@@ -35,130 +51,180 @@ export function TrainingsList({
   rosterByTeam,
   attendanceBySession,
 }: TrainingsListProps) {
-  const [filter, setFilter] = useState<string>(defaultTeamId ?? "");
-
-  const filteredBlocks = useMemo(() => {
-    if (!filter) return blocks;
-    return blocks.filter((b) => b.team_id === filter);
-  }, [blocks, filter]);
-
-  const teamById = useMemo(() => {
-    const map = new Map<string, TeamOption>();
-    for (const t of teams) map.set(t.id, t);
-    return map;
-  }, [teams]);
-  const nextSessions = useMemo(
-    () => Object.values(sessionsByBlock).reduce((total, sessions) => total + sessions.length, 0),
-    [sessionsByBlock],
-  );
-  const currentSeason = seasons.find((season) => season.id === currentSeasonId) ?? null;
+  const [teamId, setTeamId] = useState(defaultTeamId ?? teams[0]?.id ?? "");
+  const [view, setView] = useState<View>("sessions");
+  const team = teams.find((item) => item.id === teamId) ?? teams[0]!;
+  const filteredBlocks = blocks.filter((block) => block.team_id === team.id);
+  const sessions = filteredBlocks
+    .flatMap((block) => (sessionsByBlock[block.id] ?? []).map((session) => ({ session, block })))
+    .sort((a, b) => a.session.scheduled_at.localeCompare(b.session.scheduled_at));
+  const days = new Map<string, typeof sessions>();
+  for (const entry of sessions) {
+    const key = dayKey.format(new Date(entry.session.scheduled_at));
+    days.set(key, [...(days.get(key) ?? []), entry]);
+  }
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className="bg-pool-deep text-paper relative overflow-hidden rounded-2xl p-4 shadow-elev-1">
-        <span className="lane-pattern absolute inset-0 opacity-15" aria-hidden="true" />
-        <div className="relative flex flex-col gap-4">
-          <div>
-            <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">
-              {currentSeason?.label ?? "Temporada actual"}
-            </p>
-            <h2 className="mt-1 text-xl font-extrabold">Planificación de entrenamientos</h2>
-            <p className="text-paper/75 mt-1 text-sm">Aquí solo se trabaja con los equipos activos esta temporada.</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
-              <p className="text-paper/70 text-xs font-bold">Horarios activos</p>
-              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{blocks.length}</p>
-            </div>
-            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
-              <p className="text-paper/70 text-xs font-bold">Próximas sesiones</p>
-              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{nextSessions}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <div className="border-ink-200 bg-paper-card flex flex-col gap-2 rounded-2xl border p-3 shadow-elev-1">
-        <label htmlFor="team-filter" className="text-pool-deep text-sm font-extrabold">
-          Ver planificación de
+    <section className="border-ink-300 bg-paper-card overflow-hidden rounded-2xl border-2">
+      <div className="border-ink-300 grid gap-3 border-b-2 p-4 min-[560px]:grid-cols-[1fr_auto] min-[560px]:items-end">
+        <label>
+          <span className="text-pool-deep mb-1.5 block text-sm font-extrabold">Categoría</span>
+          <Select
+            value={team.id}
+            onChange={(event) => setTeamId(event.target.value)}
+            aria-label="Categoría"
+            className="h-14 min-h-14 rounded-xl border-2 text-lg font-semibold"
+          >
+            {teams.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </Select>
         </label>
-        <Select id="team-filter" value={filter} onChange={(e) => setFilter(e.target.value)}>
-          <option value="">Todos los equipos activos</option>
-          {teams.map((team) => (
-            <option key={team.id} value={team.id}>
-              {team.label}
-            </option>
-          ))}
-        </Select>
-        <p className="text-ink-500 text-xs font-semibold">No se muestran equipos de temporadas anteriores.</p>
+        <TrainingScheduleFormSheet
+          key={team.id}
+          seasons={seasons.filter((item) => item.id === currentSeasonId)}
+          teams={teams}
+          defaultTeamId={team.id}
+          defaultSeasonId={currentSeasonId}
+          trigger={
+            <Button size="lg" className="w-full min-[560px]:w-auto">
+              <CalendarPlus className="h-5 w-5" aria-hidden="true" />
+              Añadir entrenamientos
+            </Button>
+          }
+        />
       </div>
 
-      {filteredBlocks.length === 0 ? (
-        <div className="border-ink-300 bg-paper flex flex-col items-center gap-4 rounded-md border border-dashed p-8 text-center">
-          <MdSports aria-hidden="true" className="text-pool-blue h-12 w-12" />
-          <div className="flex flex-col gap-1">
-            <p className="text-pool-deep text-base font-semibold">
-              {filter ? "No hay bloques para este equipo." : "La piscina está tranquila."}
-            </p>
-            <p className="text-ink-600 text-sm">
-              {filter
-                ? "Crea un bloque de entrenamientos con el botón de arriba."
-                : "Crea el primer bloque de entrenamientos para tu equipo."}
-            </p>
-          </div>
-          <TrainingScheduleFormSheet
-            seasons={seasons}
-            teams={teams}
-            defaultTeamId={defaultTeamId}
-            defaultSeasonId={currentSeasonId}
-            trigger={
-              <Button size="md">
-                <span className="hidden sm:inline">Crear horario semanal</span>
-                <span className="sm:hidden">Crear horario</span>
-              </Button>
-            }
-          />
+      <div
+        className="border-ink-300 grid grid-cols-2 border-b-2"
+        role="tablist"
+        aria-label="Gestión de entrenamientos"
+      >
+        <Tab active={view === "sessions"} onClick={() => setView("sessions")} icon={CalendarDays}>
+          Sesiones
+        </Tab>
+        <Tab active={view === "schedule"} onClick={() => setView("schedule")} icon={Repeat2}>
+          Horario semanal
+        </Tab>
+      </div>
+
+      {view === "sessions" ? (
+        <div>
+          {days.size > 0 ? (
+            [...days.entries()].map(([key, entries], index) => (
+              <section key={key} className={cn(index > 0 && "border-ink-200 border-t")}>
+                <h2 className="border-ink-200 text-pool-deep border-b px-4 py-3 text-sm font-extrabold first-letter:uppercase">
+                  {dayLabel.format(new Date(entries[0]!.session.scheduled_at))}
+                </h2>
+                {entries.map(({ session, block }) => (
+                  <TrainingSessionsList
+                    key={session.id}
+                    blockLabel={team.label}
+                    sessions={[session]}
+                    roster={rosterByTeam[block.team_id] ?? []}
+                    attendanceBySession={attendanceBySession}
+                  />
+                ))}
+              </section>
+            ))
+          ) : (
+            <EmptyState
+              title="No hay sesiones próximas"
+              actionLabel="Ver horario semanal"
+              onAction={() => setView("schedule")}
+            />
+          )}
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {filteredBlocks.map((b) => {
-            const team = teamById.get(b.team_id);
-            if (!team) return null;
-            const cardProps: TrainingBlockCardProps = {
-              block: {
-                id: b.id,
-                label: b.label,
-                weekdays: b.weekdays,
-                start_date: b.start_date,
-                end_date: b.end_date,
-                start_time: b.start_time,
-                end_time: b.end_time,
-                location: b.location,
-                kind: b.kind,
-              },
-              team: { id: team.id, label: team.label, color: team.color },
-              sessions: sessionsByBlock[b.id] ?? [],
-              roster: rosterByTeam[b.team_id] ?? [],
-              attendanceBySession: attendanceBySession,
-              editAction: (
-                <TrainingBlockFormSheet
-                  teams={teams}
-                  defaultTeamId={b.team_id}
-                  defaultSeasonId={currentSeasonId}
-                  initial={b}
-                  trigger={
-                    <Button type="button" variant="secondary" size="sm">
-                      <MdEdit className="h-4 w-4" aria-hidden="true" />
-                      Editar horario
-                    </Button>
-                  }
-                />
-              ),
-            };
-            return <TrainingBlockCard key={b.id} {...cardProps} />;
-          })}
+        <div>
+          {filteredBlocks.length > 0 ? (
+            <ul className="divide-ink-200 divide-y">
+              {filteredBlocks.map((block) => (
+                <li key={block.id} className="flex items-start gap-3 p-4">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-pool-deep font-mono text-lg font-extrabold tabular-nums">
+                      {formatTimeRange(block.start_time.slice(0, 5), block.end_time.slice(0, 5))}
+                    </p>
+                    <p className="text-ink-900 mt-1 text-sm font-bold">
+                      {formatWeekdaysLong(block.weekdays)}
+                    </p>
+                    <p className="text-ink-600 mt-1 text-sm">
+                      {formatDayMonth(block.start_date)} – {formatDayMonth(block.end_date)}
+                      {block.location ? ` · ${block.location}` : ""}
+                    </p>
+                  </div>
+                  <TrainingBlockFormSheet
+                    teams={teams}
+                    defaultTeamId={block.team_id}
+                    defaultSeasonId={currentSeasonId}
+                    initial={block}
+                    trigger={
+                      <Button variant="secondary" size="icon" aria-label="Editar horario">
+                        <Pencil className="h-5 w-5" aria-hidden="true" />
+                      </Button>
+                    }
+                  />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <EmptyState title="Esta categoría no tiene horario" />
+          )}
         </div>
       )}
+    </section>
+  );
+}
+
+function Tab({
+  active,
+  onClick,
+  icon: Icon,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  icon: typeof CalendarDays;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      className={cn(
+        "focus-visible:ring-pool-blue relative flex min-h-14 items-center justify-center gap-2 px-2 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset",
+        active ? "text-pool-blue" : "text-ink-600 hover:text-pool-deep",
+      )}
+    >
+      <Icon className="h-4 w-4" aria-hidden="true" />
+      {children}
+      {active ? <span className="bg-pool-blue absolute inset-x-4 bottom-0 h-0.5" /> : null}
+    </button>
+  );
+}
+
+function EmptyState({
+  title,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center px-6 py-12 text-center">
+      <CalendarDays className="text-ink-400 h-8 w-8" aria-hidden="true" />
+      <h2 className="text-pool-deep mt-3 font-extrabold">{title}</h2>
+      {actionLabel && onAction ? (
+        <Button variant="secondary" className="mt-4" onClick={onAction}>
+          {actionLabel}
+        </Button>
+      ) : null}
     </div>
   );
 }

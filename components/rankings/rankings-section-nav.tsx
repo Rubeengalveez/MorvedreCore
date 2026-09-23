@@ -14,7 +14,7 @@ export function RankingsSectionNav({ active }: { active: (typeof ITEMS)[number][
   return (
     <nav
       aria-label="Secciones de rankings"
-      className="border-ink-200 bg-paper-sunk/85 grid grid-cols-3 gap-1 rounded-xl border p-1"
+      className="border-ink-200 bg-paper-sunk grid grid-cols-3 gap-1 rounded-xl border p-1"
     >
       {ITEMS.map(({ id, href, label, icon: Icon }) => {
         const isActive = active === id;

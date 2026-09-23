@@ -3,7 +3,13 @@ import type { Route } from "next";
 
 import { Avatar } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils/cn";
-import { CATEGORY_COLORS, CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { mixHexWithWhite } from "@/lib/utils/color";
+import {
+  CATEGORY_COLORS,
+  CATEGORY_LABELS,
+  CATEGORY_SURFACE_COLORS,
+  type CategoryCode,
+} from "@/lib/domain/categories";
 import {
   formatSwimTime,
   type SwimDistance,
@@ -184,6 +190,13 @@ function SwimPodiumRunner({
   const teamColor = row.category_code
     ? CATEGORY_COLORS[row.category_code]
     : (row.team_color ?? "var(--pool-blue)");
+  const backgroundColor = isMe
+    ? mixHexWithWhite("#F4C430", 0.22)
+    : isJumpTarget
+      ? mixHexWithWhite("#FF6B35", 0.2)
+      : row.category_code
+        ? CATEGORY_SURFACE_COLORS[row.category_code]
+        : mixHexWithWhite(teamColor, 0.18);
 
   return (
     <Link
@@ -192,16 +205,16 @@ function SwimPodiumRunner({
       data-podium-step={row.position}
       className={cn(
         "group border-ink-300 bg-paper-card shadow-elev-1 flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors group-hover:border-pool-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pool-blue",
-        isMe && "border-ball-gold/70 bg-ball-gold/10 ring-ball-gold/35 ring-2",
-        isJumpTarget && "border-action bg-action/5 ring-action ring-2 ring-offset-2",
+        isMe && "border-ball-gold/70 ring-ball-gold/35 ring-2",
+        isJumpTarget && "border-action ring-action ring-2 ring-offset-2",
       )}
-      style={{ borderLeftWidth: "4px", borderLeftColor: teamColor }}
+      style={{ backgroundColor, borderLeftWidth: "4px", borderLeftColor: teamColor }}
     >
       <span
         aria-hidden="true"
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-sm font-mono text-base font-extrabold",
-          row.position === 2 ? "bg-ink-200 text-ink-800" : "bg-ball-gold/30 text-pool-deep",
+          row.position === 2 ? "bg-ink-200 text-ink-800" : "bg-amber-100 text-pool-deep",
         )}
       >
         {row.position}
@@ -228,4 +241,3 @@ function SwimPodiumRunner({
     </Link>
   );
 }
-

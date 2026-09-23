@@ -13,8 +13,11 @@ export function ActaPlayerName({ name }: { name: string }) {
           name,
           `${given} ${words.at(-2)} ${words.at(-1)![0]}.`,
           `${given} ${words.at(-2)![0]}. ${words.at(-1)![0]}.`,
+          ...(words.length > 3 ? [`${words[0]} ${words.at(-2)![0]}. ${words.at(-1)![0]}.`] : []),
         ]
-      : [name];
+      : words.length === 2
+        ? [name, `${words[0]} ${words[1][0]}.`]
+        : [name];
   useEffect(() => {
     const node = container.current;
     if (!node) return;
@@ -38,7 +41,9 @@ export function ActaPlayerName({ name }: { name: string }) {
   }, [name]);
   return (
     <span ref={container} title={name} aria-label={name} className="relative block w-full min-w-0">
-      <span>{variants[choice] ?? name}</span>
+      <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
+        {variants[choice] ?? name}
+      </span>
       <span
         aria-hidden="true"
         className="pointer-events-none invisible absolute top-0 left-0 h-0 overflow-hidden"

@@ -147,7 +147,7 @@ export function TrainingRow({
   const timeRange = formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes);
 
   return (
-    <article className="border-pool-blue/20 bg-pool-foam/30 hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
+    <article className="border-pool-blue/20 bg-pool-ice hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
@@ -177,7 +177,7 @@ export function TrainingRow({
           </EventCardHeader>
         )}
 
-        <div className="border-ink-200/70 bg-paper-card/80 min-w-0 rounded-xl border px-3 py-3">
+        <div className="border-ink-200/70 bg-paper-card min-w-0 rounded-xl border px-3 py-3">
           <h3
             className={cn(
               "text-pool-deep leading-tight font-extrabold text-pretty",
@@ -207,7 +207,7 @@ export function TrainingRow({
         ) : null}
 
         {training.cancelled ? (
-          <div className="bg-danger/10 border-danger/20 text-danger flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold">
+          <div className="bg-red-50 border-danger text-danger flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold">
             <X className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p className="min-w-0 break-words">
               <span className="font-black">Cancelado.</span>{" "}
@@ -251,7 +251,7 @@ export function MatchRow({
   const awayTeam = match.is_home ? match.opponent : "Morvedre";
 
   return (
-    <article className="border-pool-blue/20 bg-pool-foam/30 hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
+    <article className="border-pool-blue/20 bg-pool-ice hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
       <span
         aria-hidden="true"
         className="absolute top-0 bottom-0 left-0 w-1.5"
@@ -304,7 +304,7 @@ export function MatchRow({
         ) : null}
 
         {compact ? (
-          <div className="bg-paper-sunk/70 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 select-none">
+          <div className="bg-paper-sunk grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 select-none">
             <div className="min-w-0">
               <p className="text-ink-600 text-xs font-bold">
                 Morvedre · {match.is_home ? "local" : "visitante"}
@@ -334,7 +334,7 @@ export function MatchRow({
               {homeTeam} contra {awayTeam}
             </h3>
 
-            <div className="border-ink-200/70 bg-paper-card/80 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl border px-3 py-3 select-none">
+            <div className="border-ink-200/70 bg-paper-card grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl border px-3 py-3 select-none">
               <div className="flex min-w-0 items-center gap-1">
                 <Gorro
                   className="h-[18px] w-[18px] shrink-0"

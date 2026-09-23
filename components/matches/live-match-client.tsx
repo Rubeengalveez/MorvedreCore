@@ -109,6 +109,7 @@ export function LiveMatchClient() {
   }, [panel]);
 
   const [notice, setNotice] = useState("");
+  const [pendingNotice, setPendingNotice] = useState("");
 
   const [shareError, setShareError] = useState("");
   const [preparedPdf, setPdf] = useState<{
@@ -228,6 +229,7 @@ export function LiveMatchClient() {
   function closePanel() {
     closingPanel.current = true;
     setPanel(null);
+    setPendingNotice("");
 
     setEditing(null);
 
@@ -242,7 +244,7 @@ export function LiveMatchClient() {
   async function dismissPanel() {
     if (closingPanel.current) return;
     if (s.pending) {
-      setNotice(
+      setPendingNotice(
         s.pending.kind === "assist"
           ? "Elige un asistente o pulsa Sin asistencia."
           : "Termina el lanzamiento antes de seguir.",
@@ -326,6 +328,7 @@ export function LiveMatchClient() {
       localMutation.current = false;
     }
 
+    if (ok) setPendingNotice("");
     if (ok && shouldClose) closePanel();
 
     return ok;
@@ -843,7 +846,14 @@ export function LiveMatchClient() {
     "miss-correction": "Corregir penalti fallado",
     sanction: "¿Qué sanción ha sido?",
   };
-  const title = activePanel ? (titles[activePanel] ?? "Acta") : "Acta";
+  const title =
+    activePanel === "keeper" && keeperStart
+      ? `Empezar cuarto ${s.period + 1}`
+      : activePanel === "keeper" && keeperMode === "correct"
+        ? "Corregir portero"
+        : activePanel
+          ? (titles[activePanel] ?? "Acta")
+          : "Acta";
 
   const button = (label: string, onClick: () => void, extra = "") => (
     <button type="button" className={`${styles.action} ${extra}`} disabled={busy} onClick={onClick}>
@@ -856,15 +866,21 @@ export function LiveMatchClient() {
     : record.dirty
       ? "Guardado · Enviando…"
       : notice || (!writable && !closed ? "Solo consulta" : "Guardado");
-  const panelContext = editing
-    ? `Corrigiendo · Cuarto ${editing.period}`
-    : activePanel === "share"
-      ? closed
-        ? "Acta final"
-        : "Acta"
-      : `Cuarto ${s.period}`;
+  const panelContext =
+    activePanel === "break-start" || (activePanel === "keeper" && keeperStart)
+      ? `Cuarto ${s.period + 1}`
+      : editing
+        ? `Corrigiendo · Cuarto ${editing.period}`
+        : activePanel === "share"
+          ? closed
+            ? "Acta final"
+            : "Acta"
+          : `Cuarto ${s.period}`;
 
   const isKeeperCap = side === "us" && (cap === 1 || cap === 13 || cap === s.keeper);
+  const showPlayerBanner =
+    cap !== null &&
+    ["actions", "goal", "shot", "sanction", "miss-correction"].includes(activePanel);
 
   const panelHeightClass = (() => {
     if (activePanel === "keeper") return styles.panelKeeper;
@@ -1075,7 +1091,7 @@ export function LiveMatchClient() {
           <button
             type="button"
             aria-label={`Abrir inicio del cuarto ${s.period + 1}`}
-            className="absolute inset-0 z-10 h-full w-full bg-transparent"
+            className="absolute inset-0 z-10 h-full w-full bg-transparent focus-visible:-outline-offset-4 focus-visible:outline-[#1657a8]"
             onClick={() => setPanel("break-start")}
           />
         )}
@@ -1184,8 +1200,7 @@ export function LiveMatchClient() {
               </div>
 
               <div className={styles.panelTitleBlock}>
-                {cap !== null &&
-                ["actions", "goal", "shot", "sanction", "miss-correction"].includes(activePanel) ? (
+                {showPlayerBanner ? (
                   <div className={styles.playerBanner}>
                     <span
                       className={`${styles.playerBannerCap} ${
@@ -1210,23 +1225,36 @@ export function LiveMatchClient() {
                 ) : (
                   <>
                     <Dialog.Title className={styles.panelTitle}>{title}</Dialog.Title>
-                    <Dialog.Description id="acta-panel-description" className={styles.description}>
-                      {editing
-                        ? "Corrige la jugada; los totales se recalculan."
-                        : activePanel === "players"
-                          ? side === "us"
-                            ? "Toca el jugador o su gorro para registrar la acción."
-                            : "Toca el gorro del rival."
-                          : activePanel === "delete"
-                            ? "Revisa la jugada antes de anularla."
-                            : ""}
-                    </Dialog.Description>
                   </>
                 )}
+                <Dialog.Description
+                  id="acta-panel-description"
+                  className={showPlayerBanner ? "sr-only" : styles.description}
+                >
+                  {editing
+                    ? "Corrige la jugada; los totales se recalculan."
+                    : showPlayerBanner
+                      ? "Elige una opción para este jugador."
+                      : activePanel === "players"
+                        ? side === "us"
+                          ? "Toca el jugador o su gorro para registrar la acción."
+                          : "Toca el gorro del rival."
+                        : activePanel === "delete"
+                          ? "Revisa la jugada antes de anularla."
+                          : ""}
+                </Dialog.Description>
               </div>
             </div>
 
             <div className={styles.panelBody}>
+              {pendingNotice && s.pending && (
+                <p
+                  role="alert"
+                  className="mb-3 rounded-xl border-2 border-[#e4b520] bg-[#fff7d6] p-3 text-base font-bold text-[#062048]"
+                >
+                  {pendingNotice}
+                </p>
+              )}
               {error && (
                 <p
                   role="alert"
@@ -1283,11 +1311,8 @@ export function LiveMatchClient() {
                           type="button"
                           className={`${styles.rivalCard} ${styles.ownSelectionCard} ${isOut ? styles.playerCardOut : ""}`}
                           onClick={() => openPlayer("us", p.cap)}
+                          aria-label={`Morvedre, gorro ${p.cap}, ${p.name}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
                         >
-                          <span className="sr-only">
-                            {p.cap}
-                            {p.name}
-                          </span>
                           <span className={styles.rivalCapBadge}>{p.cap}</span>
                           <div className={styles.rivalStatsCol}>
                             <span
@@ -1323,10 +1348,8 @@ export function LiveMatchClient() {
                           type="button"
                           className={`${styles.rivalCard} ${isOut ? styles.playerCardOut : ""}`}
                           onClick={() => openPlayer("them", capNumber)}
+                          aria-label={`Rival, gorro ${capNumber}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
                         >
-                          <span className="sr-only">
-                            {capNumber} Gorro {capNumber}
-                          </span>
                           <span className={styles.rivalCapBadge}>{capNumber}</span>
                           <div className={styles.rivalStatsCol}>
                             <span
@@ -1687,7 +1710,7 @@ export function LiveMatchClient() {
                   </div>
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+                    className={`${styles.action} ${styles.actionSecondary}`}
                     onClick={() => void patch({ ...s, pending: null })}
                   >
                     Seguir sin asistencia
@@ -1801,7 +1824,7 @@ export function LiveMatchClient() {
                   </div>
                   <button
                     type="button"
-                    className="min-h-12 w-full rounded-xl border border-slate-400 bg-white px-4 font-bold"
+                    className={`${styles.action} ${styles.actionSecondary}`}
                     onClick={() => setPanel("penalty-shooter")}
                   >
                     Cambiar lanzador
@@ -1817,14 +1840,14 @@ export function LiveMatchClient() {
                   </p>
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-lg font-bold text-white"
+                    className={`${styles.action} ${styles.actionGoal}`}
                     onClick={() => void resolveDuplicate(true)}
                   >
                     Sí, ya está apuntado
                   </button>
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl border-2 border-slate-500 bg-white px-4 text-lg font-bold"
+                    className={`${styles.action} ${styles.actionSecondary}`}
                     onClick={() => void resolveDuplicate(false)}
                   >
                     No, es otro gol
@@ -1840,7 +1863,7 @@ export function LiveMatchClient() {
                   </p>
                   <button
                     type="button"
-                    className="min-h-12 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+                    className={`${styles.action} ${styles.actionSecondary}`}
                     onClick={() => {
                       setSide("us");
                       setPanel("players");
@@ -1866,7 +1889,7 @@ export function LiveMatchClient() {
                         <button
                           key={goal.id}
                           type="button"
-                          className="min-h-14 w-full rounded-xl border-2 border-blue-300 bg-white px-4 text-left text-base font-bold"
+                          className={`${styles.action} ${styles.actionGoalExtra}`}
                           onClick={() =>
                             void patch({
                               ...s,
@@ -1889,7 +1912,7 @@ export function LiveMatchClient() {
                   </div>
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-base font-bold text-white"
+                    className={`${styles.action} ${styles.actionGoal}`}
                     onClick={() =>
                       void patch({
                         ...s,
@@ -1926,12 +1949,9 @@ export function LiveMatchClient() {
                             key={player.cap}
                             type="button"
                             className={styles.playerCard}
+                            aria-label={`Nueva asistencia de ${player.name}, gorro ${player.cap}`}
                             onClick={() => void saveAssistRelation("independent", player.cap)}
                           >
-                            <span className="sr-only">
-                              {player.cap}
-                              {player.name}Nueva asistencia
-                            </span>
                             <div className={styles.cardTopRow}>
                               <div className={styles.cardCapGroup}>
                                 <span className={styles.capBadge}>{player.cap}</span>
@@ -1955,14 +1975,14 @@ export function LiveMatchClient() {
                   )}
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl border-2 border-red-300 bg-red-50 px-4 text-base font-bold text-red-900"
+                    className={`${styles.action} ${styles.actionDangerOutline}`}
                     onClick={() => void saveAssistRelation("remove")}
                   >
                     Quitar la asistencia y guardar
                   </button>
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+                    className={`${styles.action} ${styles.actionSecondary}`}
                     onClick={() => void saveAssistRelation("independent")}
                   >
                     Dejarla como asistencia independiente
@@ -1980,7 +2000,7 @@ export function LiveMatchClient() {
                     penaltyRelation.corrected.kind === "penalty" && (
                       <button
                         type="button"
-                        className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-base font-bold text-white"
+                        className={`${styles.action} ${styles.actionGoal}`}
                         onClick={() => void savePenaltyRelation(true)}
                       >
                         Mantenerlos vinculados y mover ambos
@@ -1989,7 +2009,7 @@ export function LiveMatchClient() {
                   {!penaltyRelation.correctedIsPenalty && (
                     <button
                       type="button"
-                      className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-base font-bold text-white"
+                      className={`${styles.action} ${styles.actionGoal}`}
                       onClick={() => void savePenaltyRelation(true)}
                     >
                       Mover también la sanción y guardar
@@ -1997,7 +2017,7 @@ export function LiveMatchClient() {
                   )}
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+                    className={`${styles.action} ${styles.actionSecondary}`}
                     onClick={() => void savePenaltyRelation(false)}
                   >
                     Guardar y dejar el lanzamiento independiente
@@ -2045,9 +2065,6 @@ export function LiveMatchClient() {
                             <div className={styles.cardTopRow}>
                               <div className={styles.cardCapGroup}>
                                 <span className={styles.capBadge}>{player.cap}</span>
-                                {(player.cap === 1 || player.cap === 13) && (
-                                  <span className={styles.keeperTag}>POR</span>
-                                )}
                               </div>
                               {isCurrentKeeper ? (
                                 <span className={styles.keeperTagActive}>En juego</span>
@@ -2061,7 +2078,7 @@ export function LiveMatchClient() {
                               </span>
                             </div>
                             <div
-                              className={`${styles.cardFoulsBar} ${
+                              className={`${styles.cardFoulsBar} ${styles.keeperChoiceAction} ${
                                 out
                                   ? styles.foulsOut
                                   : isCurrentKeeper
@@ -2070,16 +2087,16 @@ export function LiveMatchClient() {
                               }`}
                             >
                               {out
-                                ? "FUERA"
+                                ? "Fuera"
                                 : isCurrentKeeper
                                   ? keeperStart
-                                    ? "Seguir y empezar cuarto"
-                                    : "Portero actual"
+                                    ? "Empezar cuarto"
+                                    : "Mantener"
                                   : keeperStart
-                                    ? "Elegir y empezar cuarto"
+                                    ? "Elegir y empezar"
                                     : keeperMode === "correct"
-                                      ? "Corregir a este portero"
-                                      : "Poner de portero"}
+                                      ? "Corregir selección"
+                                      : "Elegir portero"}
                             </div>
                           </button>
                         );
@@ -2089,7 +2106,7 @@ export function LiveMatchClient() {
                     s.players.some((player) => player.cap !== 1 && player.cap !== 13) && (
                       <button
                         type="button"
-                        className="min-h-12 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
+                        className={`${styles.action} ${styles.actionSecondary}`}
                         onClick={() => setShowAllKeepers(true)}
                       >
                         Elegir otro jugador como portero
@@ -2106,7 +2123,7 @@ export function LiveMatchClient() {
                   </p>
                   <button
                     type="button"
-                    className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-lg font-bold text-white"
+                    className={`${styles.action} ${styles.actionGoal}`}
                     onClick={() => void saveKeeperAction(true)}
                   >
                     Está jugando el #{keeperAction.cap}
@@ -2184,6 +2201,7 @@ export function LiveMatchClient() {
                   </div>
 
                   <div
+                    role="group"
                     className={`mt-3 grid gap-2 ${s.periods === 6 ? "grid-cols-3" : "grid-cols-2"}`}
                     aria-label="Parciales por cuarto"
                   >
@@ -2247,7 +2265,7 @@ export function LiveMatchClient() {
                         <>
                           <button
                             type="button"
-                            className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-lg font-bold text-white disabled:opacity-50"
+                            className={`${styles.action} ${styles.actionGoal}`}
                             disabled={busy || Boolean(s.pending)}
                             onClick={() =>
                               void patch({
@@ -2262,7 +2280,7 @@ export function LiveMatchClient() {
                           </button>
                           <button
                             type="button"
-                            className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base font-semibold"
+                            className={`${styles.action} ${styles.actionSecondary}`}
                             onClick={closePanel}
                           >
                             Seguir anotando
@@ -2437,7 +2455,7 @@ export function LiveMatchClient() {
                     <>
                       <button
                         type="button"
-                        className="min-h-14 w-full rounded-xl border-2 border-red-400 bg-white px-4 text-lg font-bold text-red-900"
+                        className={`${styles.action} ${styles.actionDangerOutline}`}
                         disabled={busy}
                         onClick={() => void remove(deleting, false)}
                       >
@@ -2445,7 +2463,7 @@ export function LiveMatchClient() {
                       </button>
                       <button
                         type="button"
-                        className="min-h-14 w-full rounded-xl bg-red-800 px-4 text-lg font-bold text-white"
+                        className={`${styles.action} ${styles.actionSanctionRed}`}
                         disabled={busy}
                         onClick={() => void remove(deleting, true)}
                       >
@@ -2455,7 +2473,7 @@ export function LiveMatchClient() {
                   ) : (
                     <button
                       type="button"
-                      className="min-h-14 w-full rounded-xl bg-red-800 px-4 text-lg font-bold text-white"
+                      className={`${styles.action} ${styles.actionSanctionRed}`}
                       disabled={busy}
                       onClick={() => void remove(deleting)}
                     >

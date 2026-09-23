@@ -13,7 +13,7 @@ const cardVariants = cva(
         interactive:
           "shadow-elev-1 hover:border-pool-blue/35 hover:bg-pool-foam/20 hover:shadow-elev-2 active:scale-[0.995] touch-manipulation cursor-pointer focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none",
         lane: "shadow-elev-1",
-        sunken: "border-ink-200/60 bg-paper-sunk/75 shadow-none",
+        sunken: "border-ink-200/60 bg-paper-sunk shadow-none",
         accented: "shadow-elev-1 pl-5",
       },
     },

@@ -1,6 +1,7 @@
 "use client";
 
 import { MdKeyboardArrowDown, MdKeyboardArrowRight, MdAutorenew, MdPlace } from "react-icons/md";
+import { CalendarRange, Clock3, Droplets } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,6 @@ import {
   formatDayMonth,
   formatTimeRange,
   formatWeekdayLetter,
-  formatWeekdaysList,
   formatWeekdaysLong,
 } from "@/lib/utils/format";
 import {
@@ -51,9 +51,6 @@ const KIND_LABELS: Record<string, string> = {
   mixed: "Mixto",
 };
 
-import { Card } from "@/components/ui/card";
-import { StatusBadge } from "@/components/ui/badge";
-
 export function TrainingBlockCard({
   block,
   team,
@@ -67,10 +64,16 @@ export function TrainingBlockCard({
   const [deleting, startDeleting] = useTransition();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
 
   function handleGenerate() {
     startGenerating(async () => {
-      await generateSessionsFromBlockAction(block.id);
+      setGenerateError(null);
+      try {
+        await generateSessionsFromBlockAction(block.id);
+      } catch (caught) {
+        setGenerateError(caught instanceof Error ? caught.message : "No pudimos generar las sesiones.");
+      }
     });
   }
 
@@ -106,111 +109,63 @@ export function TrainingBlockCard({
         error={deleteError}
         onConfirm={confirmDelete}
       />
-      <Card accentColor={team.color} className="overflow-hidden">
-        <div className="flex flex-col gap-3 p-4">
-          <button
-            type="button"
-            onClick={() => setOpen((v) => !v)}
-            aria-expanded={open}
-            className="focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex min-h-12 w-full touch-manipulation items-center gap-3 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-          >
-            <span className="text-pool-deep inline-flex h-9 w-9 shrink-0 items-center justify-center rounded">
-              {open ? (
-                <MdKeyboardArrowDown className="h-6 w-6" aria-hidden="true" />
-              ) : (
-                <MdKeyboardArrowRight className="h-6 w-6" aria-hidden="true" />
-              )}
-            </span>
-            <div className="flex flex-1 flex-col">
-              <span className="font-display text-pool-deep text-lg font-extrabold">
-                {block.label}
-              </span>
-              <span className="text-ink-600 text-sm">{team.label}</span>
-            </div>
-          </button>
-
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {[1, 2, 3, 4, 5, 6, 7].map((d) => {
-                const active = block.weekdays.includes(d);
-                return (
-                  <span
-                    key={d}
-                    aria-hidden="true"
-                    className={cn(
-                      "inline-flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold",
-                      active ? "bg-pool-blue text-paper" : "border-ink-300 text-ink-600/40 border",
-                    )}
-                  >
-                    {formatWeekdayLetter(d)}
-                  </span>
-                );
-              })}
-              <span className="sr-only">Días: {formatWeekdaysLong(block.weekdays)}</span>
-            </div>
-            <div className="text-ink-600 flex flex-col gap-0.5 text-sm">
-              <span className="text-pool-deep font-mono font-semibold">
-                {formatTimeRange(block.start_time.slice(0, 5), block.end_time.slice(0, 5))}
-              </span>
-              <span>
-                {formatDayMonth(block.start_date)} → {formatDayMonth(block.end_date)}
-              </span>
-              {block.location ? (
-                <span className="flex items-center gap-1">
-                  <MdPlace className="h-5 w-5 shrink-0" aria-hidden="true" />
-                  {block.location}
-                </span>
-              ) : null}
-              <StatusBadge variant="neutral" className="w-fit">
-                {KIND_LABELS[block.kind] ?? block.kind}
-              </StatusBadge>
-            </div>
+      <article className="border-ink-200 bg-paper-card shadow-elev-1 relative overflow-hidden rounded-2xl border">
+        <span className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: team.color }} aria-hidden="true" />
+        <header className="flex items-start gap-3 px-4 pt-4 pb-3 pl-5">
+          <span className="bg-pool-deep text-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+            <CalendarRange className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-ink-600 text-xs font-extrabold tracking-[0.08em] uppercase">{team.label}</p>
+            <h3 className="text-pool-deep mt-0.5 text-lg leading-tight font-extrabold">{block.label}</h3>
           </div>
+          {editAction}
+        </header>
 
-          {open ? (
-            <div className="border-ink-300 flex flex-col gap-3 border-t pt-3">
-              <div className="flex flex-wrap items-center gap-2">
-                {editAction}
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="sm"
-                  onClick={handleGenerate}
-                  disabled={generating || deleting}
-                >
-                  {generating ? (
-                    <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : null}
-                  Generar más sesiones
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="text-danger hover:bg-danger/10"
-                  onClick={handleDelete}
-                  disabled={generating || deleting}
-                >
-                  {deleting ? (
-                    <MdAutorenew className="h-4 w-4 animate-spin" aria-hidden="true" />
-                  ) : null}
-                  Terminar horario
-                </Button>
-              </div>
-              <p className="text-ink-600 text-xs">
-                Mostrando las próximas sesiones ({sessions.length}). Días del bloque:{" "}
-                <span className="font-semibold">{formatWeekdaysList(block.weekdays)}</span>.
-              </p>
-              <TrainingSessionsList
-                blockLabel={block.label}
-                sessions={sessions}
-                roster={roster}
-                attendanceBySession={attendanceBySession}
-              />
-            </div>
-          ) : null}
+        <div className="bg-pool-deep text-paper mx-3 ml-4 rounded-xl p-3.5">
+          <div className="flex items-center gap-2">
+            <Clock3 className="text-ball-gold h-5 w-5" aria-hidden="true" />
+            <p className="font-mono text-2xl font-extrabold tabular-nums">
+              {formatTimeRange(block.start_time.slice(0, 5), block.end_time.slice(0, 5))}
+            </p>
+          </div>
+          <div className="mt-3 flex gap-1.5" aria-label={formatWeekdaysLong(block.weekdays)}>
+            {[1, 2, 3, 4, 5, 6, 7].map((day) => (
+              <span key={day} aria-hidden="true" className={cn("flex h-8 min-w-8 flex-1 items-center justify-center rounded-lg text-xs font-extrabold", block.weekdays.includes(day) ? "bg-paper text-pool-deep" : "border border-paper/20 text-paper/45")}>
+                {formatWeekdayLetter(day)}
+              </span>
+            ))}
+          </div>
         </div>
-      </Card>
+
+        <dl className="grid grid-cols-2 gap-px bg-ink-200 mx-3 mt-3 ml-4 overflow-hidden rounded-xl border border-ink-200">
+          <div className="bg-paper-card p-3">
+            <dt className="text-ink-500 text-[0.6875rem] font-extrabold tracking-wide uppercase">Vigencia</dt>
+            <dd className="text-pool-deep mt-1 text-sm font-bold">{formatDayMonth(block.start_date)} – {formatDayMonth(block.end_date)}</dd>
+          </div>
+          <div className="bg-paper-card p-3">
+            <dt className="text-ink-500 text-[0.6875rem] font-extrabold tracking-wide uppercase">Modalidad</dt>
+            <dd className="text-pool-deep mt-1 flex items-center gap-1.5 text-sm font-bold"><Droplets className="h-4 w-4" aria-hidden="true" />{KIND_LABELS[block.kind] ?? block.kind}</dd>
+          </div>
+        </dl>
+        {block.location ? <p className="text-ink-700 mx-4 flex items-start gap-2 px-1 py-3 text-sm font-semibold"><MdPlace className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />{block.location}</p> : null}
+
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={"schedule-" + block.id} className="bg-pool-ice text-pool-deep flex min-h-14 w-full items-center justify-between gap-2 border-t border-ink-200 px-5 text-sm font-extrabold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-pool-blue">
+          <span>Gestionar sesiones <span className="text-ink-600 font-semibold">({sessions.length})</span></span>
+          {open ? <MdKeyboardArrowDown className="h-5 w-5" aria-hidden="true" /> : <MdKeyboardArrowRight className="h-5 w-5" aria-hidden="true" />}
+        </button>
+        {open && <div id={"schedule-" + block.id} className="border-t border-ink-200">
+          <div className="flex flex-wrap gap-2 bg-paper-sunk p-3">
+            <Button type="button" variant="secondary" className="min-h-12" onClick={handleGenerate} disabled={generating || deleting}>
+              <MdAutorenew className={cn("h-4 w-4", generating && "animate-spin")} aria-hidden="true" />
+              {generating ? "Generando…" : "Generar sesiones"}
+            </Button>
+            <Button type="button" variant="ghost" className="min-h-12 text-danger hover:bg-red-50" onClick={handleDelete} disabled={generating || deleting}>Terminar horario</Button>
+          </div>
+          {generateError && <p role="alert" className="px-4 py-3 text-sm text-danger">{generateError}</p>}
+          <TrainingSessionsList blockLabel={block.label} sessions={sessions} roster={roster} attendanceBySession={attendanceBySession} />
+        </div>}
+      </article>
     </>
   );
 }

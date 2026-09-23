@@ -38,8 +38,8 @@ export function ActaKeeperControl({
           </strong>
         </span>
         {keeper && (
-          <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#b9d8e5] bg-[#eef8fa] px-2 py-1 text-xs font-black text-[#176579]">
-            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#1d8793]" />
+          <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#b8cada] bg-[#e8f1fc] px-2 py-1 text-xs font-black text-[#0b4d86]">
+            <span aria-hidden="true" className="h-2 w-2 rounded-full bg-[#1657a8]" />
             Ahora
           </span>
         )}

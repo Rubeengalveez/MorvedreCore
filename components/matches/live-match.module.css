@@ -311,41 +311,14 @@
   animation: panelSlideDown 0.32s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-.panelPlayers,
-.panelExpanded {
+.panelPlayers {
   height: min(88dvh, 740px);
   max-height: min(88dvh, 740px);
 }
 
-.panelActionsField {
-  height: min(54dvh, 410px);
-  max-height: min(54dvh, 410px);
-}
-
-.panelActionsKeeper {
-  height: min(72dvh, 550px);
-  max-height: min(72dvh, 550px);
-}
-
-.panelGoal {
-  height: min(58dvh, 440px);
-  max-height: min(58dvh, 440px);
-}
-
-.panelShot,
-.panelSanction {
-  height: min(72dvh, 540px);
-  max-height: min(72dvh, 540px);
-}
-
-.panelBench {
-  height: auto;
-  max-height: min(90dvh, 430px);
-}
-
-.panelBenchActions {
-  height: min(50dvh, 390px);
-  max-height: min(50dvh, 390px);
+.panelPeriods .panelBody,
+.panelChoice .panelBody {
+  flex: 0 1 auto;
 }
 
 .panelPeriods {
@@ -358,31 +331,9 @@
   max-height: min(90dvh, 390px);
 }
 
-.panelBench .panelBody,
-.panelPeriods .panelBody,
-.panelChoice .panelBody {
-  flex: 0 1 auto;
-}
-
-.panelPenaltyResult {
-  height: min(48dvh, 370px);
-  max-height: min(48dvh, 370px);
-}
-
-.panelDelete {
-  height: min(54dvh, 420px);
-  max-height: min(54dvh, 420px);
-}
-
-.panelDefault,
-.panelMedium {
+.panelDefault {
   height: min(60dvh, 490px);
   max-height: min(60dvh, 490px);
-}
-
-.panelCompact {
-  height: min(52dvh, 420px);
-  max-height: min(52dvh, 420px);
 }
 
 .panelShare {
@@ -392,11 +343,11 @@
 
 .panelTakeover {
   height: auto;
-  max-height: min(48dvh, 340px);
+  max-height: min(90dvh, 420px);
 }
 
 .panelTakeover .panelBody {
-  overflow-y: hidden;
+  overflow-y: auto;
   padding-bottom: max(16px, env(safe-area-inset-bottom));
 }
 
@@ -432,7 +383,7 @@
 
 .panelNavigation {
   display: inline-flex;
-  min-height: 40px;
+  min-height: 48px;
   align-items: center;
   justify-content: center;
   gap: 5px;
@@ -441,7 +392,7 @@
   color: #0b4d86;
   background: #eff6ff;
   border: 1px solid #bfdbfe;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
   flex-shrink: 0;
@@ -536,11 +487,6 @@
   line-height: 1.25;
 }
 
-.panelHeading {
-  display: flex;
-  flex-direction: column;
-}
-
 .description {
   margin-top: 4px;
   color: #64748b;
@@ -584,7 +530,7 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  margin-bottom: 8px;
+  margin-block: 12px;
 }
 
 .rivalActionGrid {
@@ -599,6 +545,8 @@
 }
 
 .action {
+  --button-bg: #ffffff;
+  --button-ink: #062048;
   display: flex;
   min-height: 70px;
   width: 100%;
@@ -610,14 +558,13 @@
   font-size: 17px;
   line-height: 1.25;
   font-weight: 800;
-  background: #ffffff;
-  border: 1.5px solid #cbd5e1;
-  color: var(--acta-ink);
+  background: var(--button-bg);
+  border: 2px solid #062048;
+  color: var(--button-ink);
   transition:
     background-color 0.12s ease,
     border-color 0.12s ease,
     transform 0.12s ease;
-  box-shadow: 0 1px 2px rgba(6, 32, 72, 0.04);
 }
 
 .action:active:not(:disabled) {
@@ -629,145 +576,15 @@
   cursor: not-allowed;
 }
 
-/* 1. GOL - Éxito deportivo / Tanto (Verde esmeralda sobrio) */
-.actionGoal,
-.goalAction,
-.actionGoalExtra,
-.actionGoalPenalty {
-  border: 2px solid #059669;
-  background: #ffffff;
-  color: #065f46;
+.actionSecondary {
+  min-height: 56px;
+  font-size: 16px;
 }
 
-.actionGoal:active:not(:disabled),
-.goalAction:active:not(:disabled),
-.actionGoalExtra:active:not(:disabled),
-.actionGoalPenalty:active:not(:disabled) {
-  background: #f0fdf4;
-  border-color: #047857;
-}
-
-/* 2. TIRO - Acción deportiva de campo (Azul oficial Morvedre) */
-.actionShot,
-.actionShotBlocked,
-.actionShotCorner {
-  border: 2px solid #0b4d86;
-  background: #ffffff;
-  color: #0b4d86;
-}
-
-.actionShot:active:not(:disabled),
-.actionShotBlocked:active:not(:disabled),
-.actionShotCorner:active:not(:disabled) {
-  background: #eff6ff;
-  border-color: #083c69;
-}
-
-/* Tiro fuera / neutro */
-.actionShotOut {
-  border: 1.5px solid #94a3b8;
-  background: #ffffff;
-  color: #334155;
-}
-
-.actionShotOut:active:not(:disabled) {
-  background: #f8fafc;
-  border-color: #64748b;
-}
-
-/* Penalti fallado */
-.actionShotMissed {
-  border: 1.5px solid #f87171;
-  background: #ffffff;
-  color: #991b1b;
-}
-
-.actionShotMissed:active:not(:disabled) {
-  background: #fef2f2;
-  border-color: #dc2626;
-}
-
-/* 3. ASISTENCIA - Balón / Pase de gol (Ámbar dorado sobrio) */
-.actionAssist {
-  border: 2px solid #d97706;
-  background: #ffffff;
-  color: #92400e;
-}
-
-.actionAssist:active:not(:disabled) {
-  background: #fffbeb;
-  border-color: #b45309;
-}
-
-/* 4. EXPULSIÓN / SANCIÓN - Sanción arbitral (Rojo oficial árbitro) */
-.actionSanction,
-.actionSanctionExclusion,
-.actionSanctionPenalty,
-.actionPenalty {
-  border: 2px solid #dc2626;
-  background: #ffffff;
-  color: #991b1b;
-}
-
-.actionSanction:active:not(:disabled),
-.actionSanctionExclusion:active:not(:disabled),
-.actionSanctionPenalty:active:not(:disabled),
-.actionPenalty:active:not(:disabled) {
-  background: #fef2f2;
-  border-color: #b91c1c;
-}
-
-/* Tarjeta amarilla */
-.actionSanctionYellow {
-  border: 2px solid #d97706;
-  background: #ffffff;
-  color: #92400e;
-}
-
-.actionSanctionYellow:active:not(:disabled) {
-  background: #fffbeb;
-  border-color: #b45309;
-}
-
-/* Tarjeta roja / expulsión definitiva */
-.actionSanctionRed,
-.redAction {
-  border: 2px solid #991b1b;
-  background: #fef2f2;
-  color: #7f1d1d;
-  font-weight: 900;
-}
-
-.actionSanctionRed:active:not(:disabled),
-.redAction:active:not(:disabled) {
-  background: #fee2e2;
-  border-color: #7f1d1d;
-}
-
-/* 5. PARADAS (Portero - Azul deportivo y éxito bajo palos) */
-.actionSave,
-.keeperAction {
-  border: 2px solid #0b4d86;
-  background: #ffffff;
-  color: #0b4d86;
-}
-
-.actionSave:active:not(:disabled),
-.keeperAction:active:not(:disabled) {
-  background: #eff6ff;
-  border-color: #083c69;
-}
-
-/* Penalti parado (éxito defensivo bajo palos: verde esmeralda triunfo) */
-.actionPenaltySave {
-  border: 2px solid #059669;
-  background: #ffffff;
-  color: #065f46;
-}
-
-.actionPenaltySave:active:not(:disabled) {
-  background: #f0fdf4;
-  border-color: #047857;
+.actionDangerOutline {
+  --button-bg: #ffffff;
+  --button-ink: #991b1b;
+  border-color: #991b1b;
 }
 
 /* =========================================================
@@ -932,8 +749,8 @@
   padding: 2px 6px;
   border-radius: 9999px;
   background: #f8fafc;
-  color: #94a3b8;
-  border: 1px solid #e2e8f0;
+  color: #475569;
+  border: 1px solid #cbd5e1;
   font-size: 11px;
   font-weight: 700;
   line-height: 1;
@@ -981,6 +798,13 @@
   text-overflow: ellipsis;
 }
 
+.keeperChoiceAction {
+  min-height: 30px;
+  font-size: 13px;
+  line-height: 1.15;
+  white-space: normal;
+}
+
 .foulsClean {
   background: #f8fafc;
   color: #64748b;
@@ -1016,72 +840,6 @@
   background: #ecfdf5;
   color: #047857;
   border: 1px solid #a7f3d0;
-}
-
-/* Backward compatibility classes */
-.playerDetails {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-  flex: 1;
-  gap: 2px;
-}
-
-.playerName {
-  font-size: 14px;
-  font-weight: 800;
-  color: #062048;
-}
-
-.playerBadges {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
-}
-
-.cleanBadge {
-  font-size: 11px;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.exclusionWarningBadge {
-  font-size: 11px;
-  font-weight: 800;
-  color: #c2410c;
-  background: #ffedd5;
-  padding: 1px 6px;
-  border-radius: 6px;
-}
-
-.outBadge {
-  font-size: 11px;
-  font-weight: 800;
-  color: #b91c1c;
-  background: #fee2e2;
-  padding: 1px 6px;
-  border-radius: 6px;
-}
-
-.keeperBadge {
-  font-size: 11px;
-  font-weight: 800;
-  color: #1d4ed8;
-  background: #dbeafe;
-  padding: 1px 6px;
-  border-radius: 6px;
-}
-
-.goalsBadge {
-  font-size: 12px;
-  font-weight: 800;
-  color: #047857;
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  padding: 3px 8px;
-  border-radius: 8px;
 }
 
 /* =========================================================
@@ -1199,111 +957,6 @@
   border: 1px solid #e2e8f0;
 }
 
-.rivalMeta {
-  margin-top: 4px;
-  font-size: 11px;
-  font-weight: 700;
-  text-align: center;
-  line-height: 1.1;
-}
-
-.cleanText {
-  color: #64748b;
-}
-
-.exclusionText {
-  color: #c2410c;
-  font-weight: 800;
-}
-
-.outText {
-  color: #b91c1c;
-  font-weight: 800;
-}
-
-.rivalGoalBadge {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  font-size: 10px;
-  font-weight: 800;
-  background: #ecfdf5;
-  color: #047857;
-  border: 1px solid #a7f3d0;
-  border-radius: 6px;
-  padding: 1px 4px;
-  line-height: 1;
-}
-
-/* Backward compatibility for legacy playerGrid */
-.playerGrid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 8px;
-}
-
-@media (min-width: 480px) {
-  .playerGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.playerGrid button {
-  display: flex;
-  align-items: center;
-  min-height: 60px;
-  min-width: 0;
-  gap: 12px;
-  border: 1.5px solid #cbd5e1;
-  border-radius: 14px;
-  background: #ffffff;
-  padding: 10px 14px;
-  color: #062048;
-  text-align: left;
-}
-
-.playerGrid button:active:not(:disabled) {
-  border-color: #2563eb;
-  background: #eff6ff;
-}
-
-.playerGrid button:disabled {
-  opacity: 0.48;
-}
-
-.playerGrid strong {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  background: #062048 !important;
-  color: #ffffff !important;
-  font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 20px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-  border: 2px solid #062048;
-}
-
-.playerGrid span {
-  min-width: 0;
-  font-size: 15px;
-  line-height: 1.25;
-  font-weight: 800;
-  color: #062048;
-  word-break: break-word;
-}
-
-.playerGrid small {
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.2;
-  font-weight: 700;
-}
-
 .editPeriod {
   display: flex;
   min-height: 52px;
@@ -1319,21 +972,6 @@
 
 .editPeriod select {
   min-width: 88px;
-}
-
-.partials > div {
-  display: flex;
-  min-height: 44px;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid #e2e8f0;
-  font-size: 15px;
-}
-
-.partials strong {
-  font-family: var(--font-jetbrains-mono), monospace;
-  font-size: 18px;
-  font-variant-numeric: tabular-nums;
 }
 
 .history {
@@ -1356,10 +994,6 @@
   .preparation {
     margin: 12px;
   }
-
-  .playerGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 @media (min-width: 640px) {
@@ -1368,10 +1002,6 @@
     left: 0;
     margin-inline: auto;
     width: min(720px, calc(100vw - 32px));
-  }
-
-  .playerGrid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
@@ -1411,28 +1041,6 @@
 }
 
 @container acta (max-width: 20rem) {
-  .root [data-acta-score] {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .root [data-acta-score-number] {
-    grid-row: 1;
-    grid-column: 1 / -1;
-  }
-
-  .root [data-acta-score] > span:first-child {
-    grid-row: 2;
-    grid-column: 1;
-    overflow: visible;
-    white-space: normal;
-  }
-
-  .root [data-acta-rival-name] {
-    grid-row: 2;
-    grid-column: 2;
-    overflow: visible;
-  }
-
   .root [data-acta-meta] {
     grid-template-columns: minmax(0, 1fr);
     gap: 2px;
@@ -1446,104 +1054,12 @@
   }
 }
 
-@container acta (max-width: 19rem) {
-  .root {
-    padding-bottom: 0;
-  }
-
-  .root > footer {
-    position: static;
-    right: auto;
-    bottom: auto;
-    width: auto;
-    transform: none;
-    box-shadow: 0 -1px 0 rgb(6 32 72 / 10%);
-  }
-
-  .root [data-acta-teams],
-  .root [data-acta-utilities] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .root [data-acta-keeper-control] {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    height: auto;
-    min-height: 96px;
-  }
-
-  .root [data-acta-keeper-summary] {
-    white-space: normal;
-  }
-
-  .root [data-acta-keeper-summary] strong {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: normal;
-  }
-
-  .root [data-acta-keeper-change] {
-    align-self: center;
-  }
-
-  .root [data-acta-team-header] {
-    display: grid;
-    min-height: 112px;
-    align-content: center;
-    justify-content: stretch;
-    row-gap: 8px;
-  }
-
-  .root [data-acta-team-header] > span {
-    margin-top: 0;
-  }
-
-  .root [data-acta-navigation] {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .root [data-acta-navigation] > a {
-    justify-self: start;
-  }
-
-  .root [data-acta-navigation] > button {
-    grid-row: 1;
-    grid-column: 2;
-    justify-self: end;
-  }
-
-  .root [data-acta-navigation] > h1 {
-    grid-row: 2;
-    grid-column: 1 / -1;
-    padding-bottom: 8px;
-    text-align: center;
-  }
-
-  .root [data-acta-player-row] {
-    grid-template-columns: 60px minmax(0, 1fr) 90px;
-    min-height: 96px;
-  }
-
-  .root [data-acta-player-identity] {
-    padding-inline: 6px;
-  }
-
-  .root [data-acta-player-identity] > span:first-child {
-    width: 48px;
-    min-width: 48px;
-    height: 48px;
-  }
-
-  .root [data-acta-metrics] {
-    min-width: 0;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   .root *,
   .panel * {
     scroll-behavior: auto;
+    animation: none !important;
+    transition-duration: 0.01ms !important;
   }
   .panel,
   .overlay {
@@ -1564,49 +1080,6 @@
   flex-wrap: wrap;
   align-content: center;
 }
-.actionGrid {
-  gap: 12px;
-  margin-block: 12px;
-}
-.actionGoal,
-.actionGoalExtra,
-.actionGoalPenalty {
-  background: #1657a8;
-  color: #fff;
-  border-color: #1657a8;
-}
-.actionShot,
-.actionShotBlocked,
-.actionShotCorner,
-.actionShotOut,
-.actionShotMissed {
-  background: #e8f1fc;
-  color: #062048;
-  border-color: #8bb5e4;
-}
-.actionAssist,
-.actionSave,
-.actionPenaltySave {
-  background: #fff5cf;
-  color: #062048;
-  border-color: #e4c45c;
-}
-.panelActionsField,
-.panelActionsKeeper,
-.panelGoal,
-.panelShot,
-.panelSanction {
-  height: auto;
-  max-height: 90dvh;
-}
-.panelActionsField .panelBody,
-.panelActionsKeeper .panelBody,
-.panelGoal .panelBody,
-.panelShot .panelBody,
-.panelSanction .panelBody {
-  flex: 0 1 auto;
-}
-
 .panelKeeper {
   height: auto;
   max-height: 90dvh;
@@ -1636,42 +1109,40 @@
   font-size: 16px;
 }
 
-.panel .action {
-  --button-bg: #ffffff;
-  --button-ink: #062048;
-  border: 2px solid #062048;
-  background: var(--button-bg);
-  color: var(--button-ink);
-  box-shadow: none;
-}
-.panel .actionGoal,
-.panel .goalAction,
-.panel .actionGoalExtra,
-.panel .actionGoalPenalty,
-.panel .actionSave,
-.panel .actionPenaltySave {
+.actionGoal,
+.penaltyGoal {
   --button-bg: #062048;
   --button-ink: #ffffff;
 }
-.panel .actionShot,
-.panel .actionShotBlocked,
-.panel .actionShotCorner,
-.panel .actionShotOut,
-.panel .actionAssist,
-.panel .actionSanctionYellow {
+.actionGoalExtra,
+.actionShot,
+.actionShotBlocked,
+.penaltySave {
+  --button-bg: #1657a8;
+  --button-ink: #ffffff;
+}
+.actionGoalPenalty,
+.actionAssist,
+.actionSanctionYellow,
+.actionSanctionPenalty,
+.actionPenalty {
   --button-bg: #f4c430;
 }
-.panel .actionSanction,
-.panel .actionSanctionExclusion,
-.panel .actionSanctionPenalty,
-.panel .actionPenalty,
-.panel .actionSanctionRed,
-.panel .redAction,
-.panel .actionShotMissed {
+.actionSave,
+.actionPenaltySave {
+  --button-bg: #176579;
+  --button-ink: #ffffff;
+}
+.actionShotOut {
+  --button-bg: #e8f1fc;
+}
+.actionSanction,
+.actionSanctionExclusion,
+.actionSanctionRed {
   --button-bg: #b91c1c;
   --button-ink: #ffffff;
 }
-.panel .action:active:not(:disabled) {
+.action:active:not(:disabled) {
   background: var(--button-bg);
   color: var(--button-ink);
   border-color: #062048;
@@ -1683,9 +1154,7 @@
   border: 2px solid #062048;
 }
 .panel .warning p,
-.panel .panelBody > p,
-.panel .panelContext,
-.panel .panelDescription {
+.panel .panelBody > p {
   color: #062048;
 }
 
@@ -1742,21 +1211,6 @@
   font-size: 16px;
 }
 
-.panel .actionSave,
-.panel .actionPenaltySave {
-  --button-bg: #176579;
-  --button-ink: #ffffff;
-}
-
-.panel .penaltyGoal {
-  --button-bg: #062048;
-  --button-ink: #ffffff;
-}
-
-.panel .penaltySave {
-  --button-bg: #1657a8;
-  --button-ink: #ffffff;
-}
 .panelActionsField,
 .panelGoal,
 .panelShot,
@@ -1777,32 +1231,10 @@
 .panelSanction .panelBody,
 .panelBench .panelBody,
 .panelBenchActions .panelBody {
+  display: flex;
   flex: 1;
-}
-.panelShot .panelBody > .actionGrid,
-.panelBench .panelBody > .actionList,
-.panelBench .panelBody > .actionGrid {
-  margin-block: auto;
-}
-.panelNavigation {
-  min-height: 48px;
-  font-size: 14px;
-}
-.panel .actionGoalExtra {
-  --button-bg: #1657a8;
-}
-.panel .actionGoalPenalty {
-  --button-bg: #f4c430;
-  --button-ink: #062048;
-}
-.panel .actionShotOut {
-  --button-bg: #e8f1fc;
-  --button-ink: #062048;
-}
-.panel .actionShot,
-.panel .actionShotBlocked {
-  --button-bg: #1657a8;
-  --button-ink: #ffffff;
+  flex-direction: column;
+  justify-content: safe center;
 }
 @media (min-width: 640px) {
   .panel {
