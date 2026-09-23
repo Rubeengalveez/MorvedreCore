@@ -1080,7 +1080,7 @@
 }
 .panelKeeper {
   height: auto;
-  max-height: min(92dvh, 640px);
+  max-height: min(94dvh, 660px);
 }
 .panelKeeper .panelBody {
   flex: 1;
@@ -1220,7 +1220,10 @@
 }
 .panelActionsKeeper {
   height: auto;
-  max-height: min(90dvh, 520px);
+  max-height: min(94dvh, 660px);
+}
+.panelActionsKeeper .actionGrid {
+  margin-block: 4px;
 }
 .panelActionsField .panelBody,
 .panelActionsKeeper .panelBody,

@@ -1481,7 +1481,7 @@ export function LiveMatchClient() {
 
                       {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
                         <button
-                          className="mt-2 mb-3 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 active:bg-slate-100"
+                          className="my-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 active:bg-slate-100"
                           disabled={!enabled}
                           onClick={() => {
                             setShowAllKeepers(false);
