@@ -1076,17 +1076,18 @@ export function LiveMatchClient() {
               setEditing(null);
               openPlayer(which, n);
             }}
-          />
-        )}
-        {s.phase !== "ready" && !s.shootout && (
-          <ActaKeeperControl
-            sheet={s}
-            disabled={!enabled}
-            onChange={() => {
-              setShowAllKeepers(false);
-              openKeeper();
-            }}
-          />
+          >
+            {s.phase !== "ready" && !s.shootout && (
+              <ActaKeeperControl
+                sheet={s}
+                disabled={!enabled}
+                onChange={() => {
+                  setShowAllKeepers(false);
+                  openKeeper();
+                }}
+              />
+            )}
+          </ActaPlayerBoard>
         )}
         {s.phase === "break" && enabled && (
           <button

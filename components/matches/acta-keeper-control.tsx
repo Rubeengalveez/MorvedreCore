@@ -13,7 +13,7 @@ export function ActaKeeperControl({
 }) {
   const keeper = sheet.players.find((player) => player.cap === sheet.keeper);
   return (
-    <div className="bg-white px-2 pt-1 pb-3 sm:px-3">
+    <div className="pt-2">
       <button
         data-acta-keeper-control
         type="button"

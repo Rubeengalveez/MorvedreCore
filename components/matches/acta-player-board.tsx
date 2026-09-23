@@ -37,11 +37,13 @@ export function ActaPlayerBoard({
   playing,
   onPlayer,
   isAway = false,
+  children,
 }: {
   sheet: LiveSheet;
   playing: boolean;
   onPlayer: (side: Side, cap: number) => void;
   isAway?: boolean;
+  children?: React.ReactNode;
 }) {
   const own = sheet.players.filter((p) => !p.retired).sort((a, b) => a.cap - b.cap);
   const rival = [...sheet.opponentCaps].sort((a, b) => a - b);
@@ -150,6 +152,7 @@ export function ActaPlayerBoard({
           }),
         )}
       </div>
+      {children}
     </section>
   );
 }
