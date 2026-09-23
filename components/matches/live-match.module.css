@@ -273,11 +273,11 @@
 }
 
 .overlay[data-state="open"] {
-  animation: overlayFadeIn 0.32s ease-out;
+  animation: overlayFadeIn 0.22s ease-out;
 }
 
 .overlay[data-state="closed"] {
-  animation: overlayFadeOut 0.26s ease-in forwards;
+  animation: overlayFadeOut 0.18s ease-in forwards;
 }
 
 .panel {
@@ -296,19 +296,16 @@
   background: #f8fafc;
   color: var(--acta-ink);
   box-shadow: 0 -12px 48px rgb(2 15 34 / 35%);
-  transition:
-    height 0.38s cubic-bezier(0.22, 1, 0.36, 1),
-    max-height 0.38s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: height, transform;
+  will-change: transform;
   transform: translateY(0);
 }
 
 .panel[data-state="open"] {
-  animation: panelSlideUp 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+  animation: panelSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .panel[data-state="closed"] {
-  animation: panelSlideDown 0.32s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+  animation: panelSlideDown 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
 .panelPlayers {
@@ -318,17 +315,17 @@
 
 .panelPeriods .panelBody,
 .panelChoice .panelBody {
-  flex: 0 1 auto;
+  flex: 1;
 }
 
 .panelPeriods {
   height: auto;
-  max-height: min(90dvh, 500px);
+  max-height: min(92dvh, 640px);
 }
 
 .panelChoice {
   height: auto;
-  max-height: min(90dvh, 390px);
+  max-height: min(90dvh, 440px);
 }
 
 .panelDefault {
@@ -503,7 +500,7 @@
   flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 14px 16px max(24px, env(safe-area-inset-bottom));
+  padding: 12px 16px max(18px, env(safe-area-inset-bottom));
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -520,7 +517,8 @@
 
 .actionList {
   display: grid;
-  gap: 10px;
+  gap: 8px;
+  margin-block: 8px;
 }
 
 /* =========================================================
@@ -529,8 +527,8 @@
 .actionGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-block: 12px;
+  gap: 10px;
+  margin-block: 8px;
 }
 
 .rivalActionGrid {
@@ -1082,19 +1080,19 @@
 }
 .panelKeeper {
   height: auto;
-  max-height: 90dvh;
+  max-height: min(92dvh, 640px);
 }
 .panelKeeper .panelBody {
-  flex: 0 1 auto;
+  flex: 1;
 }
 
 .panelPenaltyResult {
   height: auto;
-  max-height: min(90dvh, 420px);
+  max-height: min(90dvh, 460px);
 }
 
 .panelPenaltyResult .panelBody {
-  flex: 0 1 auto;
+  flex: 1;
 }
 
 .panelShare .panelBody {
@@ -1217,12 +1215,12 @@
 .panelSanction,
 .panelBench,
 .panelBenchActions {
-  height: min(70dvh, 390px);
-  max-height: min(90dvh, 390px);
+  height: auto;
+  max-height: min(90dvh, 440px);
 }
 .panelActionsKeeper {
-  height: min(76dvh, 480px);
-  max-height: min(90dvh, 480px);
+  height: auto;
+  max-height: min(90dvh, 520px);
 }
 .panelActionsField .panelBody,
 .panelActionsKeeper .panelBody,
@@ -1234,7 +1232,6 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  justify-content: safe center;
 }
 @media (min-width: 640px) {
   .panel {
