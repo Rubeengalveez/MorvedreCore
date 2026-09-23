@@ -21,11 +21,10 @@ import { sheetSchema, score } from "@/lib/domain/live-match";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils/cn";
-import type { CallupRow, MatchRow, MatchStatRow, Team } from "@/server/actions/admin";
+import type { CallupRow, MatchRow, Team } from "@/server/actions/admin";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import { canManageTeam, getTeamScope, canUseLiveMatch } from "@/lib/domain/permissions";
 
-import { ActaManager, type ActaEntry } from "./_components/acta-manager";
 import { CallupList, type CallupEntry } from "./_components/callup-list";
 import { MatchDetailsForm } from "./_components/match-details-form";
 import { SuggestCallupSheet } from "./_components/suggest-callup-sheet";
@@ -59,7 +58,6 @@ async function loadMatch(
 ): Promise<{
   match: MatchWithTeam | null;
   callups: CallupRow[];
-  stats: MatchStatRow[];
   profileMeta: Map<
     string,
     {
@@ -94,7 +92,6 @@ async function loadMatch(
   const [
     { data: teamData },
     { data: callupsData, error: callupsError },
-    { data: statsData, error: statsError },
     { data: profilesData, error: profilesError },
     { data: teamsData },
     { data: availabilityData, error: availabilityError },
@@ -113,12 +110,6 @@ async function loadMatch(
       )
       .eq("match_id", match.id),
     supabase
-      .from("match_stats")
-      .select(
-        "match_id, player_id, goals, exclusions, mvp, entered_by, entered_at, validated_by, validated_at, created_at, updated_at",
-      )
-      .eq("match_id", match.id),
-    supabase
       .from("profiles")
       .select("id, full_name, photo_url, birth_year, cap_number")
       .eq("is_active", true)
@@ -131,7 +122,7 @@ async function loadMatch(
       .eq("date", match.scheduled_at.slice(0, 10)),
   ]);
 
-  if (callupsError || statsError || profilesError || availabilityError) return null;
+  if (callupsError || profilesError || availabilityError) return null;
 
   const profileMeta = new Map<
     string,
@@ -162,7 +153,6 @@ async function loadMatch(
   return {
     match: { ...match, team: teamInfo },
     callups: (callupsData ?? []) as CallupRow[],
-    stats: (statsData ?? []) as MatchStatRow[],
     profileMeta,
     teamById,
     availability: (availabilityData ?? []) as Array<{
@@ -191,7 +181,7 @@ export default async function MatchDetailPage({
   if (!data || !data.match) {
     notFound();
   }
-  const { match, callups, stats, profileMeta, teamById, availability } = data;
+  const { match, callups, profileMeta, teamById, availability } = data;
   const tabs = match.logistics_enabled ? TABS : TABS.filter((item) => item.value !== "logistica");
   const tab: Tab = (tabs.find((item) => item.value === requestedTab)?.value ??
     "convocatoria") as Tab;
@@ -206,10 +196,13 @@ export default async function MatchDetailPage({
     .maybeSingle();
   const canEditMatch = canManageTeam(access, "match_schedule", match.team_id);
   const parsedSheet = sheetSchema.safeParse(liveSheet?.document);
-  const regulationScore = parsedSheet.success && parsedSheet.data.shootout ? {
-    home: score(parsedSheet.data, match.is_home ? "us" : "them"),
-    away: score(parsedSheet.data, match.is_home ? "them" : "us"),
-  } : null;
+  const regulationScore =
+    parsedSheet.success && parsedSheet.data.shootout
+      ? {
+          home: score(parsedSheet.data, match.is_home ? "us" : "them"),
+          away: score(parsedSheet.data, match.is_home ? "them" : "us"),
+        }
+      : null;
 
   const conflicting = new Set(
     availability.filter((a) => a.available === false).map((a) => a.player_id),
@@ -241,21 +234,6 @@ export default async function MatchDetailPage({
       const aName = a.player?.full_name ?? "";
       const bName = b.player?.full_name ?? "";
       return aName.localeCompare(bName, "es");
-    });
-
-  const actaEntries: ActaEntry[] = callupEntries
-    .filter((e) => e.player != null)
-    .map((e) => {
-      const stat = stats.find((s) => s.player_id === e.callup.player_id) ?? null;
-      return {
-        callup: e.callup,
-        player: {
-          id: e.callup.player_id,
-          full_name: e.player!.full_name,
-          photo_url: e.player!.photo_url,
-        },
-        stat,
-      };
     });
 
   return (
@@ -352,34 +330,20 @@ export default async function MatchDetailPage({
         ) : null}
 
         {tab === "acta" ? (
-          <>
-            <div>
-              <h2 className="font-display text-pool-deep text-xl font-extrabold">
-                Completa el acta
-              </h2>
-              <p className="text-ink-600 mt-0.5 text-sm">
-                Resultado, goles y expulsiones con controles grandes.
-              </p>
-            </div>
-            {liveSheet && canUseLiveMatch(access, match.team_id) ? (
+          <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <h2 className="font-display text-pool-deep text-xl font-extrabold">Acta del partido</h2>
+            <p className="mt-1 text-base text-slate-700">
+              El delegado asignado registra el partido jugada a jugada desde su acta en directo.
+            </p>
+            {canUseLiveMatch(access, match.team_id) && (
               <a
                 href={`/acta?match=${match.id}`}
-                className="bg-pool-deep text-paper flex min-h-14 items-center justify-center rounded-xl p-4 text-lg font-bold"
+                className="bg-pool-deep text-paper mt-4 flex min-h-14 items-center justify-center rounded-xl p-4 text-lg font-bold"
               >
-                Continuar o consultar el acta en directo →
+                {liveSheet ? "Continuar o consultar acta" : "Abrir acta en directo"}
               </a>
-            ) : (
-              <ActaManager
-                match={{
-                  id: match.id,
-                  status: match.status,
-                  final_score_us: match.final_score_us,
-                  final_score_them: match.final_score_them,
-                }}
-                entries={actaEntries}
-              />
             )}
-          </>
+          </section>
         ) : null}
 
         {tab === "detalles" ? (

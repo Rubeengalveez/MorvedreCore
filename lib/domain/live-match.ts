@@ -120,6 +120,7 @@ export const sheetSchema = z
   })
   .superRefine((s, ctx) => {
     const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+    if (s.pending && s.phase !== "playing") fail("Completa la jugada pendiente antes de cambiar de fase.");
     if (s.phase === "shootout" && !s.shootout) fail("Falta preparar la tanda.");
     if (s.shootout) {
       if (s.period !== s.periods || !["shootout", "finished"].includes(s.phase) || s.pending || score(s as LiveSheet, "us") !== score(s as LiveSheet, "them")) {
@@ -185,7 +186,7 @@ export const sheetSchema = z
       }
       if (
         event.side === "them" &&
-        !["goal", "exclusion", "penalty", "timeout", "coach_yellow", "coach_red"].includes(
+        !["goal", "exclusion", "penalty", "red", "timeout", "coach_yellow", "coach_red"].includes(
           event.kind,
         )
       ) {

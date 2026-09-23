@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
 import type { LiveSheet } from "@/lib/domain/live-match";
+import { ActaPlayerName } from "./acta-player-name";
 
 export function ActaKeeperControl({
   sheet,
@@ -32,8 +33,8 @@ export function ActaKeeperControl({
           <span className="block text-sm leading-tight font-medium text-slate-700">
             Portero en juego
           </span>
-          <strong className="mt-1 block text-sm leading-snug font-bold text-[#062048]">
-            {keeper ? keeper.name : "Elegir portero"}
+          <strong className="mt-1 block text-base leading-snug font-bold text-[#062048]">
+            {keeper ? <ActaPlayerName name={keeper.name} /> : "Elegir portero"}
           </strong>
         </span>
         {keeper && (

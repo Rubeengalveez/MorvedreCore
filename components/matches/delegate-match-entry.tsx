@@ -44,20 +44,6 @@ export function DelegateMatchEntry({
         </span>
         <ChevronRight className="shrink-0" aria-hidden="true" />
       </a>
-      {!started && !finished && (
-        <a
-          href={`/matches/${matchId}/registro`}
-          className="flex min-h-14 items-center justify-between gap-2 border-t border-slate-200 px-4 py-3 text-base font-semibold hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-blue-700"
-        >
-          <span>
-            Solo goles y expulsiones
-            <span className="block text-sm font-normal text-slate-600">
-              Introduce los totales al terminar
-            </span>
-          </span>
-          <ChevronRight className="shrink-0" aria-hidden="true" />
-        </a>
-      )}
     </section>
   );
 }

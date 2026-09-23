@@ -19,7 +19,10 @@ export function ActaMatchControls({
 }) {
   return (
     <>
-      <div data-acta-teams className={`grid grid-cols-2 gap-2 ${isAway ? "[&>button:first-child]:order-2" : ""}`}>
+      <div
+        data-acta-teams
+        className={`grid grid-cols-2 gap-2 ${isAway ? "[&>button:first-child]:order-2" : ""}`}
+      >
         <button
           type="button"
           disabled={!playing}
@@ -42,12 +45,12 @@ export function ActaMatchControls({
           type="button"
           disabled={!playing}
           onClick={onBench}
-          aria-label="Tiempo muerto"
+          aria-label="Entrenador: tiempos muertos y tarjetas"
           className="flex min-h-14 flex-col items-center justify-center rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold active:bg-slate-200 disabled:opacity-45"
         >
-          <span>Tiempo muerto</span>
+          <span>Entrenador</span>
           <span className="mt-0.5 text-xs font-bold text-slate-600 tabular-nums">
-            Pedidos: M {timeoutCount(sheet, "us")} · R {timeoutCount(sheet, "them")}
+            Tiempos: M {timeoutCount(sheet, "us")} · R {timeoutCount(sheet, "them")}
           </span>
         </button>
         <button

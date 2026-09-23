@@ -1,5 +1,6 @@
 .root,
 .panel {
+  interpolate-size: allow-keywords;
   --acta-ink: #062048;
   --acta-blue: #0b4d86;
   --acta-line: #cbd5e1;
@@ -444,7 +445,9 @@
   font-weight: 800;
   white-space: nowrap;
   flex-shrink: 0;
-  transition: all 0.1s ease;
+  transition:
+    background-color 0.1s ease,
+    transform 0.1s ease;
 }
 
 .panelNavigation:active {
@@ -585,14 +588,14 @@
 }
 
 .rivalActionGrid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
 .rivalActionGrid .action {
-  min-height: 56px;
+  min-height: 68px;
   padding: 8px 4px;
-  font-size: 15px;
+  font-size: 16px;
 }
 
 .action {
@@ -610,7 +613,10 @@
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
   color: var(--acta-ink);
-  transition: all 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.12s ease;
   box-shadow: 0 1px 2px rgba(6, 32, 72, 0.04);
 }
 
@@ -795,14 +801,17 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-height: 106px;
+  min-height: 116px;
   width: 100%;
   padding: 8px 10px;
   background: #ffffff;
   border: 1.5px solid #cbd5e1;
   border-radius: 14px;
   text-align: left;
-  transition: all 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.12s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   position: relative;
   overflow: hidden;
@@ -938,12 +947,12 @@
   align-items: center;
   width: 100%;
   margin: 4px 0;
-  min-height: 32px;
-  max-height: 32px;
+  min-height: 38px;
+  max-height: 38px;
 }
 
 .cardPlayerName {
-  font-size: 13px;
+  font-size: 15px;
   font-weight: 800;
   color: #062048;
   line-height: 1.2;
@@ -963,7 +972,7 @@
   width: 100%;
   padding: 3px 6px;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   line-height: 1.1;
   text-align: center;
@@ -1112,7 +1121,10 @@
   border-radius: 14px;
   position: relative;
   text-align: left;
-  transition: all 0.12s ease;
+  transition:
+    background-color 0.12s ease,
+    border-color 0.12s ease,
+    transform 0.12s ease;
   box-shadow: 0 1px 2px rgba(6, 32, 72, 0.04);
 }
 
@@ -1614,7 +1626,7 @@
 
 .panelShare .panelBody {
   flex: 0 1 auto;
-  overflow-y: hidden;
+  overflow-y: auto;
   padding-bottom: max(28px, calc(env(safe-area-inset-bottom) + 16px));
 }
 
@@ -1742,6 +1754,53 @@
 }
 
 .panel .penaltySave {
+  --button-bg: #1657a8;
+  --button-ink: #ffffff;
+}
+.panelActionsField,
+.panelGoal,
+.panelShot,
+.panelSanction,
+.panelBench,
+.panelBenchActions {
+  height: min(70dvh, 390px);
+  max-height: min(90dvh, 390px);
+}
+.panelActionsKeeper {
+  height: min(76dvh, 480px);
+  max-height: min(90dvh, 480px);
+}
+.panelActionsField .panelBody,
+.panelActionsKeeper .panelBody,
+.panelGoal .panelBody,
+.panelShot .panelBody,
+.panelSanction .panelBody,
+.panelBench .panelBody,
+.panelBenchActions .panelBody {
+  flex: 1;
+}
+.panelShot .panelBody > .actionGrid,
+.panelBench .panelBody > .actionList,
+.panelBench .panelBody > .actionGrid {
+  margin-block: auto;
+}
+.panelNavigation {
+  min-height: 48px;
+  font-size: 14px;
+}
+.panel .actionGoalExtra {
+  --button-bg: #1657a8;
+}
+.panel .actionGoalPenalty {
+  --button-bg: #f4c430;
+  --button-ink: #062048;
+}
+.panel .actionShotOut {
+  --button-bg: #e8f1fc;
+  --button-ink: #062048;
+}
+.panel .actionShot,
+.panel .actionShotBlocked {
   --button-bg: #1657a8;
   --button-ink: #ffffff;
 }

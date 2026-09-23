@@ -943,3 +943,13 @@ A petición de Rubén se auditan funciones, organización, diseño y accesibilid
 ### 2026-09-16 · Gorras de partido del 1 al 14
 
 Las convocatorias admiten únicamente gorros del 1 al 14. Un jugador puede quedar temporalmente «Sin gorro» para facilitar intercambios; los números ocupados no se ofrecen al editar. La misma regla se aplica en la interfaz, las Server Actions, las funciones de dominio y la base de datos.
+
+### 2026-09-23 · Pulido del acta tras la demo
+
+- Se retira el registro manual de «solo goles y expulsiones» de las entradas, la administración y su Server Action. Las actas antiguas y sus totales se conservan para lectura.
+- El delegado elige 2, 4 o 6 cuartos. Los rivales empiezan en 14 gorros y se ajustan entre 5 y 15; se elimina la revisión de números rivales.
+- El tiro rápido solo ofrece fuera/palo o bloqueado. El penalti fallado se registra mediante el flujo de sanción y lanzamiento. Una sanción de penalti pendiente no se puede abandonar sin resultado; la asistencia conserva la salida explícita «Sin asistencia».
+- «Entrenador» reúne tiempos muertos y tarjetas, con equipo visible en cada paso. Se admite roja de jugador rival. La corrección del último tramo de portero pasa a «Corregir»; el selector ordinario solo elige quién juega.
+- La tanda muestra gorros y resultados anteriores, situación de la ronda y muerte súbita. No se impone la rotación de cinco lanzadores: la normativa infantil FNCV confirma una tanda de cinco penaltis, pero no se ha verificado una regla única aplicable a todas las categorías y torneos del club. El delegado conserva la elección del lanzador, con los que ya tiraron señalados.
+- La vista de parciales usa tres columnas para seis cuartos y dos para cuatro, también en el panel de compartir tras una tanda.
+- El PDF mantiene su estructura y omite la comparación de tiempos muertos cuando ninguno se ha pedido. Las tarjetas ya se muestran solo si existen.

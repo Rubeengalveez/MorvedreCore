@@ -41,6 +41,22 @@ function event(kind: MatchEvent["kind"], overrides: Partial<MatchEvent> = {}): M
   };
 }
 describe("acta en directo", () => {
+  it("registra la roja rival y deja al jugador fuera sin alterar el marcador", () => {
+    const s = sampleSheet();
+    s.events = [event("red", { side: "them", cap: 2 })];
+    expect(sheetSchema.safeParse(s).success).toBe(true);
+    expect(playerTotals(s, "them", 2).red).toBe(true);
+    expect(score(s, "them")).toBe(0);
+  });
+  it("impide cerrar o pausar el acta con un lanzamiento pendiente", () => {
+    const s = sampleSheet();
+    const penalty = event("penalty", { side: "them", cap: 2 });
+    s.events = [penalty];
+    s.pending = { kind: "penalty_shot", penalty_event_id: penalty.id, shooter_cap: 2 };
+    expect(sheetSchema.safeParse(s).success).toBe(true);
+    expect(sheetSchema.safeParse({ ...s, phase: "break" }).success).toBe(false);
+    expect(sheetSchema.safeParse({ ...s, phase: "finished" }).success).toBe(false);
+  });
   it("counts penalties toward the three personal exclusions", () => {
     const s = sampleSheet();
     s.events = [event("penalty"), event("exclusion")];

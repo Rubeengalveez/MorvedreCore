@@ -169,10 +169,6 @@ export function createActaPdf(record: LiveRecord): File {
     });
     return y + h;
   }
-  function bar(x: number, y: number, width: number, value: number, max: number, color = BLUE) {
-    fill(x, y, width, 3, [174, 191, 207]);
-    if (value > 0 && max > 0) fill(x, y, width * Math.min(1, value / max), 3, color);
-  }
   const cards = (yellow: boolean, red: boolean) =>
     [yellow ? "Amarilla" : "", red ? "Roja" : ""].filter(Boolean).join(" / ") || "-";
 
@@ -438,7 +434,9 @@ export function createActaPdf(record: LiveRecord): File {
     ["Tiros fallados", a.ownShooting.misses, a.rivalMisses],
     ["Expulsiones", a.count("us", "exclusion"), a.count("them", "exclusion")],
     ["Penaltis cometidos", a.count("us", "penalty"), a.count("them", "penalty")],
-    ["Tiempos muertos", a.count("us", "timeout"), a.count("them", "timeout")],
+    ...(a.count("us", "timeout") + a.count("them", "timeout") > 0
+      ? [["Tiempos muertos", a.count("us", "timeout"), a.count("them", "timeout")] as [string, number, number]]
+      : []),
   ];
   const yellows = [
     a.count("us", "yellow", "coach_yellow"),

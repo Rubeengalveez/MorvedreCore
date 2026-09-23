@@ -60,16 +60,13 @@ it("permite elegir un máximo de 14 cuando una convocatoria antigua tiene más j
   fireEvent.click(screen.getByRole("checkbox", { name: "Quitar a Jugador 1" }));
   expect(screen.getByRole("checkbox", { name: "Elegir a Jugador 15" })).toBeEnabled();
 });
-it("muestra ambos modos directamente sin enlaces de administración", () => {
+it("muestra solo el acta en directo", () => {
   render(<DelegateMatchEntry matchId={id} started={false} finished={false} />);
   expect(screen.getByRole("link", { name: /Abrir acta en directo/ })).toHaveAttribute(
     "href",
     `/acta?match=${id}`,
   );
-  expect(screen.getByRole("link", { name: /Solo goles y expulsiones/ })).toHaveAttribute(
-    "href",
-    `/matches/${id}/registro`,
-  );
+  expect(screen.queryByRole("link", { name: /Solo goles y expulsiones/ })).toBeNull();
 });
 it("solo una asignación de delegado del equipo concede acceso", () => {
   for (const role of ["admin", "coach", "delegate"]) {

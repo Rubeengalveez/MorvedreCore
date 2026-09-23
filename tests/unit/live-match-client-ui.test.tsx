@@ -77,20 +77,37 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("interfaz del acta", () => {
-  it("completa el destino de un penalti antiguo desde corregir sin duplicarlo", async () => {
+  it("permite clasificar un penalti fallado antiguo desde Corregir", async () => {
     const missed = event("penalty_missed");
     mock.hook.mockReturnValue({ ...mock.hook(), record: record([missed]) });
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
     fireEvent.click(screen.getByRole("button", { name: "Corregir" }));
-    fireEvent.click(screen.getByRole("button", { name: "Tiro" }));
-    fireEvent.click(screen.getByRole("button", { name: "Penalti fallado" }));
-    expect(mock.change).not.toHaveBeenCalled();
+    expect(screen.getByText(/Corregir penalti fallado/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Fuera / palo" }));
     await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
     expect(mock.change.mock.calls[0][0].events).toEqual([
       expect.objectContaining({ id: missed.id, kind: "penalty_missed", missOutcome: "out" }),
     ]);
+  });
+  it.each([null, 2])("impide cerrar un penalti pendiente con lanzador %s", async (shooter) => {
+    const penalty = event("penalty", { side: "them", cap: 4 });
+    const current = record([penalty]);
+    current.sheet.pending = {
+      kind: "penalty_shot",
+      penalty_event_id: penalty.id,
+      shooter_cap: shooter,
+    };
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+    expect(mock.change).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(current.sheet.pending).toMatchObject({
+      penalty_event_id: penalty.id,
+      shooter_cap: shooter,
+    });
   });
   it.each([
     ["Parada", "save"],
@@ -104,9 +121,7 @@ describe("interfaz del acta", () => {
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Resultado del penalti" })).toBeInTheDocument(),
     );
-    fireEvent.click(
-      within(screen.getByRole("dialog")).getByRole("button", { name: label }),
-    );
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: label }));
     await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
     const saved = mock.change.mock.calls[0][0] as LiveSheet;
     expect(saved.events).toHaveLength(2);
@@ -122,7 +137,8 @@ describe("interfaz del acta", () => {
     paused.sheet.phase = "break";
     mock.hook.mockReturnValue({ ...mock.hook(), record: paused });
     render(<LiveMatchClient />);
-    fireEvent.click(screen.getByRole("button", { name: "Empezar cuarto 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Toca aquí para empezar el cuarto 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "Elegir portero y empezar el cuarto 2" }));
     expect(mock.change).not.toHaveBeenCalled();
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Iván Ortiz/ }));
     await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
@@ -138,8 +154,8 @@ describe("interfaz del acta", () => {
     current.sheet.keeperStints = [{ cap: 1, period: 1, afterEventId: null }];
     mock.hook.mockReturnValue({ ...mock.hook(), record: current });
     render(<LiveMatchClient />);
-    fireEvent.click(screen.getByRole("button", { name: /Portero en juego, gorro 1/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Corregir selección" }));
+    fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Corregir último cambio de portero" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Iván Ortiz/ }));
     await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
     expect(mock.change.mock.calls[0][0].keeperStints).toEqual([
@@ -167,6 +183,21 @@ describe("interfaz del acta", () => {
     expect(saved.pending).toMatchObject({
       kind: "penalty_shot",
       penalty_event_id: saved.events.at(-1)?.id,
+      shooter_cap: null,
+    });
+  });
+
+  it("permite completar desde Corregir un penalti antiguo sin lanzamiento", async () => {
+    const penalty = event("penalty", { side: "them", cap: 4 });
+    mock.hook.mockReturnValue({ ...mock.hook(), record: record([penalty]) });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Rival" }));
+    fireEvent.click(screen.getByRole("button", { name: "Completar lanzamiento pendiente" }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
+    expect(mock.change.mock.calls[0][0].pending).toMatchObject({
+      kind: "penalty_shot",
+      penalty_event_id: penalty.id,
       shooter_cap: null,
     });
   });
@@ -206,16 +237,20 @@ describe("interfaz del acta", () => {
     expect(mock.change).not.toHaveBeenCalled();
   });
 
-  it("explica los tiempos pedidos y muestra el acceso visible para corregir", () => {
+  it("muestra entrenador, tiempos y tarjetas en pasos claros", () => {
     render(<LiveMatchClient />);
-    expect(screen.getByRole("button", { name: /Tiempo muerto/ })).toHaveTextContent(
-      "Pedidos: M 0 · R 0",
-    );
+    expect(
+      screen.getByRole("button", { name: /Entrenador: tiempos muertos y tarjetas/ }),
+    ).toHaveTextContent("Tiempos: M 0 · R 0");
     expect(screen.getByRole("button", { name: "Corregir jugadas" })).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: /Tiempo muerto/ }));
-    expect(screen.getByRole("button", { name: "Morvedre · 0 pedidos" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Rival · 0 pedidos" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tarjeta al entrenador" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /Entrenador: tiempos muertos y tarjetas/ }));
+    expect(screen.getByRole("button", { name: "Tiempo muerto" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Tarjeta al entrenador" }));
+    expect(
+      screen.getByRole("heading", { name: "¿Qué entrenador recibe la tarjeta?" }),
+    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Rival" }));
+    expect(screen.getByRole("button", { name: "Roja al entrenador" })).toBeInTheDocument();
   });
 
   it("pide confirmación amplia antes de anular", () => {
@@ -365,7 +400,7 @@ describe("interfaz del acta", () => {
     );
   });
 
-  it("permite cerrar una continuación guardada sin volver a abrirla", async () => {
+  it("mantiene la asistencia pendiente hasta elegir una salida explícita", async () => {
     const goal = event("goal", { cap: 2 });
     const pendingRecord = record([goal]);
     pendingRecord.sheet = {
@@ -380,15 +415,10 @@ describe("interfaz del acta", () => {
       ).toBeInTheDocument(),
     );
     fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
-    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+    expect(mock.change).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Seguir sin asistencia" }));
     await waitFor(() =>
       expect(mock.change).toHaveBeenCalledWith(expect.objectContaining({ pending: null })),
-    );
-    expect(mock.change).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("heading", { name: "¿Quién dio la asistencia?" }),
-      ).not.toBeInTheDocument(),
     );
   });
 });

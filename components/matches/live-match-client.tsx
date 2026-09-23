@@ -6,7 +6,7 @@ import { LiveMatchEntryState } from "./live-match-entry-state";
 
 import * as Dialog from "@radix-ui/react-dialog";
 
-import { ArrowRightLeft, ChevronLeft, Download, MessageCircle, Share2, X } from "lucide-react";
+import { ArrowRightLeft, ChevronLeft, Download, MessageCircle, X } from "lucide-react";
 
 import {
   actionLabels,
@@ -34,7 +34,7 @@ import { ActaShootout } from "./acta-shootout";
 import { ActaPlayerName } from "./acta-player-name";
 import { ActaPlayerBoard } from "./acta-player-board";
 import { ActaKeeperControl } from "./acta-keeper-control";
-import { keeperQuarters, selectMatchKeeper } from "@/lib/domain/live-match-keepers";
+import { selectMatchKeeper } from "@/lib/domain/live-match-keepers";
 import { ActaMatchControls } from "./acta-match-controls";
 
 type Panel =
@@ -43,10 +43,13 @@ type Panel =
   | "player-stats"
   | "goal"
   | "shot"
+  | "miss-correction"
   | "sanction"
   | "bench"
+  | "bench-side"
   | "bench-actions"
   | "periods"
+  | "break-start"
   | "shootout-start"
   | "history"
   | "keeper"
@@ -55,12 +58,10 @@ type Panel =
   | "assist-edit"
   | "penalty-shooter"
   | "penalty-result"
-  | "penalty-miss"
   | "duplicate-penalty"
   | "assist-relation"
   | "penalty-relation"
   | "delete"
-  | "rival-caps"
   | "share"
   | "takeover"
   | null;
@@ -97,7 +98,6 @@ export function LiveMatchClient() {
   const localMutation = useRef(false);
   const lastAction = useRef<{ key: string; at: number } | null>(null);
   const closingPanel = useRef(false);
-  const dismissedPending = useRef<string | null>(null);
   const lastActivePanelRef = useRef<Exclude<Panel, null>>("players");
   if (panel !== null) {
     lastActivePanelRef.current = panel;
@@ -145,7 +145,7 @@ export function LiveMatchClient() {
     return () => {
       cancelled = true;
     };
-  }, [panel, record?.matchId, record?.revision, record?.mutation]);
+  }, [panel, record]);
 
   const [outWarning, setOutWarning] = useState(false);
 
@@ -163,15 +163,7 @@ export function LiveMatchClient() {
   }, [notice]);
 
   useEffect(() => {
-    if (!record?.sheet.pending) {
-      dismissedPending.current = null;
-      return;
-    }
-    const pendingKey =
-      record.sheet.pending.kind === "assist"
-        ? record.sheet.pending.goal_event_id
-        : record.sheet.pending.penalty_event_id;
-    if (panel || dismissedPending.current === pendingKey) return;
+    if (!record?.sheet.pending || panel) return;
     setPanel(
       record.sheet.pending.kind === "assist"
         ? "assist"
@@ -208,9 +200,9 @@ export function LiveMatchClient() {
     ),
   );
 
-  function openKeeper(start = false) {
+  function openKeeper(start = false, mode: "change" | "correct" = "change") {
     setKeeperStart(start);
-    setKeeperMode("change");
+    setKeeperMode(mode);
     setShowAllKeepers(false);
     setPanel("keeper");
   }
@@ -249,29 +241,31 @@ export function LiveMatchClient() {
 
   async function dismissPanel() {
     if (closingPanel.current) return;
-    closingPanel.current = true;
-    const continuationOpen =
-      Boolean(s.pending) &&
-      ["assist", "penalty-shooter", "penalty-result", "duplicate-penalty"].includes(panel ?? "");
-    if (continuationOpen) {
-      dismissedPending.current =
-        s.pending?.kind === "assist"
-          ? s.pending.goal_event_id
-          : s.pending?.kind === "penalty_shot"
-            ? s.pending.penalty_event_id
-            : null;
-      const saved = await patch({ ...s, pending: null }, false);
-      if (!saved) {
-        dismissedPending.current = null;
-        closingPanel.current = false;
-        return;
-      }
+    if (s.pending) {
+      setNotice(
+        s.pending.kind === "assist"
+          ? "Elige un asistente o pulsa Sin asistencia."
+          : "Termina el lanzamiento antes de seguir.",
+      );
+      setPanel(
+        s.pending.kind === "assist"
+          ? "assist"
+          : s.pending.shooter_cap === null
+            ? "penalty-shooter"
+            : "penalty-result",
+      );
+      return;
     }
+    closingPanel.current = true;
     closePanel();
   }
 
   function goBack() {
     if (!panel) return;
+    if (panel === "miss-correction") {
+      setPanel("history");
+      return;
+    }
     if (
       [
         "player-stats",
@@ -291,15 +285,15 @@ export function LiveMatchClient() {
       return;
     }
     if (panel === "bench-actions") {
+      setPanel("bench-side");
+      return;
+    }
+    if (panel === "bench-side") {
       setPanel("bench");
       return;
     }
     if (panel === "penalty-result") {
       setPanel("penalty-shooter");
-      return;
-    }
-    if (panel === "penalty-miss") {
-      setPanel("shot");
       return;
     }
     if (panel === "duplicate-penalty" && duplicate) {
@@ -818,29 +812,35 @@ export function LiveMatchClient() {
 
   const titles: Partial<Record<Exclude<Panel, null>, string>> = {
     players: side === "us" ? "Seleccionar jugador · Morvedre" : "Seleccionar gorro · Rival",
-    bench: benchKind === "timeout" ? "¿Quién pide tiempo muerto?" : "Tarjeta al entrenador",
-    "bench-actions": `${side === "us" ? "Morvedre" : "Rival"} · Banquillo`,
+    bench: "Entrenador",
+    "bench-side":
+      benchKind === "timeout" ? "¿Quién pide tiempo muerto?" : "¿Qué entrenador recibe la tarjeta?",
+    "bench-actions": `${side === "us" ? "Morvedre" : "Rival"} · Entrenador`,
     periods: s.phase === "playing" ? `Terminar cuarto ${s.period}` : "Cuartos del partido",
+    "break-start": `Empezar cuarto ${s.period + 1}`,
     "shootout-start": "¿Quién lanza primero?",
     history: "Corregir una jugada",
     "player-stats": "Estadísticas del jugador",
-    keeper: keeperStart ? `Portero del cuarto ${s.period + 1}` : "Portero en juego",
+    keeper: keeperStart
+      ? `Portero del cuarto ${s.period + 1}`
+      : keeperMode === "correct"
+        ? "Corregir portero"
+        : "Portero en juego",
     "keeper-action": "¿Quién estaba en portería?",
     assist: "¿Quién dio la asistencia?",
     "assist-edit": "Corregir asistencia",
     "penalty-shooter": "¿Quién tira el penalti?",
     "penalty-result": "Resultado del penalti",
-    "penalty-miss": "¿Cómo termina el penalti?",
     "duplicate-penalty": "¿Es el mismo gol de penalti?",
     "assist-relation": "Resolver la asistencia",
     "penalty-relation": "Resolver el penalti vinculado",
     delete: "Anular jugada",
-    "rival-caps": "Gorros del rival",
     share: "Compartir acta",
     takeover: "Tomar el relevo",
     actions: "¿Qué ha pasado?",
     goal: "¿Qué tipo de gol?",
     shot: "¿Cómo termina el tiro?",
+    "miss-correction": "Corregir penalti fallado",
     sanction: "¿Qué sanción ha sido?",
   };
   const title = activePanel ? (titles[activePanel] ?? "Acta") : "Acta";
@@ -880,7 +880,6 @@ export function LiveMatchClient() {
         "assist-edit",
         "assist-relation",
         "penalty-shooter",
-        "rival-caps",
       ].includes(activePanel)
     ) {
       return styles.panelPlayers;
@@ -891,13 +890,13 @@ export function LiveMatchClient() {
     if (activePanel === "goal") {
       return styles.panelGoal;
     }
-    if (activePanel === "shot" || activePanel === "penalty-miss") {
+    if (activePanel === "shot" || activePanel === "miss-correction") {
       return styles.panelShot;
     }
     if (activePanel === "sanction") {
       return styles.panelSanction;
     }
-    if (activePanel === "bench") {
+    if (activePanel === "bench" || activePanel === "bench-side") {
       return styles.panelBench;
     }
     if (activePanel === "bench-actions") {
@@ -906,7 +905,7 @@ export function LiveMatchClient() {
     if (activePanel === "periods") {
       return styles.panelPeriods;
     }
-    if (activePanel === "shootout-start") {
+    if (activePanel === "shootout-start" || activePanel === "break-start") {
       return styles.panelChoice;
     }
     if (activePanel === "penalty-result" || activePanel === "duplicate-penalty") {
@@ -927,16 +926,28 @@ export function LiveMatchClient() {
 
       <div
         data-acta-body
-        className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
+        className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain"
         data-acta-scroll
       >
         {error && (
-          <div className={styles.error} role="alert">
+          <div className={`${styles.error} relative z-20`} role="alert">
             <p>{error}</p>
 
             <button type="button" onClick={() => void retry()}>
               Reintentar envío
             </button>
+          </div>
+        )}
+
+        {s.phase === "break" && (
+          <div
+            className="m-3 rounded-2xl border-2 border-[#e4b520] bg-[#fff6cd] p-4 text-center text-[#062048]"
+            role="status"
+          >
+            <p className="text-lg font-black">Descanso · cuarto {s.period + 1} pendiente</p>
+            <p className="mt-1 text-base font-semibold">
+              Toca la pantalla o el botón inferior para empezar.
+            </p>
           </div>
         )}
 
@@ -956,7 +967,7 @@ export function LiveMatchClient() {
 
                   onChange={(e) => void change({ ...s, periods: Number(e.target.value) })}
                 >
-                  {[4, 6, 8].map((n) => (
+                  {[2, 4, 6].map((n) => (
                     <option key={n} value={n}>
                       {n} cuartos
                     </option>
@@ -971,7 +982,7 @@ export function LiveMatchClient() {
                     type="button"
                     aria-label="Quitar un jugador rival"
                     className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
-                    disabled={!enabled || s.opponentCaps.length <= 1}
+                    disabled={!enabled || s.opponentCaps.length <= 5}
                     onClick={() => void change({ ...s, opponentCaps: s.opponentCaps.slice(0, -1) })}
                   >
                     −
@@ -983,7 +994,7 @@ export function LiveMatchClient() {
                     type="button"
                     aria-label="Añadir un jugador rival"
                     className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
-                    disabled={!enabled || s.opponentCaps.length >= 30}
+                    disabled={!enabled || s.opponentCaps.length >= 15}
                     onClick={() => {
                       const nextCap = Array.from({ length: 99 }, (_, index) => index + 1).find(
                         (candidate) => !s.opponentCaps.includes(candidate),
@@ -1010,21 +1021,16 @@ export function LiveMatchClient() {
               <span className={styles.setupKeeperValue}>
                 <span className={styles.setupKeeperCap}>{s.keeper ?? "—"}</span>
                 <span className={styles.setupKeeperName}>
-                  {s.keeper
-                    ? (s.players.find((p) => p.cap === s.keeper)?.name ?? "Sin nombre")
-                    : "Elegir portero"}
+                  {s.keeper ? (
+                    <ActaPlayerName
+                      name={s.players.find((p) => p.cap === s.keeper)?.name ?? "Sin nombre"}
+                    />
+                  ) : (
+                    "Elegir portero"
+                  )}
                 </span>
               </span>
               <span className={styles.setupKeeperAction}>{s.keeper ? "Cambiar" : "Elegir"}</span>
-            </button>
-
-            <button
-              type="button"
-              className="mt-2 min-h-12 w-full rounded-lg border-2 border-slate-400 bg-white px-3 text-left text-base font-bold"
-              disabled={!enabled}
-              onClick={() => setPanel("rival-caps")}
-            >
-              Revisar números del rival
             </button>
 
             {(s.baseline.some((p) => p.goals || p.exclusions) || s.baselineThem > 0) && (
@@ -1065,6 +1071,14 @@ export function LiveMatchClient() {
             }}
           />
         )}
+        {s.phase === "break" && enabled && (
+          <button
+            type="button"
+            aria-label={`Abrir inicio del cuarto ${s.period + 1}`}
+            className="absolute inset-0 z-10 h-full w-full bg-transparent"
+            onClick={() => setPanel("break-start")}
+          />
+        )}
       </div>
 
       {s.phase !== "shootout" && !(s.shootout && closed) && (
@@ -1087,9 +1101,9 @@ export function LiveMatchClient() {
 
               disabled={!enabled}
 
-              onClick={() => openKeeper(true)}
+              onClick={() => setPanel("break-start")}
             >
-              Empezar cuarto {s.period + 1}
+              Toca aquí para empezar el cuarto {s.period + 1}
             </button>
           ) : closed ? (
             <button className={styles.start} onClick={() => setPanel("share")}>
@@ -1170,7 +1184,8 @@ export function LiveMatchClient() {
               </div>
 
               <div className={styles.panelTitleBlock}>
-                {cap !== null && ["actions", "goal", "shot", "sanction"].includes(activePanel) ? (
+                {cap !== null &&
+                ["actions", "goal", "shot", "sanction", "miss-correction"].includes(activePanel) ? (
                   <div className={styles.playerBanner}>
                     <span
                       className={`${styles.playerBannerCap} ${
@@ -1181,7 +1196,11 @@ export function LiveMatchClient() {
                     </span>
                     <div className={styles.playerBannerInfo}>
                       <Dialog.Title className={styles.playerBannerName}>
-                        {side === "us" && currentPlayer ? currentPlayer.name : `Gorro #${cap}`}
+                        {side === "us" && currentPlayer ? (
+                          <ActaPlayerName name={currentPlayer.name} />
+                        ) : (
+                          `Gorro #${cap}`
+                        )}
                       </Dialog.Title>
                       <p className={styles.playerBannerSubtitle}>
                         {side === "us" ? "Morvedre" : "Rival"} · {title}
@@ -1431,6 +1450,8 @@ export function LiveMatchClient() {
 
                         {side === "them" &&
                           button("Penalti", () => void addRivalPenalty(), styles.actionPenalty)}
+                        {side === "them" &&
+                          button("Tarjeta roja", () => void add("red"), styles.actionSanctionRed)}
                       </div>
 
                       {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
@@ -1483,29 +1504,19 @@ export function LiveMatchClient() {
                     () => void add("shot_blocked"),
                     styles.actionShotBlocked,
                   )}
-                  {button(
-                    actionLabels["shot_corner"],
-                    () => void add("shot_corner"),
-                    styles.actionShotCorner,
-                  )}
-                  {button(
-                    actionLabels["penalty_missed"],
-                    () => setPanel("penalty-miss"),
-                    styles.actionShotMissed,
-                  )}
                 </div>
               )}
 
-              {activePanel === "penalty-miss" && (
-                <div className={styles.actionList}>
+              {activePanel === "miss-correction" && editing?.kind === "penalty_missed" && (
+                <div className={styles.actionGrid}>
                   {button(
                     "Fuera / palo",
-                    () => void add("penalty_missed", side, "out"),
+                    () => void add("penalty_missed", editing.side, "out"),
                     styles.actionShotOut,
                   )}
                   {button(
                     "Parada del portero",
-                    () => void add("penalty_missed", side, "save"),
+                    () => void add("penalty_missed", editing.side, "save"),
                     styles.actionSave,
                   )}
                 </div>
@@ -1533,56 +1544,60 @@ export function LiveMatchClient() {
               )}
 
               {activePanel === "bench" && (
-                <div className="space-y-3">
-                  <div className="rounded-2xl bg-[#062048] p-3 text-white shadow-sm">
-                    <p className="mb-3 text-center text-sm font-bold text-blue-100">
-                      Toca el equipo que pide el tiempo muerto
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        disabled={busy}
-                        className="flex min-h-24 flex-col items-center justify-center rounded-xl bg-[#1657a8] px-2 text-center text-white active:bg-[#0b4d86] disabled:opacity-50"
-                        onClick={() => {
-                          setSide("us");
-                          if (benchKind === "timeout") void add("timeout", "us");
-                          else setPanel("bench-actions");
-                        }}
-                      >
-                        <strong className="text-lg">Morvedre</strong>
-                        <span className="mt-1 rounded-full bg-white/15 px-2.5 py-1 text-sm font-bold">
-                          {timeoutCount(s, "us")} pedidos
-                        </span>
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busy}
-                        className="flex min-h-24 flex-col items-center justify-center rounded-xl bg-[#f4c430] px-2 text-center text-[#062048] active:bg-[#e4b520] disabled:opacity-50"
-                        onClick={() => {
-                          setSide("them");
-                          if (benchKind === "timeout") void add("timeout", "them");
-                          else setPanel("bench-actions");
-                        }}
-                      >
-                        <strong className="text-lg">Rival</strong>
-                        <span className="mt-1 rounded-full bg-white/45 px-2.5 py-1 text-sm font-bold">
-                          {timeoutCount(s, "them")} pedidos
-                        </span>
-                      </button>
-                    </div>
-                  </div>
-                  {benchKind === "timeout" && (
+                <div className={styles.actionList}>
+                  {button(
+                    "Tiempo muerto",
+                    () => {
+                      setBenchKind("timeout");
+                      setPanel("bench-side");
+                    },
+                    styles.actionShot,
+                  )}
+                  {button(
+                    "Tarjeta al entrenador",
+                    () => {
+                      setBenchKind("cards");
+                      setPanel("bench-side");
+                    },
+                    styles.actionSanction,
+                  )}
+                  <p className="text-center text-base font-semibold text-slate-700">
+                    Tiempos pedidos · Morvedre {timeoutCount(s, "us")} · Rival{" "}
+                    {timeoutCount(s, "them")}
+                  </p>
+                </div>
+              )}
+
+              {activePanel === "bench-side" && (
+                <div className={styles.actionGrid}>
+                  {(["us", "them"] as const).map((team) => (
                     <button
+                      key={team}
                       type="button"
-                      className="min-h-14 w-full rounded-xl border-2 border-[#8aa6bf] bg-[#e8f1fc] px-4 text-base font-bold text-[#062048]"
+                      disabled={!enabled}
+                      className={
+                        styles.action +
+                        " " +
+                        (team === "us" ? styles.actionGoal : styles.actionAssist)
+                      }
                       onClick={() => {
-                        setBenchKind("cards");
-                        setPanel("bench");
+                        setSide(team);
+                        if (benchKind === "timeout") void add("timeout", team);
+                        else setPanel("bench-actions");
                       }}
                     >
-                      Tarjeta al entrenador
+                      <span>
+                        <strong className="block text-lg">
+                          {team === "us" ? "Morvedre" : "Rival"}
+                        </strong>
+                        {benchKind === "timeout" && (
+                          <span className="mt-1 block text-sm">
+                            {timeoutCount(s, team)} pedidos
+                          </span>
+                        )}
+                      </span>
                     </button>
-                  )}
+                  ))}
                 </div>
               )}
 
@@ -1592,7 +1607,17 @@ export function LiveMatchClient() {
                     ? (["timeout"] as const)
                     : (["coach_yellow", "coach_red"] as const)
                   ).map((k) => (
-                    <div key={k}>{button(actionLabels[k], () => void add(k))}</div>
+                    <div key={k}>
+                      {button(
+                        actionLabels[k],
+                        () => void add(k),
+                        k === "timeout"
+                          ? styles.actionShot
+                          : k === "coach_red"
+                            ? styles.actionSanctionRed
+                            : styles.actionSanctionYellow,
+                      )}
+                    </div>
                   ))}
                 </div>
               )}
@@ -1650,7 +1675,9 @@ export function LiveMatchClient() {
                             <span className={styles.cardGoalsZero}>Asistencia</span>
                           </div>
                           <div className={styles.cardNameRow}>
-                            <span className={styles.cardPlayerName}>{player.name}</span>
+                            <span className={styles.cardPlayerName}>
+                              <ActaPlayerName name={player.name} />
+                            </span>
                           </div>
                           <div className={`${styles.cardFoulsBar} ${styles.foulsAssistAction}`}>
                             Elegir asistente
@@ -1721,7 +1748,9 @@ export function LiveMatchClient() {
                               </span>
                             </div>
                             <div className={styles.cardNameRow}>
-                              <span className={styles.cardPlayerName}>{player.name}</span>
+                              <span className={styles.cardPlayerName}>
+                                <ActaPlayerName name={player.name} />
+                              </span>
                             </div>
                             <div
                               className={`${styles.cardFoulsBar} ${
@@ -1735,13 +1764,6 @@ export function LiveMatchClient() {
                       })}
                     </div>
                   )}
-                  <button
-                    type="button"
-                    className="min-h-14 w-full rounded-xl border-2 border-slate-400 bg-white px-4 text-base font-bold"
-                    onClick={() => void patch({ ...s, pending: null })}
-                  >
-                    Seguir sin anotar el tiro
-                  </button>
                 </div>
               )}
 
@@ -1920,7 +1942,9 @@ export function LiveMatchClient() {
                               <span className={styles.cardGoalsZero}>Asistencia</span>
                             </div>
                             <div className={styles.cardNameRow}>
-                              <span className={styles.cardPlayerName}>{player.name}</span>
+                              <span className={styles.cardPlayerName}>
+                                <ActaPlayerName name={player.name} />
+                              </span>
                             </div>
                             <div className={`${styles.cardFoulsBar} ${styles.foulsAssistAction}`}>
                               Nueva asistencia
@@ -1984,30 +2008,11 @@ export function LiveMatchClient() {
               {activePanel === "keeper" && (
                 <div className="space-y-3">
                   {" "}
-                  {!keeperStart && s.phase !== "ready" && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {(["change", "correct"] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          type="button"
-                          aria-pressed={keeperMode === mode}
-                          onClick={() => setKeeperMode(mode)}
-                          className={`min-h-12 rounded-xl border-2 px-3 text-sm font-bold ${keeperMode === mode ? "border-[#062048] bg-[#062048] text-white" : "border-slate-300 bg-white text-[#062048]"}`}
-                        >
-                          {mode === "change" ? "Cambio real" : "Corregir selección"}
-                        </button>
-                      ))}
-                    </div>
+                  {keeperStart && (
+                    <p className="rounded-xl border-2 border-[#f4c430] bg-[#fff7d6] p-3 text-base font-bold text-[#062048]">
+                      Elige quién empieza el cuarto {s.period + 1}.
+                    </p>
                   )}
-                  <p className="rounded-xl border border-[#062048] bg-white p-3 text-base leading-relaxed text-[#062048]">
-                    {keeperStart
-                      ? `¿Quién juega en portería el cuarto ${s.period + 1}? Toca su nombre para empezar.`
-                      : s.phase === "ready"
-                        ? "Elige el portero que empieza el partido."
-                        : keeperMode === "correct"
-                          ? "Sustituye al portero elegido por error en el último tramo. Sus paradas y goles recibidos de ese tramo se reasignarán."
-                          : "Elige quién entra ahora. Este cuarto contará para ambos porteros."}
-                  </p>
                   <div className={styles.playerList}>
                     {orderedPlayers
                       .filter(
@@ -2051,14 +2056,10 @@ export function LiveMatchClient() {
                               )}
                             </div>
                             <div className={styles.cardNameRow}>
-                              <span className={styles.cardPlayerName}>{player.name}</span>
+                              <span className={styles.cardPlayerName}>
+                                <ActaPlayerName name={player.name} />
+                              </span>
                             </div>
-                            <p className="px-3 pb-2 text-sm font-semibold text-slate-700">
-                              Cuartos registrados:{" "}
-                              {keeperQuarters(s, player.cap)
-                                .map((q) => `${q}º`)
-                                .join(" · ") || "Ninguno"}
-                            </p>
                             <div
                               className={`${styles.cardFoulsBar} ${
                                 out
@@ -2120,130 +2121,47 @@ export function LiveMatchClient() {
                 </div>
               )}
 
-              {activePanel === "rival-caps" && (
-                <div className="space-y-3">
-                  <p className="text-base leading-relaxed">
-                    Cambia un número si el rival no usa gorros consecutivos. Cada gorro debe ser
-                    diferente.
+              {activePanel === "break-start" && (
+                <div className={styles.actionList}>
+                  <p className="rounded-xl border-2 border-[#e4b520] bg-[#fff7d6] p-4 text-center text-base font-bold text-[#062048]">
+                    El cuarto {s.period + 1} todavía no ha empezado. Elige el portero y confirma el
+                    inicio para anotar la siguiente jugada.
                   </p>
-                  <div className="divide-y divide-slate-200 rounded-xl border border-slate-300 bg-white">
-                    {s.opponentCaps.map((opponentCap, index) => {
-                      const hasEvents = active.some(
-                        (event) => event.side === "them" && event.cap === opponentCap,
-                      );
-                      return (
-                        <div
-                          key={`${index}-${opponentCap}`}
-                          className="flex min-h-14 items-center gap-3 px-3 py-2"
-                        >
-                          <label
-                            htmlFor={`rival-cap-${index}`}
-                            className="flex-1 text-base font-bold"
-                          >
-                            Jugador rival {index + 1}
-                          </label>
-                          <select
-                            id={`rival-cap-${index}`}
-                            value={opponentCap}
-                            disabled={!enabled || hasEvents}
-                            onChange={(event) => {
-                              const nextCap = Number(event.target.value);
-                              if (s.opponentCaps.includes(nextCap)) return;
-                              void change({
-                                ...s,
-                                opponentCaps: s.opponentCaps.map((value, capIndex) =>
-                                  capIndex === index ? nextCap : value,
-                                ),
-                              });
-                            }}
-                            className="min-h-12 min-w-20 rounded-lg border-2 border-slate-400 bg-white px-3 text-lg font-extrabold"
-                          >
-                            {Array.from({ length: 99 }, (_, option) => option + 1).map((option) => (
-                              <option
-                                key={option}
-                                value={option}
-                                disabled={s.opponentCaps.some(
-                                  (value, capIndex) => capIndex !== index && value === option,
-                                )}
-                              >
-                                {option}
-                              </option>
-                            ))}
-                          </select>
-                          <button
-                            type="button"
-                            disabled={!enabled || hasEvents || s.opponentCaps.length <= 1}
-                            className="min-h-12 rounded-lg border border-red-300 px-3 text-base font-bold text-red-900 disabled:opacity-40"
-                            onClick={() =>
-                              void change({
-                                ...s,
-                                opponentCaps: s.opponentCaps.filter(
-                                  (_, capIndex) => capIndex !== index,
-                                ),
-                              })
-                            }
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <button
-                    type="button"
-                    disabled={!enabled || s.opponentCaps.length >= 30}
-                    className="min-h-14 w-full rounded-xl bg-[#062048] px-4 text-lg font-bold text-white"
-                    onClick={() => {
-                      const nextCap = Array.from({ length: 99 }, (_, index) => index + 1).find(
-                        (candidate) => !s.opponentCaps.includes(candidate),
-                      );
-                      if (nextCap)
-                        void change({ ...s, opponentCaps: [...s.opponentCaps, nextCap] });
-                    }}
-                  >
-                    Añadir jugador rival
-                  </button>
+                  {button(
+                    `Elegir portero y empezar el cuarto ${s.period + 1}`,
+                    () => openKeeper(true),
+                    styles.actionGoal,
+                  )}
                 </div>
               )}
 
               {activePanel === "shootout-start" && (
-                <div className="space-y-3">
-                  <div className="rounded-xl bg-[#e8f1fc] p-3 text-center text-[#062048]">
-                    <p className="font-extrabold">Elige quién tira primero</p>
-                    <p className="mt-1 text-sm font-medium text-slate-600">
-                      Después los turnos se alternan automáticamente.
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      className="min-h-24 rounded-xl bg-[#1657a8] px-3 text-lg font-black text-white disabled:opacity-50"
-                      disabled={busy || !enabled}
-                      onClick={() =>
-                        void patch({
-                          ...s,
-                          phase: "shootout",
-                          pending: null,
-                          shootout: { firstSide: "us", shots: [] },
-                        })
-                      }
-                    >
-                      Morvedre
-                    </button>
-                    <button
-                      className="min-h-24 rounded-xl bg-[#f4c430] px-3 text-lg font-black text-[#062048] disabled:opacity-50"
-                      disabled={busy || !enabled}
-                      onClick={() =>
-                        void patch({
-                          ...s,
-                          phase: "shootout",
-                          pending: null,
-                          shootout: { firstSide: "them", shots: [] },
-                        })
-                      }
-                    >
-                      {record.opponent}
-                    </button>
-                  </div>
+                <div className={styles.actionList}>
+                  <p className="rounded-xl border border-[#b8cada] bg-[#e8f1fc] p-3 text-base font-semibold text-[#062048]">
+                    Indica qué equipo lanza primero. Después los turnos se alternan automáticamente.
+                  </p>
+                  {button(
+                    "Empieza Morvedre",
+                    () =>
+                      void patch({
+                        ...s,
+                        phase: "shootout",
+                        pending: null,
+                        shootout: { firstSide: "us", shots: [] },
+                      }),
+                    styles.actionGoal,
+                  )}
+                  {button(
+                    `Empieza ${record.opponent}`,
+                    () =>
+                      void patch({
+                        ...s,
+                        phase: "shootout",
+                        pending: null,
+                        shootout: { firstSide: "them", shots: [] },
+                      }),
+                    styles.actionAssist,
+                  )}
                 </div>
               )}
               {activePanel === "periods" && (
@@ -2265,6 +2183,27 @@ export function LiveMatchClient() {
                     </span>
                   </div>
 
+                  <div
+                    className={`mt-3 grid gap-2 ${s.periods === 6 ? "grid-cols-3" : "grid-cols-2"}`}
+                    aria-label="Parciales por cuarto"
+                  >
+                    {Array.from({ length: s.periods }, (_, index) => (
+                      <div
+                        key={index}
+                        className="rounded-lg border border-[#b8cada] bg-white px-2 py-2 text-center text-[#062048]"
+                      >
+                        <span className="block text-xs font-bold uppercase">
+                          Cuarto {index + 1}
+                        </span>
+                        <strong className="font-mono text-lg tabular-nums">
+                          {index + 1 <= s.period
+                            ? `${score(s, "us", index + 1)}–${score(s, "them", index + 1)}`
+                            : "—"}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+
                   <p className="my-4 text-center text-base">
                     Este cuarto:{" "}
                     <strong>
@@ -2276,8 +2215,8 @@ export function LiveMatchClient() {
                   {playing && (
                     <div className="space-y-2">
                       {s.period === s.periods && score(s, "us") === score(s, "them") && (
-                        <p className="text-center text-lg font-bold">
-                          El partido ha terminado en empate
+                        <p className="rounded-xl border-2 border-[#e4c45c] bg-[#fff7d6] p-3 text-center text-lg font-bold text-[#062048]">
+                          Partido empatado · elige cómo termina
                         </p>
                       )}
                       {s.pending && (
@@ -2286,18 +2225,18 @@ export function LiveMatchClient() {
                         </p>
                       )}
                       {s.period === s.periods && score(s, "us") === score(s, "them") ? (
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className={styles.actionGrid}>
                           <button
                             type="button"
-                            className="min-h-16 rounded-xl border-2 border-[#8aa6bf] bg-white px-3 text-base font-extrabold text-[#062048] disabled:opacity-50"
+                            className={`${styles.action} ${styles.actionShot}`}
                             disabled={busy || Boolean(s.pending)}
                             onClick={() => void patch({ ...s, phase: "finished" })}
                           >
-                            Terminar partido
+                            Terminar en empate
                           </button>
                           <button
                             type="button"
-                            className="min-h-16 rounded-xl bg-[#f4c430] px-3 text-base font-extrabold text-[#062048] disabled:opacity-50"
+                            className={`${styles.action} ${styles.actionGoalPenalty}`}
                             disabled={busy || Boolean(s.pending)}
                             onClick={() => setPanel("shootout-start")}
                           >
@@ -2337,6 +2276,21 @@ export function LiveMatchClient() {
 
               {activePanel === "history" && (
                 <>
+                  {s.keeper !== null &&
+                    historySide === "us" &&
+                    (s.keeperStints?.length ?? 0) > 0 && (
+                      <div className="mb-4 rounded-xl border-2 border-[#8aa6bf] bg-white p-3">
+                        <p className="text-base font-bold">Portero en juego · #{s.keeper}</p>
+                        <button
+                          type="button"
+                          disabled={!enabled}
+                          onClick={() => openKeeper(false, "correct")}
+                          className="mt-2 min-h-12 w-full rounded-lg border-2 border-[#0b4d86] bg-[#e8f1fc] px-3 text-base font-bold text-[#062048]"
+                        >
+                          Corregir último cambio de portero
+                        </button>
+                      </div>
+                    )}
                   <div className="mb-5 grid grid-cols-2 gap-2" aria-label="Equipo de las jugadas">
                     {(["us", "them"] as const).map((team) => (
                       <button
@@ -2384,6 +2338,37 @@ export function LiveMatchClient() {
                               </div>
                             </div>
 
+                            {enabled &&
+                              e.kind === "penalty" &&
+                              !s.pending &&
+                              !active.some(
+                                (item) =>
+                                  item.related_event_id === e.id && item.origin === "penalty_flow",
+                              ) && (
+                                <button
+                                  type="button"
+                                  className="mb-2 min-h-12 w-full rounded-lg border-2 border-[#b45309] bg-[#fff7d6] px-3 text-base font-bold text-[#062048]"
+                                  onClick={async () => {
+                                    if (
+                                      await patch(
+                                        {
+                                          ...s,
+                                          pending: {
+                                            kind: "penalty_shot",
+                                            penalty_event_id: e.id,
+                                            shooter_cap: null,
+                                          },
+                                        },
+                                        false,
+                                      )
+                                    )
+                                      setPanel("penalty-shooter");
+                                  }}
+                                >
+                                  Completar lanzamiento pendiente
+                                </button>
+                              )}
+
                             {enabled && (
                               <div className="grid grid-cols-2 gap-2">
                                 <button
@@ -2403,9 +2388,11 @@ export function LiveMatchClient() {
                                     setPanel(
                                       e.kind === "assist"
                                         ? "assist-edit"
-                                        : e.cap === null
-                                          ? "bench-actions"
-                                          : "actions",
+                                        : e.kind === "penalty_missed"
+                                          ? "miss-correction"
+                                          : e.cap === null
+                                            ? "bench-actions"
+                                            : "actions",
                                     );
                                   }}
                                 >
@@ -2508,15 +2495,17 @@ export function LiveMatchClient() {
                       <div className="overflow-hidden rounded-2xl border border-[#c7d6e4] bg-white shadow-sm">
                         <div className="flex min-h-11 items-center justify-between gap-3 bg-[#062048] px-3 py-2 text-white">
                           <span className="min-w-0 text-sm font-extrabold">{record.team}</span>
-                          <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold ${outcomeStyles.badge}`}>
+                          <span
+                            className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-extrabold ${outcomeStyles.badge}`}
+                          >
                             {outcomeStyles.statusText}
                           </span>
                         </div>
                         <div className="grid grid-cols-[minmax(0,1fr)_1rem_minmax(0,1fr)] items-end gap-x-2 gap-y-2 px-3 py-3 text-center text-[#062048]">
-                          <p className="min-w-0 break-words text-sm leading-tight font-extrabold">
+                          <p className="min-w-0 text-sm leading-tight font-extrabold break-words">
                             {homeSide === "us" ? "Morvedre" : record.opponent}
                           </p>
-                          <p className="col-start-3 min-w-0 break-words text-sm leading-tight font-extrabold">
+                          <p className="col-start-3 min-w-0 text-sm leading-tight font-extrabold break-words">
                             {awaySide === "us" ? "Morvedre" : record.opponent}
                           </p>
                           <strong className="font-mono text-5xl leading-none font-black tabular-nums">
@@ -2533,11 +2522,18 @@ export function LiveMatchClient() {
                           )}
                         </div>
                         {s.period > 0 && (
-                          <div className="flex flex-wrap justify-evenly gap-3 border-t border-[#dce6ef] bg-[#edf3f8] px-3 py-2">
+                          <div
+                            className={`grid gap-2 border-t border-[#dce6ef] bg-[#edf3f8] px-3 py-2 ${s.period > 4 ? "grid-cols-3" : "grid-cols-2"}`}
+                          >
                             {Array.from({ length: s.period }, (_, i) => (
-                              <div key={i} className="text-center">
-                                <span className="block text-[11px] font-semibold text-slate-500">{i + 1}º cuarto</span>
-                                <span className="text-sm font-extrabold text-[#062048] tabular-nums">
+                              <div
+                                key={i}
+                                className="rounded-lg border border-[#c7d6e4] bg-white px-1 py-1.5 text-center"
+                              >
+                                <span className="block text-xs font-semibold text-slate-600">
+                                  {i + 1}º cuarto
+                                </span>
+                                <span className="text-base font-extrabold text-[#062048] tabular-nums">
                                   {score(s, homeSide, i + 1)}–{score(s, awaySide, i + 1)}
                                 </span>
                               </div>
