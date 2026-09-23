@@ -1446,20 +1446,20 @@ export function LiveMatchClient() {
                     </div>
                   ) : (
                     <>
-                      {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
-                        <div className={styles.actionGrid}>
-                          {button("Parada", () => void add("save"), styles.actionSave)}
-                          {button(
-                            "Tiro recibido",
-                            () => void add("keeper_out"),
-                            styles.actionPenaltySave,
-                          )}
-                        </div>
-                      )}
-
                       <div
                         className={`${styles.actionGrid} ${side === "them" ? styles.rivalActionGrid : ""}`}
                       >
+                        {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
+                          <>
+                            {button("Parada", () => void add("save"), styles.actionSave)}
+                            {button(
+                              "Tiro recibido",
+                              () => void add("keeper_out"),
+                              styles.actionPenaltySave,
+                            )}
+                          </>
+                        )}
+
                         {button(
                           "Gol",
                           () => (side === "them" ? void add("goal") : setPanel("goal")),
