@@ -314,8 +314,9 @@
 }
 
 .panelPeriods .panelBody,
-.panelChoice .panelBody {
-  flex: 1;
+.panelChoice .panelBody,
+.panelDefault .panelBody {
+  flex: 0 1 auto;
 }
 
 .panelPeriods {
@@ -329,8 +330,8 @@
 }
 
 .panelDefault {
-  height: min(60dvh, 490px);
-  max-height: min(60dvh, 490px);
+  height: auto;
+  max-height: min(90dvh, 490px);
 }
 
 .panelShare {

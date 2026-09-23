@@ -922,7 +922,11 @@ export function LiveMatchClient() {
     if (activePanel === "periods") {
       return styles.panelPeriods;
     }
-    if (activePanel === "shootout-start" || activePanel === "break-start") {
+    if (
+      activePanel === "shootout-start" ||
+      activePanel === "break-start" ||
+      activePanel === "keeper-action"
+    ) {
       return styles.panelChoice;
     }
     if (activePanel === "penalty-result" || activePanel === "duplicate-penalty") {
