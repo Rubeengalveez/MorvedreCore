@@ -15,13 +15,6 @@ import { generateUuid } from "@/lib/utils/uuid";
 import styles from "./live-match.module.css";
 import { ActaPlayerName } from "./acta-player-name";
 
-const outcomeTone: Record<Shootout["shots"][number]["outcome"], string> = {
-  goal: "bg-[#062048] text-white",
-  save: "bg-red-800 text-white",
-  out: "bg-red-800 text-white",
-  post: "bg-red-800 text-white",
-};
-
 export function ActaShootout({
   record,
   enabled,
@@ -164,34 +157,34 @@ export function ActaShootout({
           {tanda.shots.length > 0 && (
             <div className="grid grid-cols-2 divide-x divide-[#c7d6e4] border-t border-slate-100 bg-[#f6f9fc] px-2 py-2.5">
               {sides.map((side) => (
-                <div key={side} className="flex min-h-6 flex-wrap justify-center gap-1 px-1">
+                <div key={side} className="flex min-h-6 flex-wrap items-center justify-center gap-1.5 px-1">
                   {tanda.shots
                     .filter((shot) => shot.side === side)
-                    .map((shot) => (
-                      <span
-                        key={shot.id}
-                        title={`#${shot.cap} · ${shootoutOutcomeLabels[shot.outcome]}`}
-                        className={`flex min-h-10 max-w-full items-center gap-1 rounded-lg border border-current px-2 text-sm font-extrabold ${outcomeTone[shot.outcome]}`}
-                      >
-                        <span className="shrink-0">#{shot.cap}</span>
-                        {side === "us" && (
-                          <span className="max-w-20 min-w-0 text-xs">
-                            <ActaPlayerName
-                              name={
-                                s.players.find((player) => player.cap === shot.cap)?.name ??
-                                `Gorro ${shot.cap}`
-                              }
-                            />
-                          </span>
-                        )}
-                        {shot.outcome === "goal" ? (
-                          <Check size={14} strokeWidth={3} aria-hidden="true" />
-                        ) : (
-                          <X size={14} strokeWidth={3} aria-hidden="true" />
-                        )}
-                        <span className="sr-only">{shootoutOutcomeLabels[shot.outcome]}</span>
-                      </span>
-                    ))}
+                    .map((shot) => {
+                      const isGoal = shot.outcome === "goal";
+                      const player =
+                        side === "us"
+                          ? s.players.find((p) => p.cap === shot.cap)
+                          : undefined;
+                      const tooltip = `#${shot.cap}${player ? ` · ${player.name}` : ""} · ${shootoutOutcomeLabels[shot.outcome]}`;
+                      return (
+                        <span
+                          key={shot.id}
+                          title={tooltip}
+                          aria-label={tooltip}
+                          className={`grid h-5.5 w-5.5 shrink-0 place-items-center rounded-full text-white shadow-xs ${
+                            isGoal ? "bg-emerald-500" : "bg-red-500"
+                          }`}
+                        >
+                          {isGoal ? (
+                            <Check size={13} strokeWidth={3.5} aria-hidden="true" />
+                          ) : (
+                            <X size={13} strokeWidth={3.5} aria-hidden="true" />
+                          )}
+                          <span className="sr-only">{tooltip}</span>
+                        </span>
+                      );
+                    })}
                 </div>
               ))}
             </div>
