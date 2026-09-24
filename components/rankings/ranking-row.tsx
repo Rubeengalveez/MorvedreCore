@@ -1,12 +1,7 @@
-import { PositionChip } from "@/components/ui/position-chip";
-import {
-  CATEGORY_COLORS,
-  CATEGORY_LABELS,
-  CATEGORY_SURFACE_COLORS,
-} from "@/lib/domain/categories";
-import { cn } from "@/lib/utils/cn";
-import { mixHexWithWhite } from "@/lib/utils/color";
+import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/domain/categories";
 import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
+
+import { RankingEntryCard } from "./ranking-entry-card";
 
 export interface RankingRowItemProps {
   row: RankingRow;
@@ -15,10 +10,36 @@ export interface RankingRowItemProps {
   metric: RankingMetric;
   isMe: boolean;
   isJumpTarget?: boolean;
-  showMedal?: boolean;
+  variant?: "list" | "podium";
 }
 
-const ME_TINT = mixHexWithWhite("#F4C430", 0.22);
+function detailsFor(row: RankingRow, metric: RankingMetric): string[] {
+  const matches = `${row.matches_played} ${row.matches_played === 1 ? "partido" : "partidos"}`;
+  if (metric === "attendance") {
+    return [`${row.trainings_attended}/${row.trainings_total} entrenamientos`];
+  }
+  if (metric === "mvp") {
+    const percent =
+      row.matches_played > 0 ? Math.round((row.mvp_count / row.matches_played) * 100) : 0;
+    return [matches, `${percent}% con MVP`];
+  }
+  if (metric === "goal_contributions") {
+    return [
+      `${row.goals} ${row.goals === 1 ? "gol" : "goles"}`,
+      `${row.assists} ${row.assists === 1 ? "asistencia" : "asistencias"}`,
+    ];
+  }
+  if (metric === "goals" || metric === "assists" || metric === "exclusions") {
+    const total =
+      metric === "goals" ? row.goals : metric === "assists" ? row.assists : row.exclusions;
+    const average = row.matches_played > 0 ? total / row.matches_played : 0;
+    return [
+      matches,
+      `${average.toLocaleString("es-ES", { maximumFractionDigits: 1 })} por partido`,
+    ];
+  }
+  return [];
+}
 
 export function RankingRowItem({
   row,
@@ -27,146 +48,22 @@ export function RankingRowItem({
   metric,
   isMe,
   isJumpTarget = false,
-  showMedal = false,
+  variant = "list",
 }: RankingRowItemProps) {
-  const isTop10 = row.position <= 10;
-  const tone = isMe ? "me" : isTop10 ? "top" : "default";
-  const teamColor = CATEGORY_COLORS[row.category_code] ?? row.team_color ?? "#1E5AA8";
-  const backgroundColor = isMe
-    ? ME_TINT
-    : isJumpTarget
-      ? mixHexWithWhite(teamColor, 0.24)
-      : CATEGORY_SURFACE_COLORS[row.category_code] ?? mixHexWithWhite(teamColor, 0.18);
-  const categoryLabel = CATEGORY_LABELS[row.category_code];
-
   return (
-    <div
-      id={`ranking-player-${row.player_id}`}
-      className={cn(
-        "border-ink-300 shadow-elev-1 flex min-h-[66px] scroll-mt-[calc(var(--top-bar-height)+1rem)] items-center gap-3 rounded-md border px-3 py-2.5 transition-colors",
-        isMe && "border-ball-gold/70 ring-ball-gold/35 ring-2",
-        isJumpTarget && "border-action ring-action ring-2 ring-offset-2",
-      )}
-      style={{
-        backgroundColor,
-        borderLeftWidth: "4px",
-        borderLeftColor: teamColor,
-      }}
-    >
-      <PositionChip position={row.position} tone={tone} size="md" />
-      <div className="min-w-0 flex-1">
-        <p className="text-pool-deep line-clamp-2 text-base leading-tight font-extrabold">
-          {row.full_name}
-          {isMe ? (
-            <span className="text-action ml-1 text-xs font-extrabold uppercase">Tu</span>
-          ) : null}
-        </p>
-        <p className="text-ink-700 mt-1 line-clamp-1 text-sm leading-none font-semibold">
-          {categoryLabel}
-        </p>
-        {metric !== "streak" ? <RankingMetricContext row={row} metric={metric} /> : null}
-      </div>
-      <div className="shrink-0 text-right">
-        <p className="text-pool-deep font-mono text-2xl leading-none font-extrabold tabular-nums">
-          {row.primary_value}
-          {metricSuffix}
-        </p>
-        <p className="text-ink-700 mt-1 text-xs leading-none font-extrabold tracking-[0.08em] uppercase">
-          {metricLabel}
-        </p>
-      </div>
-      {showMedal && row.medal ? <span className="sr-only">{row.medal}</span> : null}
-    </div>
-  );
-}
-
-type MetricContextPart = {
-  label: string;
-  value: string;
-  valueFirst: boolean;
-};
-
-function metricContextParts(row: RankingRow, metric: RankingMetric): MetricContextPart[] {
-  if (metric === "attendance") {
-    return [
-      {
-        value: `${row.trainings_attended}/${row.trainings_total}`,
-        label: "entrenos",
-        valueFirst: true,
-      },
-    ];
-  }
-  if (metric === "mvp") {
-    const pct = row.matches_played > 0 ? Math.round((row.mvp_count / row.matches_played) * 100) : 0;
-    return [
-      { value: String(row.matches_played), label: "partidos", valueFirst: true },
-      { value: `${pct}%`, label: "MVP", valueFirst: false },
-    ];
-  }
-  if (metric === "goals" || metric === "exclusions") {
-    const total = metric === "goals" ? row.goals : row.exclusions;
-    const average = row.matches_played > 0 ? total / row.matches_played : 0;
-    return [
-      { value: String(row.matches_played), label: "partidos", valueFirst: true },
-      {
-        value: average.toLocaleString("es-ES", { maximumFractionDigits: 1 }),
-        label: "Media",
-        valueFirst: false,
-      },
-    ];
-  }
-  return [];
-}
-
-export function RankingMetricContext({
-  row,
-  metric,
-  inverted = false,
-  className,
-}: {
-  row: RankingRow;
-  metric: RankingMetric;
-  inverted?: boolean;
-  className?: string;
-}) {
-  const parts = metricContextParts(row, metric);
-  if (parts.length === 0) return null;
-
-  return (
-    <div
-      className={cn(
-        "mt-1.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs leading-tight",
-        inverted ? "text-paper/70" : "text-ink-700",
-        className,
-      )}
-    >
-      {parts.map((part, index) => (
-        <span key={`${part.label}-${part.value}`} className="inline-flex items-center gap-1.5">
-          {index > 0 ? (
-            <span
-              aria-hidden="true"
-              className={cn("h-3 w-px shrink-0", inverted ? "bg-paper/25" : "bg-ink-400")}
-            />
-          ) : null}
-          <span className="whitespace-nowrap">
-            {part.valueFirst ? (
-              <>
-                <strong className={cn("font-extrabold", inverted && "text-paper/90")}>
-                  {part.value}
-                </strong>{" "}
-                {part.label}
-              </>
-            ) : (
-              <>
-                {part.label}{" "}
-                <strong className={cn("font-extrabold", inverted && "text-paper/90")}>
-                  {part.value}
-                </strong>
-              </>
-            )}
-          </span>
-        </span>
-      ))}
-    </div>
+    <RankingEntryCard
+      variant={variant}
+      position={row.position}
+      playerId={row.player_id}
+      fullName={row.full_name}
+      photoUrl={row.photo_url}
+      categoryLabel={CATEGORY_LABELS[row.category_code]}
+      categoryColor={CATEGORY_COLORS[row.category_code] ?? row.team_color ?? "#1E5AA8"}
+      value={`${row.primary_value}${metricSuffix}`}
+      valueLabel={metricLabel}
+      details={detailsFor(row, metric)}
+      isMe={isMe}
+      isJumpTarget={isJumpTarget}
+    />
   );
 }

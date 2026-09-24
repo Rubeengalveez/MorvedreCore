@@ -1,10 +1,9 @@
 export type NewsAudience = "club" | "team";
-export type NewsReaction = "like" | "fire" | "thanks";
+export type NewsReaction = "like" | "dislike";
 
-export const NEWS_REACTIONS: ReadonlyArray<{ id: NewsReaction; emoji: string; label: string }> = [
-  { id: "like", emoji: "Me gusta", label: "👍 Me gusta" },
-  { id: "fire", emoji: "Ánimo", label: "🔥 Ánimo" },
-  { id: "thanks", emoji: "Gracias", label: "🙌 Gracias" },
+export const NEWS_REACTIONS: ReadonlyArray<{ id: NewsReaction; label: string }> = [
+  { id: "like", label: "Me gusta" },
+  { id: "dislike", label: "No me gusta" },
 ];
 
 const MAX_TITLE = 120;
@@ -76,7 +75,7 @@ export function tallyReactions(
 ): ReactionTally[] {
   const map = new Map<NewsReaction, { count: number; hasMine: boolean }>();
   for (const r of reactions) {
-    if (r.reaction !== "like" && r.reaction !== "fire" && r.reaction !== "thanks") continue;
+    if (r.reaction !== "like" && r.reaction !== "dislike") continue;
     const cur = map.get(r.reaction) ?? { count: 0, hasMine: false };
     cur.count += 1;
     if (myProfileId && r.profile_id === myProfileId) cur.hasMine = true;
@@ -89,7 +88,7 @@ export function tallyReactions(
 }
 
 export function isValidReaction(value: unknown): value is NewsReaction {
-  return value === "like" || value === "fire" || value === "thanks";
+  return value === "like" || value === "dislike";
 }
 
 export function summarizeBody(md: string, max = 220): string {

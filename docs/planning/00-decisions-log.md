@@ -953,3 +953,7 @@ Las convocatorias admiten únicamente gorros del 1 al 14. Un jugador puede queda
 - La tanda muestra gorros y resultados anteriores, situación de la ronda y muerte súbita. No se impone la rotación de cinco lanzadores: la normativa infantil FNCV confirma una tanda de cinco penaltis, pero no se ha verificado una regla única aplicable a todas las categorías y torneos del club. El delegado conserva la elección del lanzador, con los que ya tiraron señalados.
 - La vista de parciales usa tres columnas para seis cuartos y dos para cuatro, también en el panel de compartir tras una tanda.
 - El PDF mantiene su estructura y omite la comparación de tiempos muertos cuando ninguno se ha pedido. Las tarjetas ya se muestran solo si existen.
+
+### 2026-09-24 · Caducidad de noticias
+
+Las noticias con fecha de caducidad desaparecen de las vistas pública y de gestión al llegar esa fecha. Una tarea horaria las elimina de la base de datos junto con sus reacciones y notificaciones vinculadas. Esto sustituye el comportamiento anterior, que solo las desfijaba y las conservaba en administración.

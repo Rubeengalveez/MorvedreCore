@@ -31,21 +31,11 @@ export interface NewsFeedResult {
   total: number;
 }
 
-async function ensureExpiredPinned(): Promise<void> {
-  const supabase = await createClient();
-  try {
-    await supabase.rpc("archive_expired_news");
-  } catch {
-    // ignore
-  }
-}
-
 export async function getNewsFeed(input: {
   myProfileId: string;
   page?: number;
   pageSize?: number;
 }): Promise<NewsFeedResult> {
-  await ensureExpiredPinned();
   const supabase = await createClient();
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 10;
@@ -153,7 +143,6 @@ export async function getNewsPost(
   postId: string,
   myProfileId: string,
 ): Promise<NewsPostWithReactions | null> {
-  await ensureExpiredPinned();
   const supabase = await createClient();
   const { data: post } = await supabase
     .from("news_posts")
@@ -214,6 +203,7 @@ export async function getNewsForAdmin(): Promise<NewsPost[]> {
     .select(
       "id, author_id, title, body_md, image_url, audience, audience_team_id, pinned, published_at, expires_at",
     )
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .order("published_at", { ascending: false })
     .limit(200);
   if (error) throw new Error("No pudimos cargar las noticias: " + error.message);
@@ -276,6 +266,7 @@ export async function getNewsPostForAdmin(postId: string): Promise<NewsPost | nu
     .select(
       "id, author_id, title, body_md, image_url, audience, audience_team_id, pinned, published_at, expires_at",
     )
+    .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`)
     .eq("id", postId)
     .maybeSingle();
 

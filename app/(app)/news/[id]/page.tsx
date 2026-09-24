@@ -1,5 +1,5 @@
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
-import { Pin, Clock } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getNewsPost } from "@/server/queries/news";
@@ -9,7 +9,8 @@ import { Markdown } from "@/components/ui/markdown";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { NewsReactions } from "@/components/news/news-card";
-import { relativeTime } from "@/lib/domain/news";
+import { NewsStoryMeta } from "@/components/news/news-story-meta";
+import type { NewsReaction } from "@/lib/domain/news";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -32,7 +33,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
   const post = await getNewsPost(id, activeProfile.id);
   if (!post) notFound();
 
-  async function react(_postId: string, reaction: "like" | "fire" | "thanks") {
+  async function react(_postId: string, reaction: NewsReaction) {
     "use server";
     await reactToNews({ post_id: id, reaction });
   }
@@ -40,65 +41,58 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <PageBackLink href="/news">Todas las noticias</PageBackLink>
-      <article className="border-ink-200 bg-paper-card shadow-elev-2 rounded-2xl border p-5 sm:p-7">
-        {post.pinned ? (
-          <div className="bg-ball-gold/15 text-pool-deep mb-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-extrabold uppercase">
-            <Pin className="h-3.5 w-3.5" aria-hidden="true" />
-            Fijada
-          </div>
-        ) : null}
-        <div className="flex items-start gap-3">
-          <Avatar
-            src={post.author_photo_url}
-            name={post.author_name}
-            size={48}
-            className="shrink-0"
+      <article className="bg-paper-card shadow-elev-2 border-ink-200 overflow-hidden rounded-[1.5rem] border">
+        <div className="bg-pool-deep h-2" aria-hidden="true" />
+        <header className="bg-pool-ice/60 border-ink-200 relative overflow-hidden border-b p-5 sm:p-8">
+          <span
+            className="lane-pattern pointer-events-none absolute inset-0 opacity-15"
+            aria-hidden="true"
           />
-          <div className="min-w-0 flex-1">
-            <p className="text-eyebrow text-ink-600">
-              {post.author_name}
-              {post.audience_team_label ? (
-                <>
-                  <span className="text-ink-300 mx-1">·</span>
-                  <span className="text-ink-600">{post.audience_team_label}</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-ink-300 mx-1">·</span>
-                  <span className="text-ink-600">Club</span>
-                </>
-              )}
-            </p>
-            <h1 className="font-display text-pool-deep text-3xl leading-tight font-extrabold text-balance break-words">
+          <div className="relative">
+            <NewsStoryMeta
+              audience={post.audience}
+              teamLabel={post.audience_team_label}
+              publishedAt={post.published_at}
+              pinned={post.pinned}
+            />
+            <h1 className="font-display text-pool-deep mt-5 text-3xl leading-[1.12] font-extrabold tracking-tight text-balance break-words sm:text-4xl">
               {post.title}
             </h1>
-            <p className="text-ink-600 mt-1 inline-flex items-center gap-1.5 text-sm">
-              <Clock className="h-4 w-4" aria-hidden="true" />
-              {relativeTime(post.published_at)}
-            </p>
+            <div className="text-ink-700 mt-5 flex items-center gap-2.5 text-sm font-semibold">
+              <Avatar
+                src={post.author_photo_url}
+                name={post.author_name}
+                size={36}
+                className="shrink-0"
+              />
+              <span>Por {post.author_name}</span>
+            </div>
           </div>
-        </div>
+        </header>
+
         {post.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={post.image_url}
-            alt=""
-            width={960}
-            height={540}
-            className="mt-5 aspect-video w-full rounded-xl object-cover"
-            loading="lazy"
-          />
+          <div className="bg-pool-foam relative aspect-[16/9] overflow-hidden">
+            <Image
+              src={post.image_url}
+              alt=""
+              fill
+              sizes="(max-width: 768px) 100vw, 768px"
+              className="object-cover"
+            />
+          </div>
         ) : null}
-        <div className="mt-5">
-          <Markdown>{post.body_md}</Markdown>
-        </div>
-        <div className="mt-6">
-          <NewsReactions
-            postId={post.id}
-            reactions={post.reactions}
-            myReactions={post.my_reactions}
-            onReact={react}
-          />
+
+        <div className="px-5 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-9">
+          <Markdown className="text-base leading-7">{post.body_md}</Markdown>
+          <div className="mt-8">
+            <p className="font-display text-pool-deep mb-2 text-sm font-extrabold">Tu reacción</p>
+            <NewsReactions
+              postId={post.id}
+              reactions={post.reactions}
+              myReactions={post.my_reactions}
+              onReact={react}
+            />
+          </div>
         </div>
       </article>
     </PageShell>

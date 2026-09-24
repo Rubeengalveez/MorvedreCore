@@ -42,14 +42,14 @@ describe("SwimPodium", () => {
     expect(screen.getByText("Top 3")).toBeInTheDocument();
     expect(screen.getByText("Líder")).toBeInTheDocument();
 
-    expect(screen.getByText("Mario Rossi")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Mario Rossi/i })).toBeInTheDocument();
     expect(screen.getByText("28,45 s")).toBeInTheDocument();
 
-    expect(screen.getByText("Alex Vance")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Alex Vance/i })).toBeInTheDocument();
     expect(screen.getByText("29,10 s")).toBeInTheDocument();
-    expect(screen.getByText("Tú")).toBeInTheDocument();
+    expect(screen.getByText(/Cadete · Tú/)).toBeInTheDocument();
 
-    expect(screen.getByText("Carlos Perez")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Carlos Perez/i })).toBeInTheDocument();
     expect(screen.getByText("30,55 s")).toBeInTheDocument();
   });
 

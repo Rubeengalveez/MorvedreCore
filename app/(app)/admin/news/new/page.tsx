@@ -15,7 +15,12 @@ export const metadata = {
   title: "Nueva noticia (admin) — Morvedre Core",
 };
 
-export default async function NewAdminNewsPage() {
+export default async function NewAdminNewsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string }>;
+}) {
+  const listHref = (await searchParams).from === "news" ? "/admin/news?from=news" : "/admin/news";
   const teamOptions: TeamOption[] = await getNewsTeamsForAdmin();
 
   async function handleSubmit(data: {
@@ -39,13 +44,13 @@ export default async function NewAdminNewsPage() {
       expires_at: data.expires_at,
       imageFile: data.imageFile,
     });
-    redirect(`/admin/news` as Route);
+    redirect(listHref as Route);
     void id;
   }
 
   return (
     <AdminPageShell width="lg" className="gap-4">
-      <PageBackLink href="/admin/news">Todas las noticias</PageBackLink>
+      <PageBackLink href={listHref as Route}>Todas las noticias</PageBackLink>
       <AdminPageHeader
         title="Nueva noticia"
         description="Escribe el aviso, elige quién lo verá y publícalo."

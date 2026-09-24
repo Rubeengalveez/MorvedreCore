@@ -1,25 +1,21 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import type { ComponentType } from "react";
-import { useTransition } from "react";
+import Link from "next/link";
+import type { Route } from "next";
 
 import { cn } from "@/lib/utils/cn";
 import { type RankingMetric } from "@/lib/domain/rankings";
-import { Balon, Calendario, Exclusion, Tiburon, Trofeo } from "@/components/brand/pictograms";
 
 export type RankingPageMetric = RankingMetric | "swim";
 
-const METRICS: ReadonlyArray<{
-  id: RankingPageMetric;
-  label: string;
-  Pictogram: ComponentType<{ className?: string; accent?: string }>;
-}> = [
-  { id: "goals", label: "Goles", Pictogram: Balon },
-  { id: "exclusions", label: "Exp.", Pictogram: Exclusion },
-  { id: "mvp", label: "MVP", Pictogram: Trofeo },
-  { id: "attendance", label: "Asist.", Pictogram: Calendario },
-  { id: "swim", label: "Nado", Pictogram: Tiburon },
+const METRICS: ReadonlyArray<{ id: RankingPageMetric; label: string; accessibleLabel?: string }> = [
+  { id: "goals", label: "Goles" },
+  { id: "assists", label: "Asistencias" },
+  { id: "goal_contributions", label: "Goles + asist.", accessibleLabel: "Goles más asistencias" },
+  { id: "exclusions", label: "Expulsiones" },
+  { id: "mvp", label: "MVP" },
+  { id: "swim", label: "Nado" },
+  { id: "attendance", label: "Entrenos", accessibleLabel: "Asistencia a entrenamientos" },
 ];
 
 export interface MetricTabsProps {
@@ -28,61 +24,50 @@ export interface MetricTabsProps {
   canViewAttendance?: boolean;
 }
 
-export function MetricTabs({ active, extraParams = {}, canViewAttendance = false }: MetricTabsProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-
-  const metrics = canViewAttendance
-    ? METRICS
-    : METRICS.filter((m) => m.id !== "attendance");
-
-  function navigate(metric: RankingPageMetric) {
-    if (metric === active) return;
+export function MetricTabs({
+  active,
+  extraParams = {},
+  canViewAttendance = false,
+}: MetricTabsProps) {
+  function hrefFor(metric: RankingPageMetric): Route {
     const params = new URLSearchParams();
-    for (const [k, v] of Object.entries(extraParams)) {
-      if (v) params.set(k, v);
+    for (const [key, value] of Object.entries(extraParams)) {
+      if (value) params.set(key, value);
     }
     if (metric !== "goals") params.set("metric", metric);
-    startTransition(() => {
-      router.push(`/rankings?${params.toString()}`);
-    });
+    return `/rankings?${params.toString()}` as Route;
   }
 
   return (
-    <div
-      role="tablist"
-      aria-label="Métrica de ranking"
-      aria-busy={isPending}
-      className="flex items-center gap-1.5 pb-1"
-    >
-      {metrics.map((m) => {
-        const Icon = m.Pictogram;
-        const isActive = active === m.id;
-        return (
-          <button
-            key={m.id}
-            type="button"
-            role="tab"
-            aria-selected={isActive}
-            disabled={isPending}
-            onClick={() => navigate(m.id)}
-            data-metric-tab={m.id}
-            className={cn(
-              "focus-visible:ring-pool-blue focus-visible:ring-offset-paper inline-flex min-h-12 min-w-0 flex-1 touch-manipulation items-center justify-center gap-1.5 rounded-xl border px-2 text-[13px] font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none sm:gap-2 sm:px-3 sm:text-sm",
-              isActive
-                ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
-                : "border-ink-300 bg-paper-card text-ink-700 hover:border-pool-blue hover:text-pool-deep",
-              isPending && "opacity-70",
-            )}
-          >
-            <Icon
-              className="hidden h-4 w-4 shrink-0 min-[360px]:block"
-              accent={isActive ? "var(--ball-gold)" : "currentColor"}
-            />
-            <span className="whitespace-nowrap">{m.label}</span>
-          </button>
-        );
-      })}
-    </div>
+    <nav aria-label="Elige ranking">
+      <div className="grid grid-cols-3 gap-1.5">
+        {METRICS.filter((metric) => canViewAttendance || metric.id !== "attendance").map(
+          ({ id, label, accessibleLabel }) => {
+            const selected = active === id;
+            return (
+              <Link
+                key={id}
+                href={hrefFor(id)}
+                aria-current={selected ? "page" : undefined}
+                aria-label={accessibleLabel ?? label}
+                data-metric-tab={id}
+                className={cn(
+                  "focus-visible:ring-pool-blue relative inline-flex min-h-12 min-w-0 touch-manipulation items-center justify-center rounded-xl border px-1 text-[13px] font-extrabold transition-[background-color,border-color,color,box-shadow] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
+                  id === "attendance" && "col-span-3",
+                  selected
+                    ? "border-pool-deep bg-pool-deep text-paper shadow-elev-2"
+                    : "border-ink-200 bg-paper-card text-pool-deep hover:border-pool-blue hover:bg-pool-foam",
+                )}
+              >
+                {selected ? (
+                  <span aria-hidden="true" className="bg-ball-gold mr-2 h-1.5 w-1.5 rounded-full" />
+                ) : null}
+                {label}
+              </Link>
+            );
+          },
+        )}
+      </div>
+    </nav>
   );
 }

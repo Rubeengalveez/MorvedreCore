@@ -19,6 +19,7 @@ function row(category: RankingRow["category_code"], teamLabel: string): RankingR
     full_name_locale: `jugador ${category}`,
     matches_played: 3,
     goals: 2,
+    assists: 0,
     exclusions: 0,
     mvp_count: 0,
     trainings_attended: 4,

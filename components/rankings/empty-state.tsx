@@ -24,15 +24,15 @@ export function EmptyState({
         description =
           "Cuando se registre asistencia en los entrenamientos de la Escuela, las posiciones se calculan solas.";
       } else {
-        description =
-          "La Escuela es formativa y no disputa partidos de competición ni genera actas.";
+        description = "La Escuela es formativa y no disputa partidos de competición.";
       }
     } else {
       if (isAttendance) {
         description =
           "Cuando se registre asistencia en los entrenamientos, las posiciones se calculan solas.";
       } else {
-        description = "Cuando se validen actas, las posiciones se calculan solas.";
+        description =
+          "Cuando se registren resultados de partidos, las posiciones se calculan solas.";
       }
     }
   }

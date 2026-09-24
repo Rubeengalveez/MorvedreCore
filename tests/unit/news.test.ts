@@ -91,8 +91,9 @@ describe("isExpired", () => {
 describe("isValidReaction / isValidAudience / isAudienceTeam", () => {
   it("reactions validas", () => {
     expect(isValidReaction("like")).toBe(true);
-    expect(isValidReaction("fire")).toBe(true);
-    expect(isValidReaction("thanks")).toBe(true);
+    expect(isValidReaction("dislike")).toBe(true);
+    expect(isValidReaction("fire")).toBe(false);
+    expect(isValidReaction("thanks")).toBe(false);
     expect(isValidReaction("hate")).toBe(false);
   });
   it("audiences validas", () => {
@@ -113,20 +114,16 @@ describe("tallyReactions", () => {
       [
         { reaction: "like", profile_id: "p1" },
         { reaction: "like", profile_id: "p2" },
-        { reaction: "fire", profile_id: "p1" },
-        { reaction: "thanks", profile_id: "p3" },
+        { reaction: "dislike", profile_id: "p3" },
       ],
       "p1",
     );
     const like = t.find((x) => x.reaction === "like");
-    const fire = t.find((x) => x.reaction === "fire");
-    const thanks = t.find((x) => x.reaction === "thanks");
+    const dislike = t.find((x) => x.reaction === "dislike");
     expect(like?.count).toBe(2);
     expect(like?.hasMine).toBe(true);
-    expect(fire?.count).toBe(1);
-    expect(fire?.hasMine).toBe(true);
-    expect(thanks?.count).toBe(1);
-    expect(thanks?.hasMine).toBe(false);
+    expect(dislike?.count).toBe(1);
+    expect(dislike?.hasMine).toBe(false);
   });
   it("ignora reacciones invalidas", () => {
     const t = tallyReactions(
@@ -138,12 +135,12 @@ describe("tallyReactions", () => {
     );
     const like = t.find((x) => x.reaction === "like");
     expect(like?.count).toBe(1);
-    const love = t.find((x) => x.reaction === "fire");
-    expect(love?.count).toBe(0);
+    const dislike = t.find((x) => x.reaction === "dislike");
+    expect(dislike?.count).toBe(0);
   });
-  it("devuelve las 3 reacciones incluso si count=0", () => {
+  it("devuelve las 2 reacciones incluso si count=0", () => {
     const t = tallyReactions([], null);
-    expect(t).toHaveLength(3);
+    expect(t).toHaveLength(2);
   });
 });
 

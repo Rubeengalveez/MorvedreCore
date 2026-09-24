@@ -1,17 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import type { Route } from "next";
-import { Pin, Clock, Heart, Flame, HandHeart } from "lucide-react";
-import { useOptimistic, useTransition } from "react";
+import { ArrowUpRight, ThumbsDown, ThumbsUp } from "lucide-react";
+import { useOptimistic, useState, useTransition } from "react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { Markdown } from "@/components/ui/markdown";
-import { LanePattern } from "@/components/ui/lane-pattern";
-import { PictogramBadge } from "@/components/ui/pictogram-badge";
-import { Equipo, Gorro } from "@/components/brand/pictograms";
+import { NewsStoryMeta } from "@/components/news/news-story-meta";
+import {
+  NEWS_REACTIONS,
+  summarizeBody,
+  type NewsReaction,
+  type ReactionTally,
+} from "@/lib/domain/news";
 import { cn } from "@/lib/utils/cn";
-import { NEWS_REACTIONS, relativeTime, summarizeBody, type ReactionTally } from "@/lib/domain/news";
 
 export interface NewsCardData {
   id: string;
@@ -33,119 +36,150 @@ export interface NewsCardData {
 
 export interface NewsCardProps {
   post: NewsCardData;
-  variant?: "feed" | "compact";
-  onReact?: (postId: string, reaction: "like" | "fire" | "thanks") => Promise<void>;
+  variant?: "featured" | "feed" | "compact";
+  onReact?: (postId: string, reaction: NewsReaction) => Promise<void>;
   canReact?: boolean;
 }
 
 const REACTION_ICON = {
-  like: Heart,
-  fire: Flame,
-  thanks: HandHeart,
+  like: ThumbsUp,
+  dislike: ThumbsDown,
 } as const;
 
 export function NewsCard({ post, variant = "feed", onReact, canReact = true }: NewsCardProps) {
-  const summary = summarizeBody(post.body_md, 200);
+  const featured = variant === "featured";
+  const summary = summarizeBody(post.body_md, featured ? 235 : 155);
   const href = `/news/${post.id}` as Route;
+
+  if (featured) {
+    return (
+      <article
+        data-news-card={post.id}
+        className="bg-pool-deep text-paper shadow-elev-3 border-pool-blue/30 overflow-hidden rounded-[1.5rem] border"
+      >
+        <Link
+          href={href}
+          className="focus-visible:ring-ball-gold relative block overflow-hidden focus-visible:ring-2 focus-visible:outline-none"
+        >
+          {post.image_url ? (
+            <div className="bg-pool-blue/30 relative aspect-[16/8] overflow-hidden sm:aspect-[16/7]">
+              <Image
+                src={post.image_url}
+                alt=""
+                fill
+                sizes="(max-width: 768px) 100vw, 768px"
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <span
+              className="lane-pattern pointer-events-none absolute inset-0 opacity-20"
+              aria-hidden="true"
+            />
+          )}
+          <div className="relative flex flex-col gap-3 p-5 sm:p-6">
+            <NewsStoryMeta
+              audience={post.audience}
+              teamLabel={post.audience_team_label}
+              publishedAt={post.published_at}
+              pinned
+              inverse
+            />
+            <div>
+              <h2 className="font-display text-2xl leading-[1.15] font-extrabold text-balance break-words sm:text-3xl">
+                {post.title}
+              </h2>
+              {summary ? (
+                <p className="text-paper/85 mt-2 line-clamp-3 text-sm leading-relaxed sm:text-base">
+                  {summary}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-paper/85 flex min-w-0 items-center gap-2 text-xs font-semibold">
+                <Avatar
+                  src={post.author_photo_url}
+                  name={post.author_name}
+                  size={30}
+                  className="shrink-0"
+                />
+                <span className="truncate">{post.author_name}</span>
+              </span>
+              <span className="text-ball-gold inline-flex shrink-0 items-center gap-1 text-sm font-extrabold">
+                Leer noticia <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+              </span>
+            </div>
+          </div>
+        </Link>
+        <div className="px-5 pb-4 sm:px-6">
+          <NewsReactions
+            postId={post.id}
+            reactions={post.reactions}
+            myReactions={post.my_reactions}
+            canReact={canReact}
+            onReact={onReact}
+            inverse
+          />
+        </div>
+      </article>
+    );
+  }
 
   return (
     <article
       data-news-card={post.id}
       className={cn(
-        "bg-paper-card shadow-elev-1 relative overflow-hidden rounded-2xl border",
-        post.pinned ? "border-ball-gold" : "border-ink-300",
+        "bg-paper-card shadow-elev-1 border-ink-200 overflow-hidden rounded-2xl border border-l-[3px]",
+        post.pinned ? "border-l-ball-gold" : "border-l-pool-blue/70",
       )}
     >
-      {post.pinned ? (
-        <div
-          aria-hidden="true"
-          className="bg-ball-gold/15 text-pool-deep absolute inset-x-0 top-0 flex items-center gap-1.5 px-4 py-1.5 text-xs font-extrabold tracking-wide uppercase"
-        >
-          <Pin className="h-3 w-3" />
-          Fijada
-        </div>
-      ) : null}
-      <div className={cn("flex flex-col gap-3 p-4", post.pinned && "pt-9")}>
-        <div className="flex items-start gap-2.5">
-          <Avatar
-            src={post.author_photo_url}
-            name={post.author_name}
-            size={36}
-            className="shrink-0"
-          />
+      <Link
+        href={href}
+        className="focus-visible:ring-pool-blue block p-4 focus-visible:ring-2 focus-visible:outline-none sm:p-5"
+      >
+        <NewsStoryMeta
+          audience={post.audience}
+          teamLabel={post.audience_team_label}
+          publishedAt={post.published_at}
+          pinned={post.pinned}
+        />
+        <div className="mt-3 flex min-w-0 gap-3">
           <div className="min-w-0 flex-1">
-            <p className="text-eyebrow text-ink-600">
-              <Link href={href} className="hover:underline">
-                {post.author_name}
-              </Link>
-              {post.audience === "team" && post.audience_team_label ? (
-                <>
-                  <span className="text-ink-300 mx-1">·</span>
-                  <span className="text-ink-600">{post.audience_team_label}</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-ink-300 mx-1">·</span>
-                  <span className="text-ink-600">Club</span>
-                </>
-              )}
-            </p>
-            <Link
-              href={href}
-              className="font-display text-pool-deep text-lg leading-tight font-extrabold break-words hover:underline"
-            >
+            <h2 className="font-display text-pool-deep text-lg leading-snug font-extrabold break-words sm:text-xl">
               {post.title}
-            </Link>
-            <p className="text-ink-600 mt-1 inline-flex items-center gap-1 text-sm">
-              <Clock className="h-4 w-4" aria-hidden="true" />
-              {relativeTime(post.published_at)}
-              {post.expires_at ? (
-                <>
-                  <span className="text-ink-300 mx-1">·</span>
-                  <span className="text-ink-500">Caduca {relativeTime(post.expires_at)}</span>
-                </>
-              ) : null}
-            </p>
+            </h2>
+            {variant !== "compact" && summary ? (
+              <p className="text-ink-700 mt-1.5 line-clamp-2 text-sm leading-relaxed">{summary}</p>
+            ) : null}
           </div>
-          {post.audience === "team" && post.audience_team_label ? (
-            <PictogramBadge pictogram={Equipo} color="var(--ball-gold)" size="sm" />
-          ) : (
-            <PictogramBadge pictogram={Gorro} color="var(--pool-deep)" size="sm" />
-          )}
+          {post.image_url ? (
+            <span className="bg-pool-foam relative h-20 w-20 shrink-0 overflow-hidden rounded-xl sm:h-24 sm:w-28">
+              <Image
+                src={post.image_url}
+                alt=""
+                fill
+                sizes="(max-width: 640px) 80px, 112px"
+                className="object-cover"
+              />
+            </span>
+          ) : null}
         </div>
-
-        {post.image_url ? (
-          <div
-            aria-hidden="true"
-            className="-mx-3 overflow-hidden"
-            style={{ backgroundColor: "var(--pool-foam)" }}
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={post.image_url}
-              alt=""
-              width={720}
-              height={360}
-              className="h-44 w-full object-cover"
-              loading="lazy"
+        <div className="text-ink-600 mt-3 flex items-center justify-between gap-3 text-xs font-semibold">
+          <span className="flex min-w-0 items-center gap-2">
+            <Avatar
+              src={post.author_photo_url}
+              name={post.author_name}
+              size={28}
+              className="shrink-0"
             />
-          </div>
-        ) : null}
-
-        {variant === "feed" ? (
-          <LanePattern as="div" className="bg-pool-foam/30 -mx-3 -mb-3 rounded-b-md" strong={false}>
-            <div className="px-3 py-2">
-              <Markdown className="text-sm leading-relaxed">{summary}</Markdown>
-              <Link
-                href={href}
-                className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 items-center gap-1 rounded-lg text-sm font-extrabold hover:underline focus-visible:ring-2 focus-visible:outline-none"
-              >
-                Leer más
-              </Link>
-            </div>
-          </LanePattern>
-        ) : null}
-
+            <span className="min-w-0 truncate">Por {post.author_name}</span>
+          </span>
+          <span className="text-pool-blue inline-flex shrink-0 items-center gap-1 font-extrabold">
+            Leer <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+          </span>
+        </div>
+      </Link>
+      <div className="px-4 pb-3 sm:px-5">
         <NewsReactions
           postId={post.id}
           reactions={post.reactions}
@@ -164,107 +198,103 @@ export function NewsReactions({
   myReactions,
   onReact,
   canReact = true,
+  inverse = false,
 }: {
   postId: string;
   reactions: ReactionTally[];
   myReactions: string[];
-  onReact?: (postId: string, reaction: "like" | "fire" | "thanks") => Promise<void>;
+  onReact?: (postId: string, reaction: NewsReaction) => Promise<void>;
   canReact?: boolean;
+  inverse?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const [optimistic, updateOptimistic] = useOptimistic(
     { reactions, myReactions },
-    (current, reaction: "like" | "fire" | "thanks") => {
-      const isMine = current.myReactions.includes(reaction);
-      const nextMine = isMine
-        ? current.myReactions.filter((item) => item !== reaction)
-        : [...current.myReactions, reaction];
-      const currentTally = current.reactions.find((item) => item.reaction === reaction);
-      const nextCount = Math.max(0, (currentTally?.count ?? 0) + (isMine ? -1 : 1));
-      const nextReactions = current.reactions.some((item) => item.reaction === reaction)
-        ? current.reactions.map((item) =>
-            item.reaction === reaction ? { ...item, count: nextCount, hasMine: !isMine } : item,
-          )
-        : [...current.reactions, { reaction, count: nextCount, hasMine: true }];
-
-      return { reactions: nextReactions, myReactions: nextMine };
+    (current, reaction: NewsReaction) => {
+      const previous = current.myReactions.find((item) => item === "like" || item === "dislike");
+      const next = previous === reaction ? null : reaction;
+      return {
+        reactions: current.reactions.map((item) => ({
+          ...item,
+          count: Math.max(
+            0,
+            item.count - Number(item.reaction === previous) + Number(item.reaction === next),
+          ),
+          hasMine: item.reaction === next,
+        })),
+        myReactions: next ? [next] : [],
+      };
     },
   );
 
-  function react(reaction: "like" | "fire" | "thanks") {
+  function react(reaction: NewsReaction) {
     if (!onReact) return;
+    setError(null);
     startTransition(async () => {
       updateOptimistic(reaction);
       try {
         await onReact(postId, reaction);
-      } catch (err) {
-        console.error(err);
+      } catch {
+        setError("No pudimos guardar tu reacción. Inténtalo de nuevo.");
       }
     });
   }
 
   return (
-    <ReactionBar
-      reactions={optimistic.reactions}
-      myReactions={optimistic.myReactions}
-      disabled={!canReact || isPending || !onReact}
-      pending={isPending}
-      onReact={react}
-    />
-  );
-}
-
-function ReactionBar({
-  reactions,
-  myReactions,
-  disabled,
-  pending,
-  onReact,
-}: {
-  reactions: ReactionTally[];
-  myReactions: string[];
-  disabled: boolean;
-  pending: boolean;
-  onReact: (reaction: "like" | "fire" | "thanks") => void;
-}) {
-  return (
-    <div
-      role="group"
-      aria-label="Reaccionar"
-      aria-busy={pending}
-      data-reaction-bar
-      className="border-ink-300 flex flex-wrap items-center gap-1.5 border-t pt-2"
-    >
-      {NEWS_REACTIONS.map((meta) => {
-        const tally = reactions.find((r) => r.reaction === meta.id);
-        const count = tally?.count ?? 0;
-        const mine = (myReactions ?? []).includes(meta.id);
-        const ReactionIcon = REACTION_ICON[meta.id];
-        return (
-          <button
-            key={meta.id}
-            type="button"
-            disabled={disabled}
-            onClick={() => onReact(meta.id)}
-            data-reaction={meta.id}
-            data-mine={mine}
-            aria-pressed={mine}
-            aria-label={`${meta.emoji}: ${count}`}
-            className={cn(
-              "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.94] motion-reduce:transition-none",
-              mine
-                ? "border-pool-deep bg-pool-deep text-paper"
-                : count > 0
-                  ? "border-pool-blue/30 bg-pool-foam text-pool-deep hover:bg-pool-foam/70"
-                  : "border-ink-300 bg-paper text-ink-600 hover:bg-pool-foam/40",
-              disabled && "opacity-50",
-            )}
-          >
-            <ReactionIcon className="h-4 w-4" aria-hidden="true" />
-            <span className="font-mono tabular-nums">{count}</span>
-          </button>
-        );
-      })}
+    <div>
+      <div
+        role="group"
+        aria-label="Reacciones"
+        aria-busy={isPending}
+        data-reaction-bar
+        className="grid grid-cols-2 gap-2"
+      >
+        {NEWS_REACTIONS.map((meta) => {
+          const tally = optimistic.reactions.find((item) => item.reaction === meta.id);
+          const count = tally?.count ?? 0;
+          const mine = optimistic.myReactions.includes(meta.id);
+          const ReactionIcon = REACTION_ICON[meta.id];
+          return (
+            <button
+              key={meta.id}
+              type="button"
+              disabled={!canReact || isPending || !onReact}
+              onClick={() => react(meta.id)}
+              data-reaction={meta.id}
+              data-mine={mine}
+              aria-pressed={mine}
+              aria-label={`${meta.label}: ${count} ${count === 1 ? "reacción" : "reacciones"}`}
+              className={cn(
+                "focus-visible:ring-pool-blue flex min-h-12 min-w-0 touch-manipulation flex-wrap items-center justify-center gap-x-1.5 gap-y-0.5 rounded-xl border px-2 py-2 text-xs font-bold transition-[background-color,border-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+                inverse
+                  ? mine
+                    ? "border-ball-gold bg-ball-gold text-pool-deep"
+                    : "border-paper/25 bg-paper/10 text-paper hover:bg-paper/20"
+                  : mine
+                    ? "border-pool-deep bg-pool-deep text-paper"
+                    : "border-ink-200 bg-paper text-pool-deep hover:bg-pool-foam",
+                (!canReact || !onReact) && "opacity-60",
+              )}
+            >
+              <ReactionIcon aria-hidden="true" className="h-4 w-4 shrink-0" />
+              <span className="whitespace-nowrap">{meta.label}</span>
+              <span className="font-mono tabular-nums">{count.toLocaleString("es-ES")}</span>
+            </button>
+          );
+        })}
+      </div>
+      {error ? (
+        <p
+          role="alert"
+          className={cn(
+            "mt-2 text-xs font-semibold",
+            inverse ? "text-ball-gold" : "text-goggle-red",
+          )}
+        >
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }

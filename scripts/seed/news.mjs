@@ -98,7 +98,7 @@ const NEWS_TEMPLATES = [
   },
 ];
 
-const REACTIONS = ["like", "fire", "thanks"];
+const REACTIONS = ["like", "dislike"];
 
 async function main() {
   resetRng();
@@ -178,7 +178,7 @@ async function main() {
           reaction,
           created_at: createdAt,
         },
-        { onConflict: "post_id,profile_id,reaction" },
+        { onConflict: "post_id,profile_id" },
       );
     }
     if (i < 3) console.log(`  - "${t.title.slice(0, 50)}...": ${reactors.size} reacciones`);

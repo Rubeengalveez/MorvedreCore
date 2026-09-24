@@ -21,13 +21,40 @@ import { useRankingAnchor } from "./use-ranking-anchor";
 const METRICS: ReadonlyArray<{
   id: RankingMetric;
   label: string;
+  valueLabel: string;
   positionLabel: string;
   suffix: string;
 }> = [
-  { id: "goals", label: "Goles", positionLabel: "goles", suffix: "" },
-  { id: "exclusions", label: "Exp.", positionLabel: "expulsiones", suffix: "" },
-  { id: "mvp", label: "MVP", positionLabel: "MVP", suffix: "" },
-  { id: "attendance", label: "Asist.", positionLabel: "asistencia", suffix: "%" },
+  { id: "goals", label: "Goles", valueLabel: "Goles", positionLabel: "goles", suffix: "" },
+  {
+    id: "assists",
+    label: "Asistencias",
+    valueLabel: "Asist.",
+    positionLabel: "asistencias",
+    suffix: "",
+  },
+  {
+    id: "goal_contributions",
+    label: "Goles + asistencias",
+    valueLabel: "G + A",
+    positionLabel: "goles + asistencias",
+    suffix: "",
+  },
+  {
+    id: "exclusions",
+    label: "Expulsiones",
+    valueLabel: "Exp.",
+    positionLabel: "expulsiones",
+    suffix: "",
+  },
+  { id: "mvp", label: "MVP", valueLabel: "MVP", positionLabel: "MVP", suffix: "" },
+  {
+    id: "attendance",
+    label: "Asistencia a entrenamientos",
+    valueLabel: "Entrenos",
+    positionLabel: "asistencia a entrenamientos",
+    suffix: "%",
+  },
 ];
 
 export interface RankingsContentProps {
@@ -79,7 +106,10 @@ export function RankingsContent({
 }: RankingsContentProps) {
   const metricMeta = METRICS.find((m) => m.id === activeMetric) ?? METRICS[0]!;
   const paged = paginateRankingWithPodium({ ranking: ranking.rows, page, page_size: 10 });
-  const hasData = ranking.rows.length > 0;
+  const isActaMetric =
+    activeMetric === "goals" || activeMetric === "assists" || activeMetric === "goal_contributions";
+  const hasData =
+    ranking.rows.length > 0 && (!isActaMetric || ranking.rows.some((row) => row.primary_value > 0));
   const isSchool = isSchoolScope(activeScope, meta.teams);
   const jumpTargetPlayerId = useRankingAnchor(paged.page);
   const rankingByPlayer = new Map(ranking.rows.map((row) => [row.player_id, row]));
@@ -133,6 +163,11 @@ export function RankingsContent({
           metricLabel={metricMeta.label}
           scopeLabel={scopeLabelOf(activeScope, meta)}
           isSchool={isSchool}
+          description={
+            isActaMetric && !isSchool
+              ? "Las posiciones aparecerán cuando se anoten estas jugadas en un partido finalizado."
+              : undefined
+          }
         />
       ) : (
         <>
@@ -140,6 +175,7 @@ export function RankingsContent({
             <Podium
               items={paged.podium_rows}
               metricLabel={metricMeta.label}
+              valueLabel={metricMeta.valueLabel}
               metricSuffix={metricMeta.suffix}
               metric={activeMetric}
               myPlayerId={myPlayerId}
@@ -164,7 +200,7 @@ export function RankingsContent({
                   <li key={row.player_id}>
                     <RankingRowItem
                       row={row}
-                      metricLabel={metricMeta.label}
+                      metricLabel={metricMeta.valueLabel}
                       metricSuffix={metricMeta.suffix}
                       metric={activeMetric}
                       isMe={row.player_id === myPlayerId}

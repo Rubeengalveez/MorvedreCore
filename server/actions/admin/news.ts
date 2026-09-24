@@ -184,7 +184,7 @@ export async function togglePinNews(input: { post_id: string; pinned: boolean })
 
 export async function reactToNews(input: {
   post_id: string;
-  reaction: "like" | "fire" | "thanks";
+  reaction: "like" | "dislike";
 }): Promise<void> {
   const supabase = await createClient();
   const {
@@ -214,23 +214,20 @@ export async function reactToNews(input: {
 
   const { data: existing } = await supabase
     .from("news_reactions")
-    .select("id")
+    .select("id, reaction")
     .eq("post_id", input.post_id)
     .eq("profile_id", profile.id)
-    .eq("reaction", parsed.data.reaction)
     .maybeSingle();
-  if (existing) {
-    const { error } = await supabase
-      .from("news_reactions")
-      .delete()
-      .eq("id", (existing as { id: string }).id);
+  if (existing?.reaction === parsed.data.reaction) {
+    const { error } = await supabase.from("news_reactions").delete().eq("id", existing.id);
     if (error) throw new Error("No pudimos quitar la reacción: " + error.message);
   } else {
-    const { error } = await supabase.from("news_reactions").insert({
-      post_id: input.post_id,
-      profile_id: profile.id,
-      reaction: parsed.data.reaction,
-    });
+    const { error } = await supabase
+      .from("news_reactions")
+      .upsert(
+        { post_id: input.post_id, profile_id: profile.id, reaction: parsed.data.reaction },
+        { onConflict: "post_id,profile_id" },
+      );
     if (error) throw new Error("No pudimos guardar la reacción: " + error.message);
   }
   revalidatePath("/news");

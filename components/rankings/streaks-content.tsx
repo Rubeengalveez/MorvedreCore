@@ -255,6 +255,7 @@ export function StreaksContent({
             <Podium
               items={paged.podium_rows}
               metricLabel="Racha"
+              valueLabel="Racha"
               metricSuffix=""
               metric="streak"
               myPlayerId={ownProfileId}

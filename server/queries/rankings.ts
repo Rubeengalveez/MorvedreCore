@@ -8,6 +8,8 @@ import {
   type RankingScope,
 } from "@/lib/domain/rankings";
 import type { CategoryCode } from "@/lib/domain/categories";
+import { contributionsFromFinishedActa } from "@/lib/domain/ranking-acta";
+import type { TypedSupabaseClient } from "@/lib/supabase/types";
 
 export interface RankingQueryInput {
   season_id: string;
@@ -53,6 +55,48 @@ function scopeKindOf(scope: RankingScope): "season" | "category" | "team" {
   return "team";
 }
 
+async function getSeasonActaStats(
+  supabase: TypedSupabaseClient,
+  seasonId: string,
+): Promise<Map<string, { goals: number; assists: number; matches: number }>> {
+  const totals = new Map<string, { goals: number; assists: number; matches: number }>();
+  const matchIds: string[] = [];
+
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase
+      .from("matches")
+      .select("id")
+      .eq("season_id", seasonId)
+      .eq("status", "played")
+      .order("id")
+      .range(offset, offset + 499);
+    if (error) throw new Error("No pudimos cargar los partidos del ranking.");
+    matchIds.push(...(data ?? []).map((match) => match.id));
+    if ((data?.length ?? 0) < 500) break;
+  }
+
+  for (let start = 0; start < matchIds.length; start += 100) {
+    const { data, error } = await supabase
+      .from("live_match_sheets")
+      .select("document")
+      .in("match_id", matchIds.slice(start, start + 100));
+    if (error) throw new Error("No pudimos cargar las asistencias del ranking.");
+
+    for (const row of data ?? []) {
+      for (const contribution of contributionsFromFinishedActa(row.document)) {
+        const previous = totals.get(contribution.playerId) ?? { goals: 0, assists: 0, matches: 0 };
+        totals.set(contribution.playerId, {
+          goals: previous.goals + contribution.goals,
+          assists: previous.assists + contribution.assists,
+          matches: previous.matches + 1,
+        });
+      }
+    }
+  }
+
+  return totals;
+}
+
 export async function getRankings(input: RankingQueryInput): Promise<RankingResult> {
   const supabase = await createClient();
   const scopeKey = scopeKeyOf(input.scope);
@@ -70,6 +114,11 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
   if (error) {
     throw new Error("No pudimos cargar los datos del ranking.");
   }
+
+  const actaStatsByPlayer =
+    input.metric === "goals" || input.metric === "assists" || input.metric === "goal_contributions"
+      ? await getSeasonActaStats(supabase, input.season_id)
+      : new Map<string, { goals: number; assists: number; matches: number }>();
 
   const streakMap = new Map<string, { current: number; best: number }>();
   if (input.metric === "streak") {
@@ -171,8 +220,14 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
       team_id: team?.id ?? null,
       team_label: team?.label ?? null,
       team_color: team?.color ?? null,
-      matches_played: s.matches_played,
-      goals: s.goals,
+      matches_played:
+        input.metric === "goals" ||
+        input.metric === "assists" ||
+        input.metric === "goal_contributions"
+          ? (actaStatsByPlayer.get(s.player_id)?.matches ?? 0)
+          : s.matches_played,
+      goals: actaStatsByPlayer.get(s.player_id)?.goals ?? 0,
+      assists: actaStatsByPlayer.get(s.player_id)?.assists ?? 0,
       exclusions: s.exclusions,
       mvp_count: s.mvp_count,
       trainings_attended: s.trainings_attended,

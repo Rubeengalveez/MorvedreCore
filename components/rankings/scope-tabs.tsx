@@ -50,7 +50,7 @@ export function ScopeTabs({
       data-scope-tabs
       aria-busy={isPending}
       className={cn(
-        "border-ink-300 bg-paper-card shadow-elev-1 grid grid-cols-[auto_1fr] items-center gap-2 rounded-md border p-1.5",
+        "border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-[auto_1fr] items-center gap-2 rounded-xl border p-1.5",
         isPending && "opacity-70",
       )}
     >
@@ -60,7 +60,7 @@ export function ScopeTabs({
         onClick={() => navigate({ kind: "all" })}
         aria-pressed={active.kind === "all"}
         className={cn(
-          "focus-visible:ring-pool-blue inline-flex h-12 min-w-12 touch-manipulation items-center justify-center rounded-md px-4 text-sm font-extrabold transition-[background-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+          "focus-visible:ring-pool-blue inline-flex h-12 min-w-12 touch-manipulation items-center justify-center rounded-lg px-4 text-sm font-extrabold transition-[background-color,color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
           active.kind === "all"
             ? "bg-pool-deep text-paper shadow-elev-1"
             : "bg-paper text-pool-deep",
@@ -86,7 +86,7 @@ export function ScopeTabs({
             });
           }}
           className={cn(
-            "focus-visible:ring-pool-blue h-12 w-full appearance-none truncate rounded-md border px-3 pr-9 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
+            "focus-visible:ring-pool-blue h-12 w-full appearance-none truncate rounded-lg border px-3 pr-9 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
             active.kind === "category"
               ? "border-pool-blue bg-pool-foam text-pool-deep"
               : "border-ink-200 bg-paper text-ink-700",

@@ -26,6 +26,7 @@ function makePlayer(overrides: Partial<PlayerStatsInput>): PlayerStatsInput {
     team_color: "#1E5AA8",
     matches_played: 0,
     goals: 0,
+    assists: 0,
     exclusions: 0,
     mvp_count: 0,
     trainings_attended: 0,
@@ -134,6 +135,28 @@ describe("computeRanking", () => {
     expect(result.map((r) => r.player_id)).toEqual(["p-1", "p-3", "p-2"]);
   });
 
+  it("sorts by assists and combined goals plus assists", () => {
+    const players = [
+      makePlayer({ player_id: "p-1", goals: 5, assists: 0 }),
+      makePlayer({ player_id: "p-2", goals: 2, assists: 4 }),
+      makePlayer({ player_id: "p-3", goals: 0, assists: 3 }),
+    ];
+    expect(
+      computeRanking(players, { metric: "assists", scope: { kind: "all" } }).map(
+        (row) => row.player_id,
+      ),
+    ).toEqual(["p-2", "p-3", "p-1"]);
+    expect(
+      computeRanking(players, { metric: "goal_contributions", scope: { kind: "all" } }).map(
+        (row) => [row.player_id, row.primary_value],
+      ),
+    ).toEqual([
+      ["p-2", 6],
+      ["p-1", 5],
+      ["p-3", 3],
+    ]);
+  });
+
   it("respects top_n when provided", () => {
     const players = [
       makePlayer({ player_id: "p-1", goals: 10 }),
@@ -151,6 +174,7 @@ describe("computeRanking", () => {
 
   it.each([
     ["goals", "goals"],
+    ["assists", "assists"],
     ["exclusions", "exclusions"],
     ["mvp", "mvp_count"],
     ["attendance", "attendance_pct"],

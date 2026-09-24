@@ -288,7 +288,7 @@ export const togglePinNewsSchema = z.object({
 
 export const reactNewsSchema = z.object({
   post_id: z.string().uuid("Post inválido."),
-  reaction: z.enum(["like", "fire", "thanks"]),
+  reaction: z.enum(["like", "dislike"]),
 });
 
 export const makeRosterSchema = z.object({

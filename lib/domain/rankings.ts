@@ -1,6 +1,7 @@
 import { type CategoryCode } from "./categories";
 
-export type RankingMetric = "goals" | "exclusions" | "mvp" | "attendance" | "streak";
+export type RankingMetric =
+  "goals" | "assists" | "goal_contributions" | "exclusions" | "mvp" | "attendance" | "streak";
 
 export interface PlayerStatsInput {
   player_id: string;
@@ -13,6 +14,7 @@ export interface PlayerStatsInput {
   team_color: string | null;
   matches_played: number;
   goals: number;
+  assists: number;
   exclusions: number;
   mvp_count: number;
   trainings_attended: number;
@@ -34,6 +36,7 @@ export interface RankingPlayer {
   full_name_locale: string;
   matches_played: number;
   goals: number;
+  assists: number;
   exclusions: number;
   mvp_count: number;
   trainings_attended: number;
@@ -64,6 +67,10 @@ function primaryValueOf(player: PlayerStatsInput, metric: RankingMetric): number
   switch (metric) {
     case "goals":
       return player.goals;
+    case "assists":
+      return player.assists;
+    case "goal_contributions":
+      return player.goals + player.assists;
     case "exclusions":
       return player.exclusions;
     case "mvp":
@@ -101,6 +108,7 @@ function toRankingPlayer(player: PlayerStatsInput, primary: number): RankingPlay
     full_name_locale: player.full_name,
     matches_played: player.matches_played,
     goals: player.goals,
+    assists: player.assists,
     exclusions: player.exclusions,
     mvp_count: player.mvp_count,
     trainings_attended: player.trainings_attended,

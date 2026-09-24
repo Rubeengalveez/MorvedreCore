@@ -4,7 +4,7 @@ import { Megaphone } from "lucide-react";
 
 import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { getNewsPostForAdmin, getNewsTeamsForAdmin } from "@/server/queries/news";
-import { deleteNewsPost, togglePinNews, updateNewsPost } from "@/server/actions/admin/news";
+import { deleteNewsPost, updateNewsPost } from "@/server/actions/admin/news";
 import { NewsEditor } from "@/components/news/news-editor";
 import { PageBackLink } from "@/components/ui/page-back-link";
 
@@ -15,8 +15,15 @@ export const metadata = {
   title: "Editar noticia (admin) — Morvedre Core",
 };
 
-export default async function EditAdminNewsPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditAdminNewsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
+}) {
   const { id } = await params;
+  const listHref = (await searchParams).from === "news" ? "/admin/news?from=news" : "/admin/news";
   const [post, teamOptions] = await Promise.all([getNewsPostForAdmin(id), getNewsTeamsForAdmin()]);
   if (!post) notFound();
 
@@ -42,23 +49,18 @@ export default async function EditAdminNewsPage({ params }: { params: Promise<{ 
       expires_at: data.expires_at,
       imageFile: data.imageFile,
     });
-    redirect(`/admin/news` as Route);
-  }
-
-  async function handlePin(pinned: boolean) {
-    "use server";
-    await togglePinNews({ post_id: id, pinned });
+    redirect(listHref as Route);
   }
 
   async function handleDelete() {
     "use server";
     await deleteNewsPost({ post_id: id });
-    redirect(`/admin/news` as Route);
+    redirect(listHref as Route);
   }
 
   return (
     <AdminPageShell width="lg" className="gap-4">
-      <PageBackLink href="/admin/news">Todas las noticias</PageBackLink>
+      <PageBackLink href={listHref as Route}>Todas las noticias</PageBackLink>
       <AdminPageHeader
         title="Editar noticia"
         description="Corrige el aviso o cambia a quién va dirigido."
@@ -77,7 +79,6 @@ export default async function EditAdminNewsPage({ params }: { params: Promise<{ 
           expires_at: post.expires_at,
         }}
         onSubmit={handleSubmit}
-        onPinToggle={handlePin}
         onDelete={handleDelete}
       />
     </AdminPageShell>

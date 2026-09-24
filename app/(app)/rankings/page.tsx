@@ -28,7 +28,7 @@ export const revalidate = 0;
 
 export const metadata: Metadata = {
   title: "Rankings - Morvedre Core",
-  description: "Goles, MVP, expulsiones y asistencia de la temporada.",
+  description: "Goles, asistencias y estadísticas de la temporada.",
 };
 
 async function loadCoachOrAdmin(profileId: string): Promise<boolean> {
@@ -64,7 +64,13 @@ function parseScope(scopeStr: string | undefined): RankingScope {
 
 function parseMetric(metricStr: string | undefined): RankingPageMetric {
   if (metricStr === "swim") return "swim";
-  if (metricStr === "exclusions" || metricStr === "mvp" || metricStr === "attendance") {
+  if (
+    metricStr === "assists" ||
+    metricStr === "goal_contributions" ||
+    metricStr === "exclusions" ||
+    metricStr === "mvp" ||
+    metricStr === "attendance"
+  ) {
     return metricStr;
   }
   return "goals";
@@ -103,7 +109,9 @@ export default async function RankingsPage({
 
   const [isCoachOrAdminOwn, isCoachOrAdminActive] = await Promise.all([
     loadCoachOrAdmin(ownProfile.id),
-    ownProfile.id === activeProfile.id ? Promise.resolve(false) : loadCoachOrAdmin(activeProfile.id),
+    ownProfile.id === activeProfile.id
+      ? Promise.resolve(false)
+      : loadCoachOrAdmin(activeProfile.id),
   ]);
   const canViewAttendance = isCoachOrAdminOwn || isCoachOrAdminActive;
 
@@ -156,7 +164,7 @@ export default async function RankingsPage({
       <PageHeader
         eyebrow={`${meta.season.label} · ${scopeLabel}`}
         title="Rankings"
-        description="Rendimiento y constancia de la temporada."
+        description="Los datos de la temporada, en cifras."
         icon={<Trofeo className="h-5 w-5" accent="currentColor" />}
       />
 
