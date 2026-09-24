@@ -193,6 +193,31 @@ export function LiveMatchClient() {
   const currentPlayer = s.players.find((p) => p.cap === cap);
 
   const active = s.events.filter((e) => !e.deleted);
+  const lastKeeperStint = s.keeperStints?.findLast((stint) => stint.period === s.period);
+  const historyEntries: (
+    | { kind: "event"; event: MatchEvent; order: number }
+    | { kind: "keeper"; cap: number; period: number; label: string; order: number }
+  )[] = active
+    .filter((event) => event.side === historySide)
+    .map((event) => ({ kind: "event", event, order: s.events.indexOf(event) }));
+  if (historySide === "us" && lastKeeperStint) {
+    const anchor = lastKeeperStint.afterEventId
+      ? s.events.findIndex((event) => event.id === lastKeeperStint.afterEventId)
+      : -1;
+    historyEntries.push({
+      kind: "keeper",
+      cap: lastKeeperStint.cap,
+      period: lastKeeperStint.period,
+      label:
+        (s.keeperStints?.filter((stint) => stint.period === lastKeeperStint.period).length ?? 0) > 1
+          ? "Cambio de portero"
+          : lastKeeperStint.period === 1
+            ? "Portero inicial"
+            : "Portero del cuarto",
+      order: anchor + 0.5,
+    });
+  }
+  historyEntries.sort((a, b) => b.order - a.order);
   const deletingHasPenaltyResult = Boolean(
     deleting?.kind === "penalty" &&
     s.events.some(
@@ -2300,21 +2325,6 @@ export function LiveMatchClient() {
 
               {activePanel === "history" && (
                 <>
-                  {s.keeper !== null &&
-                    historySide === "us" &&
-                    (s.keeperStints?.length ?? 0) > 0 && (
-                      <div className="mb-4 rounded-xl border-2 border-[#8aa6bf] bg-white p-3">
-                        <p className="text-base font-bold">Portero en juego · #{s.keeper}</p>
-                        <button
-                          type="button"
-                          disabled={!enabled}
-                          onClick={() => openKeeper(false, "correct")}
-                          className="mt-2 min-h-12 w-full rounded-lg border-2 border-[#0b4d86] bg-[#e8f1fc] px-3 text-base font-bold text-[#062048]"
-                        >
-                          Corregir último cambio de portero
-                        </button>
-                      </div>
-                    )}
                   <div className="mb-5 grid grid-cols-2 gap-2" aria-label="Equipo de las jugadas">
                     {(["us", "them"] as const).map((team) => (
                       <button
@@ -2328,14 +2338,43 @@ export function LiveMatchClient() {
                       </button>
                     ))}
                   </div>
-                  {active.filter((event) => event.side === historySide).length === 0 ? (
+                  {historyEntries.length === 0 ? (
                     <p>Todavía no hay jugadas.</p>
                   ) : (
                     <ol className={styles.history}>
-                      {[...active]
-                        .filter((event) => event.side === historySide)
-                        .reverse()
-                        .map((e) => (
+                      {historyEntries.map((entry) => {
+                        if (entry.kind === "keeper")
+                          return (
+                            <li key={`keeper-${entry.period}-${entry.order}`}>
+                              <small className="text-sm font-semibold">
+                                Morvedre · Cuarto {entry.period}
+                              </small>
+                              <div className="my-3 flex items-center gap-3">
+                                <span className="grid h-11 min-w-11 place-items-center rounded-lg bg-blue-900 text-xl font-bold text-white">
+                                  #{entry.cap}
+                                </span>
+                                <div className="min-w-0">
+                                  <p className="text-lg leading-tight font-bold">{entry.label}</p>
+                                  <p className="mt-1 text-sm text-slate-600">
+                                    <ActaPlayerName
+                                      name={s.players.find((player) => player.cap === entry.cap)?.name ?? `Gorro ${entry.cap}`}
+                                    />
+                                  </p>
+                                </div>
+                              </div>
+                              {enabled && (
+                                <button
+                                  type="button"
+                                  className="min-h-12 w-full rounded-lg border-2 border-blue-800 bg-blue-50 px-3 text-base font-bold"
+                                  onClick={() => openKeeper(false, "correct")}
+                                >
+                                  Corregir
+                                </button>
+                              )}
+                            </li>
+                          );
+                        const e = entry.event;
+                        return (
                           <li key={e.id}>
                             <small className="text-sm font-semibold">
                               {e.side === "us" ? "Morvedre" : "Rival"} · Cuarto {e.period}
@@ -2436,7 +2475,8 @@ export function LiveMatchClient() {
                               </div>
                             )}
                           </li>
-                        ))}
+                        );
+                      })}
                     </ol>
                   )}
                 </>
