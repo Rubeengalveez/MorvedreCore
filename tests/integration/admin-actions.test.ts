@@ -341,10 +341,15 @@ describe("createPlayerSchema", () => {
   const validPlayer = {
     full_name: "Jugador Ejemplo",
     birth_year: 2010,
+    team_id: "550e8400-e29b-41d4-a716-446655440000",
   };
 
   it("accepts a minimal valid player", () => {
     expect(createPlayerSchema.safeParse(validPlayer).success).toBe(true);
+  });
+
+  it("requires an initial team", () => {
+    expect(createPlayerSchema.safeParse({ ...validPlayer, team_id: undefined }).success).toBe(false);
   });
 
   it("trims whitespace from full_name", () => {

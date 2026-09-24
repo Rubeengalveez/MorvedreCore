@@ -144,6 +144,7 @@ export async function assignStaff(input: {
   }
 
   const isCoachRole = parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach";
+  const accessRole = isCoachRole ? "coach" : parsed.data.role === "delegate" ? "delegate" : null;
   const supabase = await createClient();
   const { error } = await supabase.from("team_staff").insert({
     team_id: parsed.data.team_id,
@@ -162,11 +163,11 @@ export async function assignStaff(input: {
     throw new Error("No pudimos asignar el rol. Inténtalo de nuevo.");
   }
 
-  if (isCoachRole) {
+  if (accessRole) {
     const { error: roleError } = await supabase.from("user_roles").upsert(
       {
         profile_id: parsed.data.profile_id,
-        role: "coach",
+        role: accessRole,
         scope_team_id: parsed.data.team_id,
         granted_by: admin.id,
       },
@@ -212,13 +213,15 @@ export async function unassignStaff(input: {
 
   throwIfError(error, "No pudimos quitar el rol. Inténtalo de nuevo.");
 
-  if (parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach") {
+  if (parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach" || parsed.data.role === "delegate") {
+    const isCoachRole = parsed.data.role !== "delegate";
+    const matchingRoles = isCoachRole ? ["head_coach", "assistant_coach"] : ["delegate"];
     const { data: remainingCoachStaff, error: remainingError } = await supabase
       .from("team_staff")
       .select("role")
       .eq("team_id", parsed.data.team_id)
       .eq("profile_id", parsed.data.profile_id)
-      .in("role", ["head_coach", "assistant_coach"])
+      .in("role", matchingRoles)
       .limit(1);
 
     throwIfError(remainingError, "No pudimos comprobar los permisos del entrenador.");
@@ -227,7 +230,7 @@ export async function unassignStaff(input: {
         .from("user_roles")
         .delete()
         .eq("profile_id", parsed.data.profile_id)
-        .eq("role", "coach")
+        .eq("role", isCoachRole ? "coach" : "delegate")
         .eq("scope_team_id", parsed.data.team_id);
       throwIfError(roleError, "No pudimos retirar los permisos del entrenador.");
     }

@@ -957,3 +957,12 @@ Las convocatorias admiten únicamente gorros del 1 al 14. Un jugador puede queda
 ### 2026-09-24 · Caducidad de noticias
 
 Las noticias con fecha de caducidad desaparecen de las vistas pública y de gestión al llegar esa fecha. Una tarea horaria las elimina de la base de datos junto con sus reacciones y notificaciones vinculadas. Esto sustituye el comportamiento anterior, que solo las desfijaba y las conservaba en administración.
+## 2026-09-24 — Alta y acceso vinculados a perfiles del club
+
+- El administrador crea al jugador con nombre completo, año de nacimiento y equipo principal de la temporada actual. El jugador no puede darse de alta a sí mismo: solicita vincular el perfil existente indicando esos tres datos. Una coincidencia ambigua o ya vinculada bloquea la solicitud y se resuelve con el club.
+- El familiar puede solicitar acceso aunque el hijo no tenga cuenta. Escribe el nombre completo y año de nacimiento de cada jugador; el administrador verifica el vínculo antes de aprobar. Cada persona que quiera un acceso individual necesita un correo distinto.
+- Personal y directiva se crean desde el panel de personal con correo. Los roles de entrenador, delegado y directiva se asignan exclusivamente desde administración; elegir «Personal y directiva» en la solicitud no concede permisos.
+- La solicitud con correo se aprueba mediante contraseña aleatoria única, visible una sola vez al administrador, que la entrega por un canal privado. El primer acceso obliga a establecer una contraseña personal.
+- La solicitud iniciada con Google conserva la identidad de Google verificada. Tras la aprobación se accede con Google sin generar ni comunicar una contraseña provisional.
+- Las solicitudes avisan a los administradores por notificación dentro de la app y por correo configurado. El panel de solicitudes conserva el estado aunque falle una vía de aviso.
+- Las solicitudes públicas se validan en Server Actions y las tablas continúan bajo RLS. Los perfiles y los roles solo se vinculan tras aprobación administrativa.

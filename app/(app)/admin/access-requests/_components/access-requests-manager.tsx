@@ -29,6 +29,7 @@ interface ChildRef {
 
 interface AccessRequest {
   id: string;
+  auth_user_id: string | null;
   email: string;
   full_name: string;
   role: string;
@@ -37,6 +38,7 @@ interface AccessRequest {
   relation: string | null;
   status: string;
   candidate?: { id: string; full_name: string } | null;
+  team?: { id: string; label: string } | null;
   children?: ChildRef[] | null;
   created_at: string;
 }
@@ -44,6 +46,7 @@ interface AccessRequest {
 const ROLE_LABELS: Record<string, string> = {
   player: "Jugador/a",
   parent: "Padre o madre",
+  staff: "Personal y directiva",
   coach: "Entrenador/a",
   delegate: "Delegado/a",
   directiva: "Directiva",
@@ -76,6 +79,7 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
   const [requests, setRequests] = useState<AccessRequest[]>(initialRequests);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [issuedCredentials, setIssuedCredentials] = useState<IssuedCredential[]>([]);
+  const [approvedWithGoogle, setApprovedWithGoogle] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rejectRequest, setRejectRequest] = useState<AccessRequest | null>(null);
   const [, startTransition] = useTransition();
@@ -96,8 +100,9 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
         return;
       }
       setIssuedCredentials(result.credentials ?? []);
+      setApprovedWithGoogle(!!request.auth_user_id);
       setRequests((items) =>
-        items.map((item) => (item.id === request.id ? { ...item, status: "approved" } : item)),
+        items.map((item) => (item.id === request.id ? { ...item, status: request.auth_user_id ? "activated" : "approved" } : item)),
       );
     });
   }
@@ -114,7 +119,7 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
         setError(result?.error ?? "No pudimos rechazar la solicitud.");
         return;
       }
-      setRequests((items) => items.filter((item) => item.id !== request.id));
+      setRequests((items) => items.map((item) => item.id === request.id ? { ...item, status: "rejected" } : item));
       setRejectRequest(null);
     });
   }
@@ -149,7 +154,7 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
           <div>
             <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">Revisión de accesos</p>
             <h2 className="mt-1 text-xl font-extrabold">{pendingRequests.length} por revisar</h2>
-            <p className="text-paper/75 mt-1 text-sm">Comprueba los datos y aprueba una solicitud cada vez. Al aprobar, se generan las credenciales temporales.</p>
+            <p className="text-paper/75 mt-1 text-sm">Comprueba la identidad y el vínculo con el club antes de aprobar. Para correo se genera una contraseña provisional; Google conserva su acceso verificado.</p>
           </div>
         </div>
       </section>
@@ -175,6 +180,12 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
             ))}
           </ul>
         </section>
+      ) : null}
+
+      {approvedWithGoogle && issuedCredentials.length === 0 ? (
+        <p role="status" className="border-success/25 bg-success/5 text-pool-deep rounded-xl border p-3 text-sm font-semibold">
+          Acceso aprobado. La persona ya puede volver a entrar con Google.
+        </p>
       ) : null}
 
       <section aria-labelledby="pending-access-title" className="flex flex-col gap-3">
@@ -205,20 +216,20 @@ export function AccessRequestsManager({ initialRequests }: { initialRequests: Ac
             <p className="text-ink-500 text-xs font-extrabold tracking-[0.12em] uppercase">Registro</p>
             <h2 id="access-history-title" className="text-pool-deep mt-1 text-lg font-extrabold">Solicitudes resueltas</h2>
           </div>
-          <Card className="divide-ink-200 divide-y">
+          <div className="flex flex-col gap-2">
             {history.map((request) => (
-              <div key={request.id} className="flex min-h-16 items-center gap-3 p-3">
+              <div key={request.id} className="bg-paper-card shadow-elev-1 flex min-h-16 items-center gap-3 rounded-xl p-3">
                 <CircleUserRound className="text-ink-400 h-7 w-7 shrink-0" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   <p className="text-pool-deep truncate text-sm font-extrabold">{request.full_name}</p>
                   <p className="text-ink-600 truncate text-xs">{request.email}</p>
                 </div>
-                <StatusBadge variant={request.status === "activated" ? "success" : "info"} dot>
-                  {request.status === "activated" ? "Activada" : "Aprobada"}
+                <StatusBadge variant={request.status === "activated" ? "success" : request.status === "rejected" ? "danger" : "info"} dot>
+                  {request.status === "activated" ? "Activada" : request.status === "rejected" ? "Rechazada" : "Aprobada"}
                 </StatusBadge>
               </div>
             ))}
-          </Card>
+          </div>
         </section>
       ) : null}
     </div>
@@ -242,11 +253,13 @@ function AccessRequestCard({ request, pending, onApprove, onReject }: { request:
           {request.birth_year ? <RequestDetail label="Año de nacimiento" value={String(request.birth_year)} /> : null}
           {request.gender ? <RequestDetail label="Género" value={GENDER_LABELS[request.gender] ?? request.gender} /> : null}
           {request.relation ? <RequestDetail label="Vínculo" value={RELATION_LABELS[request.relation] ?? request.relation} /> : null}
+          {request.team ? <RequestDetail label="Equipo" value={request.team.label} /> : null}
+          <RequestDetail label="Método" value={request.auth_user_id ? "Google verificado" : "Correo y contraseña provisional"} />
         </dl>
         {request.candidate ? <div className="border-pool-blue/20 bg-pool-foam/55 rounded-xl border p-3"><p className="text-pool-blue text-xs font-extrabold tracking-[0.1em] uppercase">Perfil indicado</p><p className="text-pool-deep mt-1 text-sm font-extrabold">{request.candidate.full_name}</p></div> : null}
         {children.length > 0 ? <div className="border-ink-200 flex gap-2 rounded-xl border p-3"><UsersRound className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" /><div><p className="text-ink-500 text-xs font-extrabold tracking-[0.1em] uppercase">Hijos o hijas vinculados</p><p className="text-pool-deep mt-1 text-sm font-extrabold">{children.join(", ")}</p></div></div> : null}
       </div>
-      <div className="border-ink-200 grid grid-cols-1 gap-2 border-t p-3 min-[420px]:grid-cols-[1fr_auto]">
+      <div className="bg-pool-foam/35 grid grid-cols-1 gap-2 rounded-b-2xl p-3 min-[420px]:grid-cols-[1fr_auto]">
         <Button type="button" variant="primary" disabled={pending} onClick={onApprove} className="w-full">
           {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : <CheckCircle2 className="h-5 w-5" aria-hidden="true" />}
           {pending ? "Aprobando acceso…" : "Aprobar acceso"}

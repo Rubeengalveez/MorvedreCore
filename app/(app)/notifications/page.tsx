@@ -95,6 +95,12 @@ const KIND_META: Record<
     color: "var(--pool-teal)",
     tone: "border-pool-teal bg-cyan-50",
   },
+  access_request: {
+    label: "Solicitud de acceso",
+    Icon: UserCheck,
+    color: "var(--pool-blue)",
+    tone: "border-pool-blue bg-blue-50",
+  },
   result_published: {
     label: "Resultado",
     Icon: Trophy,
@@ -303,7 +309,7 @@ function getBadgeVariant(kind: string): "brand" | "danger" | "success" | "info" 
   if (kind === "convocatoria") return "brand";
   if (kind === "training_cancelled" || kind === "training_absence") return "danger";
   if (kind === "training_attendance_corrected" || kind === "result_published") return "success";
-  if (kind === "news_pinned" || kind === "match_reminder") return "info";
+  if (kind === "news_pinned" || kind === "match_reminder" || kind === "access_request") return "info";
   return "neutral";
 }
 

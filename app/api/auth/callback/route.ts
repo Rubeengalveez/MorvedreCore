@@ -64,10 +64,14 @@ export async function GET(request: NextRequest) {
           .maybeSingle();
 
         if (!profile) {
+          const { data: pendingRequest } = await admin.from("access_requests")
+            .select("id").eq("auth_user_id", user.id).eq("status", "pending").maybeSingle();
+          if (pendingRequest) {
+            return NextResponse.redirect(`${origin}/login/request/pending`);
+          }
           const params = new URLSearchParams();
           params.set("email", user.email || "");
           params.set("provider", "google");
-          await supabase.auth.signOut();
           return NextResponse.redirect(`${origin}/login/request?${params.toString()}`);
         }
 

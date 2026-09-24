@@ -134,6 +134,7 @@ export const phoneSchema = z
 
 export const createPlayerSchema = z.object({
   full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
+  team_id: z.string().uuid("Selecciona el equipo principal."),
   birth_year: z
     .number()
     .int("Año entero.")
@@ -147,7 +148,6 @@ export const createPlayerSchema = z.object({
   team_color: optionalHexColor,
   school_enrolled: z.boolean().optional(),
   school_payment_paid: z.boolean().optional(),
-  must_change_password: z.boolean().optional(),
   license_active: z.boolean().optional(),
   notes: z.preprocess(
     emptyToNull,

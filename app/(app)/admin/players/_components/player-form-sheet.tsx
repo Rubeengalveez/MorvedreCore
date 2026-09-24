@@ -4,8 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Loader2, UserRound } from "lucide-react";
 import { useRouter } from "next/navigation";
 import * as React from "react";
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useTransition } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
@@ -47,6 +47,7 @@ const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 const playerFormSchema = z.object({
   full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100),
+  team_id: z.string().optional(),
   birth_year: z
     .string()
     .trim()
@@ -79,7 +80,6 @@ const playerFormSchema = z.object({
     .trim()
     .optional()
     .refine((v) => !v || urlPattern.test(v), "URL inválida."),
-  must_change_password: z.boolean(),
   school_enrolled: z.boolean(),
   school_payment_paid: z.boolean(),
   notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
@@ -122,12 +122,12 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
     } else {
       await createPlayer({
         ...commonValues,
+        team_id: String(formData.get("team_id") ?? ""),
         cap_number: capNumber ?? undefined,
         phone_e164: phone ?? undefined,
         email_contact: email || undefined,
         photo_url: photoUrl || undefined,
         notes: notes || undefined,
-        must_change_password: formData.get("must_change_password") === "true",
       });
     }
     return { ok: true };
@@ -188,6 +188,7 @@ function Toggle({
 }
 
 export interface PlayerFormSheetProps {
+  teams?: Array<{ id: string; label: string }>;
   trigger?: React.ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -206,61 +207,60 @@ export interface PlayerFormSheetProps {
   };
 }
 
-export function PlayerFormSheet({ trigger, open, onOpenChange, player }: PlayerFormSheetProps) {
+export function PlayerFormSheet({ trigger, open, onOpenChange, player, teams = [] }: PlayerFormSheetProps) {
   const router = useRouter();
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
+  const [state, setState] = useState<ActionState>(null);
   const [isSaving, startTransition] = useTransition();
   const isControlled = open !== undefined;
   const sheetOpen = open ?? uncontrolledOpen;
   const formId = player ? `player-form-${player.id}` : "player-form-new";
 
-  function handleOpenChange(nextOpen: boolean) {
+  const handleOpenChange = React.useCallback((nextOpen: boolean) => {
     if (!isControlled) setUncontrolledOpen(nextOpen);
     onOpenChange?.(nextOpen);
-  }
+  }, [isControlled, onOpenChange]);
 
   const form = useForm<PlayerFormValues>({
     resolver: zodResolver(playerFormSchema),
     defaultValues: {
       full_name: player?.full_name ?? "",
+      team_id: "",
       birth_year: player?.birth_year?.toString() ?? "",
       gender: (player?.gender as PlayerFormValues["gender"]) ?? "prefer_not_to_say",
       cap_number: player?.cap_number?.toString() ?? "",
       phone_e164: player?.phone_e164 ?? "",
       email_contact: player?.email_contact ?? "",
       photo_url: player?.photo_url ?? "",
-      must_change_password: true,
       school_enrolled: player?.school_enrolled ?? false,
       school_payment_paid: player?.school_payment_paid ?? false,
       notes: player?.notes ?? "",
     },
   });
-
-  useEffect(() => {
-    if (state?.ok) {
-      form.reset();
-      handleOpenChange(false);
-      router.refresh();
-    }
-  }, [state, form, router]);
+  const schoolEnrolled = useWatch({ control: form.control, name: "school_enrolled" });
 
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
     if (player) fd.append("profile_id", player.id);
     fd.append("full_name", values.full_name);
+    if (!player) fd.append("team_id", values.team_id ?? "");
     fd.append("birth_year", values.birth_year ?? "");
     fd.append("gender", values.gender);
     if (values.cap_number) fd.append("cap_number", values.cap_number);
     if (values.phone_e164) fd.append("phone_e164", values.phone_e164);
     if (values.email_contact) fd.append("email_contact", values.email_contact);
     if (values.photo_url) fd.append("photo_url", values.photo_url);
-    fd.append("must_change_password", values.must_change_password ? "true" : "false");
     fd.append("school_enrolled", values.school_enrolled ? "true" : "false");
     fd.append("school_payment_paid", values.school_payment_paid ? "true" : "false");
     if (values.notes && values.notes.trim() !== "") fd.append("notes", values.notes);
-    startTransition(() => {
-      formAction(fd);
+    startTransition(async () => {
+      const result = await submitAction(null, fd);
+      setState(result);
+      if (result?.ok) {
+        form.reset();
+        handleOpenChange(false);
+        router.refresh();
+      }
     });
   });
 
@@ -276,7 +276,7 @@ export function PlayerFormSheet({ trigger, open, onOpenChange, player }: PlayerF
           <SheetDescription>
             {player
               ? "Actualiza sus datos sin perder estadísticas ni historial."
-              : "Da de alta a un jugador. El dorsal y el equipo se asignan después."}
+              : "Da de alta al jugador con su equipo principal. Después podrá solicitar acceso a su perfil."}
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
@@ -313,6 +313,25 @@ export function PlayerFormSheet({ trigger, open, onOpenChange, player }: PlayerF
                     </FormItem>
                   )}
                 />
+
+                {!player ? (
+                  <FormField
+                    control={form.control}
+                    name="team_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Equipo principal</FormLabel>
+                        <FormControl>
+                          <Select {...field} required>
+                            <option value="">Selecciona un equipo</option>
+                            {teams.map((team) => <option key={team.id} value={team.id}>{team.label}</option>)}
+                          </Select>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                ) : null}
 
                 <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                   <FormField
@@ -477,24 +496,6 @@ export function PlayerFormSheet({ trigger, open, onOpenChange, player }: PlayerF
                 />
               </section>
 
-              {!player ? (
-                <FormField
-                  control={form.control}
-                  name="must_change_password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Toggle
-                        value={field.value}
-                        onChange={field.onChange}
-                        label="Deberá cambiar la contraseña"
-                        description="Recomendado al dar de alta un jugador nuevo."
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              ) : null}
-
               <section className="border-ink-200 bg-paper-card shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-4">
                 <div>
                   <h3 className="text-pool-deep text-sm font-extrabold">Escuela</h3>
@@ -518,7 +519,7 @@ export function PlayerFormSheet({ trigger, open, onOpenChange, player }: PlayerF
                     </FormItem>
                   )}
                 />
-                {form.watch("school_enrolled") ? (
+                {schoolEnrolled ? (
                   <FormField
                     control={form.control}
                     name="school_payment_paid"

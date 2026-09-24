@@ -1,16 +1,23 @@
-import { describe, it, expect } from "vitest";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import { findUniqueExactProfile, requiresTemporaryPassword } from "@/lib/domain/access-onboarding";
 
-describe("Access Request Approval Compensation", () => {
-  it("implements compensation rollback and defers existing user password mutation until DB is consistent", () => {
-    const authActionsPath = resolve(process.cwd(), "server/actions/auth.ts");
-    const content = readFileSync(authActionsPath, "utf8");
+describe("vinculación de cuentas", () => {
+  const profiles = [
+    { id: "ana", full_name: "Ana María Pérez" },
+    { id: "luis", full_name: "Luis García" },
+  ];
 
-    // Must ensure existing users don't get passwords reset before DB operations succeed
-    expect(content).toContain("isExistingAuthUser");
-    expect(content).toContain("createdProfileId");
-    expect(content).toContain("deleteUser(authUserId)");
-    expect(content).toContain('.delete().eq("id", createdProfileId)');
+  it("encuentra un perfil existente aunque el nombre llegue sin tildes", () => {
+    expect(findUniqueExactProfile(profiles, "  ANA   MARIA PEREZ ")?.id).toBe("ana");
+  });
+
+  it("no vincula un nombre ambiguo o inexistente", () => {
+    expect(findUniqueExactProfile([...profiles, { id: "otra", full_name: "Ana Maria Perez" }], "Ana María Pérez")).toBeNull();
+    expect(findUniqueExactProfile(profiles, "Carlos García")).toBeNull();
+  });
+
+  it("solo emite contraseña provisional cuando no hay una identidad de Google verificada", () => {
+    expect(requiresTemporaryPassword(null)).toBe(true);
+    expect(requiresTemporaryPassword("google-user-id")).toBe(false);
   });
 });

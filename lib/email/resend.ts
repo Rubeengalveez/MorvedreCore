@@ -71,6 +71,7 @@ function getRoleLabel(role: string) {
     {
       player: "Jugador",
       parent: "Padre/Madre",
+      staff: "Personal y directiva",
       coach: "Entrenador",
       delegate: "Delegado",
       directiva: "Directiva",

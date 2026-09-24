@@ -76,9 +76,11 @@ export type Database = {
           },
         ];
       };
-      access_requests: {
-        Row: {
-          approved_at: string | null;
+        access_requests: {
+          Row: {
+            auth_user_id: string | null;
+            team_id: string | null;
+            approved_at: string | null;
           approved_by_profile_id: string | null;
           birth_year: number | null;
           candidate_profile_id: string | null;
@@ -87,13 +89,17 @@ export type Database = {
           full_name: string;
           gender: string | null;
           id: string;
-          relation: string | null;
-          role: string;
+            relation: string | null;
+            rejected_at: string | null;
+            rejected_by_profile_id: string | null;
+            role: string;
           status: string;
           updated_at: string;
         };
-        Insert: {
-          approved_at?: string | null;
+          Insert: {
+            auth_user_id?: string | null;
+            team_id?: string | null;
+            approved_at?: string | null;
           approved_by_profile_id?: string | null;
           birth_year?: number | null;
           candidate_profile_id?: string | null;
@@ -102,13 +108,17 @@ export type Database = {
           full_name: string;
           gender?: string | null;
           id?: string;
-          relation?: string | null;
-          role: string;
+            relation?: string | null;
+            rejected_at?: string | null;
+            rejected_by_profile_id?: string | null;
+            role: string;
           status?: string;
           updated_at?: string;
         };
-        Update: {
-          approved_at?: string | null;
+          Update: {
+            auth_user_id?: string | null;
+            team_id?: string | null;
+            approved_at?: string | null;
           approved_by_profile_id?: string | null;
           birth_year?: number | null;
           candidate_profile_id?: string | null;
@@ -117,8 +127,10 @@ export type Database = {
           full_name?: string;
           gender?: string | null;
           id?: string;
-          relation?: string | null;
-          role?: string;
+            relation?: string | null;
+            rejected_at?: string | null;
+            rejected_by_profile_id?: string | null;
+            role?: string;
           status?: string;
           updated_at?: string;
         };
@@ -144,13 +156,34 @@ export type Database = {
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "access_requests_candidate_profile_id_fkey";
-            columns: ["candidate_profile_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles_public";
-            referencedColumns: ["id"];
-          },
+            {
+              foreignKeyName: "access_requests_candidate_profile_id_fkey";
+              columns: ["candidate_profile_id"];
+              isOneToOne: false;
+              referencedRelation: "profiles_public";
+              referencedColumns: ["id"];
+            },
+            {
+              foreignKeyName: "access_requests_team_id_fkey";
+              columns: ["team_id"];
+              isOneToOne: false;
+              referencedRelation: "teams";
+              referencedColumns: ["id"];
+            },
+            {
+              foreignKeyName: "access_requests_rejected_by_profile_id_fkey";
+              columns: ["rejected_by_profile_id"];
+              isOneToOne: false;
+              referencedRelation: "profiles";
+              referencedColumns: ["id"];
+            },
+            {
+              foreignKeyName: "access_requests_rejected_by_profile_id_fkey";
+              columns: ["rejected_by_profile_id"];
+              isOneToOne: false;
+              referencedRelation: "profiles_public";
+              referencedColumns: ["id"];
+            },
         ];
       };
       audit_log: {

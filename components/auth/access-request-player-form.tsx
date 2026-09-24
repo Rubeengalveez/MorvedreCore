@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { MdAutorenew } from "react-icons/md";
 
@@ -22,26 +22,15 @@ function SubmitButton() {
 
 export interface AccessRequestPlayerFormProps {
   email: string;
+  lockedEmail?: boolean;
+  teams: Array<{ id: string; label: string }>;
 }
 
-export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps) {
+export function AccessRequestPlayerForm({ email, lockedEmail = false, teams }: AccessRequestPlayerFormProps) {
   const [state, formAction] = useActionState<SubmitAccessRequestState, FormData>(
     submitAccessRequest,
     null,
   );
-  const [, startTransition] = useTransition();
-  const [fullName, setFullName] = useState("");
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const fd = new FormData(form);
-    fd.set("email", email);
-    fd.set("role", "player");
-    startTransition(() => {
-      formAction(fd);
-    });
-  };
 
   if (state?.success) {
     return (
@@ -65,9 +54,9 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
         <div>
           <h3 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h3>
           <p className="text-ink-600 mt-1 text-sm">
-            Tu cuenta est&aacute; pendiente de activaci&oacute;n. El administrador del club
-            revisar&aacute; tus datos y te pasar&aacute; una contrase&ntilde;a provisional para que
-            entres y la cambies.
+            Revisaremos que tus datos coincidan con el perfil del club. Si usaste Google,
+            entra de nuevo con Google tras la aprobación. Si solicitaste acceso con correo,
+            recibirás una contraseña provisional que cambiarás al entrar.
           </p>
         </div>
       </div>
@@ -75,7 +64,8 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex w-full flex-col gap-4">
+    <form action={formAction} className="flex w-full flex-col gap-4">
+      <input type="hidden" name="role" value="player" />
       {state?.error ? (
         <Alert variant="danger" title="No pudimos enviar la solicitud">
           {state.error}
@@ -89,10 +79,22 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
         <Input
           id="email"
           type="email"
-          value={email}
-          disabled
+          name="email"
+          defaultValue={email}
+          readOnly={lockedEmail}
+          required
+          autoComplete="email"
           className="bg-ink-100 text-ink-600 h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="teamId" className="text-eyebrow text-ink-700">Equipo principal</label>
+        <Select id="teamId" name="teamId" required defaultValue=""
+          className="bg-pool-ice focus:border-pool-blue focus:bg-paper min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4">
+          <option value="" disabled>Selecciona tu equipo</option>
+          {teams.map((team) => <option key={team.id} value={team.id}>{team.label}</option>)}
+        </Select>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -106,14 +108,11 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
           placeholder="Tu nombre y apellidos"
           required
           minLength={2}
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
           className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5">
           <label htmlFor="birthYear" className="text-eyebrow text-ink-700">
             A&ntilde;o de nacimiento
           </label>
@@ -127,28 +126,6 @@ export function AccessRequestPlayerForm({ email }: AccessRequestPlayerFormProps)
             required
             className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label htmlFor="gender" className="text-eyebrow text-ink-700">
-            G&eacute;nero
-          </label>
-          <Select
-            id="gender"
-            name="gender"
-            required
-            defaultValue=""
-            className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
-          >
-            <option value="" disabled>
-              Selecciona...
-            </option>
-            <option value="male">Hombre</option>
-            <option value="female">Mujer</option>
-            <option value="other">Otro</option>
-            <option value="prefer_not_to_say">Prefiero no decirlo</option>
-          </Select>
-        </div>
       </div>
 
       <SubmitButton />

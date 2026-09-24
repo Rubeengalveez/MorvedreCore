@@ -27,6 +27,7 @@ async function loadData(): Promise<{
   people: PersonOption[];
   permissionsByProfile: Record<string, AdminPermission[]>;
   canGrantPermissions: boolean;
+  boardProfileIds: string[];
 }> {
   const supabase = await createClient();
 
@@ -35,6 +36,7 @@ async function loadData(): Promise<{
     { data: teamsData },
     { data: profilesData },
     { data: permissionData },
+    { data: boardData },
     access,
   ] = await Promise.all([
     supabase
@@ -53,6 +55,7 @@ async function loadData(): Promise<{
       .order("full_name", { ascending: true })
       .limit(2000),
     supabase.from("profile_permissions").select("profile_id, permission"),
+    supabase.from("user_roles").select("profile_id").eq("role", "directiva").is("scope_team_id", null),
     getAdminAccess(),
   ]);
 
@@ -98,19 +101,23 @@ async function loadData(): Promise<{
 
   const people: PersonOption[] = (profilesData ?? []) as PersonOption[];
 
-  return { rows, teams, people, permissionsByProfile, canGrantPermissions: access.isAdmin };
+  return { rows, teams, people, permissionsByProfile,
+    boardProfileIds: [...new Set((boardData ?? []).map((row) => row.profile_id))],
+    canGrantPermissions: access.isAdmin };
 }
 
 export default async function StaffPage() {
-  const { rows, teams, people, permissionsByProfile, canGrantPermissions } = await loadData();
+  const { rows, teams, people, permissionsByProfile, boardProfileIds, canGrantPermissions } = await loadData();
 
   return (
     <AdminPageShell>
       <StaffClient
+        key={boardProfileIds.join(",")}
         rows={rows}
         teams={teams}
         people={people}
         permissionsByProfile={permissionsByProfile}
+        boardProfileIds={boardProfileIds}
         canGrantPermissions={canGrantPermissions}
       />
     </AdminPageShell>

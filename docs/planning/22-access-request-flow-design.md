@@ -214,3 +214,6 @@ El panel `/admin/access-requests` muestra al aprobar una credencial aleatoria di
 4. Integrar Resend para el aviso de nuevas solicitudes.
 5. Actualizar login, callback de Google y change-password.
 6. Tests de integración.
+# Estado de este documento
+
+Este diseño describe la primera versión del acceso. El flujo vigente desde el 24 de septiembre de 2026 está en `docs/guides/access-and-onboarding.md` y la decisión correspondiente en `00-decisions-log.md`.

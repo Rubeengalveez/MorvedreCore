@@ -191,6 +191,7 @@ export default async function PlayersPage({
               </Link>
             </Button>
             <PlayerFormSheet
+              teams={teams}
               trigger={
                 <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
                   <MdAdd className="h-6 w-6" aria-hidden="true" />

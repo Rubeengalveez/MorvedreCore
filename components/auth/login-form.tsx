@@ -138,6 +138,11 @@ export function LoginForm({ next, error }: LoginFormProps) {
           ¿Olvidaste la contraseña?
         </Link>
 
+        <Link href={"/login/request" as Route}
+          className="text-pool-blue self-start text-sm font-bold hover:underline focus-visible:underline focus-visible:outline-none">
+          ¿Es tu primera vez? Solicita acceso
+        </Link>
+
         <div className="flex flex-col gap-3 pt-1">
           <Button type="submit" size="lg" className="w-full" disabled={isPending}>
             {isPending ? (

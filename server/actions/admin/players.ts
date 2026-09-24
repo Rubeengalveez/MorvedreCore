@@ -8,6 +8,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { Tables } from "@/types/database";
 import { ADMIN_PERMISSIONS, type AdminPermission } from "@/lib/domain/permissions";
 import { canViewPersonalFinances, requiresGuardianApproval } from "@/lib/domain/family";
+import { canRosterPlayer } from "@/lib/domain/teams";
+import type { CategoryCode } from "@/lib/domain/categories";
 import {
   createPlayerSchema,
   idSchema,
@@ -22,6 +24,39 @@ import { rosterPlayer, unrosterPlayer } from "./teams";
 
 export type Player = Tables<"profiles">;
 
+const personnelProfileSchema = z.object({
+  full_name: z.string().trim().min(2).max(100),
+  email: z.string().trim().toLowerCase().email(),
+  directiva: z.boolean(),
+});
+
+export async function createPersonnelProfile(input: unknown): Promise<void> {
+  await requireAdmin();
+  const parsed = personnelProfileSchema.safeParse(input);
+  if (!parsed.success) throw new Error("Revisa el nombre y el correo de la persona.");
+  const admin = createAdminClient();
+  const { data: existing } = await admin.from("profiles").select("id")
+    .ilike("email_contact", parsed.data.email).limit(1).maybeSingle();
+  if (existing) throw new Error("Ese correo ya figura en un perfil. Asigna los permisos al perfil existente.");
+  const { data: person, error } = await admin.from("profiles").insert({
+    full_name: parsed.data.full_name,
+    email_contact: parsed.data.email,
+    must_change_password: false,
+    is_active: true,
+  }).select("id").single();
+  if (error || !person) throw new Error("No pudimos crear a esta persona.");
+  if (parsed.data.directiva) {
+    const { error: roleError } = await admin.from("user_roles").insert({
+      profile_id: person.id, role: "directiva", scope_team_id: null,
+    });
+    if (roleError) {
+      await admin.from("profiles").delete().eq("id", person.id);
+      throw new Error("No pudimos asignar el rol de directiva.");
+    }
+  }
+  revalidatePath("/admin/staff");
+}
+
 function throwIfError(error: { message: string } | null, fallback: string): void {
   if (error) {
     throw new Error(fallback);
@@ -31,6 +66,7 @@ function throwIfError(error: { message: string } | null, fallback: string): void
 export async function createPlayer(input: {
   full_name: string;
   birth_year: number;
+  team_id: string;
   gender?: "male" | "female" | "other" | "prefer_not_to_say";
   cap_number?: number;
   phone_e164?: string;
@@ -39,7 +75,6 @@ export async function createPlayer(input: {
   team_color?: string;
   school_enrolled?: boolean;
   school_payment_paid?: boolean;
-  must_change_password?: boolean;
   license_active?: boolean;
   notes?: string | null;
 }): Promise<Player> {
@@ -51,6 +86,18 @@ export async function createPlayer(input: {
   }
 
   const supabase = createAdminClient();
+  const { data: team } = await supabase
+    .from("teams")
+    .select("id, category_code, season:seasons!teams_season_id_fkey(start_date, is_current)")
+    .eq("id", parsed.data.team_id)
+    .maybeSingle();
+  if (!team?.season?.is_current) {
+    throw new Error("Selecciona un equipo de la temporada actual.");
+  }
+  const seasonYear = new Date(`${team.season.start_date}T12:00:00`).getFullYear();
+  if (!canRosterPlayer(parsed.data.birth_year, team.category_code as CategoryCode, seasonYear)) {
+    throw new Error("El año de nacimiento no encaja con ese equipo.");
+  }
   const { data, error } = await supabase
     .from("profiles")
     .insert({
@@ -65,7 +112,7 @@ export async function createPlayer(input: {
       team_color: parsed.data.team_color ?? null,
       school_enrolled: parsed.data.school_enrolled ?? false,
       school_payment_paid: parsed.data.school_payment_paid ?? false,
-      must_change_password: parsed.data.must_change_password ?? false,
+      must_change_password: false,
       license_active: true,
       is_active: true,
       notes: parsed.data.notes ?? null,
@@ -76,6 +123,25 @@ export async function createPlayer(input: {
   throwIfError(error, "No pudimos crear el jugador. Inténtalo de nuevo.");
   if (!data) {
     throw new Error("No pudimos crear el jugador. Inténtalo de nuevo.");
+  }
+
+  const { error: rosterError } = await supabase.from("team_rosters").insert({
+    team_id: parsed.data.team_id,
+    player_id: data.id,
+    squad_number: parsed.data.cap_number ?? null,
+  });
+  if (rosterError) {
+    await supabase.from("profiles").delete().eq("id", data.id);
+    throw new Error("No pudimos asignar el equipo principal. Inténtalo de nuevo.");
+  }
+  const { error: roleError } = await supabase.from("user_roles").insert({
+    profile_id: data.id,
+    role: "player",
+    scope_team_id: null,
+  });
+  if (roleError) {
+    await supabase.from("profiles").delete().eq("id", data.id);
+    throw new Error("No pudimos completar el alta del jugador. Inténtalo de nuevo.");
   }
 
   revalidatePath("/admin/players");

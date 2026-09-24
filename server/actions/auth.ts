@@ -8,6 +8,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAccessRequestNotification } from "@/lib/email/resend";
+import { findUniqueExactProfile, normalizeFullName, requiresTemporaryPassword } from "@/lib/domain/access-onboarding";
 
 const signInSchema = z.object({
   email: z.string().email("Introduce un email válido."),
@@ -40,17 +41,18 @@ const updatePasswordSchema = z
 const submitAccessRequestSchema = z
   .object({
     email: z.string().email("Introduce un email válido."),
-    fullName: z.string().min(2, "Introduce tu nombre completo."),
-    role: z.enum(["player", "parent"], {
+    fullName: z.string().trim().min(2, "Introduce tu nombre completo.").max(100, "Máximo 100 caracteres."),
+    role: z.enum(["player", "parent", "staff"], {
       message: "Selecciona un tipo de cuenta.",
     }),
     birthYear: z.preprocess(
       (val: unknown) => (val ? Number(val) : undefined),
-      z.number().min(1900).max(2100).optional(),
+      z.number().int().min(1900).max(new Date().getFullYear()).optional(),
     ),
     gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
+    teamId: z.string().uuid().optional(),
     relation: z.enum(["mother", "father", "legal_guardian", "other"]).optional(),
-    childrenIds: z.string().optional(),
+    children: z.string().optional(),
   })
   .refine(
     (data: { role: string; birthYear?: number }) => {
@@ -64,6 +66,10 @@ const submitAccessRequestSchema = z
       path: ["birthYear"],
     },
   )
+  .refine((data) => data.role !== "player" || !!data.teamId, {
+    message: "Selecciona tu equipo.",
+    path: ["teamId"],
+  })
   .refine(
     (data: { role: string; relation?: string }) => {
       if (data.role === "parent" && !data.relation) {
@@ -79,11 +85,6 @@ const submitAccessRequestSchema = z
 
 const accessRequestIdSchema = z.string().uuid("Identificador de solicitud inválido.");
 
-const searchChildrenSchema = z.object({
-  query: z.string().trim().min(5, "Escribe el nombre completo."),
-  birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
-});
-
 export type PasswordResetState = { error?: string; success?: boolean } | null;
 export type UpdatePasswordState = { error?: string } | null;
 export type SubmitAccessRequestState = { error?: string; success?: boolean } | null;
@@ -97,11 +98,6 @@ export type AccessRequestActionState = {
   success?: boolean;
   credentials?: IssuedCredential[];
 } | null;
-export type SearchChildrenState = {
-  children?: { id: string; full_name: string; birth_year: number | null }[];
-  error?: string;
-} | null;
-
 function getSafeRedirectPath(value: FormDataEntryValue | null, fallback: string) {
   if (typeof value !== "string") return fallback;
   if (!value.startsWith("/") || value.startsWith("//")) return fallback;
@@ -115,36 +111,17 @@ function buildLoginErrorUrl(next: string | undefined, errorCode: string) {
   return `/login?${params.toString()}` as Route;
 }
 
-function normalizeFullName(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
-    .replace(/\s+/g, " ");
-}
+const childClaimsSchema = z.array(z.object({
+  fullName: z.string().trim().min(5).max(100),
+  birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
+})).min(1).max(10);
 
-function parseChildrenIds(raw: string | undefined): string[] {
-  if (!raw) return [];
+function parseChildClaims(raw: string | undefined) {
   try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) {
-      return Array.from(
-        new Set(
-          parsed.filter(
-            (id): id is string => typeof id === "string" && z.string().uuid().safeParse(id).success,
-          ),
-        ),
-      ).slice(0, 10);
-    }
+    return childClaimsSchema.safeParse(JSON.parse(raw ?? "null"));
   } catch {
-    return raw
-      .split(",")
-      .map((s) => s.trim())
-      .filter((id) => z.string().uuid().safeParse(id).success)
-      .slice(0, 10);
+    return childClaimsSchema.safeParse(null);
   }
-  return [];
 }
 
 function generateTemporaryPassword(): string {
@@ -218,35 +195,27 @@ async function rateLimitCheck(email: string) {
     console.error("[rateLimitCheck] error:", emailError ?? globalError);
     return true;
   }
-  return (emailCount ?? 0) >= 3 || (globalCount ?? 0) >= 50;
+  return (emailCount ?? 0) >= 3 || (globalCount ?? 0) >= 300;
 }
 
-async function findCandidateProfile(fullName: string, birthYear: number) {
+async function findCandidateProfile(fullName: string, birthYear: number, teamId: string) {
   const supabase = createAdminClient();
   const normalized = normalizeFullName(fullName);
-
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, full_name, birth_year")
-    .eq("birth_year", birthYear)
-    .limit(50);
-
-  const exactMatches = (profiles ?? []).filter(
-    (profile) => normalizeFullName(profile.full_name) === normalized,
+  const { data: currentSeason } = await supabase
+    .from("seasons").select("id").eq("is_current", true).maybeSingle();
+  if (!currentSeason) return null;
+  const { data: team } = await supabase
+    .from("teams").select("id").eq("id", teamId).eq("season_id", currentSeason.id).maybeSingle();
+  if (!team) return null;
+  const { data: rosters, error } = await supabase
+    .from("team_rosters")
+    .select("player:profiles!team_rosters_player_id_fkey(id, full_name, birth_year, auth_user_id, is_active)")
+    .eq("team_id", teamId).is("left_at", null).limit(300);
+  if (error) return null;
+  const matches = (rosters ?? []).map((row) => row.player).filter((profile) =>
+    profile && profile.birth_year === birthYear && profile.is_active && !profile.auth_user_id,
   );
-
-  if (exactMatches.length === 1) {
-    return {
-      candidate: exactMatches[0],
-      candidates: [] as { id: string; full_name: string; birth_year: number | null }[],
-    };
-  }
-
-  const similar = (profiles ?? [])
-    .filter((profile) => normalizeFullName(profile.full_name).includes(normalized))
-    .slice(0, 5);
-
-  return { candidate: null, candidates: similar };
+  return findUniqueExactProfile(matches, normalized);
 }
 
 export async function signIn(formData: FormData) {
@@ -271,40 +240,7 @@ export async function signIn(formData: FormData) {
   const { data: authData, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error || !authData.user) {
-    const admin = createAdminClient();
-
-    const { data: pendingRequest } = await admin
-      .from("access_requests")
-      .select("id")
-      .ilike("email", email)
-      .eq("status", "pending")
-      .maybeSingle();
-
-    if (pendingRequest) {
-      redirect(buildLoginErrorUrl(next, "pending_request"));
-    }
-
-    const existingAuth = await findAuthUserByEmail(email);
-    const { data: existingProfile } = existingAuth
-      ? await admin
-          .from("profiles")
-          .select("id, auth_user_id")
-          .eq("auth_user_id", existingAuth.id)
-          .maybeSingle()
-      : await admin
-          .from("profiles")
-          .select("id, auth_user_id")
-          .ilike("email_contact", email)
-          .maybeSingle();
-
-    if (existingProfile?.auth_user_id) {
-      redirect(buildLoginErrorUrl(next, "invalid_credentials"));
-    }
-
-    const params = new URLSearchParams();
-    if (next && next !== "/dashboard") params.set("next", next);
-    params.set("email", email);
-    redirect(`/login/request?${params.toString()}` as Route);
+    redirect(buildLoginErrorUrl(next, "invalid_credentials"));
   }
 
   const signInAdmin = createAdminClient();
@@ -317,6 +253,7 @@ export async function signIn(formData: FormData) {
   if (!profile) {
     const params = new URLSearchParams();
     params.set("email", email);
+    await supabase.auth.signOut({ scope: "local" });
     redirect(`/login/request?${params.toString()}` as Route);
   }
 
@@ -447,7 +384,7 @@ export async function submitAccessRequest(
   _prevState: SubmitAccessRequestState,
   formData: FormData,
 ): Promise<SubmitAccessRequestState> {
-  const rawChildren = formData.get("childrenIds");
+  const rawChildren = formData.get("children");
   const rawEmail =
     typeof formData.get("email") === "string"
       ? (formData.get("email") as string).toLowerCase().trim()
@@ -458,8 +395,9 @@ export async function submitAccessRequest(
     role: formData.get("role"),
     birthYear: formData.get("birthYear") || undefined,
     gender: formData.get("gender") || undefined,
+    teamId: formData.get("teamId") || undefined,
     relation: formData.get("relation") || undefined,
-    childrenIds: typeof rawChildren === "string" ? rawChildren : undefined,
+    children: typeof rawChildren === "string" ? rawChildren : undefined,
   };
 
   const parsed = submitAccessRequestSchema.safeParse(rawFields);
@@ -467,14 +405,26 @@ export async function submitAccessRequest(
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  const { email, fullName, role, birthYear, gender, relation } = parsed.data;
-  const childrenIds = parseChildrenIds(parsed.data.childrenIds);
-
-  if (role === "parent" && childrenIds.length === 0) {
-    return { error: "Selecciona al menos a un hijo/a." };
+  const { email, fullName, role, birthYear, gender, relation, teamId } = parsed.data;
+  const parsedChildren = role === "parent" ? parseChildClaims(parsed.data.children) : null;
+  if (role === "parent" && !parsedChildren?.success) {
+    return { error: "Escribe el nombre completo y año de nacimiento de cada hijo." };
   }
+  const childrenClaims = parsedChildren?.success ? parsedChildren.data : [];
+  let childrenIds: string[] = [];
 
   const admin = createAdminClient();
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user && user.email?.toLowerCase() !== email) {
+    return { error: "Usa el mismo correo con el que has entrado con Google." };
+  }
+  const googleUserId = user?.email_confirmed_at && user.identities?.some(
+    (identity) => identity.provider === "google",
+  ) ? user.id : null;
+  if (user && !googleUserId) {
+    return { error: "Esta sesión ya tiene una cuenta. Sal y vuelve a intentarlo." };
+  }
 
   if (await rateLimitCheck(email)) {
     return {
@@ -492,30 +442,72 @@ export async function submitAccessRequest(
   if (existingProfile) {
     return { error: "Este email ya tiene una cuenta activa. Intenta iniciar sesión." };
   }
+  const existingAuth = await findAuthUserByEmail(email);
+  if (existingAuth && existingAuth.id !== googleUserId) {
+    return { error: "Este correo ya está registrado. Entra con Google o recupera tu contraseña." };
+  }
+  if (googleUserId) {
+    const { data: linkedProfile } = await admin.from("profiles")
+      .select("id").eq("auth_user_id", googleUserId).maybeSingle();
+    if (linkedProfile) return { error: "Esta cuenta ya tiene un perfil. Entra en la app." };
+  }
 
   let candidateProfileId: string | null = null;
 
-  if (role === "player" && birthYear) {
-    const { candidate } = await findCandidateProfile(fullName, birthYear);
-    candidateProfileId = candidate?.id ?? null;
+  if (role === "player" && birthYear && teamId) {
+    const candidate = await findCandidateProfile(fullName, birthYear, teamId);
+    if (!candidate) {
+      return { error: "No encontramos un jugador disponible con esos datos en ese equipo. Consulta con el club." };
+    }
+    candidateProfileId = candidate.id;
+  }
+
+  if (role === "staff") {
+    const { data: profiles } = await admin.from("profiles")
+      .select("id, full_name, email_contact")
+      .ilike("email_contact", email)
+      .is("auth_user_id", null).eq("is_active", true).limit(20);
+    const candidate = findUniqueExactProfile(
+      (profiles ?? []).filter((profile) => profile.email_contact?.toLowerCase() === email), fullName,
+    );
+    if (!candidate) {
+      return { error: "No encontramos un perfil de personal con ese nombre y correo. Consulta con el club." };
+    }
+    candidateProfileId = candidate.id;
+    const { data: staffRoles } = await admin.from("user_roles").select("role")
+      .eq("profile_id", candidateProfileId).in("role", ["coach", "delegate", "directiva", "admin"]);
+    const { data: staffAssignments } = await admin.from("team_staff").select("team_id")
+      .eq("profile_id", candidateProfileId).limit(1);
+    if (!staffRoles?.length && !staffAssignments?.length) {
+      return { error: "Tu perfil aún no tiene un rol de personal asignado. Consulta con el club." };
+    }
   }
 
   if (role === "parent") {
-    const { data: children } = await admin
-      .from("profiles")
-      .select("id, auth_user_id, must_change_password")
-      .in("id", childrenIds);
-
-    const validChildren = (children ?? []).filter(
-      (child) => child.auth_user_id && child.must_change_password === false,
+    const { data: profiles } = await admin.from("profiles")
+      .select("id, full_name, email_contact")
+      .ilike("email_contact", email)
+      .is("auth_user_id", null).eq("is_active", true).limit(20);
+    const candidate = findUniqueExactProfile(
+      (profiles ?? []).filter((profile) => profile.email_contact?.toLowerCase() === email), fullName,
     );
+    if (candidate) candidateProfileId = candidate.id;
+  }
 
-    if (validChildren.length !== childrenIds.length) {
-      return {
-        error:
-          "Alguno de los hijos seleccionados no tiene una cuenta activada. Activa primero su cuenta.",
-      };
+  if (role === "parent") {
+    for (const child of childrenClaims) {
+      const { data: matches, error } = await admin.from("profiles")
+        .select("id, full_name")
+        .eq("birth_year", child.birthYear)
+        .eq("is_active", true)
+        .limit(300);
+      const exact = findUniqueExactProfile(matches ?? [], child.fullName);
+      if (error || !exact) {
+        return { error: "No encontramos a uno de los jugadores con esos datos. Consulta con el club." };
+      }
+      childrenIds.push(exact.id);
     }
+    childrenIds = Array.from(new Set(childrenIds));
   }
 
   const { data: request, error: insertError } = await admin
@@ -528,6 +520,8 @@ export async function submitAccessRequest(
       gender: gender ?? null,
       relation: relation ?? null,
       candidate_profile_id: candidateProfileId,
+      auth_user_id: googleUserId,
+      team_id: role === "player" ? teamId : null,
     })
     .select()
     .single();
@@ -548,15 +542,33 @@ export async function submitAccessRequest(
     const { error: linksError } = await admin.from("access_request_children").insert(links);
     if (linksError) {
       console.error("[submitAccessRequest] children links error:", linksError);
+      await admin.from("access_requests").delete().eq("id", request.id);
+      return { error: "No pudimos guardar los vínculos familiares. Inténtalo de nuevo." };
     }
   }
 
-  await sendAdminAccessRequestNotification({ email, fullName, role });
+  const { data: adminRoles } = await admin.from("user_roles").select("profile_id")
+    .eq("role", "admin").is("scope_team_id", null);
+  const adminIds = Array.from(new Set((adminRoles ?? []).map((row) => row.profile_id)));
+  if (adminIds.length) {
+    const { error: notificationError } = await admin.from("notifications").insert(
+      adminIds.map((recipientId) => ({
+        recipient_id: recipientId,
+        kind: "access_request",
+        title: "Nueva solicitud de acceso",
+        body: `${fullName} solicita acceso como ${role === "player" ? "jugador" : role === "parent" ? "familiar" : "personal"}.`,
+        href: "/admin/access-requests",
+      })),
+    );
+    if (notificationError) console.error("[submitAccessRequest] admin notification error:", notificationError);
+  }
+  const mail = await sendAdminAccessRequestNotification({ email, fullName, role });
+  if (!mail.success) console.error("[submitAccessRequest] admin email notification error:", mail.error);
 
   return { success: true };
 }
 
-export async function getAccessRequests(status?: "pending" | "approved" | "activated") {
+export async function getAccessRequests(status?: "pending" | "approved" | "activated" | "rejected") {
   try {
     await requireCurrentAdminProfile();
   } catch {
@@ -568,7 +580,7 @@ export async function getAccessRequests(status?: "pending" | "approved" | "activ
   let query = supabase
     .from("access_requests")
     .select(
-      "*, candidate:profiles!candidate_profile_id(id, full_name), children:access_request_children(child_profile_id, child:profiles!child_profile_id(id, full_name))",
+      "*, candidate:profiles!candidate_profile_id(id, full_name), team:teams!access_requests_team_id_fkey(id, label), children:access_request_children(child_profile_id, child:profiles!child_profile_id(id, full_name))",
     )
     .order("created_at", { ascending: false });
 
@@ -612,39 +624,47 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
     return { error: "La solicitud no existe o ya ha sido gestionada." };
   }
 
-  if (request.role !== "player" && request.role !== "parent") {
+  if (!["player", "parent", "staff"].includes(request.role)) {
     return { error: "Los roles internos se asignan desde la gestión de personal." };
   }
+  if ((request.role === "player" || request.role === "staff") && !request.candidate_profile_id) {
+    return { error: "Este acceso necesita un perfil creado previamente por el club." };
+  }
 
-  const tempPassword = generateTemporaryPassword();
+  const tempPassword = requiresTemporaryPassword(request.auth_user_id) ? generateTemporaryPassword() : null;
   let authUserId: string | null = null;
   let createdAuthUser = false;
   let createdProfileId: string | null = null;
-  let isExistingAuthUser = false;
+  let linkedExistingProfile = false;
+  let originalProfile: { email_contact: string | null; must_change_password: boolean } | null = null;
+  let insertedRole = false;
+  let linkedChildren: string[] = [];
 
   try {
     const existingAuth = await findAuthUserByEmail(request.email);
 
-    if (existingAuth) {
+    if (request.auth_user_id) {
+      if (!existingAuth || existingAuth.id !== request.auth_user_id) {
+        return { error: "La cuenta de Google ya no coincide con la solicitud." };
+      }
+      const { data: googleAuth, error: googleError } = await adminUser.auth.admin.getUserById(request.auth_user_id);
+      if (googleError || !googleAuth.user?.email_confirmed_at ||
+        !googleAuth.user.identities?.some((identity) => identity.provider === "google") ||
+        googleAuth.user.email?.toLowerCase() !== request.email.toLowerCase()) {
+        return { error: "No pudimos verificar la identidad de Google. Pide que envíen otra solicitud." };
+      }
       const { data: linkedProfile } = await adminUser
         .from("profiles")
         .select("id")
-        .eq("auth_user_id", existingAuth.id)
+        .eq("auth_user_id", request.auth_user_id)
         .maybeSingle();
-
-      if (
-        linkedProfile &&
-        (!request.candidate_profile_id || linkedProfile.id !== request.candidate_profile_id)
-      ) {
-        return { error: "Ese email ya esta vinculado a otra cuenta del club." };
-      }
-
-      authUserId = existingAuth.id;
-      isExistingAuthUser = true;
+      if (linkedProfile) return { error: "Esta cuenta de Google ya tiene un perfil vinculado." };
+      authUserId = request.auth_user_id;
     } else {
+      if (existingAuth) return { error: "Ese correo ya tiene una cuenta. Pide que accedan con Google o recuperen su contraseña." };
       const { data: newAuth, error: createAuthError } = await adminUser.auth.admin.createUser({
         email: request.email,
-        password: tempPassword,
+        password: tempPassword!,
         email_confirm: true,
       });
       if (createAuthError || !newAuth.user) {
@@ -660,27 +680,50 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
     if (request.candidate_profile_id) {
       const { data: candidate } = await adminUser
         .from("profiles")
-        .select("id, auth_user_id")
+        .select("id, auth_user_id, full_name, birth_year, is_active, email_contact, must_change_password")
         .eq("id", request.candidate_profile_id)
         .single();
 
-      if (candidate?.auth_user_id && candidate.auth_user_id !== authUserId) {
-        throw new Error("El perfil candidato ya está vinculado a otra cuenta.");
+      if (!candidate || candidate.auth_user_id || !candidate.is_active) {
+        throw new Error("El perfil indicado ya no está disponible.");
       }
+      if (normalizeFullName(candidate.full_name) !== normalizeFullName(request.full_name)) {
+        throw new Error("El nombre ya no coincide con el perfil indicado.");
+      }
+      if (request.role !== "player" && candidate.email_contact?.toLowerCase() !== request.email.toLowerCase()) {
+        throw new Error("El correo ya no coincide con el perfil indicado.");
+      }
+      if (request.role === "player" &&
+        candidate.birth_year !== request.birth_year) {
+        throw new Error("Los datos del jugador ya no coinciden con su perfil.");
+      }
+      if (request.role === "player") {
+        const { data: roster } = await adminUser.from("team_rosters").select("team_id")
+          .eq("player_id", candidate.id).eq("team_id", request.team_id!)
+          .is("left_at", null).maybeSingle();
+        if (!roster) throw new Error("El jugador ya no figura en el equipo solicitado.");
+      }
+      originalProfile = {
+        email_contact: candidate.email_contact,
+        must_change_password: candidate.must_change_password,
+      };
 
-      const { error: updateProfileError } = await adminUser
+      const { data: updatedProfile, error: updateProfileError } = await adminUser
         .from("profiles")
         .update({
           auth_user_id: authUserId,
-          email_contact: request.email,
-          must_change_password: true,
-          gender: request.gender ?? undefined,
+          email_contact: candidate.email_contact ?? request.email,
+          must_change_password: !request.auth_user_id,
         })
-        .eq("id", request.candidate_profile_id);
+        .eq("id", request.candidate_profile_id)
+        .is("auth_user_id", null)
+        .select("id")
+        .maybeSingle();
 
-      if (updateProfileError) {
+      if (updateProfileError || !updatedProfile) {
         throw new Error("No se pudo vincular el perfil existente.");
       }
+      linkedExistingProfile = true;
 
       profileId = request.candidate_profile_id;
     } else {
@@ -692,7 +735,7 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
           birth_year: request.birth_year,
           gender: request.gender ?? undefined,
           email_contact: request.email,
-          must_change_password: true,
+          must_change_password: !request.auth_user_id,
         })
         .select()
         .single();
@@ -705,64 +748,86 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
       createdProfileId = newProfile.id;
     }
 
-    const { error: roleError } = await adminUser.from("user_roles").upsert(
-      {
-        profile_id: profileId,
-        role: request.role,
-        scope_team_id: null,
-      },
-      { onConflict: "profile_id,role,scope_team_id" },
-    );
-
-    if (roleError) {
-      throw new Error("No se pudo asignar el rol.");
+    if (request.role !== "staff") {
+      const { data: existingRole } = await adminUser.from("user_roles").select("id")
+        .eq("profile_id", profileId).eq("role", request.role).is("scope_team_id", null).maybeSingle();
+      if (!existingRole) {
+        const { error: roleError } = await adminUser.from("user_roles").insert({
+          profile_id: profileId, role: request.role, scope_team_id: null,
+        });
+        if (roleError) throw new Error("No se pudo asignar el rol.");
+        insertedRole = true;
+      }
+    } else {
+      const { data: staffRoles } = await adminUser.from("user_roles").select("role")
+        .eq("profile_id", profileId).in("role", ["coach", "delegate", "directiva", "admin"]);
+      const { data: staffAssignments } = await adminUser.from("team_staff").select("team_id")
+        .eq("profile_id", profileId).limit(1);
+      if (!staffRoles?.length && !staffAssignments?.length) {
+        throw new Error("El perfil no tiene un rol de personal autorizado.");
+      }
     }
 
     if (request.role === "parent" && request.children && request.children.length > 0) {
-      const links = request.children.map((child) => ({
+      const childIds = request.children.map((child) => child.child_profile_id);
+      const { data: existingLinks } = await adminUser.from("parent_child_links")
+        .select("child_profile_id").eq("parent_profile_id", profileId).in("child_profile_id", childIds);
+      const existingChildIds = new Set((existingLinks ?? []).map((link) => link.child_profile_id));
+      const links = request.children.filter((child) => !existingChildIds.has(child.child_profile_id)).map((child) => ({
         parent_profile_id: profileId,
         child_profile_id: child.child_profile_id,
         relation: request.relation ?? "other",
       }));
-      const { error: parentLinkError } = await adminUser.from("parent_child_links").insert(links);
-      if (parentLinkError) {
-        throw new Error("No se pudo vincular a los hijos.");
+      if (links.length) {
+        const { error: parentLinkError } = await adminUser.from("parent_child_links").insert(links);
+        if (parentLinkError) throw new Error("No se pudo vincular a los hijos.");
       }
+      linkedChildren = links.map((link) => link.child_profile_id);
     }
 
-    const { error: statusError } = await adminUser
+    const { data: updatedRequest, error: statusError } = await adminUser
       .from("access_requests")
       .update({
-        status: "approved",
+        status: request.auth_user_id ? "activated" : "approved",
         approved_by_profile_id: adminProfile.id,
         approved_at: new Date().toISOString(),
       })
-      .eq("id", request.id);
+      .eq("id", request.id).eq("status", "pending").select("id").maybeSingle();
 
-    if (statusError) {
+    if (statusError || !updatedRequest) {
       throw new Error("No se pudo actualizar el estado de la solicitud.");
-    }
-
-    if (isExistingAuthUser && authUserId) {
-      const { error: updateAuthError } = await adminUser.auth.admin.updateUserById(authUserId, {
-        password: tempPassword,
-      });
-      if (updateAuthError) {
-        console.error("[approveAccessRequest] update auth password error:", updateAuthError);
-      }
     }
 
     return {
       success: true,
-      credentials: [{ email: request.email, temporaryPassword: tempPassword }],
+      credentials: tempPassword ? [{ email: request.email, temporaryPassword: tempPassword }] : [],
     };
   } catch (err) {
+    let canDeleteCreatedAuthUser = true;
+    if (linkedChildren.length && request.candidate_profile_id) {
+      await adminUser.from("parent_child_links").delete()
+        .eq("parent_profile_id", request.candidate_profile_id).in("child_profile_id", linkedChildren);
+    }
+    if (insertedRole && request.candidate_profile_id) {
+      await adminUser.from("user_roles").delete()
+        .eq("profile_id", request.candidate_profile_id).eq("role", request.role).is("scope_team_id", null);
+    }
+    if (linkedExistingProfile && request.candidate_profile_id && originalProfile) {
+      const { data: restoredProfile, error: restoreError } = await adminUser.from("profiles")
+        .update({ auth_user_id: null, ...originalProfile })
+        .eq("id", request.candidate_profile_id).eq("auth_user_id", authUserId!)
+        .select("id").maybeSingle();
+      if (restoreError || !restoredProfile) {
+        canDeleteCreatedAuthUser = false;
+        console.error("[approveAccessRequest] could not restore linked profile:", restoreError);
+      }
+    }
     if (createdProfileId) {
       await adminUser.from("parent_child_links").delete().eq("parent_profile_id", createdProfileId);
       await adminUser.from("user_roles").delete().eq("profile_id", createdProfileId);
       await adminUser.from("profiles").delete().eq("id", createdProfileId);
     }
-    if (createdAuthUser && authUserId) {
+    if (createdAuthUser && authUserId && canDeleteCreatedAuthUser) {
       await adminUser.auth.admin.deleteUser(authUserId).catch((e) => {
         console.error("[approveAccessRequest] rollback deleteUser error:", e);
       });
@@ -819,44 +884,23 @@ export async function rejectAccessRequest(formData: FormData): Promise<AccessReq
     return { error: "Solicitud inválida." };
   }
 
+  let adminProfile: { id: string };
   try {
-    await requireCurrentAdminProfile();
+    adminProfile = await requireCurrentAdminProfile();
   } catch (err) {
     return { error: err instanceof Error ? err.message : "No tienes permisos." };
   }
 
   const admin = createAdminClient();
-  const { error } = await admin.from("access_requests").delete().eq("id", parsed.data);
+  const { data: rejected, error } = await admin.from("access_requests")
+    .update({ status: "rejected", rejected_at: new Date().toISOString(),
+      rejected_by_profile_id: adminProfile.id })
+    .eq("id", parsed.data).eq("status", "pending").select("id").maybeSingle();
 
-  if (error) {
+  if (error || !rejected) {
     console.error("[rejectAccessRequest] error:", error);
     return { error: "No pudimos rechazar la solicitud." };
   }
 
   return { success: true };
-}
-
-export async function searchChildrenProfiles(input: unknown): Promise<SearchChildrenState> {
-  const parsed = searchChildrenSchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Búsqueda inválida." };
-  }
-
-  const supabase = createAdminClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id, full_name, birth_year")
-    .not("auth_user_id", "is", null)
-    .eq("must_change_password", false)
-    .eq("birth_year", parsed.data.birthYear)
-    .ilike("full_name", parsed.data.query.replace(/\s+/g, " ").trim())
-    .order("full_name")
-    .limit(3);
-
-  if (error) {
-    console.error("[searchChildrenProfiles] error:", error);
-    return { error: "No pudimos buscar hijos." };
-  }
-
-  return { children: data ?? [] };
 }
