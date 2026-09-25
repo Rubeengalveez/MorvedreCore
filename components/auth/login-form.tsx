@@ -7,6 +7,7 @@ import type { Route } from "next";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { authFieldClass } from "@/components/auth/auth-field-style";
 import { signIn } from "@/server/actions/auth";
 
 const GoogleIcon = () => (
@@ -54,6 +55,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
     <>
       <form
         id="login-form"
+        tabIndex={-1}
         action={(formData) => {
           startTransition(async () => {
             await signIn(formData);
@@ -63,8 +65,9 @@ export function LoginForm({ next, error }: LoginFormProps) {
       >
         {error === "invalid_credentials" ? (
           <div
+            id="login-error"
             role="alert"
-            className="border-danger/30 bg-danger/10 text-danger rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold"
+            className="border-danger/50 bg-red-50 rounded-[var(--r-sm)] border px-3 py-2 text-sm font-semibold text-red-800"
           >
             Email o contraseña incorrectos.
           </div>
@@ -93,7 +96,9 @@ export function LoginForm({ next, error }: LoginFormProps) {
             placeholder="tu@email.com"
             defaultValue=""
             required
-            className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
+            aria-invalid={error === "invalid_credentials"}
+            aria-describedby={error === "invalid_credentials" ? "login-error" : undefined}
+            className={`${authFieldClass} h-[52px]`}
           />
         </div>
 
@@ -111,14 +116,16 @@ export function LoginForm({ next, error }: LoginFormProps) {
               placeholder="••••••••"
               defaultValue=""
               required
-              className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent pr-12 pl-4"
+              aria-invalid={error === "invalid_credentials"}
+              aria-describedby={error === "invalid_credentials" ? "login-error" : undefined}
+              className={`${authFieldClass} h-[52px] pr-12`}
             />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
               aria-pressed={showPassword}
-              className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="text-ink-600 hover:text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue focus-visible:ring-offset-paper touch-target absolute top-1/2 right-0.5 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-[var(--r-sm)] transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             >
               {showPassword ? (
                 <EyeOff className="h-5 w-5" aria-hidden="true" />
@@ -133,7 +140,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
 
         <Link
           href={"/reset-password" as Route}
-          className="text-pool-blue self-end text-xs font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+          className="text-pool-blue inline-flex min-h-12 items-center self-end rounded-lg px-1 text-sm font-bold hover:underline focus-visible:underline focus-visible:outline-none"
         >
           ¿Olvidaste la contraseña?
         </Link>
@@ -157,7 +164,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
       <a
         href={googleRedirectUrl}
         rel="noopener"
-        className="focus-visible:ring-pool-blue border-ink-200 bg-paper text-ink-700 hover:bg-ink-50 focus-visible:ring-offset-paper inline-flex w-full items-center justify-center gap-2.5 rounded-[var(--r-sm)] border py-3 text-sm font-semibold shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+        className="focus-visible:ring-pool-blue border-pool-blue/75 bg-paper text-ink-700 hover:bg-ink-50 focus-visible:ring-offset-paper inline-flex min-h-12 w-full items-center justify-center gap-2.5 rounded-[var(--r-sm)] border py-3 text-sm font-semibold shadow-sm transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
       >
         <GoogleIcon />
         <span>Continuar con Google</span>

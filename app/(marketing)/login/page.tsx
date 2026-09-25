@@ -61,7 +61,7 @@ export default async function LoginPage({
   const formError = parseFormError(params.error);
 
   return (
-    <div className="bg-paper relative isolate flex min-h-svh flex-col items-center justify-start overflow-x-hidden overflow-y-auto px-4 pt-6 pb-4 sm:px-6 sm:pt-12 sm:pb-6">
+    <main id="main-content" tabIndex={-1} className="bg-paper relative isolate flex min-h-svh flex-col items-center justify-start overflow-x-hidden overflow-y-auto px-4 pt-6 pb-4 focus:outline-none sm:px-6 sm:pt-12 sm:pb-6">
       <a
         href="#login-form"
         className="bg-pool-deep shadow-elev-3 focus-visible:ring-pool-blue focus-visible:ring-offset-paper sr-only rounded-md px-3 py-2 text-sm font-semibold text-white focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
@@ -111,12 +111,12 @@ export default async function LoginPage({
             href={supportWhatsAppUrl("Hola Rubén, estoy teniendo problemas con Morvedre Core.")}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-pool-blue font-bold underline underline-offset-2 hover:text-pool-deep focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="text-pool-blue inline-flex min-h-12 items-center rounded-md px-1 font-bold underline underline-offset-2 hover:text-pool-deep focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             Escr&iacute;beme
           </a>
         </p>
       </div>
-    </div>
+    </main>
   );
 }

@@ -33,25 +33,27 @@ export function AuthRequestShell({
             Morvedre Core
           </p>
         </div>
-        <main className="bg-paper-card shadow-elev-2 w-full rounded-[var(--r-xl)] p-5 sm:p-7">
-          <div className="mb-4">
-            <h1 className="font-display text-pool-deep text-[22px] leading-tight font-extrabold">{title}</h1>
-            {subtitle ? <p className="text-ink-700 mt-2 text-sm leading-snug">{subtitle}</p> : null}
+        <main id="main-content" tabIndex={-1} className="flex w-full flex-col gap-3 focus:outline-none">
+          <div className="bg-paper-card shadow-elev-2 w-full rounded-[var(--r-xl)] p-5 sm:p-7">
+            <div className="mb-4">
+              <h1 className="font-display text-pool-deep text-[22px] leading-tight font-extrabold">{title}</h1>
+              {subtitle ? <p className="text-ink-700 mt-2 text-sm leading-snug">{subtitle}</p> : null}
+            </div>
+            {children}
           </div>
-          {children}
+          {showNextSteps ? <section aria-labelledby="next-steps-title"
+            className="bg-paper-card/95 border-pool-blue/20 rounded-[var(--r-lg)] border p-4 shadow-sm">
+            <h2 id="next-steps-title" className="text-pool-deep font-display text-base font-extrabold">¿Qué ocurre después?</h2>
+            <ol className="text-ink-700 mt-3 flex flex-col gap-3 text-sm leading-snug">
+              <li className="flex items-start gap-3"><Clock3 className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <span>El club revisa tu solicitud y comprueba tus datos.</span></li>
+              <li className="flex items-start gap-3"><ShieldCheck className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <span>Cuando la aprobemos, podrás acceder a tu perfil.</span></li>
+              <li className="flex items-start gap-3"><KeyRound className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                <span>Con Google, vuelves a entrar. Con correo, recibes una contraseña provisional y la cambias al entrar.</span></li>
+            </ol>
+          </section> : null}
         </main>
-        {showNextSteps ? <section aria-labelledby="next-steps-title"
-          className="bg-paper-card/95 border-pool-blue/20 rounded-[var(--r-lg)] border p-4 shadow-sm">
-          <h2 id="next-steps-title" className="text-pool-deep font-display text-base font-extrabold">¿Qué ocurre después?</h2>
-          <ol className="text-ink-700 mt-3 flex flex-col gap-3 text-sm leading-snug">
-            <li className="flex items-start gap-3"><Clock3 className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-              <span>El club revisa tu solicitud y comprueba tus datos.</span></li>
-            <li className="flex items-start gap-3"><ShieldCheck className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-              <span>Cuando la aprobemos, podrás acceder a tu perfil.</span></li>
-            <li className="flex items-start gap-3"><KeyRound className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-              <span>Con Google, vuelves a entrar. Con correo, recibes una contraseña provisional y la cambias al entrar.</span></li>
-          </ol>
-        </section> : null}
         <p className="text-ink-700 mt-1 text-center text-sm">
           ¿Ya tienes cuenta?{" "}
           <Link href={"/login" as Route}

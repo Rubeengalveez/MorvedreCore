@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { authFieldClass } from "@/components/auth/auth-field-style";
 import { updatePassword, type UpdatePasswordState } from "@/server/actions/auth";
 
 const changePasswordSchema = z
@@ -75,7 +76,7 @@ export function ChangePasswordForm() {
           name="newPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel htmlFor="newPassword">Nueva contraseña</FormLabel>
+              <FormLabel htmlFor="newPassword" className="text-ink-700">Nueva contraseña</FormLabel>
               <FormControl>
                 <Input
                   id="newPassword"
@@ -87,9 +88,10 @@ export function ChangePasswordForm() {
                   onBlur={field.onBlur}
                   name={field.name}
                   ref={field.ref}
+                  className={authFieldClass}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-800" />
             </FormItem>
           )}
         />
@@ -99,7 +101,7 @@ export function ChangePasswordForm() {
           name="confirmPassword"
           render={({ field }) => (
             <FormItem>
-              <FormLabel htmlFor="confirmPassword">Repite la contraseña</FormLabel>
+              <FormLabel htmlFor="confirmPassword" className="text-ink-700">Repite la contraseña</FormLabel>
               <FormControl>
                 <Input
                   id="confirmPassword"
@@ -111,9 +113,10 @@ export function ChangePasswordForm() {
                   onBlur={field.onBlur}
                   name={field.name}
                   ref={field.ref}
+                  className={authFieldClass}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-800" />
             </FormItem>
           )}
         />

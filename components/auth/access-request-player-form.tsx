@@ -7,6 +7,7 @@ import { MdAutorenew } from "react-icons/md";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { authFieldClass } from "@/components/auth/auth-field-style";
 import { PlayerIdentityFields } from "@/components/auth/player-identity-fields";
 import { submitAccessRequest, type SubmitAccessRequestState } from "@/server/actions/auth";
 
@@ -48,7 +49,7 @@ export function AccessRequestPlayerForm() {
           </svg>
         </div>
         <div>
-          <h3 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h3>
+          <h2 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h2>
           <p className="text-ink-600 mt-1 text-sm">
             Revisaremos que tus datos coincidan con el perfil del club.{" "}
             {state.accessMethod === "google"
@@ -82,7 +83,7 @@ export function AccessRequestPlayerForm() {
           spellCheck={false}
           required
           autoComplete="off"
-          className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
+          className={`${authFieldClass} h-[52px]`}
         />
       </div>
 

@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import { AlertCircle, CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
+import { authFieldClass } from "@/components/auth/auth-field-style";
 import { checkPlayerIdentity } from "@/server/actions/auth";
 import { supportWhatsAppUrl } from "@/lib/auth/support";
 
@@ -59,7 +60,7 @@ export function PlayerIdentityFields({
         aria-invalid={status === "missing"}
         aria-describedby={status !== "idle" || pending ? helpId : undefined}
         onChange={(event) => { clearLookup(); onNameChange(event.target.value); }} onBlur={check}
-        className="bg-pool-ice focus:border-pool-blue focus:bg-paper min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4" />
+        className={authFieldClass} />
     </div>
     <div className="flex flex-col gap-1.5">
       <label htmlFor={`${idPrefix}-year`} className="text-eyebrow text-ink-700">Año de nacimiento</label>
@@ -69,7 +70,7 @@ export function PlayerIdentityFields({
         aria-invalid={status === "missing"}
         aria-describedby={status !== "idle" || pending ? helpId : undefined}
         onChange={(event) => { clearLookup(); onYearChange(event.target.value); }} onBlur={check}
-        className="bg-pool-ice focus:border-pool-blue focus:bg-paper min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4" />
+        className={authFieldClass} />
     </div>
     {(pending || status !== "idle") ? <div id={helpId} role={status === "missing" || status === "limited" ? "alert" : "status"}
       className={`flex items-start gap-2 rounded-xl border p-3 text-sm leading-snug ${status === "missing" || status === "limited" ? "border-danger/50 bg-red-50 text-ink-900" : "border-pool-teal/30 bg-pool-teal/10 text-pool-deep"}`}>

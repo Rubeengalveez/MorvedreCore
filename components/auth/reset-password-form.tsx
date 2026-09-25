@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { authFieldClass } from "@/components/auth/auth-field-style";
 import { requestPasswordReset, type PasswordResetState } from "@/server/actions/auth";
 
 const emailSchema = z.object({
@@ -79,7 +80,7 @@ export function ResetPasswordForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel htmlFor="email">Email</FormLabel>
+              <FormLabel htmlFor="email" className="text-ink-700">Email</FormLabel>
               <FormControl>
                 <Input
                   id="email"
@@ -92,9 +93,10 @@ export function ResetPasswordForm() {
                   onBlur={field.onBlur}
                   name={field.name}
                   ref={field.ref}
+                  className={authFieldClass}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-red-800" />
             </FormItem>
           )}
         />
