@@ -64,34 +64,37 @@ export default async function TeamPlayerPage({
       <PageBackLink href={backTarget.href as Route}>{backTarget.label}</PageBackLink>
 
       <header className="bg-pool-deep shadow-elev-2 relative overflow-hidden rounded-[1.75rem] text-white">
-        <span className="lane-pattern pointer-events-none absolute inset-0 opacity-20" aria-hidden="true" />
-        <div className="relative px-5 pt-5 pb-6 sm:px-7 sm:pt-7">
-          <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">
-            {team.label}
-          </p>
-          <div className="mt-4 flex items-end justify-between gap-4">
-            <span aria-hidden="true" className="inline-flex rounded-full ring-4 ring-white/20">
+        <span className="lane-pattern pointer-events-none absolute inset-0 opacity-15" aria-hidden="true" />
+        <span className="bg-pool-blue/20 pointer-events-none absolute -top-16 -right-12 h-44 w-44 rounded-full blur-3xl" aria-hidden="true" />
+        <div className="relative flex items-center gap-4 p-4 sm:gap-5 sm:p-5">
+          <div className="relative shrink-0">
+            <span aria-hidden="true" className="inline-flex rounded-full ring-4 ring-white/25">
               <Avatar
                 src={player.photo_url}
                 name={player.full_name}
-                size={player.photo_url ? 144 : 104}
+                size={player.photo_url ? 128 : 104}
                 teamColor={team.color}
                 className="border-4 shadow-elev-2"
               />
             </span>
             {number != null ? (
-              <span className="bg-paper text-pool-deep flex h-14 min-w-14 items-center justify-center rounded-2xl px-3 font-mono text-2xl font-extrabold tabular-nums shadow-sm">
+              <span className="bg-ball-gold text-pool-deep absolute -right-2 -bottom-1 flex h-12 min-w-12 items-center justify-center rounded-2xl px-2 font-mono text-xl font-extrabold tabular-nums shadow-elev-2">
                 <span className="sr-only">Dorsal </span>
                 {number}
               </span>
             ) : null}
           </div>
-          <h1 className="font-display mt-5 text-[clamp(1.75rem,7vw,2.35rem)] leading-tight font-extrabold tracking-tight text-balance">
-            {player.full_name}
-          </h1>
-          {player.birth_year != null ? (
-            <p className="mt-1 text-sm font-medium text-white/85">Nacido en {player.birth_year}</p>
-          ) : null}
+          <div className="min-w-0 flex-1 py-1">
+            <p className="text-ball-gold text-xs font-extrabold tracking-[0.1em] uppercase">
+              {team.label}
+            </p>
+            <h1 className="font-display mt-2 text-lg leading-[1.12] font-extrabold tracking-tight break-words min-[380px]:text-[1.375rem] sm:text-2xl">
+              {player.full_name}
+            </h1>
+            {player.birth_year != null ? (
+              <p className="mt-2 text-sm font-medium text-white/85">Nacido en {player.birth_year}</p>
+            ) : null}
+          </div>
         </div>
       </header>
 
