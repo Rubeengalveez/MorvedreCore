@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { MessageCircle } from "lucide-react";
+import { Info, MessageCircle } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProduct } from "@/server/queries/shop";
@@ -36,28 +36,42 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
       <FloatingCartButton profileId={ctx.ownProfile.id} />
       <PageBackLink href="/shop">Volver a la tienda</PageBackLink>
 
-      <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-4">
-        <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
+      <header className="from-pool-deep to-pool-blue shadow-elev-2 rounded-2xl bg-gradient-to-br px-4 py-4 text-white sm:p-5">
+        <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">
           {product.category}
         </p>
-        <h1 className="text-pool-deep mt-1.5 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
+        <h1 className="mt-1.5 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
           {product.title}
         </h1>
-        <p className="bg-ball-gold text-pool-deep mt-3 inline-flex rounded-xl px-3 py-2 font-mono text-2xl leading-none font-extrabold tabular-nums sm:text-3xl">
+        <p className="text-ball-gold mt-3 font-mono text-3xl leading-none font-extrabold tabular-nums sm:text-4xl">
+          <span className="sr-only">Precio: </span>
           {formatCents(product.price_cents, product.currency)}
         </p>
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] md:items-start md:gap-8">
-        <ProductGallery
-          title={product.title}
-          images={product.images.map((image) => ({
-            id: image.id,
-            url: image.url,
-            alt: image.alt,
-            is_cover: image.is_cover,
-          }))}
-        />
+        <div className="flex min-w-0 flex-col gap-4">
+          <ProductGallery
+            title={product.title}
+            images={product.images.map((image) => ({
+              id: image.id,
+              url: image.url,
+              alt: image.alt,
+              is_cover: image.is_cover,
+            }))}
+          />
+          <section className="border-pool-blue/20 bg-paper-card shadow-elev-1 rounded-2xl border p-4 sm:p-5">
+            <div className="flex items-center gap-2.5">
+              <span className="bg-pool-foam text-pool-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-xl">
+                <Info className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <h2 className="font-display text-pool-deep text-lg font-extrabold">Detalles</h2>
+            </div>
+            <p className="text-ink-700 mt-3 text-base leading-relaxed whitespace-pre-line">
+              {product.description}
+            </p>
+          </section>
+        </div>
 
         <div className="flex min-w-0 flex-col gap-4 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
           {product.available ? (
@@ -77,13 +91,6 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
               Este producto no está disponible ahora mismo.
             </p>
           )}
-
-          <section className="border-ink-300 bg-paper-card rounded-xl border p-4 sm:p-5">
-            <h2 className="font-display text-pool-deep text-lg font-extrabold">Detalles</h2>
-            <p className="text-ink-700 mt-2 text-base leading-relaxed whitespace-pre-line">
-              {product.description}
-            </p>
-          </section>
 
           <section className="bg-pool-deep text-paper rounded-2xl p-4 shadow-sm sm:p-5">
             <div className="flex items-start gap-3">
