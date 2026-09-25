@@ -1,6 +1,6 @@
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { Waves } from "lucide-react";
+import { ChartNoAxesColumn, Waves } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { PageBackLink } from "@/components/ui/page-back-link";
@@ -99,9 +99,12 @@ export default async function TeamPlayerPage({
       </header>
 
       <section aria-labelledby="player-season-heading">
-        <h2 id="player-season-heading" className="font-display text-pool-deep px-1 text-xl font-extrabold">
-          Esta temporada
-        </h2>
+        <div className="flex items-center gap-2 px-1">
+          <ChartNoAxesColumn className="text-pool-blue h-5 w-5" aria-hidden="true" />
+          <h2 id="player-season-heading" className="font-display text-pool-deep text-xl font-extrabold">
+            Esta temporada
+          </h2>
+        </div>
         <div className="bg-paper-card shadow-elev-1 mt-2 overflow-hidden rounded-2xl">
           <div className="bg-pool-deep relative overflow-hidden">
             <span className="lane-pattern pointer-events-none absolute inset-0 opacity-15" aria-hidden="true" />
