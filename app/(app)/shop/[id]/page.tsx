@@ -1,5 +1,5 @@
 import { redirect, notFound } from "next/navigation";
-import { MessageCircle, PackageCheck, ShieldCheck } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProduct } from "@/server/queries/shop";
@@ -36,17 +36,16 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
       <FloatingCartButton profileId={ctx.ownProfile.id} />
       <PageBackLink href="/shop">Volver a la tienda</PageBackLink>
 
-      <header className="px-0.5 pb-1">
+      <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-4">
         <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
           {product.category}
         </p>
-        <h1 className="text-pool-deep mt-2 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
+        <h1 className="text-pool-deep mt-1.5 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
           {product.title}
         </h1>
-        <p className="font-display text-pool-blue mt-3 text-4xl leading-none font-extrabold tracking-tight tabular-nums sm:text-5xl">
+        <p className="bg-ball-gold text-pool-deep mt-3 inline-flex rounded-xl px-3 py-2 font-mono text-2xl leading-none font-extrabold tabular-nums sm:text-3xl">
           {formatCents(product.price_cents, product.currency)}
         </p>
-        <p className="text-ink-500 mt-2 text-sm font-semibold">Se prepara bajo pedido</p>
       </header>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] md:items-start md:gap-8">
@@ -84,26 +83,18 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
             <p className="text-ink-700 mt-2 text-base leading-relaxed whitespace-pre-line">
               {product.description}
             </p>
-            <div className="bg-pool-ice mt-5 grid grid-cols-2 gap-2 rounded-xl p-3">
-              <TrustLine icon={ShieldCheck} title="Compra del club" text="Sin comisiones" />
-              <TrustLine
-                icon={PackageCheck}
-                title="Entrega coordinada"
-                text="Recogida en el club"
-              />
-            </div>
           </section>
 
-          <section className="border-pool-blue/25 bg-pool-foam/70 rounded-2xl border p-4 sm:p-5">
+          <section className="bg-pool-deep text-paper rounded-2xl p-4 shadow-sm sm:p-5">
             <div className="flex items-start gap-3">
-              <span className="bg-paper-card text-pool-deep flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+              <span className="bg-paper-card/15 text-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
                 <MessageCircle className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <h2 className="font-display text-pool-deep text-lg font-extrabold">
+                <h2 className="font-display text-paper text-lg font-extrabold">
                   ¿Tienes alguna duda?
                 </h2>
-                <p className="text-ink-600 mt-1 text-sm leading-relaxed font-semibold">
+                <p className="text-paper mt-1 text-sm leading-relaxed font-semibold">
                   Pregunta directamente a Sol, la encargada de la equipación.
                 </p>
               </div>
@@ -112,7 +103,7 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue mt-4 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
+              className="bg-paper-card text-pool-deep hover:bg-pool-foam focus-visible:ring-ball-gold mt-4 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
             >
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
               Preguntar a Sol por WhatsApp
@@ -121,25 +112,5 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
         </div>
       </div>
     </PageShell>
-  );
-}
-
-function TrustLine({
-  icon: Icon,
-  title,
-  text,
-}: {
-  icon: typeof ShieldCheck;
-  title: string;
-  text: string;
-}) {
-  return (
-    <div className="flex min-w-0 gap-2 px-2 first:pl-0 last:pr-0">
-      <Icon className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-      <div className="min-w-0">
-        <p className="text-pool-deep text-sm font-extrabold">{title}</p>
-        <p className="text-ink-600 mt-0.5 text-sm">{text}</p>
-      </div>
-    </div>
   );
 }
