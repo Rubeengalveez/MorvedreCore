@@ -102,17 +102,22 @@ export default async function TeamPlayerPage({
         <h2 id="player-season-heading" className="font-display text-pool-deep px-1 text-xl font-extrabold">
           Esta temporada
         </h2>
-        <dl className="bg-pool-deep mt-2 grid grid-cols-6 gap-2 rounded-2xl p-2.5 text-white shadow-sm">
-          <PrimaryStat label="Expulsiones" value={snapshot?.exclusions ?? "—"} />
-          <PrimaryStat label="Goles" value={actaStats.goals} featured />
-          <PrimaryStat label="Asistencias" value={actaStats.assists} />
+        <div className="bg-paper-card shadow-elev-1 mt-2 overflow-hidden rounded-2xl">
+          <div className="bg-pool-deep relative overflow-hidden">
+            <span className="lane-pattern pointer-events-none absolute inset-0 opacity-15" aria-hidden="true" />
+            <dl className="relative grid grid-cols-3 gap-1 p-2 text-white">
+              <PrimaryStat label="Expulsiones" value={snapshot?.exclusions ?? "—"} />
+              <PrimaryStat label="Goles" value={actaStats.goals} featured />
+              <PrimaryStat label="Asistencias" value={actaStats.assists} />
+            </dl>
+          </div>
           {snapshot ? (
-            <>
+            <dl className="grid grid-cols-2 gap-2 p-2">
               <SecondaryStat label="Partidos" value={snapshot.matches_played} />
               <SecondaryStat label="MVP" value={snapshot.mvp_count} />
-            </>
+            </dl>
           ) : null}
-        </dl>
+        </div>
       </section>
 
       <section aria-labelledby="player-swim-heading">
@@ -122,7 +127,7 @@ export default async function TeamPlayerPage({
             Tiempos de nado
           </h2>
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="mt-2 flex flex-col gap-2">
           <SwimDistanceCard distance={50} latest={swim.latest50} best={swim.best50} />
           <SwimDistanceCard distance={100} latest={swim.latest100} best={swim.best100} />
         </div>
@@ -138,8 +143,8 @@ function PrimaryStat({ label, value, featured = false }: {
   featured?: boolean;
 }) {
   return (
-    <div className="col-span-2 flex min-w-0 flex-col items-center justify-center px-0.5 py-1.5 text-center">
-      <dt className="order-2 mt-1 text-xs font-bold tracking-wide text-white/85 uppercase">
+    <div className={`flex min-w-0 flex-col items-center justify-center rounded-xl px-0.5 py-1.5 text-center ${featured ? "bg-white/10" : ""}`}>
+      <dt className="order-2 mt-0.5 text-xs font-bold tracking-wide text-white/85 uppercase">
         {label}
       </dt>
       <dd className={`order-1 font-mono text-3xl font-extrabold tabular-nums ${featured ? "text-ball-gold" : "text-white"}`}>
@@ -155,23 +160,24 @@ function SwimDistanceCard({ distance, latest, best }: {
   best: number | null;
 }) {
   return (
-    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card rounded-2xl p-2.5 shadow-sm sm:p-3">
-      <h3 id={`swim-${distance}-heading`} className="font-display text-pool-deep px-1 text-lg font-extrabold">
-        {distance} m
+    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card shadow-elev-1 flex min-h-14 items-center gap-3 rounded-2xl px-3 py-1.5">
+      <h3 id={`swim-${distance}-heading`} aria-label={`${distance} metros`} className="bg-pool-deep flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl font-mono font-extrabold leading-none text-white">
+        <span className="text-lg">{distance}</span>
+        <span className="mt-0.5 text-[0.625rem] tracking-wide uppercase">metros</span>
       </h3>
-      <dl className="mt-1 flex flex-col gap-0.5">
+      <dl className="grid min-w-0 flex-1 grid-cols-2 gap-2">
         <SwimValue label="Actual" value={latest} />
-        <SwimValue label="Mejor" value={best} />
+        <SwimValue label="Mejor" value={best} highlight />
       </dl>
     </article>
   );
 }
 
-function SwimValue({ label, value }: { label: string; value: number | null }) {
+function SwimValue({ label, value, highlight = false }: { label: string; value: number | null; highlight?: boolean }) {
   return (
-    <div className="flex min-h-8 items-center justify-between gap-1 px-1">
-      <dt className="text-ink-700 shrink-0 text-xs font-bold">{label}</dt>
-      <dd className="text-pool-deep font-mono text-[0.8125rem] font-extrabold whitespace-nowrap tabular-nums min-[380px]:text-sm">
+    <div className="min-w-0">
+      <dt className="text-ink-700 text-xs font-bold">{label}</dt>
+      <dd className={`mt-0.5 font-mono text-sm font-extrabold whitespace-nowrap tabular-nums min-[380px]:text-base ${highlight ? "text-pool-blue" : "text-pool-deep"}`}>
         {value == null ? "Sin marca" : formatSwimTime(value)}
       </dd>
     </div>
@@ -183,11 +189,11 @@ function SecondaryStat({ label, value }: {
   value: number;
 }) {
   return (
-    <div className="col-span-3 flex min-w-0 flex-col items-center justify-center rounded-xl bg-white/10 px-2 py-1.5 text-center">
-      <dt className="order-2 mt-1 text-xs font-bold leading-tight text-white/85">
+    <div className="bg-pool-ice flex min-w-0 items-center justify-center gap-2 rounded-xl px-2 py-1.5">
+      <dt className="order-2 text-xs font-bold leading-tight text-ink-700">
         {label}
       </dt>
-      <dd className="order-1 font-mono text-xl font-extrabold tabular-nums text-white">{value}</dd>
+      <dd className="text-pool-deep order-1 font-mono text-xl font-extrabold tabular-nums">{value}</dd>
     </div>
   );
 }
