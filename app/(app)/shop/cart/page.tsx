@@ -23,8 +23,8 @@ export default async function CartPage() {
       <PageBackLink href="/shop">Seguir comprando</PageBackLink>
       <PageHeader
         eyebrow="Tienda Morvedre"
-        title="Revisa tu solicitud"
-        description="Cada producto conserva su talla y personalización. Enviar la solicitud no realiza ningún pago."
+        title="Tu carrito"
+        description="Revisa los productos que has elegido antes de enviar la solicitud. No pagarás en la app."
         icon={<ShoppingBag className="h-5 w-5" aria-hidden="true" />}
       />
       <CartClient

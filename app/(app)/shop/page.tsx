@@ -62,7 +62,7 @@ export default async function ShopPage({
         title="Tienda Morvedre"
         description="Productos bajo pedido, preparados por el club."
         icon={<ShoppingBag className="h-5 w-5" aria-hidden="true" />}
-        className="pr-14 sm:pr-36"
+        className="pr-32 sm:pr-36"
       />
 
       <Card className="overflow-hidden p-2">
