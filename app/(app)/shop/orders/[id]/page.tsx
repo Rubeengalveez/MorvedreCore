@@ -77,16 +77,20 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <span className="capitalize">{formattedDate}</span>
             </p>
           </div>
-          <StatusBadge status={order.status} />
+          {!isOwnOrder || order.status === "pending_parent" ? (
+            <StatusBadge status={order.status} />
+          ) : null}
         </div>
         <div className="border-ink-200 bg-paper-sunk/45 grid grid-cols-[minmax(0,1fr)_auto] items-end gap-4 border-t px-4 py-3.5">
           <div className="min-w-0">
             <p className="text-ink-500 text-sm font-bold">
               {order.items.length} {order.items.length === 1 ? "producto" : "productos"}
             </p>
-            <p className="text-ink-700 mt-0.5 text-sm leading-snug font-semibold">
-              {statusDescription(order.status)}
-            </p>
+            {!isOwnOrder || order.status === "pending_parent" ? (
+              <p className="text-ink-700 mt-0.5 text-sm leading-snug font-semibold">
+                {statusDescription(order.status)}
+              </p>
+            ) : null}
           </div>
           <div className="text-right">
             <p className="text-ink-500 text-xs font-bold uppercase">Total</p>

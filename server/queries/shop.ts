@@ -286,6 +286,7 @@ export async function getShopOrdersForPlayer(profileId: string): Promise<ShopOrd
     .from("shop_orders")
     .select(ORDER_FIELDS)
     .eq("requested_by", profileId)
+    .in("status", ["pending_admin", "ordered", "received", "delivered", "cancelled"])
     .order("requested_at", { ascending: false })
     .limit(50);
   if (error) return [];

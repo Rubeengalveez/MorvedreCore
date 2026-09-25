@@ -71,7 +71,7 @@ export default async function ShopPage({
             href="/shop/orders"
             icon={<PackageOpen className="h-5 w-5" aria-hidden="true" />}
             title="Mis pedidos"
-            detail="Seguimiento, preparación y entrega"
+            detail="Historial de compras enviadas"
           />
           {ctx.linkedProfiles.length > 0 ? (
             <ShopShortcut
@@ -170,7 +170,8 @@ function ProductCard({ product }: { product: ShopProduct }) {
             {product.title}
           </h3>
           <div className="mt-auto pt-2">
-            <span className="text-pool-deep block font-mono text-lg font-extrabold whitespace-nowrap tabular-nums sm:text-xl">
+            <span className="text-pool-blue block font-mono text-xl leading-none font-extrabold whitespace-nowrap tabular-nums sm:text-2xl">
+              <span className="sr-only">Precio: </span>
               {formatCents(product.price_cents, product.currency)}
             </span>
           </div>

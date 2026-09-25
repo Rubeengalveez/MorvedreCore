@@ -307,7 +307,7 @@ export function summarizeCart(
 
 export function formatCents(cents: number, currency: string = DEFAULT_CURRENCY): string {
   const euros = cents / 100;
-  return euros.toFixed(2) + " " + currency;
+  return euros.toFixed(2) + " " + (currency === "EUR" ? "€" : currency);
 }
 
 export function isValidShopOrderStatus(value: unknown): value is ShopOrderStatus {

@@ -248,7 +248,7 @@ describe("summarizeCart", () => {
 
 describe("formatCents", () => {
   it("formatea correctamente", () => {
-    expect(formatCents(2599)).toBe("25.99 EUR");
+    expect(formatCents(2599)).toBe("25.99 €");
   });
   it("acepta otra moneda", () => {
     expect(formatCents(1000, "USD")).toBe("10.00 USD");
