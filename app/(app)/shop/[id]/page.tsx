@@ -43,7 +43,7 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
         <h1 className="text-pool-deep mt-2 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
           {product.title}
         </h1>
-        <p className="font-display text-pool-deep mt-3 text-4xl leading-none font-extrabold tracking-tight tabular-nums sm:text-5xl">
+        <p className="font-display text-pool-blue mt-3 text-4xl leading-none font-extrabold tracking-tight tabular-nums sm:text-5xl">
           {formatCents(product.price_cents, product.currency)}
         </p>
         <p className="text-ink-500 mt-2 text-sm font-semibold">Se prepara bajo pedido</p>
@@ -61,17 +61,23 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
         />
 
         <div className="flex min-w-0 flex-col gap-4 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
-          <section className="border-ink-300 bg-paper-card rounded-xl border p-4 shadow-sm sm:p-5">
-            <AddToCartButton
-              profileId={ctx.ownProfile.id}
-              productId={product.id}
-              available={product.available}
-              sizes={product.sizes}
-              personalizationEnabled={product.personalization_enabled}
-              personalizationLabel={product.personalization_label}
-              personalizationMaxLength={product.personalization_max_length}
-            />
-          </section>
+          {product.available ? (
+            <section className="border-pool-blue/30 bg-pool-ice shadow-elev-1 rounded-2xl border p-4 sm:p-5">
+              <AddToCartButton
+                profileId={ctx.ownProfile.id}
+                productId={product.id}
+                available={product.available}
+                sizes={product.sizes}
+                personalizationEnabled={product.personalization_enabled}
+                personalizationLabel={product.personalization_label}
+                personalizationMaxLength={product.personalization_max_length}
+              />
+            </section>
+          ) : (
+            <p className="border-ink-300 bg-paper-card text-pool-deep rounded-2xl border p-4 text-center text-base font-semibold">
+              Este producto no está disponible ahora mismo.
+            </p>
+          )}
 
           <section className="border-ink-300 bg-paper-card rounded-xl border p-4 sm:p-5">
             <h2 className="font-display text-pool-deep text-lg font-extrabold">Detalles</h2>
@@ -88,15 +94,9 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
             </div>
           </section>
 
-          {!product.available ? (
-            <p className="border-ink-200 bg-paper-card text-ink-600 rounded-2xl border p-4 text-center text-base font-semibold">
-              Este producto no está disponible ahora mismo.
-            </p>
-          ) : null}
-
-          <section className="border-success/25 bg-success/10 rounded-2xl border p-4 sm:p-5">
+          <section className="border-pool-blue/25 bg-pool-foam/70 rounded-2xl border p-4 sm:p-5">
             <div className="flex items-start gap-3">
-              <span className="bg-success/12 text-success flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+              <span className="bg-paper-card text-pool-deep flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
                 <MessageCircle className="h-5 w-5" aria-hidden="true" />
               </span>
               <div className="min-w-0">

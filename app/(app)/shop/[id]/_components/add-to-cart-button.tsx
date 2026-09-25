@@ -96,8 +96,8 @@ export function AddToCartButton({
           </div>
         </fieldset>
       ) : (
-        <div className="border-ink-300 flex min-h-12 items-center justify-between border-y py-3 text-sm">
-          <span className="text-ink-600">Talla</span>
+        <div className="bg-paper-card flex min-h-12 items-center justify-between rounded-xl px-3 py-2 text-sm">
+          <span className="text-ink-600 font-semibold">Talla</span>
           <span className="text-pool-deep font-extrabold">Única</span>
         </div>
       )}
@@ -117,7 +117,7 @@ export function AddToCartButton({
           </div>
           <div className="relative mt-3">
             <PenLine
-              className="text-ink-400 pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2"
+              className="text-pool-blue pointer-events-none absolute top-1/2 left-4 h-5 w-5 -translate-y-1/2"
               aria-hidden="true"
             />
             <input
