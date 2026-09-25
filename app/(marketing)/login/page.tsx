@@ -94,7 +94,7 @@ export default async function LoginPage({
         </div>
 
         <Link href={"/login/request" as Route}
-          className="bg-pool-foam text-pool-deep focus-visible:ring-ball-gold flex min-h-16 w-full items-center gap-3 rounded-xl px-4 py-3 shadow-sm transition-colors hover:bg-white focus-visible:ring-2 focus-visible:outline-none">
+          className="bg-[#e8f1fc] text-pool-deep focus-visible:ring-ball-gold flex min-h-16 w-full items-center gap-3 rounded-xl px-4 py-3 shadow-sm transition-colors hover:bg-blue-100 focus-visible:ring-2 focus-visible:outline-none">
           <span className="bg-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
             <UserRoundPlus className="text-pool-blue h-5 w-5" aria-hidden="true" />
           </span>

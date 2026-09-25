@@ -36,7 +36,7 @@ export function AuthRequestShell({
         <main className="bg-paper-card shadow-elev-2 w-full rounded-[var(--r-xl)] p-5 sm:p-7">
           <div className="mb-4">
             <h1 className="font-display text-pool-deep text-[22px] leading-tight font-extrabold">{title}</h1>
-            {subtitle ? <p className="text-ink-700 mt-1 text-sm leading-snug">{subtitle}</p> : null}
+            {subtitle ? <p className="text-ink-700 mt-2 text-sm leading-snug">{subtitle}</p> : null}
           </div>
           {children}
         </main>
