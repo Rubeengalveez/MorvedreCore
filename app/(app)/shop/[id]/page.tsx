@@ -63,9 +63,11 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
               is_cover: image.is_cover,
             }))}
           />
-          <section className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-4 sm:p-5">
-            <h2 className="font-display text-pool-deep text-lg font-extrabold">Detalles</h2>
-            <p className="text-ink-700 mt-1.5 text-base leading-relaxed whitespace-pre-line">
+          <section className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border">
+            <h2 className="bg-pool-deep text-paper font-display px-4 py-2.5 text-lg font-extrabold sm:px-5">
+              Detalles
+            </h2>
+            <p className="text-ink-700 px-4 py-4 text-base leading-relaxed whitespace-pre-line sm:px-5">
               {product.description}
             </p>
           </section>
