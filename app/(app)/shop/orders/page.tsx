@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { CalendarDays, ChevronRight, PackageOpen, ReceiptText } from "lucide-react";
+import { CalendarDays, PackageOpen, ReceiptText } from "lucide-react";
 
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopOrdersForPlayer } from "@/server/queries/shop";
@@ -56,10 +56,7 @@ export default async function MyOrdersPage() {
         <ul className="flex flex-col gap-3">
           {orders.map((order) => (
             <li key={order.id}>
-              <Link
-                href={`/shop/orders/${order.id}` as Route}
-                className="border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue focus-visible:ring-pool-blue group hover:shadow-elev-2 block touch-manipulation overflow-hidden rounded-2xl border transition-[border-color,box-shadow] focus-visible:ring-2 focus-visible:outline-none"
-              >
+              <article className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border">
                 <div className="bg-pool-deep text-paper flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3">
                   <span className="font-display text-base font-extrabold tabular-nums">
                     Pedido {order.order_reference}
@@ -94,15 +91,11 @@ export default async function MyOrdersPage() {
 
                 <div className="bg-pool-ice flex items-center justify-between gap-3 px-4 py-3">
                   <span className="text-ink-700 text-sm font-bold">Total del pedido</span>
-                  <span className="text-pool-blue inline-flex items-center gap-2 font-mono text-xl font-extrabold whitespace-nowrap tabular-nums">
+                  <span className="text-pool-blue font-mono text-xl font-extrabold whitespace-nowrap tabular-nums">
                     {formatCents(order.total_cents, order.currency)}
-                    <ChevronRight
-                      className="h-5 w-5 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
-                      aria-hidden="true"
-                    />
                   </span>
                 </div>
-              </Link>
+              </article>
             </li>
           ))}
         </ul>

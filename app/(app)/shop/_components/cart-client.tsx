@@ -89,7 +89,11 @@ export function CartClient({
         });
         cart.clear();
         setSuccess(true);
-        window.setTimeout(() => router.push(`/shop/orders/${result.id}` as never), 1200);
+        window.setTimeout(
+          () =>
+            router.push((requiresGuardian ? `/shop/orders/${result.id}` : "/shop/orders") as never),
+          1200,
+        );
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "No hemos podido enviar la solicitud.");
       }
@@ -111,7 +115,7 @@ export function CartClient({
         <p className="text-ink-600 mt-2 max-w-sm text-base leading-relaxed">
           {requiresGuardian
             ? "Sol recibirá el pedido cuando una persona adulta de tu familia lo apruebe."
-            : "Te llevamos al seguimiento del pedido…"}
+            : "Te llevamos a tus pedidos…"}
         </p>
       </div>
     );
