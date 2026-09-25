@@ -122,6 +122,8 @@ export function RankingsContent({
     metric: activeMetric,
   });
   const baseHref = `/rankings?${baseParams}`;
+  const rankingHref = `${baseHref}${paged.page > 1 ? `&page=${paged.page}` : ""}`;
+  const teamId = activeScope.kind === "team" ? activeScope.team_id : undefined;
   const metricExtraParams: Record<string, string> = {
     scope:
       activeScope.kind === "all"
@@ -180,6 +182,8 @@ export function RankingsContent({
               metric={activeMetric}
               myPlayerId={myPlayerId}
               jumpTargetPlayerId={jumpTargetPlayerId}
+              rankingHref={rankingHref}
+              teamId={teamId}
             />
           ) : null}
 
@@ -205,6 +209,8 @@ export function RankingsContent({
                       metric={activeMetric}
                       isMe={row.player_id === myPlayerId}
                       isJumpTarget={row.player_id === jumpTargetPlayerId}
+                      rankingHref={rankingHref}
+                      teamId={teamId}
                     />
                   </li>
                 ))}

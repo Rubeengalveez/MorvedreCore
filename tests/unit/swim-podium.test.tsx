@@ -53,7 +53,7 @@ describe("SwimPodium", () => {
     expect(screen.getByText("30,55 s")).toBeInTheDocument();
   });
 
-  it("links each podium position to the player's swim profile", () => {
+  it("links each podium position to the player profile and preserves the swim ranking", () => {
     const items = [
       mockRow(1, "Mario Rossi", 2845, "player-1"),
     ];
@@ -63,13 +63,15 @@ describe("SwimPodium", () => {
         items={items}
         distance={100}
         mode="latest"
+        rankingHref="/rankings?scope=all&metric=swim&distance=100&mode=latest"
       />,
     );
 
     const leaderLink = screen.getByRole("link", { name: /Mario Rossi/i });
-    expect(leaderLink).toHaveAttribute(
-      "href",
-      "/players/player-1/swim-times?from=rankings&distance=100",
-    );
+    const href = leaderLink.getAttribute("href")!;
+    const url = new URL(href, "https://morvedre.local");
+    expect(url.pathname).toBe("/team/team-1/players/player-1");
+    expect(url.searchParams.get("returnTo"))
+      .toBe("/rankings?scope=all&metric=swim&distance=100&mode=latest#ranking-player-player-1");
   });
 });

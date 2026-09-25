@@ -10,6 +10,8 @@ export interface PodiumProps {
   metric: RankingMetric;
   myPlayerId: string;
   jumpTargetPlayerId?: string | null;
+  rankingHref?: string;
+  teamId?: string;
 }
 
 export function Podium({
@@ -20,6 +22,8 @@ export function Podium({
   metric,
   myPlayerId,
   jumpTargetPlayerId = null,
+  rankingHref,
+  teamId,
 }: PodiumProps) {
   if (items.length === 0) return null;
 
@@ -44,6 +48,8 @@ export function Podium({
               metric={metric}
               isMe={row.player_id === myPlayerId}
               isJumpTarget={row.player_id === jumpTargetPlayerId}
+              rankingHref={rankingHref}
+              teamId={teamId}
             />
           </li>
         ))}

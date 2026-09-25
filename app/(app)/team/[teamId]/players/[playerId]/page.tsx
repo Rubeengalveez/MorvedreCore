@@ -26,20 +26,46 @@ export default async function TeamPlayerPage({
   searchParams,
 }: {
   params: Promise<{ teamId: string; playerId: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; returnTo?: string }>;
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 
   const { teamId, playerId } = await params;
-  const { from } = await searchParams;
+  const { from, returnTo } = await searchParams;
   const [team, roster] = await Promise.all([getTeamById(teamId), getTeamRoster(teamId)]);
   if (!team) notFound();
 
-  const player = roster.find((item) => item.player_id === playerId);
+  const supabase = await createClient();
+  let player = roster.find((item) => item.player_id === playerId);
+  if (!player && from === "rankings") {
+    const { data: membership } = await supabase
+      .from("team_rosters")
+      .select("squad_number")
+      .eq("team_id", teamId)
+      .eq("player_id", playerId)
+      .limit(1)
+      .maybeSingle();
+    if (membership) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, full_name, photo_url, birth_year, cap_number, is_active")
+        .eq("id", playerId)
+        .maybeSingle();
+      if (profile?.is_active) {
+        player = {
+          player_id: profile.id,
+          squad_number: membership.squad_number,
+          full_name: profile.full_name,
+          photo_url: profile.photo_url,
+          birth_year: profile.birth_year,
+          cap_number: profile.cap_number,
+        };
+      }
+    }
+  }
   if (!player) notFound();
 
-  const supabase = await createClient();
   const [snapshotResult, actaStats, swimEntries] = await Promise.all([
     supabase
       .from("ranking_snapshots")
@@ -57,7 +83,7 @@ export default async function TeamPlayerPage({
   const snapshot = snapshotResult.data;
   const swim = getSwimProfileSummary(swimEntries);
   const number = player.squad_number ?? player.cap_number;
-  const backTarget = getPlayerProfileBackTarget(from, team.id);
+  const backTarget = getPlayerProfileBackTarget(from, team.id, returnTo, playerId);
 
   return (
     <PageShell width="md" className="gap-3 pb-4">

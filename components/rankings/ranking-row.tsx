@@ -1,5 +1,7 @@
+import type { Route } from "next";
 import { CATEGORY_COLORS, CATEGORY_LABELS } from "@/lib/domain/categories";
 import { type RankingMetric, type RankingRow } from "@/lib/domain/rankings";
+import { getRankingPlayerProfileHref } from "@/lib/domain/player-profile-navigation";
 
 import { RankingEntryCard } from "./ranking-entry-card";
 
@@ -11,6 +13,8 @@ export interface RankingRowItemProps {
   isMe: boolean;
   isJumpTarget?: boolean;
   variant?: "list" | "podium";
+  rankingHref?: string;
+  teamId?: string;
 }
 
 function detailsFor(row: RankingRow, metric: RankingMetric): string[] {
@@ -49,7 +53,10 @@ export function RankingRowItem({
   isMe,
   isJumpTarget = false,
   variant = "list",
+  rankingHref,
+  teamId,
 }: RankingRowItemProps) {
+  const targetTeamId = teamId ?? row.team_id;
   return (
     <RankingEntryCard
       variant={variant}
@@ -64,6 +71,11 @@ export function RankingRowItem({
       details={detailsFor(row, metric)}
       isMe={isMe}
       isJumpTarget={isJumpTarget}
+      href={
+        rankingHref && targetTeamId
+          ? getRankingPlayerProfileHref(targetTeamId, row.player_id, rankingHref) as Route
+          : undefined
+      }
     />
   );
 }

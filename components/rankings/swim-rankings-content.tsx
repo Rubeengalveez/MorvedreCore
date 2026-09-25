@@ -54,6 +54,8 @@ export function SwimRankingsContent({
         : `team:${scope.team_id}`;
   const params = { metric: "swim", distance: String(distance), mode };
   const baseHref = `/rankings?${new URLSearchParams({ scope: scopeParam, ...params }).toString()}`;
+  const rankingHref = `${baseHref}${activePage > 1 ? `&page=${activePage}` : ""}`;
+  const teamId = scope.kind === "team" ? scope.team_id : undefined;
 
   function navigate(changes: Partial<Record<"distance" | "mode", string>>) {
     const next = new URLSearchParams({ scope: scopeParam, ...params, ...changes });
@@ -119,6 +121,8 @@ export function SwimRankingsContent({
               mode={mode}
               myPlayerId={myPlayerId}
               jumpTargetPlayerId={jumpTargetPlayerId}
+              rankingHref={rankingHref}
+              teamId={teamId}
             />
           ) : null}
           {listRows.length > 0 ? (
@@ -142,6 +146,8 @@ export function SwimRankingsContent({
                       mode={mode}
                       myPlayerId={myPlayerId}
                       jumpTargetPlayerId={jumpTargetPlayerId}
+                      rankingHref={rankingHref}
+                      teamId={teamId}
                     />
                   </li>
                 ))}

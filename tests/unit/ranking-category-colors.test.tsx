@@ -64,4 +64,24 @@ describe("ranking category presentation", () => {
       borderLeftColor: CATEGORY_COLORS.benjamin,
     });
   });
+
+  it("opens the player's team profile from a ranking card", () => {
+    render(
+      <RankingRowItem
+        row={row("juvenil", "Juvenil")}
+        metricLabel="Goles"
+        metricSuffix=""
+        metric="goals"
+        isMe={false}
+        teamId="team-1"
+        rankingHref="/rankings?scope=team%3Ateam-1&page=2"
+      />,
+    );
+
+    const href = screen.getByRole("link", { name: /Jugador juvenil/i }).getAttribute("href")!;
+    const url = new URL(href, "https://morvedre.local");
+    expect(url.pathname).toBe("/team/team-1/players/player-juvenil");
+    expect(url.searchParams.get("returnTo"))
+      .toBe("/rankings?scope=team%3Ateam-1&page=2#ranking-player-player-juvenil");
+  });
 });

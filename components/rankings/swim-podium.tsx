@@ -8,6 +8,8 @@ export interface SwimPodiumProps {
   mode: SwimRankingMode;
   myPlayerId?: string;
   jumpTargetPlayerId?: string | null;
+  rankingHref?: string;
+  teamId?: string;
 }
 
 export function SwimPodium({
@@ -16,6 +18,8 @@ export function SwimPodium({
   mode,
   myPlayerId,
   jumpTargetPlayerId = null,
+  rankingHref,
+  teamId,
 }: SwimPodiumProps) {
   if (items.length === 0) return null;
 
@@ -39,6 +43,8 @@ export function SwimPodium({
               mode={mode}
               myPlayerId={myPlayerId}
               jumpTargetPlayerId={jumpTargetPlayerId}
+              rankingHref={rankingHref}
+              teamId={teamId}
             />
           </li>
         ))}

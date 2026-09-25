@@ -9,6 +9,7 @@ import {
 } from "@/lib/domain/swim-times";
 
 import { RankingEntryCard } from "./ranking-entry-card";
+import { getRankingPlayerProfileHref } from "@/lib/domain/player-profile-navigation";
 
 export function SwimRankingCard({
   row,
@@ -17,6 +18,8 @@ export function SwimRankingCard({
   myPlayerId,
   jumpTargetPlayerId,
   variant = "list",
+  rankingHref,
+  teamId,
 }: {
   row: SwimRankingRow;
   distance: SwimDistance;
@@ -24,6 +27,8 @@ export function SwimRankingCard({
   myPlayerId?: string;
   jumpTargetPlayerId?: string | null;
   variant?: "list" | "podium";
+  rankingHref?: string;
+  teamId?: string;
 }) {
   const date = new Intl.DateTimeFormat("es-ES", {
     day: "numeric",
@@ -48,7 +53,11 @@ export function SwimRankingCard({
       details={[`${distance} m`, date]}
       isMe={row.player_id === myPlayerId}
       isJumpTarget={row.player_id === jumpTargetPlayerId}
-      href={`/players/${row.player_id}/swim-times?from=rankings&distance=${distance}` as Route}
+      href={
+        rankingHref
+          ? getRankingPlayerProfileHref(teamId ?? row.team_id, row.player_id, rankingHref) as Route
+          : `/players/${row.player_id}/swim-times?from=rankings&distance=${distance}` as Route
+      }
     />
   );
 }
