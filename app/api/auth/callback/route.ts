@@ -69,10 +69,7 @@ export async function GET(request: NextRequest) {
           if (pendingRequest) {
             return NextResponse.redirect(`${origin}/login/request/pending`);
           }
-          const params = new URLSearchParams();
-          params.set("email", user.email || "");
-          params.set("provider", "google");
-          return NextResponse.redirect(`${origin}/login/request?${params.toString()}`);
+          return NextResponse.redirect(`${origin}/login/request`);
         }
 
         const target = profile.must_change_password ? "/change-password" : fallback;

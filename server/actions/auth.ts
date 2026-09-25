@@ -285,10 +285,8 @@ export async function signIn(formData: FormData) {
     .maybeSingle();
 
   if (!profile) {
-    const params = new URLSearchParams();
-    params.set("email", email);
     await supabase.auth.signOut({ scope: "local" });
-    redirect(`/login/request?${params.toString()}` as Route);
+    redirect("/login/request" as Route);
   }
 
   const target = profile.must_change_password ? "/change-password" : next;

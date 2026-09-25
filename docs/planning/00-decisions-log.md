@@ -1,5 +1,10 @@
 # Log de decisiones
 
+## 2026-09-25 - Correo y guía visual de solicitud
+
+- La pantalla de elección de solicitud no muestra ni transmite el correo por URL. Solo un inicio de sesión verificado con Google rellena y bloquea el correo en el formulario; con correo y contraseña se escribe allí.
+- La explicación de lo que ocurre después se muestra únicamente al elegir el tipo de cuenta. La búsqueda sin resultados se presenta como error y ofrece ayuda mediante un botón de WhatsApp; la solicitud familiar separa los datos del adulto de la búsqueda de sus hijos.
+
 ## 2026-09-25 - Solicitud de acceso simplificada
 
 - La entrada pública permite solicitar acceso solo a jugadores y familiares. El personal recibe una cuenta directamente desde Administración; quienes ya son jugadores o familiares conservan su perfil y reciben los permisos adicionales allí.

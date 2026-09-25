@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { CheckCircle2, CircleHelp, Loader2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, MessageCircle } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { checkPlayerIdentity } from "@/server/actions/auth";
@@ -56,6 +56,7 @@ export function PlayerIdentityFields({
       <Input id={`${idPrefix}-name`} name={forParent ? undefined : "fullName"}
         type="text" autoComplete={forParent ? "off" : "name"} required minLength={5} maxLength={100}
         placeholder="Ej. María Pérez García" value={fullName}
+        aria-invalid={status === "missing"}
         aria-describedby={status !== "idle" || pending ? helpId : undefined}
         onChange={(event) => { clearLookup(); onNameChange(event.target.value); }} onBlur={check}
         className="bg-pool-ice focus:border-pool-blue focus:bg-paper min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4" />
@@ -65,24 +66,26 @@ export function PlayerIdentityFields({
       <Input id={`${idPrefix}-year`} name={forParent ? undefined : "birthYear"}
         type="number" inputMode="numeric" required min={1900} max={new Date().getFullYear()}
         placeholder="Ej. 2012" value={birthYear}
+        aria-invalid={status === "missing"}
         aria-describedby={status !== "idle" || pending ? helpId : undefined}
         onChange={(event) => { clearLookup(); onYearChange(event.target.value); }} onBlur={check}
         className="bg-pool-ice focus:border-pool-blue focus:bg-paper min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4" />
     </div>
-    {(pending || status !== "idle") ? <div id={helpId} role="status" aria-live="polite"
-      className={`flex items-start gap-2 rounded-xl p-3 text-sm leading-snug font-semibold ${status === "found" ? "bg-pool-teal/12 text-pool-deep" : "bg-pool-foam text-pool-deep"}`}>
+    {(pending || status !== "idle") ? <div id={helpId} role={status === "missing" || status === "limited" ? "alert" : "status"}
+      className={`flex items-start gap-2 rounded-xl border p-3 text-sm leading-snug ${status === "missing" || status === "limited" ? "border-danger/50 bg-red-50 text-ink-900" : "border-pool-teal/30 bg-pool-teal/10 text-pool-deep"}`}>
       {pending ? <Loader2 className="h-5 w-5 shrink-0 animate-spin" aria-hidden="true" />
         : status === "found" ? <CheckCircle2 className="text-success h-5 w-5 shrink-0" aria-hidden="true" />
-        : <CircleHelp className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />}
+        : <AlertCircle className="text-danger h-5 w-5 shrink-0" aria-hidden="true" />}
       <span>{pending ? "Buscando jugador…"
-        : status === "found" ? "Jugador encontrado. Ya puedes enviar la solicitud."
-        : status === "limited" ? "No podemos comprobarlo ahora. Inténtalo más tarde."
-        : "Revisa que el nombre esté bien escrito y completo y que el año de nacimiento sea correcto."}</span>
+        : status === "found" ? <><strong>Jugador encontrado.</strong> Ya puedes enviar la solicitud.</>
+        : status === "limited" ? <><strong>No podemos comprobarlo ahora.</strong> Inténtalo más tarde o pide ayuda.</>
+        : <><strong>No encontramos al jugador.</strong> Revisa que el nombre esté bien escrito y completo y que el año de nacimiento sea correcto.</>}</span>
     </div> : null}
     {(status === "missing" || status === "limited") ? <a href={supportWhatsAppUrl(supportMessage)}
       target="_blank" rel="noopener noreferrer"
-      className="text-pool-blue inline-flex min-h-12 items-center text-sm font-bold underline-offset-2 hover:underline focus-visible:underline">
-      Lo he revisado y sigue sin salir. Hablar con el administrador
+      className="border-pool-blue text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 bg-white px-3 py-2 text-center text-sm font-bold focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none">
+      <MessageCircle className="h-5 w-5 shrink-0" aria-hidden="true" />
+      ¿Lo has revisado? Pide ayuda por WhatsApp
     </a> : null}
   </div>;
 }

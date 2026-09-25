@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { ArrowUpRight, Eye, EyeOff, Loader2, UserRoundPlus } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import type { Route } from "next";
 
 import { Button } from "@/components/ui/button";
@@ -163,17 +163,6 @@ export function LoginForm({ next, error }: LoginFormProps) {
         <span>Continuar con Google</span>
       </a>
 
-      <Link href={"/login/request" as Route}
-        className="bg-pool-foam/75 text-pool-deep focus-visible:ring-pool-blue mt-4 flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-pool-foam focus-visible:ring-2 focus-visible:outline-none">
-        <span className="bg-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-          <UserRoundPlus className="text-pool-blue h-5 w-5" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1 text-sm leading-tight">
-          <span className="block font-extrabold">¿Aún no tienes acceso?</span>
-          <span className="text-ink-700 mt-0.5 block">Solicita tu cuenta al club</span>
-        </span>
-        <ArrowUpRight className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
-      </Link>
     </>
   );
 }

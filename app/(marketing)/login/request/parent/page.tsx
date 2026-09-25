@@ -9,17 +9,11 @@ export const metadata: Metadata = {
   description: "Solicita acceso como padre o madre a la app del club.",
 };
 
-export default async function ParentRequestPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ email?: string | string[] }>;
-}) {
-  const params = await searchParams;
-  const emailRaw = Array.isArray(params.email) ? params.email[0] : params.email;
+export default async function ParentRequestPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  const googleUser = user?.identities?.some((identity) => identity.provider === "google") ? user : null;
-  const email = googleUser?.email ?? (typeof emailRaw === "string" ? emailRaw : "");
+  const googleUser = user?.email_confirmed_at && user.identities?.some((identity) => identity.provider === "google") ? user : null;
+  const email = googleUser?.email ?? "";
 
   return (
     <AuthRequestShell

@@ -1,7 +1,10 @@
-import Image from "next/image";
+import Link from "next/link";
 import type { Metadata } from "next";
+import type { Route } from "next";
+import { ArrowUpRight, UserRoundPlus } from "lucide-react";
 
 import { LoginForm } from "@/components/auth/login-form";
+import { AuthLogo } from "@/components/auth/auth-logo";
 import { AuthErrorBanner, type AuthErrorCode } from "@/components/auth/auth-error-banner";
 import { supportWhatsAppUrl } from "@/lib/auth/support";
 
@@ -73,14 +76,7 @@ export default async function LoginPage({
 
       <div className="relative z-10 flex w-full max-w-[400px] flex-col items-center gap-4 sm:gap-8">
         <div className="flex flex-col items-center gap-3 text-center sm:gap-4">
-          <Image
-            src="/brand/icon-192.png"
-            alt="Escudo del Waterpolo Morvedre"
-            width={160}
-            height={160}
-            priority
-            className="h-[118px] w-[118px] rounded-full object-cover min-[390px]:h-[140px] min-[390px]:w-[140px] sm:h-[200px] sm:w-[200px]"
-          />
+          <AuthLogo />
 
           <div className="flex flex-col gap-1 sm:gap-1.5">
             <h1 className="font-display text-[32px] leading-none font-extrabold tracking-tight text-white drop-shadow-md min-[390px]:text-[36px] sm:text-[44px]">
@@ -97,13 +93,25 @@ export default async function LoginPage({
           <LoginForm next={next} error={formError} />
         </div>
 
-        <p className="text-ink-500 text-center text-xs">
+        <Link href={"/login/request" as Route}
+          className="bg-pool-foam text-pool-deep focus-visible:ring-ball-gold flex min-h-16 w-full items-center gap-3 rounded-xl px-4 py-3 shadow-sm transition-colors hover:bg-white focus-visible:ring-2 focus-visible:outline-none">
+          <span className="bg-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+            <UserRoundPlus className="text-pool-blue h-5 w-5" aria-hidden="true" />
+          </span>
+          <span className="min-w-0 flex-1 text-sm leading-tight">
+            <span className="block font-extrabold">¿Aún no tienes acceso?</span>
+            <span className="text-ink-700 mt-0.5 block">Solicita tu cuenta al club</span>
+          </span>
+          <ArrowUpRight className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
+        </Link>
+
+        <p className="text-ink-700 text-center text-sm">
           &iquest;Problemas para entrar?{" "}
           <a
             href={supportWhatsAppUrl("Hola Rubén, estoy teniendo problemas con Morvedre Core.")}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-pool-blue font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
+            className="text-pool-blue font-bold underline underline-offset-2 hover:text-pool-deep focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             Escr&iacute;beme
           </a>

@@ -1,8 +1,9 @@
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Clock3, KeyRound, ShieldCheck } from "lucide-react";
 import type { ReactNode } from "react";
 import type { Route } from "next";
+
+import { AuthLogo } from "@/components/auth/auth-logo";
 
 interface AuthRequestShellProps {
   children: ReactNode;
@@ -27,9 +28,7 @@ export function AuthRequestShell({
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />{backLabel}
         </Link>
         <div className="flex flex-col items-center gap-1.5 text-center">
-          <Image src="/brand/icon-192.png" alt="Escudo del Waterpolo Morvedre"
-            width={120} height={120} priority
-            className={`${showNextSteps ? "h-[104px] w-[104px]" : "h-[72px] w-[72px]"} rounded-full object-cover sm:h-[124px] sm:w-[124px]`} />
+          <AuthLogo />
           <p className="font-display text-2xl leading-none font-extrabold tracking-tight text-white drop-shadow-md sm:text-3xl">
             Morvedre Core
           </p>
@@ -40,13 +39,19 @@ export function AuthRequestShell({
             {subtitle ? <p className="text-ink-700 mt-1 text-sm leading-snug">{subtitle}</p> : null}
           </div>
           {children}
-          {showNextSteps ? <div className="bg-pool-foam/55 mt-4 rounded-xl p-3">
-            <h2 className="text-pool-deep text-sm font-extrabold">Qué ocurre después</h2>
-            <p className="text-ink-700 mt-1 text-sm leading-snug">
-              Revisamos tu solicitud y te damos acceso con Google o una contraseña provisional.
-            </p>
-          </div> : null}
         </main>
+        {showNextSteps ? <section aria-labelledby="next-steps-title"
+          className="bg-paper-card/95 border-pool-blue/20 rounded-[var(--r-lg)] border p-4 shadow-sm">
+          <h2 id="next-steps-title" className="text-pool-deep font-display text-base font-extrabold">¿Qué ocurre después?</h2>
+          <ol className="text-ink-700 mt-3 flex flex-col gap-3 text-sm leading-snug">
+            <li className="flex items-start gap-3"><Clock3 className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <span>El club revisa tu solicitud y comprueba tus datos.</span></li>
+            <li className="flex items-start gap-3"><ShieldCheck className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <span>Cuando la aprobemos, podrás acceder a tu perfil.</span></li>
+            <li className="flex items-start gap-3"><KeyRound className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+              <span>Con Google, vuelves a entrar. Con correo, recibes una contraseña provisional y la cambias al entrar.</span></li>
+          </ol>
+        </section> : null}
         <p className="text-ink-700 mt-1 text-center text-sm">
           ¿Ya tienes cuenta?{" "}
           <Link href={"/login" as Route}

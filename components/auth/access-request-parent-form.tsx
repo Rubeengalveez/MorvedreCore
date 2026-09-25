@@ -2,7 +2,7 @@
 
 import { useActionState, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,9 +50,15 @@ export function AccessRequestParentForm({ email, lockedEmail = false }: { email:
 
   return <form ref={formRef} action={action} className="flex w-full flex-col gap-3.5">
     {state?.error ? <Alert variant="danger" title="No pudimos enviar la solicitud">{state.error}</Alert> : null}
-    <p className="bg-pool-foam text-pool-deep rounded-lg px-3 py-2 text-xs font-extrabold tracking-wide uppercase">
-      Paso {step} de 2 · {step === 1 ? "Tus datos" : "Tus hijos"}
-    </p>
+    <div className="flex min-h-12 items-center justify-between gap-2">
+      <p className="bg-pool-foam text-pool-deep rounded-lg px-3 py-2 text-xs font-extrabold tracking-wide uppercase">
+        Paso {step} de 2 · {step === 1 ? "Tus datos" : "Tus hijos"}
+      </p>
+      {step === 2 ? <button type="button" onClick={() => setStep(1)}
+        className="text-pool-blue focus-visible:ring-pool-blue inline-flex min-h-12 items-center gap-1.5 rounded-lg px-2 text-sm font-bold hover:bg-pool-foam focus-visible:ring-2 focus-visible:outline-none">
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />Editar mis datos
+      </button> : null}
+    </div>
     <input type="hidden" name="role" value="parent" />
     <input type="hidden" name="children" value={JSON.stringify(children.map((child) => ({
       fullName: child.fullName.trim(), birthYear: Number(child.birthYear),
@@ -83,14 +89,15 @@ export function AccessRequestParentForm({ email, lockedEmail = false }: { email:
     {step === 1 ? <Button type="button" size="lg" className="w-full" onClick={continueToChildren}>
       Continuar con tus hijos
     </Button> : null}
-    {step === 2 ? <fieldset className="flex flex-col gap-2.5">
-      <legend className="text-pool-deep font-extrabold">Tus hijos en el club</legend>
-      {children.map((child, index) => <div key={child.id} className="bg-pool-foam/50 flex flex-col gap-2 rounded-xl p-3">
-        <div className="flex items-center justify-between gap-2">
-          <span className="text-pool-deep text-sm font-bold">Jugador {index + 1}</span>
+    {step === 2 ? <fieldset className="flex flex-col gap-3">
+      <legend className="text-pool-deep mb-1 font-display text-lg font-extrabold">Busca a tus hijos</legend>
+      {children.map((child, index) => <div key={child.id} className="border-pool-blue/25 bg-white shadow-elev-1 flex flex-col gap-3 rounded-2xl border-2 p-3.5">
+        <div className="flex min-h-12 items-center gap-2.5">
+          <span aria-hidden="true" className="bg-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-base font-extrabold text-white">{index + 1}</span>
+          <span className="text-pool-deep flex-1 text-base font-extrabold">Hijo {index + 1}</span>
           {children.length > 1 ? <button type="button" onClick={() => setChildren((rows) => rows.filter((row) => row.id !== child.id))}
-            className="text-danger flex min-h-12 min-w-12 items-center justify-center rounded-xl" aria-label={`Quitar jugador ${index + 1}`}>
-            <Trash2 className="h-5 w-5" aria-hidden="true" />
+            className="text-danger hover:bg-red-50 focus-visible:ring-danger inline-flex min-h-12 items-center gap-1 rounded-xl px-2 text-sm font-bold focus-visible:ring-2 focus-visible:outline-none" aria-label={`Quitar hijo ${index + 1}`}>
+            <Trash2 className="h-4 w-4" aria-hidden="true" />Quitar
           </button> : null}
         </div>
         <PlayerIdentityFields idPrefix={`child-${child.id}`} fullName={child.fullName}
@@ -99,14 +106,12 @@ export function AccessRequestParentForm({ email, lockedEmail = false }: { email:
           onYearChange={(value) => updateChild(child.id, "birthYear", value)}
           supportMessage={`Hola Rubén, estoy intentando acceder como ${relation === "father" ? "padre" : relation === "mother" ? "madre" : "familiar"} a Morvedre Core y no encuentro a mi hijo en el club.`} />
       </div>)}
-      {children.length < 10 ? <Button type="button" variant="outline" onClick={() =>
-        setChildren((rows) => [...rows, { id: nextId.current++, fullName: "", birthYear: "" }])}>
+      {children.length < 10 ? <button type="button" onClick={() =>
+        setChildren((rows) => [...rows, { id: nextId.current++, fullName: "", birthYear: "" }])}
+        className="border-pool-blue text-pool-deep hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 bg-white px-3 py-2.5 text-sm font-extrabold focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none">
         <Plus className="h-5 w-5" aria-hidden="true" /> Añadir otro hijo
-      </Button> : null}
+      </button> : null}
     </fieldset> : null}
-    {step === 2 ? <div className="flex flex-col gap-2">
-      <SubmitButton />
-      <Button type="button" variant="ghost" className="w-full" onClick={() => setStep(1)}>Volver a mis datos</Button>
-    </div> : null}
+    {step === 2 ? <SubmitButton /> : null}
   </form>;
 }
