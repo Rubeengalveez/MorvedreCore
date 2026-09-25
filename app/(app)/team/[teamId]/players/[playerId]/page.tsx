@@ -160,11 +160,11 @@ function SwimDistanceCard({ distance, latest, best }: {
   best: number | null;
 }) {
   return (
-    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card shadow-elev-1 rounded-2xl p-2.5">
-      <h3 id={`swim-${distance}-heading`} className="font-display text-pool-deep px-1 text-lg font-extrabold">
+    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl">
+      <h3 id={`swim-${distance}-heading`} className="font-display bg-pool-deep px-3 py-2 text-center text-lg font-extrabold text-white">
         {distance} metros
       </h3>
-      <dl className="mt-1.5 grid grid-cols-2 gap-2">
+      <dl className="grid grid-cols-2 gap-2 px-3 py-2.5">
         <SwimValue label="Actual" value={latest} />
         <SwimValue label="Mejor" value={best} highlight />
       </dl>
@@ -174,9 +174,9 @@ function SwimDistanceCard({ distance, latest, best }: {
 
 function SwimValue({ label, value, highlight = false }: { label: string; value: number | null; highlight?: boolean }) {
   return (
-    <div className={`min-w-0 rounded-xl px-2 py-1 ${highlight ? "bg-pool-foam" : "bg-pool-ice"}`}>
-      <dt className="text-ink-700 text-sm font-bold">{label}</dt>
-      <dd className={`mt-0.5 font-mono text-lg font-extrabold whitespace-nowrap tabular-nums min-[380px]:text-xl ${highlight ? "text-pool-blue" : "text-pool-deep"}`}>
+    <div className="flex min-w-0 flex-col items-center text-center">
+      <dt className="text-ink-700 order-2 mt-0.5 text-sm font-bold">{label}</dt>
+      <dd className={`order-1 font-mono text-xl leading-tight font-extrabold whitespace-nowrap tabular-nums ${highlight ? "text-pool-blue" : "text-pool-deep"}`}>
         {value == null ? "Sin marca" : formatSwimTime(value)}
       </dd>
     </div>
