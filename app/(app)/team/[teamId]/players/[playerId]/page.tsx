@@ -60,7 +60,7 @@ export default async function TeamPlayerPage({
   const backTarget = getPlayerProfileBackTarget(from, team.id);
 
   return (
-    <PageShell width="md" className="gap-5 pb-8">
+    <PageShell width="md" className="gap-3 pb-4">
       <PageBackLink href={backTarget.href as Route}>{backTarget.label}</PageBackLink>
 
       <header className="bg-pool-deep shadow-elev-2 relative overflow-hidden rounded-[1.75rem] text-white">
@@ -99,13 +99,10 @@ export default async function TeamPlayerPage({
       </header>
 
       <section aria-labelledby="player-season-heading">
-        <div className="px-1">
-          <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">Esta temporada</p>
-          <h2 id="player-season-heading" className="font-display text-pool-deep text-xl font-extrabold">
-            Rendimiento con el equipo
-          </h2>
-        </div>
-        <dl className="bg-pool-deep mt-3 grid grid-cols-6 gap-2 rounded-2xl p-3 text-white shadow-sm">
+        <h2 id="player-season-heading" className="font-display text-pool-deep px-1 text-xl font-extrabold">
+          Esta temporada
+        </h2>
+        <dl className="bg-pool-deep mt-2 grid grid-cols-6 gap-2 rounded-2xl p-2.5 text-white shadow-sm">
           <PrimaryStat label="Expulsiones" value={snapshot?.exclusions ?? "—"} />
           <PrimaryStat label="Goles" value={actaStats.goals} featured />
           <PrimaryStat label="Asistencias" value={actaStats.assists} />
@@ -125,7 +122,7 @@ export default async function TeamPlayerPage({
             Tiempos de nado
           </h2>
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
+        <div className="mt-2 grid grid-cols-2 gap-2 sm:gap-3">
           <SwimDistanceCard distance={50} latest={swim.latest50} best={swim.best50} />
           <SwimDistanceCard distance={100} latest={swim.latest100} best={swim.best100} />
         </div>
@@ -141,7 +138,7 @@ function PrimaryStat({ label, value, featured = false }: {
   featured?: boolean;
 }) {
   return (
-    <div className="col-span-2 flex min-w-0 flex-col items-center justify-center px-0.5 py-2 text-center">
+    <div className="col-span-2 flex min-w-0 flex-col items-center justify-center px-0.5 py-1.5 text-center">
       <dt className="order-2 mt-1 text-xs font-bold tracking-wide text-white/85 uppercase">
         {label}
       </dt>
@@ -158,11 +155,11 @@ function SwimDistanceCard({ distance, latest, best }: {
   best: number | null;
 }) {
   return (
-    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card rounded-2xl p-2.5 shadow-sm sm:p-4">
+    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card rounded-2xl p-2.5 shadow-sm sm:p-3">
       <h3 id={`swim-${distance}-heading`} className="font-display text-pool-deep px-1 text-lg font-extrabold">
         {distance} m
       </h3>
-      <dl className="mt-2 flex flex-col gap-2">
+      <dl className="mt-1 flex flex-col gap-0.5">
         <SwimValue label="Actual" value={latest} />
         <SwimValue label="Mejor" value={best} />
       </dl>
@@ -172,9 +169,9 @@ function SwimDistanceCard({ distance, latest, best }: {
 
 function SwimValue({ label, value }: { label: string; value: number | null }) {
   return (
-    <div className="bg-pool-ice rounded-xl px-2.5 py-2">
-      <dt className="text-ink-700 text-xs font-bold">{label}</dt>
-      <dd className={`text-pool-deep mt-0.5 font-mono font-extrabold tabular-nums ${value == null ? "text-sm" : "text-base min-[360px]:text-lg"}`}>
+    <div className="flex min-h-8 items-center justify-between gap-1 px-1">
+      <dt className="text-ink-700 shrink-0 text-xs font-bold">{label}</dt>
+      <dd className="text-pool-deep font-mono text-[0.8125rem] font-extrabold whitespace-nowrap tabular-nums min-[380px]:text-sm">
         {value == null ? "Sin marca" : formatSwimTime(value)}
       </dd>
     </div>
@@ -186,7 +183,7 @@ function SecondaryStat({ label, value }: {
   value: number;
 }) {
   return (
-    <div className="col-span-3 flex min-w-0 flex-col items-center justify-center rounded-xl bg-white/10 px-2 py-2 text-center">
+    <div className="col-span-3 flex min-w-0 flex-col items-center justify-center rounded-xl bg-white/10 px-2 py-1.5 text-center">
       <dt className="order-2 mt-1 text-xs font-bold leading-tight text-white/85">
         {label}
       </dt>
