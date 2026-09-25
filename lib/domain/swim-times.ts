@@ -87,6 +87,19 @@ export function formatSwimTime(centiseconds: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")},${hundredths.toString().padStart(2, "0")}`;
 }
 
+export function getSwimProfileSummary(entries: SwimTimeEntryInput[]) {
+  const recent = [...entries].sort((a, b) =>
+    b.test_date.localeCompare(a.test_date) || b.created_at.localeCompare(a.created_at),
+  );
+  const latest50 = recent.find((entry) => entry.time_50_cs != null)?.time_50_cs ?? null;
+  const latest100 = recent.find((entry) => entry.time_100_cs != null)?.time_100_cs ?? null;
+  const best50 = entries.reduce<number | null>((best, entry) =>
+    entry.time_50_cs == null ? best : best == null ? entry.time_50_cs : Math.min(best, entry.time_50_cs), null);
+  const best100 = entries.reduce<number | null>((best, entry) =>
+    entry.time_100_cs == null ? best : best == null ? entry.time_100_cs : Math.min(best, entry.time_100_cs), null);
+  return { latest50, latest100, best50, best100 };
+}
+
 export function describeSwimTime(centiseconds: number): string {
   const minutes = Math.floor(centiseconds / 6000);
   const seconds = Math.floor((centiseconds % 6000) / 100);

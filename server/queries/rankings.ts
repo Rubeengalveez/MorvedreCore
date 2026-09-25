@@ -58,18 +58,20 @@ function scopeKindOf(scope: RankingScope): "season" | "category" | "team" {
 async function getSeasonActaStats(
   supabase: TypedSupabaseClient,
   seasonId: string,
+  teamId?: string,
 ): Promise<Map<string, { goals: number; assists: number; matches: number }>> {
   const totals = new Map<string, { goals: number; assists: number; matches: number }>();
   const matchIds: string[] = [];
 
   for (let offset = 0; ; offset += 500) {
-    const { data, error } = await supabase
+    let query = supabase
       .from("matches")
       .select("id")
       .eq("season_id", seasonId)
       .eq("status", "played")
-      .order("id")
-      .range(offset, offset + 499);
+      .order("id");
+    if (teamId) query = query.eq("team_id", teamId);
+    const { data, error } = await query.range(offset, offset + 499);
     if (error) throw new Error("No pudimos cargar los partidos del ranking.");
     matchIds.push(...(data ?? []).map((match) => match.id));
     if ((data?.length ?? 0) < 500) break;
@@ -95,6 +97,16 @@ async function getSeasonActaStats(
   }
 
   return totals;
+}
+
+export async function getPlayerTeamActaStats(input: {
+  seasonId: string;
+  teamId: string;
+  playerId: string;
+}): Promise<{ goals: number; assists: number; matches: number }> {
+  const supabase = await createClient();
+  const totals = await getSeasonActaStats(supabase, input.seasonId, input.teamId);
+  return totals.get(input.playerId) ?? { goals: 0, assists: 0, matches: 0 };
 }
 
 export async function getRankings(input: RankingQueryInput): Promise<RankingResult> {

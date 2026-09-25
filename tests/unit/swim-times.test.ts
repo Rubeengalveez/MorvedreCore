@@ -6,6 +6,7 @@ import {
   computeSwimLegends,
   computeSwimRanking,
   formatSwimTime,
+  getSwimProfileSummary,
   normalizeSearchTerm,
   parseSwimTime,
   type SwimTimeEntryInput,
@@ -67,6 +68,18 @@ describe("parseSwimTime", () => {
   it("muestra segundos y minutos de forma legible", () => {
     expect(formatSwimTime(3452)).toBe("34,52 s");
     expect(formatSwimTime(7840)).toBe("1:18,40");
+  });
+});
+
+describe("getSwimProfileSummary", () => {
+  it("separa la marca más reciente de la mejor en cada distancia", () => {
+    expect(getSwimProfileSummary([
+      entry({ id: "old", test_date: "2026-01-10", time_50_cs: 3500, time_100_cs: 7800 }),
+      entry({ id: "new", test_date: "2026-09-10", time_50_cs: 3700, time_100_cs: null }),
+    ])).toEqual({ latest50: 3700, best50: 3500, latest100: 7800, best100: 7800 });
+    expect(getSwimProfileSummary([])).toEqual({
+      latest50: null, best50: null, latest100: null, best100: null,
+    });
   });
 });
 

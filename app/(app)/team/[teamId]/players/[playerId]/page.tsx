@@ -1,14 +1,16 @@
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
-import { CalendarCheck, Goal, Shield, Timer, Trophy, Waves } from "lucide-react";
+import { CalendarCheck, Shield, Trophy, Waves } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
-import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
+import { PageShell } from "@/components/ui/page-shell";
 import { getPlayerProfileBackTarget } from "@/lib/domain/player-profile-navigation";
+import { formatSwimTime, getSwimProfileSummary } from "@/lib/domain/swim-times";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
+import { getPlayerTeamActaStats } from "@/server/queries/rankings";
+import { getSwimTimeEntries } from "@/server/queries/swim-times";
 import { getTeamById, getTeamRoster } from "@/server/queries/teams";
 
 export const dynamic = "force-dynamic";
@@ -38,205 +40,165 @@ export default async function TeamPlayerPage({
   if (!player) notFound();
 
   const supabase = await createClient();
-  const { data: snapshot } = await supabase
-    .from("ranking_snapshots")
-    .select(
-      "matches_played, matches_called, goals, exclusions, mvp_count, trainings_attended, trainings_total, attendance_pct, attendance_streak",
-    )
-    .eq("season_id", team.season_id)
-    .eq("scope", "team")
-    .eq("scope_key", team.id)
-    .eq("player_id", player.player_id)
-    .maybeSingle();
+  const [snapshotResult, actaStats, swimEntries] = await Promise.all([
+    supabase
+      .from("ranking_snapshots")
+      .select("matches_played, matches_called, exclusions, mvp_count")
+      .eq("season_id", team.season_id)
+      .eq("scope", "team")
+      .eq("scope_key", team.id)
+      .eq("player_id", player.player_id)
+      .maybeSingle(),
+    getPlayerTeamActaStats({ seasonId: team.season_id, teamId: team.id, playerId }),
+    getSwimTimeEntries({ playerId }),
+  ]);
+  if (snapshotResult.error) throw new Error("No pudimos cargar las estadísticas del jugador.");
 
-  const currentYear = new Date().getFullYear();
-  const age = player.birth_year != null ? currentYear - player.birth_year : null;
+  const snapshot = snapshotResult.data;
+  const swim = getSwimProfileSummary(swimEntries);
   const number = player.squad_number ?? player.cap_number;
   const backTarget = getPlayerProfileBackTarget(from, team.id);
-  const matchesPlayed = snapshot?.matches_played ?? 0;
-  const goalsPerMatch = matchesPlayed > 0 ? (snapshot?.goals ?? 0) / matchesPlayed : 0;
-  const exclusionsPerMatch = matchesPlayed > 0 ? (snapshot?.exclusions ?? 0) / matchesPlayed : 0;
-  const mvpRate =
-    matchesPlayed > 0 ? Math.round(((snapshot?.mvp_count ?? 0) / matchesPlayed) * 100) : 0;
 
   return (
-    <PageShell width="md" className="gap-4 pb-8">
+    <PageShell width="md" className="gap-5 pb-8">
       <PageBackLink href={backTarget.href as Route}>{backTarget.label}</PageBackLink>
 
-      <header className="border-ink-200 bg-paper-card shadow-elev-2 overflow-hidden rounded-[1.75rem] border">
-        <div className="bg-pool-deep h-20" aria-hidden="true" />
-        <div className="px-5 pb-6 sm:px-7 sm:pb-7">
-          <div className="-mt-14 flex items-end justify-between gap-4">
-            <Avatar
-              src={player.photo_url}
-              name={player.full_name}
-              size={112}
-              teamColor={team.color}
-              className="border-paper-card ring-paper-card border-4 ring-2"
-            />
-            {number != null ? (
-              <div className="bg-pool-deep text-paper shadow-elev-2 flex h-14 min-w-14 items-center justify-center rounded-2xl px-3 font-mono text-2xl font-extrabold tabular-nums">
-                {number}
-              </div>
-            ) : null}
-          </div>
-
-          <p className="text-pool-blue mt-5 text-xs font-extrabold tracking-[0.12em] uppercase">
+      <header className="bg-pool-deep shadow-elev-2 relative overflow-hidden rounded-[1.75rem] text-white">
+        <span className="lane-pattern pointer-events-none absolute inset-0 opacity-20" aria-hidden="true" />
+        <div className="relative px-5 pt-5 pb-6 sm:px-7 sm:pt-7">
+          <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">
             {team.label}
           </p>
-          <h1 className="font-display text-pool-deep mt-1 text-3xl leading-tight font-extrabold tracking-tight text-balance">
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <span aria-hidden="true" className="inline-flex rounded-full ring-4 ring-white/20">
+              <Avatar
+                src={player.photo_url}
+                name={player.full_name}
+                size={player.photo_url ? 144 : 104}
+                teamColor={team.color}
+                className="border-4 shadow-elev-2"
+              />
+            </span>
+            {number != null ? (
+              <span className="bg-paper text-pool-deep flex h-14 min-w-14 items-center justify-center rounded-2xl px-3 font-mono text-2xl font-extrabold tabular-nums shadow-sm">
+                <span className="sr-only">Dorsal </span>
+                {number}
+              </span>
+            ) : null}
+          </div>
+          <h1 className="font-display mt-5 text-[clamp(1.75rem,7vw,2.35rem)] leading-tight font-extrabold tracking-tight text-balance">
             {player.full_name}
           </h1>
-          <p className="text-ink-500 mt-2 text-sm">
-            {player.birth_year
-              ? `Nacido en ${player.birth_year}`
-              : "Año de nacimiento no disponible"}
-            {age != null ? ` · ${age} años` : ""}
-          </p>
+          {player.birth_year != null ? (
+            <p className="mt-1 text-sm font-medium text-white/85">Nacido en {player.birth_year}</p>
+          ) : null}
         </div>
       </header>
 
-      <Link
-        href={`/players/${player.player_id}/swim-times?from=team&teamId=${teamId}` as Route}
-        className="border-pool-blue/30 bg-pool-foam/55 text-pool-deep hover:border-pool-blue focus-visible:ring-pool-blue flex min-h-16 touch-manipulation items-center gap-3 rounded-2xl border px-4 py-3 font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none"
-      >
-        <span className="bg-pool-deep text-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-          <Timer className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block">Tiempos de nado</span>
-          <span className="text-ink-600 mt-0.5 block text-sm font-semibold">
-            Tiempo actual, mejor e historial de 50 y 100 m
-          </span>
-        </span>
-      </Link>
+      <section aria-labelledby="player-season-heading">
+        <div className="px-1">
+          <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">Esta temporada</p>
+          <h2 id="player-season-heading" className="font-display text-pool-deep text-xl font-extrabold">
+            Rendimiento con el equipo
+          </h2>
+        </div>
+        <dl className="bg-pool-deep mt-3 grid grid-cols-3 gap-2 rounded-2xl p-3 text-white shadow-sm">
+          <PrimaryStat label="Partidos" value={snapshot?.matches_played ?? "—"} />
+          <PrimaryStat label="Goles" value={actaStats.goals} featured />
+          <PrimaryStat label="Asistencias" value={actaStats.assists} />
+        </dl>
+        <p className="text-ink-600 mt-2 px-1 text-sm leading-snug">
+          Goles y asistencias de partidos finalizados con acta.
+        </p>
+      </section>
+
+      <section aria-labelledby="player-swim-heading">
+        <div className="flex items-center gap-2 px-1">
+          <Waves className="text-pool-blue h-5 w-5" aria-hidden="true" />
+          <h2 id="player-swim-heading" className="font-display text-pool-deep text-xl font-extrabold">
+            Tiempos de nado
+          </h2>
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3">
+          <SwimDistanceCard distance={50} latest={swim.latest50} best={swim.best50} />
+          <SwimDistanceCard distance={100} latest={swim.latest100} best={swim.best100} />
+        </div>
+      </section>
 
       {snapshot ? (
-        <>
-          <section aria-labelledby="player-season-heading">
-            <div className="px-1">
-              <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-                Temporada
-              </p>
-              <h2
-                id="player-season-heading"
-                className="font-display text-pool-deep text-xl font-extrabold"
-              >
-                Rendimiento con el equipo
-              </h2>
-            </div>
-
-            <dl className="border-ink-200 bg-paper-card divide-ink-200 mt-3 grid grid-cols-3 divide-x overflow-hidden rounded-2xl border shadow-sm">
-              <PrimaryStat label="Partidos" value={snapshot.matches_played} />
-              <PrimaryStat label="Goles" value={snapshot.goals} />
-              <PrimaryStat
-                label="Asistencia"
-                value={`${Math.round(Number(snapshot.attendance_pct))}%`}
-              />
-            </dl>
-          </section>
-
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            <StatGroup
-              title="Competición"
-              rows={[
-                { label: "Convocatorias", value: snapshot.matches_called, icon: CalendarCheck },
-                {
-                  label: "Goles por partido",
-                  value: goalsPerMatch.toLocaleString("es-ES", { maximumFractionDigits: 2 }),
-                  icon: Goal,
-                },
-                {
-                  label: "Expulsiones por partido",
-                  value: exclusionsPerMatch.toLocaleString("es-ES", {
-                    maximumFractionDigits: 2,
-                  }),
-                  icon: Shield,
-                },
-                {
-                  label: "Partidos como MVP",
-                  value: `${snapshot.mvp_count} · ${mvpRate}%`,
-                  icon: Trophy,
-                },
-              ]}
-            />
-            <StatGroup
-              title="Entrenamientos"
-              rows={[
-                {
-                  label: "Sesiones completadas",
-                  value: `${snapshot.trainings_attended} de ${snapshot.trainings_total}`,
-                  icon: Waves,
-                },
-                { label: "Racha de asistencia", value: snapshot.attendance_streak, icon: Goal },
-              ]}
-            />
-          </div>
-        </>
-      ) : (
-        <section className="border-ink-200 bg-paper-card flex min-h-40 flex-col items-center justify-center rounded-2xl border border-dashed px-6 text-center">
-          <Waves className="text-ink-400 h-7 w-7" aria-hidden="true" />
-          <h2 className="font-display text-pool-deep mt-3 text-lg font-extrabold">
-            Sin estadísticas todavía
+        <section aria-labelledby="player-more-heading">
+          <h2 id="player-more-heading" className="font-display text-pool-deep px-1 text-xl font-extrabold">
+            Más datos de la temporada
           </h2>
-          <p className="text-ink-500 mt-1 max-w-sm text-sm leading-relaxed">
-            La actividad de esta temporada aparecerá aquí cuando se registren partidos y
-            entrenamientos.
-          </p>
+          <dl className="bg-paper-card mt-3 grid grid-cols-3 gap-2 rounded-2xl p-3 shadow-sm">
+            <SecondaryStat label="Convocatorias" value={snapshot.matches_called} icon={CalendarCheck} />
+            <SecondaryStat label="Expulsiones" value={snapshot.exclusions} icon={Shield} />
+            <SecondaryStat label="MVP" value={snapshot.mvp_count} icon={Trophy} />
+          </dl>
         </section>
-      )}
+      ) : null}
     </PageShell>
   );
 }
 
-function PrimaryStat({ label, value }: { label: string; value: string | number }) {
+function PrimaryStat({ label, value, featured = false }: {
+  label: string;
+  value: string | number;
+  featured?: boolean;
+}) {
   return (
-    <div className="min-w-0 px-2 py-4 text-center sm:px-4 sm:py-5">
-      <dd className="font-display text-pool-deep text-2xl font-extrabold tabular-nums sm:text-3xl">
-        {value}
-      </dd>
-      <dt className="text-ink-500 mt-1 truncate text-xs font-extrabold tracking-wide uppercase">
+    <div className="flex min-w-0 flex-col items-center justify-center px-0.5 py-2 text-center">
+      <dt className="order-2 mt-1 text-xs font-bold tracking-wide text-white/85 uppercase">
         {label}
       </dt>
+      <dd className={`order-1 font-mono text-3xl font-extrabold tabular-nums ${featured ? "text-ball-gold" : "text-white"}`}>
+        {value}
+      </dd>
     </div>
   );
 }
 
-function StatGroup({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: Array<{
-    label: string;
-    value: string | number;
-    icon: React.ComponentType<{ className?: string }>;
-  }>;
+function SwimDistanceCard({ distance, latest, best }: {
+  distance: 50 | 100;
+  latest: number | null;
+  best: number | null;
 }) {
   return (
-    <section aria-labelledby={`player-${title.toLocaleLowerCase("es-ES")}`}>
-      <h2
-        id={`player-${title.toLocaleLowerCase("es-ES")}`}
-        className="font-display text-pool-deep mb-3 px-1 text-lg font-extrabold"
-      >
-        {title}
-      </h2>
-      <dl className="border-ink-200 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-2xl border shadow-sm">
-        {rows.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="flex min-h-16 items-center gap-3 px-4 py-3">
-            <span
-              aria-hidden="true"
-              className="bg-pool-foam text-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            >
-              <Icon className="h-5 w-5" />
-            </span>
-            <dt className="text-ink-600 min-w-0 flex-1 text-sm font-semibold">{label}</dt>
-            <dd className="text-pool-deep shrink-0 font-mono text-lg font-extrabold tabular-nums">
-              {value}
-            </dd>
-          </div>
-        ))}
+    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card rounded-2xl p-2.5 shadow-sm sm:p-4">
+      <h3 id={`swim-${distance}-heading`} className="font-display text-pool-deep px-1 text-lg font-extrabold">
+        {distance} m
+      </h3>
+      <dl className="mt-2 flex flex-col gap-2">
+        <SwimValue label="Actual" value={latest} />
+        <SwimValue label="Mejor" value={best} />
       </dl>
-    </section>
+    </article>
+  );
+}
+
+function SwimValue({ label, value }: { label: string; value: number | null }) {
+  return (
+    <div className="bg-pool-ice rounded-xl px-2.5 py-2">
+      <dt className="text-ink-700 text-xs font-bold">{label}</dt>
+      <dd className={`text-pool-deep mt-0.5 font-mono font-extrabold tabular-nums ${value == null ? "text-sm" : "text-base min-[360px]:text-lg"}`}>
+        {value == null ? "Sin marca" : formatSwimTime(value)}
+      </dd>
+    </div>
+  );
+}
+
+function SecondaryStat({ label, value, icon: Icon }: {
+  label: string;
+  value: number;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col items-center px-0.5 py-1 text-center">
+      <Icon className="text-pool-blue mb-1 h-5 w-5" aria-hidden="true" />
+      <dt className="text-ink-700 order-2 mt-1 text-xs font-bold leading-tight">
+        {label}
+      </dt>
+      <dd className="text-pool-deep order-1 font-mono text-xl font-extrabold tabular-nums">{value}</dd>
+    </div>
   );
 }
