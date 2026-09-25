@@ -105,14 +105,14 @@ export default async function TeamPlayerPage({
         <div className="bg-paper-card shadow-elev-1 mt-2 overflow-hidden rounded-2xl">
           <div className="bg-pool-deep relative overflow-hidden">
             <span className="lane-pattern pointer-events-none absolute inset-0 opacity-15" aria-hidden="true" />
-            <dl className="relative grid grid-cols-3 gap-1 p-2 text-white">
+            <dl className="relative grid grid-cols-3 gap-2 p-2.5 text-white">
               <PrimaryStat label="Expulsiones" value={snapshot?.exclusions ?? "—"} />
               <PrimaryStat label="Goles" value={actaStats.goals} featured />
               <PrimaryStat label="Asistencias" value={actaStats.assists} />
             </dl>
           </div>
           {snapshot ? (
-            <dl className="grid grid-cols-2 gap-2 p-2">
+            <dl className="grid grid-cols-2 gap-2 p-2.5">
               <SecondaryStat label="Partidos" value={snapshot.matches_played} />
               <SecondaryStat label="MVP" value={snapshot.mvp_count} />
             </dl>
@@ -143,11 +143,11 @@ function PrimaryStat({ label, value, featured = false }: {
   featured?: boolean;
 }) {
   return (
-    <div className={`flex min-w-0 flex-col items-center justify-center rounded-xl px-0.5 py-1.5 text-center ${featured ? "bg-white/10" : ""}`}>
-      <dt className="order-2 mt-0.5 text-xs font-bold tracking-wide text-white/85 uppercase">
+    <div className={`flex min-w-0 flex-col items-center justify-center rounded-xl px-0.5 py-2 text-center ${featured ? "bg-white/10" : ""}`}>
+      <dt className="order-2 mt-1 text-xs font-bold text-white/90 uppercase min-[360px]:text-[0.8125rem]">
         {label}
       </dt>
-      <dd className={`order-1 font-mono text-3xl font-extrabold tabular-nums ${featured ? "text-ball-gold" : "text-white"}`}>
+      <dd className={`order-1 font-mono text-4xl leading-none font-extrabold tabular-nums ${featured ? "text-ball-gold" : "text-white"}`}>
         {value}
       </dd>
     </div>
@@ -160,12 +160,11 @@ function SwimDistanceCard({ distance, latest, best }: {
   best: number | null;
 }) {
   return (
-    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card shadow-elev-1 flex min-h-14 items-center gap-3 rounded-2xl px-3 py-1.5">
-      <h3 id={`swim-${distance}-heading`} aria-label={`${distance} metros`} className="bg-pool-deep flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl font-mono font-extrabold leading-none text-white">
-        <span className="text-lg">{distance}</span>
-        <span className="mt-0.5 text-[0.625rem] tracking-wide uppercase">metros</span>
+    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card shadow-elev-1 rounded-2xl p-2.5">
+      <h3 id={`swim-${distance}-heading`} className="font-display text-pool-deep px-1 text-lg font-extrabold">
+        {distance} metros
       </h3>
-      <dl className="grid min-w-0 flex-1 grid-cols-2 gap-2">
+      <dl className="mt-1.5 grid grid-cols-2 gap-2">
         <SwimValue label="Actual" value={latest} />
         <SwimValue label="Mejor" value={best} highlight />
       </dl>
@@ -175,9 +174,9 @@ function SwimDistanceCard({ distance, latest, best }: {
 
 function SwimValue({ label, value, highlight = false }: { label: string; value: number | null; highlight?: boolean }) {
   return (
-    <div className="min-w-0">
-      <dt className="text-ink-700 text-xs font-bold">{label}</dt>
-      <dd className={`mt-0.5 font-mono text-sm font-extrabold whitespace-nowrap tabular-nums min-[380px]:text-base ${highlight ? "text-pool-blue" : "text-pool-deep"}`}>
+    <div className={`min-w-0 rounded-xl px-2 py-1 ${highlight ? "bg-pool-foam" : "bg-pool-ice"}`}>
+      <dt className="text-ink-700 text-sm font-bold">{label}</dt>
+      <dd className={`mt-0.5 font-mono text-lg font-extrabold whitespace-nowrap tabular-nums min-[380px]:text-xl ${highlight ? "text-pool-blue" : "text-pool-deep"}`}>
         {value == null ? "Sin marca" : formatSwimTime(value)}
       </dd>
     </div>
@@ -189,11 +188,11 @@ function SecondaryStat({ label, value }: {
   value: number;
 }) {
   return (
-    <div className="bg-pool-ice flex min-w-0 items-center justify-center gap-2 rounded-xl px-2 py-1.5">
-      <dt className="order-2 text-xs font-bold leading-tight text-ink-700">
+    <div className="bg-pool-ice flex min-w-0 items-center justify-center gap-2 rounded-xl px-2 py-2">
+      <dt className="order-2 text-sm font-bold leading-tight text-ink-700">
         {label}
       </dt>
-      <dd className="text-pool-deep order-1 font-mono text-xl font-extrabold tabular-nums">{value}</dd>
+      <dd className="text-pool-deep order-1 font-mono text-2xl leading-none font-extrabold tabular-nums">{value}</dd>
     </div>
   );
 }
