@@ -106,12 +106,12 @@ export default async function TeamPlayerPage({
           </h2>
         </div>
         <dl className="bg-pool-deep mt-3 grid grid-cols-6 gap-2 rounded-2xl p-3 text-white shadow-sm">
-          <PrimaryStat label="Partidos" value={snapshot?.matches_played ?? "—"} />
+          <PrimaryStat label="Expulsiones" value={snapshot?.exclusions ?? "—"} />
           <PrimaryStat label="Goles" value={actaStats.goals} featured />
           <PrimaryStat label="Asistencias" value={actaStats.assists} />
           {snapshot ? (
             <>
-              <SecondaryStat label="Expulsiones" value={snapshot.exclusions} />
+              <SecondaryStat label="Partidos" value={snapshot.matches_played} />
               <SecondaryStat label="MVP" value={snapshot.mvp_count} />
             </>
           ) : null}
