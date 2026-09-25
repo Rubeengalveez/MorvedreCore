@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Check, PackageOpen, Phone, Send, ShoppingBag, Trash2 } from "lucide-react";
+import { Check, PackageOpen, Phone, Send, ShoppingBag, Trash2 } from "lucide-react";
 
 import { useShopCart } from "@/hooks/use-shop-cart";
 import { formatCents, summarizeCart } from "@/lib/domain/shop";
@@ -44,10 +44,7 @@ export function CartClient({
   const [success, setSuccess] = useState(false);
   const [phone, setPhone] = useState(initialPhone ?? "");
   const [phoneOpen, setPhoneOpen] = useState(false);
-  const [exitOpen, setExitOpen] = useState(false);
-  const [pendingHref, setPendingHref] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const allowNextNavigation = useRef(false);
 
   const cartSummary = summarizeCart(
     cart.items.map((item) => ({
@@ -59,48 +56,6 @@ export function CartClient({
     products,
   );
   const productById = new Map(products.map((product) => [product.id, product]));
-  const shouldWarnBeforeLeaving = cart.hydrated && cart.items.length > 0 && !success && !pending;
-
-  useEffect(() => {
-    if (!shouldWarnBeforeLeaving) return;
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      if (allowNextNavigation.current) return;
-      event.preventDefault();
-      event.returnValue = "";
-    };
-    const handleDocumentClick = (event: MouseEvent) => {
-      if (allowNextNavigation.current) return;
-      if (
-        event.defaultPrevented ||
-        event.button !== 0 ||
-        event.metaKey ||
-        event.ctrlKey ||
-        event.shiftKey
-      )
-        return;
-      const target = event.target;
-      if (!(target instanceof Element)) return;
-      const anchor = target.closest<HTMLAnchorElement>("a[href]");
-      if (!anchor || anchor.target === "_blank" || anchor.hasAttribute("download")) return;
-      const destination = new URL(anchor.href, window.location.href);
-      if (
-        destination.href === window.location.href ||
-        destination.pathname === window.location.pathname
-      )
-        return;
-      event.preventDefault();
-      setPendingHref(`${destination.pathname}${destination.search}${destination.hash}`);
-      setExitOpen(true);
-    };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("click", handleDocumentClick, true);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("click", handleDocumentClick, true);
-    };
-  }, [shouldWarnBeforeLeaving]);
-
   function handleCheckout() {
     setError(null);
     if (!cartSummary.ok) {
@@ -147,7 +102,7 @@ export function CartClient({
         role="status"
         className="border-success/25 bg-success/10 flex min-h-64 flex-col items-center justify-center rounded-[1.75rem] border px-6 text-center"
       >
-        <span className="bg-success text-paper flex h-14 w-14 items-center justify-center rounded-2xl">
+        <span className="bg-pool-deep text-paper flex h-14 w-14 items-center justify-center rounded-2xl">
           <Check className="h-7 w-7" aria-hidden="true" />
         </span>
         <h2 className="font-display text-pool-deep mt-4 text-2xl font-extrabold">
@@ -155,7 +110,7 @@ export function CartClient({
         </h2>
         <p className="text-ink-600 mt-2 max-w-sm text-base leading-relaxed">
           {requiresGuardian
-            ? "Sol no recibirá el pedido hasta que una persona adulta de tu familia lo apruebe."
+            ? "Sol recibirá el pedido cuando una persona adulta de tu familia lo apruebe."
             : "Te llevamos al seguimiento del pedido…"}
         </p>
       </div>
@@ -319,11 +274,11 @@ export function CartClient({
             >
               Indicaciones del pedido
             </h2>
-            <label
-              htmlFor="shop-order-notes"
-              className="text-ink-600 mt-1 block text-sm leading-relaxed"
-            >
+            <p className="text-ink-600 mt-1 text-sm leading-relaxed">
               Opcional. Úsalo solo si necesitas aclarar algo a la encargada.
+            </p>
+            <label htmlFor="shop-order-notes" className="sr-only">
+              Indicaciones del pedido
             </label>
             <textarea
               id="shop-order-notes"
@@ -333,24 +288,22 @@ export function CartClient({
               autoComplete="off"
               rows={3}
               placeholder="Escribe una indicación general…"
-              className="border-ink-200 bg-paper text-pool-deep placeholder:text-ink-400 focus-visible:ring-pool-blue mt-3 w-full resize-y rounded-xl border p-3 text-base outline-none focus-visible:ring-2"
+              className="border-ink-300 bg-paper text-pool-deep placeholder:text-ink-500 focus-visible:ring-pool-blue mt-3 w-full resize-y rounded-xl border p-3 text-base outline-none focus-visible:ring-2"
             />
           </section>
         </div>
 
         <aside className="border-pool-deep bg-pool-deep text-paper shadow-elev-2 rounded-xl border p-5 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
-          <p className="text-paper/80 text-xs font-extrabold tracking-[0.08em] uppercase">
-            Resumen
-          </p>
+          <p className="text-paper text-xs font-extrabold tracking-[0.08em] uppercase">Resumen</p>
           {cartSummary.ok ? (
             <>
               <div className="mt-3 flex items-end justify-between gap-4">
-                <span className="text-paper/80 text-base font-semibold">Total</span>
+                <span className="text-paper text-base font-semibold">Total</span>
                 <span className="text-paper font-mono text-3xl font-extrabold tabular-nums">
                   {formatCents(cartSummary.total_cents!, "EUR")}
                 </span>
               </div>
-              <p className="text-paper/70 mt-3 text-sm leading-relaxed">
+              <p className="text-paper mt-3 text-sm leading-relaxed">
                 {cart.items.length} {cart.items.length === 1 ? "producto" : "productos"}.{" "}
                 {requiresGuardian
                   ? "Primero lo revisará tu familia; todavía no se enviará a Sol."
@@ -376,7 +329,7 @@ export function CartClient({
             type="button"
             disabled={pending || !cartSummary.ok}
             onClick={handleCheckout}
-            className="bg-action hover:bg-action-dark text-paper focus-visible:ring-paper mt-5 inline-flex min-h-13 w-full touch-manipulation items-center justify-center gap-2 rounded-lg px-4 text-base font-extrabold transition-[background-color,transform,opacity] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
+            className="bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-ball-gold mt-5 inline-flex min-h-13 w-full touch-manipulation items-center justify-center gap-2 rounded-lg px-4 text-base font-extrabold transition-[background-color,transform,opacity] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
           >
             <Send className="h-5 w-5" aria-hidden="true" />
             {pending ? "Enviando…" : "Enviar solicitud"}
@@ -406,6 +359,8 @@ export function CartClient({
               inputMode="tel"
               autoComplete="tel"
               value={phone}
+              aria-invalid={Boolean(phone && !normalizeSpanishPhone(phone))}
+              aria-describedby="shop-contact-phone-help"
               onChange={(event) => {
                 setPhone(event.target.value);
                 setError(null);
@@ -413,9 +368,18 @@ export function CartClient({
               placeholder="Ejemplo: 612 345 678"
               className="mt-2"
             />
-            {phone && !normalizeSpanishPhone(phone) ? (
+            <p
+              id="shop-contact-phone-help"
+              role={phone && !normalizeSpanishPhone(phone) ? "alert" : undefined}
+              className={`${phone && !normalizeSpanishPhone(phone) ? "text-goggle-red" : "text-ink-600"} mt-2 text-sm font-semibold`}
+            >
+              {phone && !normalizeSpanishPhone(phone)
+                ? "Escribe un teléfono válido de 9 cifras o con prefijo internacional."
+                : "Escribe 9 cifras o incluye el prefijo internacional."}
+            </p>
+            {error ? (
               <p role="alert" className="text-goggle-red mt-2 text-sm font-semibold">
-                Escribe un teléfono válido de 9 cifras o con prefijo internacional.
+                {error}
               </p>
             ) : null}
           </SheetBody>
@@ -433,47 +397,6 @@ export function CartClient({
               }}
             >
               Guardar teléfono y enviar
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={exitOpen} onOpenChange={setExitOpen}>
-        <SheetContent size="md">
-          <SheetHeader>
-            <span className="bg-ball-gold/25 text-pool-deep mb-2 flex h-11 w-11 items-center justify-center rounded-xl">
-              <AlertTriangle className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <SheetTitle>Alto ahí: el pedido aún no está enviado</SheetTitle>
-            <SheetDescription>
-              Los productos seguirán en el carrito, pero Sol no recibirá nada hasta que pulses
-              “Enviar solicitud”.
-            </SheetDescription>
-          </SheetHeader>
-          <SheetBody>
-            <div className="border-ball-gold/35 bg-ball-gold/10 text-ink-700 rounded-xl border px-4 py-3 text-sm leading-relaxed">
-              Sol no recibirá el pedido hasta que pulses <strong>Enviar solicitud</strong>. Si
-              sales, los productos seguirán guardados para cuando vuelvas.
-            </div>
-          </SheetBody>
-          <SheetFooter className="gap-2">
-            <Button type="button" size="lg" onClick={() => setExitOpen(false)}>
-              Volver al carrito
-            </Button>
-            <Button
-              type="button"
-              size="lg"
-              variant="secondary"
-              className="border-goggle-red/30 text-goggle-red"
-              onClick={() => {
-                const destination = pendingHref;
-                allowNextNavigation.current = true;
-                setExitOpen(false);
-                setPendingHref(null);
-                if (destination) router.push(destination as never);
-              }}
-            >
-              Salir y conservar el carrito
             </Button>
           </SheetFooter>
         </SheetContent>

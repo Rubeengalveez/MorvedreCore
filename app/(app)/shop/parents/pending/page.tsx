@@ -39,7 +39,7 @@ export default async function ParentPendingPage() {
         <ShieldCheck className="text-pool-ice mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <p className="text-sm leading-relaxed font-semibold">
           Comprueba producto, talla y personalización. Al aprobar, el pedido se envía a la persona
-            encargada de la equipación.
+          encargada de la equipación.
         </p>
       </div>
 
@@ -56,8 +56,8 @@ export default async function ParentPendingPage() {
               key={o.id}
               className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border"
             >
-              <div className="bg-pool-foam/65 border-ink-200 flex items-center justify-between gap-2 border-b px-4 py-3">
-                <span className="text-pool-deep text-sm font-extrabold">
+              <div className="bg-pool-foam/65 flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+                <span className="text-pool-deep min-w-0 text-sm font-extrabold break-words">
                   {o.requested_by_name ?? "Tu hijo/a"}
                   <span className="text-pool-blue ml-2 text-xs font-extrabold">
                     {o.order_reference}
@@ -69,18 +69,12 @@ export default async function ParentPendingPage() {
                     })}
                   </span>
                 </span>
-                <span
-                  className="inline-flex min-h-7 items-center rounded-full px-2.5 text-xs font-extrabold uppercase"
-                  style={{
-                    backgroundColor: "var(--warning)20",
-                    color: "var(--warning)",
-                  }}
-                >
+                <span className="inline-flex min-h-7 items-center rounded-full bg-amber-50 px-2.5 text-xs font-extrabold text-amber-900 uppercase">
                   {SHOP_ORDER_STATUS_LABELS[o.status]}
                 </span>
               </div>
               <div className="p-4">
-                <ul className="divide-ink-200 divide-y">
+                <ul className="flex flex-col gap-2">
                   {o.items.map((i) => (
                     <li key={i.id} className="flex min-h-12 items-center gap-3 py-2 text-sm">
                       <span className="text-pool-deep font-mono font-extrabold">{i.quantity}×</span>
@@ -96,7 +90,7 @@ export default async function ParentPendingPage() {
                   ))}
                 </ul>
                 {o.notes ? <p className="text-ink-700 mt-2 text-sm italic">“{o.notes}”</p> : null}
-                <div className="border-ink-200 mt-3 flex items-end justify-between border-t pt-3">
+                <div className="bg-pool-ice mt-3 flex items-end justify-between rounded-xl px-3 py-2.5">
                   <span className="text-ink-600 text-sm font-semibold">Total</span>
                   <strong className="text-pool-deep font-mono text-2xl tabular-nums">
                     {formatCents(o.total_cents, o.currency)}

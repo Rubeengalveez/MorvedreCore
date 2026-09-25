@@ -65,8 +65,8 @@ export default async function ShopPage({
         className="pr-14 sm:pr-36"
       />
 
-      <Card className="divide-ink-200 divide-y overflow-hidden">
-        <nav aria-label="Gestiones de compra">
+      <Card className="overflow-hidden p-2">
+        <nav aria-label="Gestiones de compra" className="grid gap-1">
           <ShopShortcut
             href="/shop/orders"
             icon={<PackageOpen className="h-5 w-5" aria-hidden="true" />}
@@ -102,7 +102,9 @@ export default async function ShopPage({
               Productos
             </h2>
           </div>
-          <span className="text-ink-500 text-sm font-semibold tabular-nums">{products.length}</span>
+          <span className="text-ink-600 text-sm font-semibold tabular-nums" aria-live="polite">
+            {products.length} {products.length === 1 ? "producto" : "productos"}
+          </span>
         </div>
 
         <ShopFilters categories={categories} activeCategory={category} search={search} />
@@ -169,7 +171,7 @@ function ProductCard({ product }: { product: ShopProduct }) {
             {product.title}
           </h3>
           <p className="text-ink-500 mt-1 text-xs font-semibold">{variantText}</p>
-          <div className="border-ink-200 mt-auto border-t pt-3">
+          <div className="mt-auto pt-3">
             <span className="text-pool-deep block font-mono text-lg font-extrabold whitespace-nowrap tabular-nums sm:text-xl">
               {formatCents(product.price_cents, product.currency)}
             </span>
@@ -203,7 +205,7 @@ function ShopShortcut({
   return (
     <Link
       href={href}
-      className="hover:bg-pool-foam/40 focus-visible:ring-pool-blue group flex min-h-16 touch-manipulation items-center gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+      className="hover:bg-pool-foam/70 focus-visible:ring-pool-blue group flex min-h-16 touch-manipulation items-center gap-3 rounded-xl px-3 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
     >
       <span className="bg-pool-foam text-pool-blue flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
         {icon}

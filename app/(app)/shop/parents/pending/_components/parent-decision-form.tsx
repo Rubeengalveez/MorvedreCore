@@ -68,7 +68,7 @@ export function ParentDecisionForm({ orderId, initialPhone }: ParentDecisionForm
           disabled={pending}
           onClick={handleApprove}
         >
-          <Check className="h-4 w-4" />
+          <Check className="h-4 w-4" aria-hidden="true" />
           Aprobar
         </Button>
         <Sheet>
@@ -127,6 +127,8 @@ export function ParentDecisionForm({ orderId, initialPhone }: ParentDecisionForm
               inputMode="tel"
               autoComplete="tel"
               value={phone}
+              aria-invalid={Boolean(phone && !normalizeSpanishPhone(phone))}
+              aria-describedby={`parent-shop-phone-help-${orderId}`}
               onChange={(event) => {
                 setPhone(event.target.value);
                 setError(null);
@@ -134,9 +136,18 @@ export function ParentDecisionForm({ orderId, initialPhone }: ParentDecisionForm
               placeholder="Ejemplo: 612 345 678"
               className="mt-2"
             />
-            {phone && !normalizeSpanishPhone(phone) ? (
+            <p
+              id={`parent-shop-phone-help-${orderId}`}
+              role={phone && !normalizeSpanishPhone(phone) ? "alert" : undefined}
+              className={`${phone && !normalizeSpanishPhone(phone) ? "text-goggle-red" : "text-ink-600"} mt-2 text-sm font-semibold`}
+            >
+              {phone && !normalizeSpanishPhone(phone)
+                ? "Escribe un teléfono válido de 9 cifras o con prefijo internacional."
+                : "Escribe 9 cifras o incluye el prefijo internacional."}
+            </p>
+            {error ? (
               <p role="alert" className="text-goggle-red mt-2 text-sm font-semibold">
-                Escribe un teléfono válido de 9 cifras o con prefijo internacional.
+                {error}
               </p>
             ) : null}
           </SheetBody>

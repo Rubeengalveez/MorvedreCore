@@ -174,7 +174,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           value={form.description}
           onChange={(e) => update("description", e.target.value)}
           rows={4}
-          className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-[100px] w-full rounded border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
+          className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-[100px] w-full rounded-lg border px-3 py-2 text-base focus-visible:ring-2 focus-visible:outline-none"
           required
         />
       </Field>
@@ -257,10 +257,12 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           </div>
         ) : null}
       </div>
-      <Field label="Fotos del producto">
+      <div className="flex flex-col gap-1">
+        <span className="text-eyebrow text-ink-700">Fotos del producto</span>
         <input
           ref={fileRef}
           type="file"
+          aria-label="Seleccionar fotos del producto"
           multiple
           accept="image/jpeg,image/png,image/webp"
           onChange={(e) => {
@@ -268,7 +270,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             setImageFiles(files);
             setCoverImageIndex(0);
           }}
-          className="hidden"
+          className="sr-only"
         />
         <div className="flex flex-col gap-2">
           <button
@@ -289,14 +291,22 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
                   type="button"
                   onClick={() => setCoverImageIndex(index)}
                   className={cn(
-                    "bg-paper-sunk relative aspect-square overflow-hidden rounded-md border",
+                    "bg-paper-sunk focus-visible:ring-pool-blue relative aspect-square min-h-12 overflow-hidden rounded-md border focus-visible:ring-2 focus-visible:outline-none",
                     coverImageIndex === index
                       ? "border-action ring-action/25 ring-2"
                       : "border-ink-300",
                   )}
+                  aria-label={`Usar foto ${index + 1} como portada${coverImageIndex === index ? ", seleccionada" : ""}`}
+                  aria-pressed={coverImageIndex === index}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={url} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={url}
+                    alt=""
+                    width={120}
+                    height={120}
+                    className="h-full w-full object-cover"
+                  />
                   {coverImageIndex === index ? (
                     <span className="bg-action text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-xs font-extrabold uppercase">
                       Portada
@@ -316,7 +326,13 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
                     className="border-ink-300 bg-paper-sunk relative aspect-square overflow-hidden rounded-md border"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={image.url} alt="" className="h-full w-full object-cover" />
+                    <img
+                      src={image.url}
+                      alt=""
+                      width={120}
+                      height={120}
+                      className="h-full w-full object-cover"
+                    />
                     {image.is_cover ? (
                       <span className="bg-pool-deep text-paper absolute inset-x-1 bottom-1 rounded-sm px-1 py-0.5 text-center text-xs font-extrabold uppercase">
                         Portada
@@ -328,7 +344,13 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           ) : form.image_url ? (
             <div className="border-ink-300 bg-paper flex items-center gap-2 rounded-md border p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={form.image_url} alt="" className="h-12 w-12 rounded object-cover" />
+              <img
+                src={form.image_url}
+                alt=""
+                width={48}
+                height={48}
+                className="h-12 w-12 rounded object-cover"
+              />
               <span className="text-ink-700 min-w-0 flex-1 text-sm font-semibold">
                 Imagen actual
               </span>
@@ -349,7 +371,7 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
             Puedes subir hasta 8 fotos. Toca una foto seleccionada para marcarla como portada.
           </p>
         </div>
-      </Field>
+      </div>
       <label
         className={cn(
           "border-ink-300 bg-paper text-pool-deep flex min-h-12 touch-manipulation items-center gap-2 rounded-md border p-2 text-sm",
@@ -359,14 +381,14 @@ export function ShopEditorForm({ mode, productId, initial }: ShopEditorFormProps
           type="checkbox"
           checked={form.available}
           onChange={(e) => update("available", e.target.checked)}
-          className="h-4 w-4"
+          className="accent-pool-blue h-5 w-5"
         />
         Visible en el catálogo
       </label>
       {error ? (
         <div
           role="alert"
-          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red rounded border px-3 py-2 text-xs font-bold"
+          className="border-goggle-red/30 bg-goggle-red/5 text-goggle-red rounded border px-3 py-2 text-sm font-bold"
         >
           {error}
         </div>

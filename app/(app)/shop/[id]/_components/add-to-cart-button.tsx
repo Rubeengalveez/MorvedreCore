@@ -71,10 +71,7 @@ export function AddToCartButton({
 
       {sizes.length > 0 ? (
         <fieldset>
-          <div className="flex items-center justify-between gap-3">
-            <legend className="text-pool-deep text-base font-extrabold">Talla</legend>
-            <span className="text-ink-500 text-sm">Obligatoria</span>
-          </div>
+          <legend className="text-pool-deep text-base font-extrabold">Talla · obligatoria</legend>
           <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
             {sizes.map((item) => (
               <button
@@ -83,6 +80,7 @@ export function AddToCartButton({
                 onClick={() => {
                   setSize(item);
                   setError(null);
+                  setAdded(false);
                 }}
                 aria-pressed={size === item}
                 className={cn(
@@ -129,11 +127,14 @@ export function AddToCartButton({
               onChange={(event) => {
                 setPersonalization(event.target.value);
                 setError(null);
+                setAdded(false);
               }}
               maxLength={personalizationMaxLength}
               autoComplete="off"
-              placeholder={`Escribe ${personalizationLabel.toLocaleLowerCase("es-ES")}`}
-              className="border-ink-300 bg-paper text-pool-deep placeholder:text-ink-400 focus-visible:ring-pool-blue min-h-13 w-full rounded-lg border pr-4 pl-12 text-base font-semibold outline-none focus-visible:ring-2"
+              placeholder={`Ejemplo: ${personalizationLabel.toLocaleLowerCase("es-ES")}…`}
+              aria-invalid={Boolean(error && !personalization.trim())}
+              aria-describedby={error ? "product-options-error" : undefined}
+              className="border-ink-300 bg-paper text-pool-deep placeholder:text-ink-500 focus-visible:ring-pool-blue min-h-13 w-full rounded-lg border pr-4 pl-12 text-base font-semibold outline-none focus-visible:ring-2"
               required
             />
           </div>
@@ -144,7 +145,8 @@ export function AddToCartButton({
       {error ? (
         <p
           role="alert"
-          className="bg-goggle-red/5 text-goggle-red rounded-lg px-3 py-2.5 text-sm font-semibold"
+          id="product-options-error"
+          className="border-goggle-red/35 bg-goggle-red/5 text-goggle-red rounded-lg border px-3 py-2.5 text-sm font-semibold"
         >
           {error}
         </p>
@@ -156,7 +158,7 @@ export function AddToCartButton({
           onClick={add}
           className={cn(
             "focus-visible:ring-pool-blue inline-flex min-h-13 touch-manipulation items-center justify-center gap-2 rounded-lg px-5 text-base font-extrabold transition-[background-color,color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
-            added ? "bg-success text-paper" : "bg-action hover:bg-action-dark text-paper",
+            added ? "bg-pool-deep text-paper" : "bg-pool-deep hover:bg-pool-blue text-paper",
           )}
           aria-live="polite"
         >
@@ -165,7 +167,7 @@ export function AddToCartButton({
           ) : (
             <ShoppingBag className="h-5 w-5" aria-hidden="true" />
           )}
-          {added ? "Añadido" : "Añadir al carrito"}
+          {added ? "Añadido al carrito" : "Añadir al carrito"}
         </button>
         <Link
           href={"/shop/cart" as Route}

@@ -29,22 +29,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   const isOwnOrder = order.requested_by === ctx.ownProfile.id;
   const isFamilyOrder = ctx.linkedProfiles.some((profile) => profile.id === order.requested_by);
-  const access =
-    !isOwnOrder && !isFamilyOrder
-      ? await getAdminAccess().catch(() => null)
-      : null;
+  const access = !isOwnOrder && !isFamilyOrder ? await getAdminAccess().catch(() => null) : null;
   const managesShop = Boolean(access?.isAdmin || access?.permissions.has("manage_shop"));
   const canDecide = isFamilyOrder && order.status === "pending_parent";
   const initialPhone = canDecide ? await getOwnProfilePhone() : null;
 
-  const back =
-    isOwnOrder
-      ? { href: "/shop/orders" as Route, label: "Volver a mis pedidos" }
-      : isFamilyOrder && order.status === "pending_parent"
-        ? { href: "/shop/parents/pending" as Route, label: "Volver a compras familiares" }
-        : managesShop
-          ? { href: "/admin/shop" as Route, label: "Volver a gestión de pedidos" }
-          : { href: "/shop" as Route, label: "Volver a la tienda" };
+  const back = isOwnOrder
+    ? { href: "/shop/orders" as Route, label: "Volver a mis pedidos" }
+    : isFamilyOrder && order.status === "pending_parent"
+      ? { href: "/shop/parents/pending" as Route, label: "Volver a compras familiares" }
+      : managesShop
+        ? { href: "/admin/shop" as Route, label: "Volver a gestión de pedidos" }
+        : { href: "/shop" as Route, label: "Volver a la tienda" };
 
   const formattedDate = new Intl.DateTimeFormat("es-ES", {
     day: "numeric",
@@ -158,7 +154,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                     {item.size ? `Talla ${item.size}` : "Talla única"}
                   </span>
                   {item.personalization ? (
-                    <span className="border-pool-blue/20 bg-pool-foam text-pool-deep max-w-full break-words rounded-full border px-2 py-0.5 text-sm font-bold">
+                    <span className="border-pool-blue/20 bg-pool-foam text-pool-deep max-w-full rounded-full border px-2 py-0.5 text-sm font-bold break-words">
                       {item.personalization}
                     </span>
                   ) : null}
@@ -184,7 +180,7 @@ function StatusBadge({ status }: { status: keyof typeof SHOP_ORDER_STATUS_LABELS
     <span
       className={cn(
         "inline-flex min-h-7 max-w-36 shrink-0 items-center rounded-full px-2.5 text-center text-xs leading-tight font-extrabold uppercase",
-        status === "delivered" && "bg-success/10 text-success",
+        status === "delivered" && "bg-emerald-50 text-emerald-800",
         status === "rejected" || status === "cancelled"
           ? "bg-goggle-red/10 text-goggle-red"
           : status !== "delivered"

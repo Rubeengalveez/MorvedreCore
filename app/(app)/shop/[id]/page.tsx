@@ -78,7 +78,7 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
             <p className="text-ink-700 mt-2 text-base leading-relaxed whitespace-pre-line">
               {product.description}
             </p>
-            <div className="border-ink-200 mt-5 grid grid-cols-2 border-t pt-4">
+            <div className="bg-pool-ice mt-5 grid grid-cols-2 gap-2 rounded-xl p-3">
               <TrustLine icon={ShieldCheck} title="Compra del club" text="Sin comisiones" />
               <TrustLine
                 icon={PackageCheck}
@@ -112,7 +112,7 @@ export default async function ShopDetailPage({ params }: { params: Promise<{ id:
               href={whatsappUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="bg-success text-paper hover:bg-success/90 focus-visible:ring-success mt-4 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
+              className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue mt-4 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
             >
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
               Preguntar a Sol por WhatsApp
@@ -138,7 +138,7 @@ function TrustLine({
       <Icon className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
       <div className="min-w-0">
         <p className="text-pool-deep text-sm font-extrabold">{title}</p>
-        <p className="text-ink-500 mt-0.5 text-xs">{text}</p>
+        <p className="text-ink-600 mt-0.5 text-sm">{text}</p>
       </div>
     </div>
   );

@@ -74,7 +74,7 @@ export default async function MyOrdersPage() {
                     aria-hidden="true"
                   />
                 </div>
-                <div className="border-ink-200 mt-3 flex items-end justify-between gap-3 border-t pt-3">
+                <div className="bg-pool-ice mt-3 flex items-end justify-between gap-3 rounded-xl px-3 py-2.5">
                   <div className="min-w-0">
                     <StatusBadge status={order.status} />
                     <p className="text-ink-500 mt-1.5 text-sm font-semibold">
@@ -99,7 +99,7 @@ function StatusBadge({ status }: { status: keyof typeof SHOP_ORDER_STATUS_LABELS
     <span
       className={cn(
         "inline-flex min-h-7 items-center rounded-full px-2.5 text-xs font-extrabold tracking-wide uppercase",
-        status === "delivered" && "bg-success/10 text-success",
+        status === "delivered" && "bg-emerald-50 text-emerald-800",
         status === "rejected" || status === "cancelled"
           ? "bg-goggle-red/10 text-goggle-red"
           : status !== "delivered"
