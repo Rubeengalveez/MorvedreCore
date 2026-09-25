@@ -1,6 +1,6 @@
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { CalendarCheck, Shield, Trophy, Waves } from "lucide-react";
+import { Waves } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
 import { PageBackLink } from "@/components/ui/page-back-link";
@@ -43,7 +43,7 @@ export default async function TeamPlayerPage({
   const [snapshotResult, actaStats, swimEntries] = await Promise.all([
     supabase
       .from("ranking_snapshots")
-      .select("matches_played, matches_called, exclusions, mvp_count")
+      .select("matches_played, exclusions, mvp_count")
       .eq("season_id", team.season_id)
       .eq("scope", "team")
       .eq("scope_key", team.id)
@@ -105,14 +105,17 @@ export default async function TeamPlayerPage({
             Rendimiento con el equipo
           </h2>
         </div>
-        <dl className="bg-pool-deep mt-3 grid grid-cols-3 gap-2 rounded-2xl p-3 text-white shadow-sm">
+        <dl className="bg-pool-deep mt-3 grid grid-cols-6 gap-2 rounded-2xl p-3 text-white shadow-sm">
           <PrimaryStat label="Partidos" value={snapshot?.matches_played ?? "—"} />
           <PrimaryStat label="Goles" value={actaStats.goals} featured />
           <PrimaryStat label="Asistencias" value={actaStats.assists} />
+          {snapshot ? (
+            <>
+              <SecondaryStat label="Expulsiones" value={snapshot.exclusions} />
+              <SecondaryStat label="MVP" value={snapshot.mvp_count} />
+            </>
+          ) : null}
         </dl>
-        <p className="text-ink-600 mt-2 px-1 text-sm leading-snug">
-          Goles y asistencias de partidos finalizados con acta.
-        </p>
       </section>
 
       <section aria-labelledby="player-swim-heading">
@@ -128,18 +131,6 @@ export default async function TeamPlayerPage({
         </div>
       </section>
 
-      {snapshot ? (
-        <section aria-labelledby="player-more-heading">
-          <h2 id="player-more-heading" className="font-display text-pool-deep px-1 text-xl font-extrabold">
-            Más datos de la temporada
-          </h2>
-          <dl className="bg-paper-card mt-3 grid grid-cols-3 gap-2 rounded-2xl p-3 shadow-sm">
-            <SecondaryStat label="Convocatorias" value={snapshot.matches_called} icon={CalendarCheck} />
-            <SecondaryStat label="Expulsiones" value={snapshot.exclusions} icon={Shield} />
-            <SecondaryStat label="MVP" value={snapshot.mvp_count} icon={Trophy} />
-          </dl>
-        </section>
-      ) : null}
     </PageShell>
   );
 }
@@ -150,7 +141,7 @@ function PrimaryStat({ label, value, featured = false }: {
   featured?: boolean;
 }) {
   return (
-    <div className="flex min-w-0 flex-col items-center justify-center px-0.5 py-2 text-center">
+    <div className="col-span-2 flex min-w-0 flex-col items-center justify-center px-0.5 py-2 text-center">
       <dt className="order-2 mt-1 text-xs font-bold tracking-wide text-white/85 uppercase">
         {label}
       </dt>
@@ -190,18 +181,16 @@ function SwimValue({ label, value }: { label: string; value: number | null }) {
   );
 }
 
-function SecondaryStat({ label, value, icon: Icon }: {
+function SecondaryStat({ label, value }: {
   label: string;
   value: number;
-  icon: React.ComponentType<{ className?: string }>;
 }) {
   return (
-    <div className="flex min-w-0 flex-col items-center px-0.5 py-1 text-center">
-      <Icon className="text-pool-blue mb-1 h-5 w-5" aria-hidden="true" />
-      <dt className="text-ink-700 order-2 mt-1 text-xs font-bold leading-tight">
+    <div className="col-span-3 flex min-w-0 flex-col items-center justify-center rounded-xl bg-white/10 px-2 py-2 text-center">
+      <dt className="order-2 mt-1 text-xs font-bold leading-tight text-white/85">
         {label}
       </dt>
-      <dd className="text-pool-deep order-1 font-mono text-xl font-extrabold tabular-nums">{value}</dd>
+      <dd className="order-1 font-mono text-xl font-extrabold tabular-nums text-white">{value}</dd>
     </div>
   );
 }
