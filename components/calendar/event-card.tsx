@@ -6,6 +6,7 @@ import type { Route } from "next";
 
 import { Avatar } from "@/components/ui/avatar";
 import { CapTile } from "@/components/ui/cap-tile";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
 import { Eyebrow } from "@/components/ui/eyebrow";
@@ -102,6 +103,7 @@ function EventBody({
   showAttendance: boolean | undefined;
   userAttendance: boolean | null;
 }) {
+  const capNumber = validCapNumber(event.callup_cap_number);
   return (
     <>
       <div className="flex items-start justify-between gap-3">
@@ -145,9 +147,9 @@ function EventBody({
           className="border-ink-300 bg-pool-foam flex items-center gap-2 rounded-md border p-2"
           style={{ borderLeftWidth: "3px", borderLeftColor: color }}
         >
-          {event.callup_cap_number != null ? (
+          {capNumber != null ? (
             <CapTile
-              number={event.callup_cap_number}
+              number={capNumber}
               teamColor={event.callup_team_color ?? color}
               size="sm"
             />

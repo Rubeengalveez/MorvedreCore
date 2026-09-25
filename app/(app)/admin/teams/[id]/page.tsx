@@ -7,6 +7,7 @@ import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
 import { Button } from "@/components/ui/button";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { CATEGORY_LABELS, inferCategory, type CategoryCode } from "@/lib/domain/categories";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { createClient } from "@/lib/supabase/server";
 import type { Team } from "@/server/actions/admin";
 
@@ -110,7 +111,7 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
         player_id: r.player_id,
         full_name: p?.full_name ?? "Sin nombre",
         birth_year: birthYear,
-        squad_number: r.squad_number,
+        squad_number: validCapNumber(r.squad_number),
         categoryLabel,
       };
     })

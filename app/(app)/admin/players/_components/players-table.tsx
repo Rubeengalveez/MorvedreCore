@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { cn } from "@/lib/utils/cn";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { setPlayerActive } from "@/server/actions/admin/players";
 
 import { PlayerFormSheet } from "./player-form-sheet";
@@ -241,7 +242,7 @@ export function PlayersTable({ players, teams, total, totalPages, filters }: Pla
                             {player.full_name}
                           </p>
                           <p className="text-ink-600 text-xs">
-                            {player.cap_number != null ? `Dorsal ${player.cap_number} · ` : ""}
+                            {validCapNumber(player.cap_number) != null ? `Gorro ${player.cap_number} · ` : ""}
                             {player.birth_year ?? "Sin año"}
                           </p>
                         </div>

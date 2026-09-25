@@ -2,6 +2,7 @@
 
 import { ActaPlayerName } from "./acta-player-name";
 import { playerTotals, type LiveSheet, type Side } from "@/lib/domain/live-match";
+import { validCapNumber } from "@/lib/domain/cap-number";
 
 function sanctionStyle(count: number, red: boolean) {
   if (red || count >= 3) return "bg-red-100 text-red-950";
@@ -80,7 +81,7 @@ export function ActaPlayerBoard({
                 disabled={!playing}
                 onClick={() => onPlayer(side, cap)}
                 className={`min-h-[76px] min-w-0 gap-1 ${side === "them" ? "flex flex-row items-center justify-center" : "grid grid-cols-[32px_minmax(0,1fr)] items-center"} border-t border-[#062048] px-2 py-1 text-left enabled:active:brightness-95 ${sanctionStyle(totals.exclusions, totals.red)}`}
-                aria-label={`${keeper ? "Portero de " : ""}${side === "us" ? "Morvedre" : "Rival"}, gorro ${cap}${player ? `, ${player.name}` : ""}, ${keeper ? `${totals.saves} paradas, ${totals.conceded} goles encajados` : `${totals.goals} goles`}, ${totals.exclusions} de 3 expulsiones${totals.red ? ", roja" : ""}${out ? ", fuera" : ""}${keeper && cap === sheet.keeper ? ", portero en juego" : ""}`}
+                aria-label={`${keeper ? "Portero de " : ""}${side === "us" ? "Morvedre" : "Rival"}, ${validCapNumber(cap) == null ? "sin gorro" : `gorro ${cap}`}${player ? `, ${player.name}` : ""}, ${keeper ? `${totals.saves} paradas, ${totals.conceded} goles encajados` : `${totals.goals} goles`}, ${totals.exclusions} de 3 expulsiones${totals.red ? ", roja" : ""}${out ? ", fuera" : ""}${keeper && cap === sheet.keeper ? ", portero en juego" : ""}`}
               >
                 <span
                   className={`${side === "them" ? "flex items-center justify-center" : "contents"}`}
@@ -88,7 +89,7 @@ export function ActaPlayerBoard({
                   <strong
                     className={`relative grid shrink-0 place-items-center rounded-md tabular-nums ${side === "us" ? "col-start-1 row-span-2 row-start-1 h-10 min-w-8 border border-[#062048] bg-[#062048] text-2xl font-black text-white" : "h-10 min-w-8 border border-[#062048] bg-[#f4c430] text-2xl font-black text-[#062048]"}`}
                   >
-                    {cap}
+                    {validCapNumber(cap) ?? "—"}
                     {out && (
                       <span
                         className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs"

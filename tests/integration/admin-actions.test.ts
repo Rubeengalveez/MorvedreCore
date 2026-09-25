@@ -383,6 +383,8 @@ describe("createPlayerSchema", () => {
   });
 
   it("rejects cap_number out of range", () => {
+    expect(createPlayerSchema.safeParse({ ...validPlayer, cap_number: 0 }).success).toBe(false);
+    expect(createPlayerSchema.safeParse({ ...validPlayer, cap_number: 15 }).success).toBe(false);
     expect(createPlayerSchema.safeParse({ ...validPlayer, cap_number: -1 }).success).toBe(false);
     expect(createPlayerSchema.safeParse({ ...validPlayer, cap_number: 100 }).success).toBe(false);
   });
@@ -524,6 +526,8 @@ describe("updateProfileSchema", () => {
   });
 
   it("rejects cap_number out of range", () => {
+    expect(updateProfileSchema.safeParse({ ...basePayload, cap_number: "0" }).success).toBe(false);
+    expect(updateProfileSchema.safeParse({ ...basePayload, cap_number: "15" }).success).toBe(false);
     expect(updateProfileSchema.safeParse({ ...basePayload, cap_number: "-1" }).success).toBe(false);
     expect(updateProfileSchema.safeParse({ ...basePayload, cap_number: "100" }).success).toBe(
       false,
@@ -688,6 +692,13 @@ describe("xlsxRowSchema", () => {
   });
 
   it("rejects dorsal out of range", () => {
+    expect(
+      xlsxRowSchema(currentYear).safeParse({
+        nombre_completo: "X",
+        ano_nacimiento: 2015,
+        dorsal: 15,
+      }).success,
+    ).toBe(false);
     expect(
       xlsxRowSchema(currentYear).safeParse({
         nombre_completo: "X",

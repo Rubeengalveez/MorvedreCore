@@ -3,6 +3,8 @@ import Link from "next/link";
 import { ChevronRight, Plus, Timer, Waves } from "lucide-react";
 
 import { Avatar } from "@/components/ui/avatar";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { formatSwimTime } from "@/lib/domain/swim-times";
 import { getSwimTimeEntries } from "@/server/queries/swim-times";
 
@@ -103,27 +105,27 @@ export async function TeamSwimTimesTab({
           <div className="border-ink-200 bg-paper-card divide-ink-200 flex flex-col divide-y rounded-2xl border shadow-sm">
             {playersWithTimes.map((player) => {
               const data = latestByPlayer.get(player.player_id);
-              const number = player.cap_number ?? player.squad_number;
+              const number = validCapNumber(player.squad_number ?? player.cap_number);
               return (
                 <Link
                   key={player.player_id}
                   href={`/players/${player.player_id}/swim-times?from=team&teamId=${teamId}` as Route}
                   className="hover:bg-pool-foam/30 flex min-h-16 items-center justify-between gap-3 p-3.5 transition-colors"
                 >
-                  <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     <Avatar
                       src={player.photo_url}
                       name={player.full_name}
                       size={44}
                       teamColor={teamColor}
                     />
-                    <div className="min-w-0">
-                      <p className="text-ink-900 truncate font-extrabold text-base">
-                        {player.full_name}
+                    <div className="min-w-0 flex-1">
+                      <span className="text-ink-900 block font-extrabold text-base">
+                        <AdaptivePlayerName name={player.full_name} />
+                      </span>
+                      <p className="text-ink-500 text-xs font-semibold">
+                        {number != null ? `Gorro #${number}` : "Sin gorro"}
                       </p>
-                      {number != null ? (
-                        <p className="text-ink-500 text-xs font-semibold">Gorro #{number}</p>
-                      ) : null}
                     </div>
                   </div>
 

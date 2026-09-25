@@ -7,6 +7,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { createClient } from "@/lib/supabase/server";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import type { Season, Team, TrainingBlockRow, TrainingSessionRow } from "@/server/actions/admin";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import { getTeamScope } from "@/lib/domain/permissions";
@@ -229,7 +230,7 @@ async function loadTrainings(teamScope: string[] | null): Promise<LoadResult> {
       id: profile.id,
       full_name: profile.full_name,
       photo_url: profile.photo_url,
-      cap_number: r.squad_number ?? profile.cap_number,
+      cap_number: validCapNumber(r.squad_number ?? profile.cap_number),
       present: true,
       reason: null,
     });

@@ -32,6 +32,7 @@ import {
 import { SignOutButton } from "@/components/auth/sign-out-button";
 import { PageShell, SectionHeader } from "@/components/ui/page-shell";
 import { formatTreasuryCents } from "@/lib/domain/treasury";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import type { AdminPermission } from "@/lib/domain/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
@@ -134,7 +135,7 @@ export default async function ProfilePage() {
       ? [
           {
             label: "Gorro",
-            complete: ownProfile.cap_number != null,
+            complete: validCapNumber(ownProfile.cap_number) != null,
             icon: Hash,
             href: "/profile/edit#cap_number",
           },

@@ -62,8 +62,8 @@ const playerFormSchema = z.object({
     .trim()
     .optional()
     .refine(
-      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 0 && Number(v) <= 99),
-      "Dorsal entre 0 y 99.",
+      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 1 && Number(v) <= 14),
+      "Gorro entre 1 y 14.",
     ),
   phone_e164: z
     .string()
@@ -228,7 +228,7 @@ export function PlayerFormSheet({ trigger, open, onOpenChange, player, teams = [
       team_id: "",
       birth_year: player?.birth_year?.toString() ?? "",
       gender: (player?.gender as PlayerFormValues["gender"]) ?? "prefer_not_to_say",
-      cap_number: player?.cap_number?.toString() ?? "",
+      cap_number: player?.cap_number != null && player.cap_number >= 1 && player.cap_number <= 14 ? String(player.cap_number) : "",
       phone_e164: player?.phone_e164 ?? "",
       email_contact: player?.email_contact ?? "",
       photo_url: player?.photo_url ?? "",
@@ -391,13 +391,13 @@ export function PlayerFormSheet({ trigger, open, onOpenChange, player, teams = [
                   name="cap_number"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Dorsal (opcional)</FormLabel>
+                      <FormLabel>Gorro (opcional)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           inputMode="numeric"
-                          min={0}
-                          max={99}
+                          min={1}
+                          max={14}
                           placeholder="7"
                           value={field.value ?? ""}
                           onChange={field.onChange}

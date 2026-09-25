@@ -1,6 +1,7 @@
 import { jsPDF } from "jspdf";
 import { actaAnalysis, actaPlayerTotals } from "./acta-analysis";
 import { finalScore, isGoal, playerTotals, type LiveRecord, type ActionKind } from "./live-match";
+import { validCapNumber } from "./cap-number";
 
 type Color = [number, number, number];
 const NAVY: Color = [10, 46, 92];
@@ -12,6 +13,8 @@ const LINE: Color = [177, 193, 207];
 const WHITE: Color = [255, 255, 255];
 const SECTION_TITLE_SIZE = 21;
 const pct = (value: number | null) => (value === null ? "Sin datos" : `${Math.round(value)}%`);
+const capCell = (value: number | null) => String(validCapNumber(value) ?? "—");
+const capLabel = (value: number) => validCapNumber(value) == null ? "Sin gorro" : `Gorro ${value}`;
 const slug = (value: string) =>
   value
     .normalize("NFD")
@@ -254,7 +257,7 @@ export function createActaPdf(record: LiveRecord): File {
     const t = cap === undefined ? null : actaPlayerTotals(sheet, "them", cap);
     const own = p
       ? [
-          String(p.cap),
+          capCell(p.cap),
           p.name,
           String(p.totals.goals),
           String(p.totals.shots),
@@ -310,7 +313,7 @@ export function createActaPdf(record: LiveRecord): File {
   y += 7;
   const kw = [12, 46, 22, 22, 22, 27];
   const keeperRows = keeperPlayers.map((p) => [
-    String(p.cap),
+    capCell(p.cap),
     p.name,
     String(p.totals.received),
     String(p.totals.saves),
@@ -659,7 +662,7 @@ export function createActaPdf(record: LiveRecord): File {
     }
     y = tableRow(
       [
-        String(p.cap),
+        capCell(p.cap),
         p.name,
         String(p.totals.goals),
         String(p.shooting.attempts),
@@ -696,7 +699,7 @@ export function createActaPdf(record: LiveRecord): File {
       group.forEach((p, j) => {
         const x = 14 + j * 62;
         fill(x, y, 7, h, PALE);
-        text(String(p.cap), x + 3.5, y + 4, 8, true, NAVY, "center");
+        text(capCell(p.cap), x + 3.5, y + 4, 8, true, NAVY, "center");
         nameRows[j].forEach((name, row) => text(name, x + 9, y + 4 + row * 3.2, 8));
       });
       y += h + 1;
@@ -715,7 +718,7 @@ export function createActaPdf(record: LiveRecord): File {
     const h = nameHeight + 18;
     if (y + h > bottom()) y = newPage("Nuestra portería");
     fill(14, y, 182, nameHeight, NAVY);
-    text(String(p.cap), 20, y + 9, 15, true, WHITE);
+    text(capCell(p.cap), 20, y + 9, 15, true, WHITE);
     text(p.name, 30, y + 8, 10, true, WHITE);
     const quarterWidth = sheet.periods <= 4 ? 7 : 4.7;
     const quarterStart = 190 - sheet.periods * quarterWidth;
@@ -800,7 +803,7 @@ export function createActaPdf(record: LiveRecord): File {
       for (let j = 0; j < groups; j++) {
         const p = a.rivalScorers[j * perGroup + i];
         if (p)
-          tableRow([String(p.cap), String(p.goals), pct(p.share)], widths, 14 + j * 94, y, {
+          tableRow([capCell(p.cap), String(p.goals), pct(p.share)], widths, 14 + j * 94, y, {
             height: 7.2,
             size: 9,
             striped: i % 2 === 1,
@@ -880,8 +883,8 @@ export function createActaPdf(record: LiveRecord): File {
         event.cap === null
           ? "Banquillo"
           : event.side === "them"
-            ? `Gorro ${event.cap}`
-            : `${event.cap}  ${a.players.find((p) => p.cap === event.cap)?.name ?? "Jugador"}`;
+            ? capLabel(event.cap)
+            : `${capCell(event.cap)}  ${a.players.find((p) => p.cap === event.cap)?.name ?? "Jugador"}`;
       const assist = a.events.find(
         (e) => e.kind === "assist" && e.side === "us" && e.related_event_id === event.id,
       );
@@ -893,7 +896,7 @@ export function createActaPdf(record: LiveRecord): File {
               ? "Penalti fuera / palo"
               : "Penalti parado por el rival"
             : labels[event.kind]!;
-      const detail = `${action}${assist ? ` · Asistencia: ${assist.cap} ${a.players.find((p) => p.cap === assist.cap)?.name ?? ""}` : ""}`;
+      const detail = `${action}${assist ? ` · Asistencia: ${capCell(assist.cap)} ${a.players.find((p) => p.cap === assist.cap)?.name ?? ""}` : ""}`;
       const values = [
         isGoal(event.kind) ? `${us} - ${them}` : "-",
         event.side === "us" ? "Morvedre" : "Rival",
@@ -951,8 +954,8 @@ export function createActaPdf(record: LiveRecord): File {
         else them++;
       }
       const who = shot.side === "us"
-        ? `${shot.cap}  ${a.players.find((p) => p.cap === shot.cap)?.name ?? "Jugador"}`
-        : `Gorro ${shot.cap}`;
+        ? `${capCell(shot.cap)}  ${a.players.find((p) => p.cap === shot.cap)?.name ?? "Jugador"}`
+        : capLabel(shot.cap);
       const action = {
         goal: "Gol",
         save: "Parado",

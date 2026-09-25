@@ -137,7 +137,7 @@ function CallupRowItem({ entry, entries }: { entry: CallupEntry; entries: Callup
       />
       <div className="grid grid-cols-[3rem_minmax(0,1fr)_auto] items-center gap-2">
         <CapNumberButton
-          value={capDraft && Number(capDraft) <= 14 ? Number(capDraft) : null}
+          value={capDraft && Number(capDraft) >= 1 && Number(capDraft) <= 14 ? Number(capDraft) : null}
           open={capPickerOpen}
           disabled={pending}
           label={`Cambiar gorro de ${entry.player?.full_name ?? "jugador"}`}

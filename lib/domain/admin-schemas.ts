@@ -141,7 +141,7 @@ export const createPlayerSchema = z.object({
     .min(1900, "Año entre 1900 y 2100.")
     .max(2100, "Año entre 1900 y 2100."),
   gender: genderEnum.optional(),
-  cap_number: z.number().int("Dorsal entero.").min(0, "Mínimo 0.").max(99, "Máximo 99.").optional(),
+  cap_number: z.number().int("Gorro entero.").min(1, "Gorro entre 1 y 14.").max(14, "Gorro entre 1 y 14.").optional(),
   phone_e164: phoneSchema,
   email_contact: z.string().email("Email inválido.").optional(),
   photo_url: z.string().url("URL inválida.").optional(),
@@ -173,9 +173,9 @@ export const updatePlayerSchema = z
     gender: genderEnum.optional(),
     cap_number: z
       .number()
-      .int("Dorsal entero.")
-      .min(0, "Mínimo 0.")
-      .max(99, "Máximo 99.")
+      .int("Gorro entero.")
+      .min(1, "Gorro entre 1 y 14.")
+      .max(14, "Gorro entre 1 y 14.")
       .nullable()
       .optional(),
     phone_e164: z.preprocess(
@@ -217,7 +217,7 @@ export const updateProfileSchema = z.object({
     nullIfEmpty,
     z.preprocess(
       (v) => (v == null ? null : Number(v)),
-      z.number().int("Dorsal entero.").min(0, "Mínimo 0.").max(99, "Máximo 99.").nullable(),
+      z.number().int("Gorro entero.").min(1, "Gorro entre 1 y 14.").max(14, "Gorro entre 1 y 14.").nullable(),
     ),
   ),
   phone_e164: z.preprocess(
@@ -296,9 +296,9 @@ export const makeRosterSchema = z.object({
   player_id: z.string().uuid("Jugador inválido."),
   squad_number: z
     .number()
-    .int("Dorsal entero.")
-    .min(0, "Mínimo 0.")
-    .max(99, "Máximo 99.")
+    .int("Gorro entero.")
+    .min(1, "Gorro entre 1 y 14.")
+    .max(14, "Gorro entre 1 y 14.")
     .optional(),
   joined_at: isoDate.optional(),
 });

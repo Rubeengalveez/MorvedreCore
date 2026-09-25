@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils/cn";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { formatShortDate, formatTime } from "@/lib/utils/format";
 import { markAllPresent, markAttendance } from "@/server/actions/admin";
 
@@ -200,8 +201,8 @@ export function AttendanceSheet({
                   <span className="font-display text-pool-deep text-base font-bold">
                     {p.full_name}
                   </span>
-                  {p.cap_number != null ? (
-                    <span className="text-ink-600 font-mono text-xs">Dorsal {p.cap_number}</span>
+                  {validCapNumber(p.cap_number) != null ? (
+                    <span className="text-ink-600 font-mono text-xs">Gorro {p.cap_number}</span>
                   ) : null}
                 </div>
                 <div

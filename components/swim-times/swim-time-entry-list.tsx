@@ -4,6 +4,7 @@ import { useMemo, useRef, useState, useTransition } from "react";
 import { CheckCircle2, ChevronRight, RotateCcw, Save, Search, X } from "lucide-react";
 
 import { createSwimTime } from "@/server/actions/swim-times";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { describeSwimTime, formatSwimTime, normalizeSearchTerm, parseSwimTime } from "@/lib/domain/swim-times";
 
 type Player = {
@@ -54,6 +55,7 @@ export function SwimTimeEntryList({
     () => players.find((p) => p.player_id === selectedPlayerId) ?? null,
     [players, selectedPlayerId],
   );
+  const selectedCap = validCapNumber(selectedPlayer?.squad_number ?? selectedPlayer?.cap_number);
 
   const filteredPlayers = useMemo(() => {
     const query = normalizeSearchTerm(search);
@@ -61,7 +63,7 @@ export function SwimTimeEntryList({
     const cleanCapQuery = query.replace(/^#/, "");
     return players.filter((player) => {
       const nameMatch = normalizeSearchTerm(player.full_name).includes(query);
-      const cap = player.cap_number ?? player.squad_number;
+      const cap = validCapNumber(player.squad_number ?? player.cap_number);
       const capMatch = cap != null && cap.toString() === cleanCapQuery;
       return nameMatch || capMatch;
     });
@@ -219,8 +221,8 @@ export function SwimTimeEntryList({
           <div className="bg-pool-foam/40 border-pool-blue/30 flex items-center justify-between gap-3 rounded-xl border p-2">
             <div className="flex items-center gap-3 min-w-0">
               <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-black shadow-xs">
-                {selectedPlayer.cap_number != null
-                  ? `#${selectedPlayer.cap_number}`
+                {selectedCap != null
+                  ? `#${selectedCap}`
                   : selectedPlayer.full_name.charAt(0)}
               </span>
               <div className="min-w-0">
@@ -267,7 +269,7 @@ export function SwimTimeEntryList({
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {filteredPlayers.map((player) => {
                 const recorded = timesTodayByPlayer.get(player.player_id);
-                const cap = player.cap_number ?? player.squad_number;
+                const cap = validCapNumber(player.squad_number ?? player.cap_number);
                 return (
                   <button
                     key={player.player_id}
@@ -514,7 +516,7 @@ export function SwimTimeEntryList({
             {todayEntries.map((entry) => {
               const player = players.find((p) => p.player_id === entry.player_id);
               const name = player?.full_name ?? "Jugador";
-              const cap = player?.cap_number ?? player?.squad_number;
+              const cap = validCapNumber(player?.squad_number ?? player?.cap_number);
               return (
                 <div
                   key={entry.id}

@@ -41,8 +41,8 @@ const rosterSchema = z.object({
     .trim()
     .optional()
     .refine(
-      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 0 && Number(v) <= 99),
-      "Dorsal entre 0 y 99.",
+      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 1 && Number(v) <= 14),
+      "Gorro entre 1 y 14.",
     ),
 });
 
@@ -286,13 +286,13 @@ export function RosterAddSheet({ teamId, candidates, trigger }: RosterAddSheetPr
                 name="squad_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Dorsal (opcional)</FormLabel>
+                    <FormLabel>Gorro (opcional)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
                         inputMode="numeric"
-                        min={0}
-                        max={99}
+                        min={1}
+                        max={14}
                         placeholder="7"
                         value={field.value ?? ""}
                         onChange={field.onChange}

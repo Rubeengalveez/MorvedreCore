@@ -22,6 +22,7 @@ import {
   type MatchEvent,
   type Side,
 } from "@/lib/domain/live-match";
+import { validCapNumber } from "@/lib/domain/cap-number";
 
 import { useLiveMatch } from "./use-live-match";
 import { generateUuid } from "@/lib/utils/uuid";
@@ -554,7 +555,7 @@ export function LiveMatchClient() {
       },
     };
     if (await patch(next, false)) {
-      setNotice(`Penalti de ${penaltySide === "us" ? "Morvedre" : "rival"} #${cap} guardado`);
+      setNotice(`Penalti de ${penaltySide === "us" ? "Morvedre" : "rival"} ${validCapNumber(cap) == null ? "sin gorro" : `#${cap}`} guardado`);
       setPanel("penalty-shooter");
     }
   }
@@ -1040,9 +1041,9 @@ export function LiveMatchClient() {
                     type="button"
                     aria-label="Añadir un jugador rival"
                     className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
-                    disabled={!enabled || s.opponentCaps.length >= 15}
+                    disabled={!enabled || s.opponentCaps.length >= 14}
                     onClick={() => {
-                      const nextCap = Array.from({ length: 99 }, (_, index) => index + 1).find(
+                      const nextCap = Array.from({ length: 14 }, (_, index) => index + 1).find(
                         (candidate) => !s.opponentCaps.includes(candidate),
                       );
                       if (nextCap)
@@ -1238,14 +1239,14 @@ export function LiveMatchClient() {
                         side === "us" ? styles.playerBannerCapUs : styles.playerBannerCapThem
                       }`}
                     >
-                      {cap}
+                      {validCapNumber(cap) ?? "—"}
                     </span>
                     <div className={styles.playerBannerInfo}>
                       <Dialog.Title className={styles.playerBannerName}>
                         {side === "us" && currentPlayer ? (
                           <ActaPlayerName name={currentPlayer.name} />
                         ) : (
-                          `Gorro #${cap}`
+                          validCapNumber(cap) == null ? "Sin gorro" : `Gorro #${cap}`
                         )}
                       </Dialog.Title>
                       <p className={styles.playerBannerSubtitle}>
@@ -1323,7 +1324,7 @@ export function LiveMatchClient() {
                   >
                     {orderedPlayers.map((player) => (
                       <option key={player.cap} value={player.cap}>
-                        #{player.cap} {player.name}
+                        {validCapNumber(player.cap) == null ? "Sin gorro" : `#${player.cap}`} {player.name}
                       </option>
                     ))}
                   </select>
@@ -1342,9 +1343,9 @@ export function LiveMatchClient() {
                           type="button"
                           className={`${styles.rivalCard} ${styles.ownSelectionCard} ${isOut ? styles.playerCardOut : ""}`}
                           onClick={() => openPlayer("us", p.cap)}
-                          aria-label={`Morvedre, gorro ${p.cap}, ${p.name}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
+                          aria-label={`Morvedre, ${validCapNumber(p.cap) == null ? "sin gorro" : `gorro ${p.cap}`}, ${p.name}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
                         >
-                          <span className={styles.rivalCapBadge}>{p.cap}</span>
+                          <span className={styles.rivalCapBadge}>{validCapNumber(p.cap) ?? "—"}</span>
                           <div className={styles.rivalStatsCol}>
                             <span
                               className={
@@ -1379,9 +1380,9 @@ export function LiveMatchClient() {
                           type="button"
                           className={`${styles.rivalCard} ${isOut ? styles.playerCardOut : ""}`}
                           onClick={() => openPlayer("them", capNumber)}
-                          aria-label={`Rival, gorro ${capNumber}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
+                          aria-label={`Rival, ${validCapNumber(capNumber) == null ? "sin gorro" : `gorro ${capNumber}`}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
                         >
-                          <span className={styles.rivalCapBadge}>{capNumber}</span>
+                          <span className={styles.rivalCapBadge}>{validCapNumber(capNumber) ?? "—"}</span>
                           <div className={styles.rivalStatsCol}>
                             <span
                               className={
@@ -1446,7 +1447,7 @@ export function LiveMatchClient() {
                   return (
                     <section>
                       <h3 className="mb-4 text-lg font-bold">
-                        #{cap} · {currentPlayer?.name}
+                        {validCapNumber(cap) == null ? "Sin gorro" : `#${cap}`} · {currentPlayer?.name}
                       </h3>
                       <dl className="divide-y divide-slate-200">
                         {entries.map(([label, value]) => (
@@ -1715,13 +1716,13 @@ export function LiveMatchClient() {
                                 pending: null,
                               })
                             ) {
-                              setNotice(`Asistencia de #${player.cap} registrada`);
+                              setNotice(`Asistencia de ${validCapNumber(player.cap) == null ? player.name : `#${player.cap}`} registrada`);
                             }
                           }}
                         >
                           <div className={styles.cardTopRow}>
                             <div className={styles.cardCapGroup}>
-                              <span className={styles.capBadge}>{player.cap}</span>
+                              <span className={styles.capBadge}>{validCapNumber(player.cap) ?? "—"}</span>
                               {player.cap === s.keeper && (
                                 <span className={styles.keeperTag}>POR</span>
                               )}
@@ -1788,7 +1789,7 @@ export function LiveMatchClient() {
                           >
                             <div className={styles.cardTopRow}>
                               <div className={styles.cardCapGroup}>
-                                <span className={styles.capBadge}>{player.cap}</span>
+                                <span className={styles.capBadge}>{validCapNumber(player.cap) ?? "—"}</span>
                                 {player.cap === s.keeper && (
                                   <span className={styles.keeperTag}>POR</span>
                                 )}
@@ -1824,7 +1825,7 @@ export function LiveMatchClient() {
               {activePanel === "penalty-result" && pending?.kind === "penalty_shot" && (
                 <div className="space-y-3">
                   <p className="text-center text-lg font-bold">
-                    Lanza el #{pending.shooter_cap}{" "}
+                    Lanza {validCapNumber(pending.shooter_cap) == null ? "sin gorro" : `el #${pending.shooter_cap}`} {" "}
                     {s.events.find((event) => event.id === pending.penalty_event_id)?.side ===
                     "them"
                       ? s.players.find((player) => player.cap === pending.shooter_cap)?.name
@@ -1889,7 +1890,7 @@ export function LiveMatchClient() {
               {activePanel === "assist-edit" && editing?.kind === "assist" && (
                 <div className="space-y-3">
                   <p className="rounded-xl border border-[#062048] bg-white p-3 text-base leading-relaxed text-[#062048]">
-                    Asistencia de <strong>#{editing.cap}</strong>. Puedes vincularla a un gol o
+                    Asistencia de <strong>{validCapNumber(editing.cap) == null ? "jugador sin gorro" : `#${editing.cap}`}</strong>. Puedes vincularla a un gol o
                     conservarla como estadística independiente.
                   </p>
                   <button
@@ -1937,7 +1938,7 @@ export function LiveMatchClient() {
                             })
                           }
                         >
-                          Vincular al gol de #{goal.cap} · Cuarto {goal.period}
+                          Vincular al gol de {validCapNumber(goal.cap) == null ? "jugador sin gorro" : `#${goal.cap}`} · Cuarto {goal.period}
                         </button>
                       ))}
                   </div>
@@ -1980,12 +1981,12 @@ export function LiveMatchClient() {
                             key={player.cap}
                             type="button"
                             className={styles.playerCard}
-                            aria-label={`Nueva asistencia de ${player.name}, gorro ${player.cap}`}
+                            aria-label={`Nueva asistencia de ${player.name}, ${validCapNumber(player.cap) == null ? "sin gorro" : `gorro ${player.cap}`}`}
                             onClick={() => void saveAssistRelation("independent", player.cap)}
                           >
                             <div className={styles.cardTopRow}>
                               <div className={styles.cardCapGroup}>
-                                <span className={styles.capBadge}>{player.cap}</span>
+                                <span className={styles.capBadge}>{validCapNumber(player.cap) ?? "—"}</span>
                                 {player.cap === s.keeper && (
                                   <span className={styles.keeperTag}>POR</span>
                                 )}
@@ -2095,7 +2096,7 @@ export function LiveMatchClient() {
                           >
                             <div className={styles.cardTopRow}>
                               <div className={styles.cardCapGroup}>
-                                <span className={styles.capBadge}>{player.cap}</span>
+                                <span className={styles.capBadge}>{validCapNumber(player.cap) ?? "—"}</span>
                               </div>
                               {isCurrentKeeper ? (
                                 <span className={styles.keeperTagActive}>En juego</span>
@@ -2149,15 +2150,14 @@ export function LiveMatchClient() {
               {activePanel === "keeper-action" && keeperAction && (
                 <div className="space-y-3">
                   <p className="rounded-xl bg-amber-50 p-3 text-base leading-relaxed text-amber-950">
-                    Has apuntado la parada al #{keeperAction.cap}, pero figura en juego el #
-                    {s.keeper}.
+                    Has apuntado la parada a {validCapNumber(keeperAction.cap) == null ? "un jugador sin gorro" : `#${keeperAction.cap}`}, pero figura en juego {validCapNumber(s.keeper) == null ? "un portero sin gorro" : `el #${s.keeper}`}.
                   </p>
                   <button
                     type="button"
                     className={`${styles.action} ${styles.actionGoal}`}
                     onClick={() => void saveKeeperAction(true)}
                   >
-                    Está jugando el #{keeperAction.cap}
+                    Está jugando {validCapNumber(keeperAction.cap) == null ? "un portero sin gorro" : `el #${keeperAction.cap}`}
                   </button>
                   <button
                     type="button"
@@ -2351,13 +2351,13 @@ export function LiveMatchClient() {
                               </small>
                               <div className="my-3 flex items-center gap-3">
                                 <span className="grid h-11 min-w-11 place-items-center rounded-lg bg-blue-900 text-xl font-bold text-white">
-                                  #{entry.cap}
+                                  {validCapNumber(entry.cap) == null ? "—" : `#${entry.cap}`}
                                 </span>
                                 <div className="min-w-0">
                                   <p className="text-lg leading-tight font-bold">{entry.label}</p>
                                   <p className="mt-1 text-sm text-slate-600">
                                     <ActaPlayerName
-                                      name={s.players.find((player) => player.cap === entry.cap)?.name ?? `Gorro ${entry.cap}`}
+                                      name={s.players.find((player) => player.cap === entry.cap)?.name ?? (validCapNumber(entry.cap) == null ? "Sin gorro" : `Gorro ${entry.cap}`)}
                                     />
                                   </p>
                                 </div>
@@ -2384,7 +2384,7 @@ export function LiveMatchClient() {
                               <span
                                 className={`grid h-11 min-w-11 place-items-center rounded-lg text-xl font-bold ${e.side === "us" ? "bg-blue-900 text-white" : "bg-amber-100 text-blue-950"}`}
                               >
-                                {e.cap === null ? "E" : `#${e.cap}`}
+                                {e.cap === null ? "E" : validCapNumber(e.cap) == null ? "—" : `#${e.cap}`}
                               </span>
                               <div className="min-w-0">
                                 <p className="text-lg leading-tight font-bold">
@@ -2395,8 +2395,8 @@ export function LiveMatchClient() {
                                     ? "Entrenador"
                                     : e.side === "us"
                                       ? (s.players.find((player) => player.cap === e.cap)?.name ??
-                                        `Gorro ${e.cap}`)
-                                      : `Jugador rival · gorro ${e.cap}`}
+                                        (validCapNumber(e.cap) == null ? "Sin gorro" : `Gorro ${e.cap}`))
+                                      : validCapNumber(e.cap) == null ? "Jugador rival · sin gorro" : `Jugador rival · gorro ${e.cap}`}
                                 </p>
                               </div>
                             </div>

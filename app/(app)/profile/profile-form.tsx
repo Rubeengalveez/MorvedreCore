@@ -46,8 +46,8 @@ const profileFormSchema = z.object({
     .trim()
     .optional()
     .refine(
-      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 0 && Number(v) <= 99),
-      "Dorsal entre 0 y 99.",
+      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 1 && Number(v) <= 14),
+      "Gorro entre 1 y 14.",
     ),
   phone_e164: z
     .string()
@@ -91,7 +91,7 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
     defaultValues: {
       full_name: profile.full_name,
       birth_year: profile.birth_year?.toString() ?? "",
-      cap_number: isPlayer ? (profile.cap_number?.toString() ?? "") : "",
+      cap_number: isPlayer && profile.cap_number != null && profile.cap_number >= 1 && profile.cap_number <= 14 ? String(profile.cap_number) : "",
       phone_e164: toSpanishPhoneDigits(profile.phone_e164),
     },
   });
@@ -200,8 +200,8 @@ export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
                       id="cap_number_input"
                       type="number"
                       inputMode="numeric"
-                      min={0}
-                      max={99}
+                      min={1}
+                      max={14}
                       placeholder="7"
                       value={field.value ?? ""}
                       onChange={field.onChange}

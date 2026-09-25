@@ -40,7 +40,7 @@ export function LiveMatchEntryState({
   const validCaps =
     selectedCaps.length > 0 &&
     selectedCaps.length <= 14 &&
-    selectedCaps.every((cap) => cap > 0 && cap <= 99) &&
+    selectedCaps.every((cap) => cap > 0 && cap <= 14) &&
     new Set(selectedCaps).size === selectedCaps.length;
   async function save() {
     if (!preparation || saving) return;

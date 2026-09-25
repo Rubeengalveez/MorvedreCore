@@ -162,7 +162,7 @@ describe("interfaz del acta", () => {
     mock.hook.mockReturnValue({ ...mock.hook(), record: current });
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
-    fireEvent.click(screen.getByRole("button", { name: "Corregir último cambio de portero" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Corregir" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Iván Ortiz/ }));
     await waitFor(() => expect(mock.change).toHaveBeenCalledTimes(1));
     expect(mock.change.mock.calls[0][0].keeperStints).toEqual([

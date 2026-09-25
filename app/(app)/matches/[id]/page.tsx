@@ -17,6 +17,7 @@ import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { MapLocationLink } from "@/components/ui/map-location-link";
 import { formatLongDate } from "@/lib/domain/calendar";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getMatchById,
@@ -179,7 +180,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             isPlayed && mvp
               ? {
                   name: mvp.full_name,
-                  cap: mvp.cap_number ?? null,
+                  cap: validCapNumber(mvp.cap_number),
                   goals: mvp.goals,
                   assists: mvp.assists ?? 0,
                 }
@@ -240,7 +241,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                           <span className="text-pool-deep min-w-0 flex-1 truncate text-sm font-extrabold">
                             {callup.full_name}
                           </span>
-                          {callup.cap_number != null ? (
+                          {validCapNumber(callup.cap_number) != null ? (
                             <span className="text-pool-deep bg-pool-foam rounded-lg px-2.5 py-0.5 font-mono text-sm font-bold">
                               #{callup.cap_number}
                             </span>
@@ -318,9 +319,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                       <div className="relative shrink-0">
                         <div
                           className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-base font-black shadow-sm"
-                          aria-label={c.cap_number != null ? `Gorro ${c.cap_number}` : "Sin dorsal"}
+                          aria-label={validCapNumber(c.cap_number) != null ? `Gorro ${c.cap_number}` : "Sin gorro"}
                         >
-                          {c.cap_number != null ? c.cap_number : "–"}
+                          {validCapNumber(c.cap_number) ?? "–"}
                         </div>
                         {!isPlayed && (
                           <span

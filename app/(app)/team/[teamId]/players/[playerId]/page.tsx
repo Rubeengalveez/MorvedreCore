@@ -6,6 +6,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { PageShell } from "@/components/ui/page-shell";
 import { getPlayerProfileBackTarget } from "@/lib/domain/player-profile-navigation";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import { formatSwimTime, getSwimProfileSummary } from "@/lib/domain/swim-times";
 import { createClient } from "@/lib/supabase/server";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
@@ -82,7 +83,7 @@ export default async function TeamPlayerPage({
 
   const snapshot = snapshotResult.data;
   const swim = getSwimProfileSummary(swimEntries);
-  const number = player.squad_number ?? player.cap_number;
+  const number = validCapNumber(player.squad_number ?? player.cap_number);
   const backTarget = getPlayerProfileBackTarget(from, team.id, returnTo, playerId);
 
   return (

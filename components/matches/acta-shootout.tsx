@@ -12,6 +12,7 @@ import {
   type Shootout,
 } from "@/lib/domain/live-match";
 import { generateUuid } from "@/lib/utils/uuid";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import styles from "./live-match.module.css";
 import { ActaPlayerName } from "./acta-player-name";
 
@@ -52,7 +53,7 @@ export function ActaShootout({
             const totals = playerTotals(s, "them", number);
             return !totals.red && totals.exclusions < 3;
           })
-          .map((number) => ({ cap: number, name: `Gorro ${number}` }));
+          .map((number) => ({ cap: number, name: validCapNumber(number) == null ? "Sin gorro" : `Gorro ${number}` }));
   const keeper = availableKeepers.find((player) => player.cap === s.keeper);
   const label = (side: "us" | "them") => (side === "us" ? "Morvedre" : record.opponent);
   const turnIsUs = state.nextSide === "us";
@@ -166,7 +167,7 @@ export function ActaShootout({
                         side === "us"
                           ? s.players.find((p) => p.cap === shot.cap)
                           : undefined;
-                      const tooltip = `#${shot.cap}${player ? ` · ${player.name}` : ""} · ${shootoutOutcomeLabels[shot.outcome]}`;
+                      const tooltip = `${validCapNumber(shot.cap) == null ? "Sin gorro" : `#${shot.cap}`}${player ? ` · ${player.name}` : ""} · ${shootoutOutcomeLabels[shot.outcome]}`;
                       return (
                         <span
                           key={shot.id}
@@ -213,7 +214,7 @@ export function ActaShootout({
                   <span className="flex min-w-0 gap-1 text-base font-extrabold">
                     {keeper ? (
                       <>
-                        <span className="shrink-0">#{keeper.cap} ·</span>
+                        <span className="shrink-0">{validCapNumber(keeper.cap) == null ? "Sin gorro" : `#${keeper.cap}`} ·</span>
                         <ActaPlayerName name={keeper.name} />
                       </>
                     ) : (
@@ -245,7 +246,7 @@ export function ActaShootout({
                       <span
                         className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg font-mono text-lg font-black ${player.cap === s.keeper ? "bg-white/15" : "bg-[#062048] text-white"}`}
                       >
-                        {player.cap}
+                        {validCapNumber(player.cap) ?? "—"}
                       </span>
                       <span className="min-w-0 flex-1 text-sm leading-tight">
                         <ActaPlayerName name={player.name} />
@@ -315,7 +316,7 @@ export function ActaShootout({
                           <span
                             className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl font-mono text-xl font-black ${turnIsUs ? "bg-[#062048] text-white" : "bg-[#f4c430] text-[#062048]"}`}
                           >
-                            {player.cap}
+                            {validCapNumber(player.cap) ?? "—"}
                           </span>
                           <span className="min-w-0 flex-1 text-base leading-tight font-extrabold">
                             <ActaPlayerName name={player.name} />
@@ -334,11 +335,11 @@ export function ActaShootout({
                     <button
                       type="button"
                       className="mb-3 flex min-h-14 w-full items-center gap-3 rounded-xl border-2 border-[#062048] bg-[#e8f1fc] px-3 text-left"
-                      aria-label={`Cambiar lanzador, gorro ${cap}`}
+                      aria-label={`Cambiar lanzador, ${validCapNumber(cap) == null ? "sin gorro" : `gorro ${cap}`}`}
                       onClick={() => setCap(null)}
                     >
                       <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-[#062048] font-mono text-lg font-black text-white">
-                        {cap}
+                        {validCapNumber(cap) ?? "—"}
                       </span>
                       <span className="min-w-0 flex-1 font-extrabold">
                         {turnIsUs && selectedLauncher ? (

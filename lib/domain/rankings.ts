@@ -1,4 +1,5 @@
 import { type CategoryCode } from "./categories";
+import { validCapNumber } from "./cap-number";
 
 export type RankingMetric =
   "goals" | "assists" | "goal_contributions" | "exclusions" | "mvp" | "attendance" | "streak";
@@ -141,8 +142,8 @@ export function computeRanking(
     if (a.primary_value !== b.primary_value) {
       return ascending ? a.primary_value - b.primary_value : b.primary_value - a.primary_value;
     }
-    const aCap = a.cap_number ?? 100;
-    const bCap = b.cap_number ?? 100;
+    const aCap = validCapNumber(a.cap_number) ?? 100;
+    const bCap = validCapNumber(b.cap_number) ?? 100;
     if (aCap !== bCap) return aCap - bCap;
     return a.full_name_locale.localeCompare(b.full_name_locale, RANKING_LOCALE);
   });

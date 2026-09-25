@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { validCapNumber } from "@/lib/domain/cap-number";
 import type { Database, Tables } from "@/types/database";
 
 export type Team = Tables<"teams">;
@@ -124,11 +125,11 @@ export async function getTeamRoster(
       if (!p.is_active) continue;
       result.push({
         player_id: p.id,
-        squad_number: row.squad_number,
+        squad_number: validCapNumber(row.squad_number),
         full_name: p.full_name,
         photo_url: p.photo_url,
         birth_year: p.birth_year,
-        cap_number: p.cap_number,
+        cap_number: validCapNumber(p.cap_number),
       });
     }
   }
@@ -416,7 +417,7 @@ export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListIte
     } | null;
     if (!profile?.id || profile.is_active === false) continue;
     counts.set(row.team_id, (counts.get(row.team_id) ?? 0) + 1);
-    const cap = row.squad_number ?? profile.cap_number ?? null;
+    const cap = validCapNumber(row.squad_number ?? profile.cap_number);
     if (cap == null) continue;
     const current = featuredByTeam.get(row.team_id);
     if (!current || cap < (current.cap ?? 99)) {
@@ -465,7 +466,7 @@ export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListIte
       featuredByTeam.set(teamId, {
         player_id: row.player_id,
         full_name: profile.full_name,
-        cap: profile.cap_number ?? null,
+        cap: validCapNumber(profile.cap_number),
       });
     }
   }

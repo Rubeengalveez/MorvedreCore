@@ -21,8 +21,8 @@ export function makeRowSchema(currentYear: number) {
       z.coerce
         .number()
         .int("dorsal debe ser entero")
-        .min(0, "dorsal debe ser >= 0")
-        .max(99, "dorsal debe ser <= 99")
+        .min(1, "gorro debe estar entre 1 y 14")
+        .max(14, "gorro debe estar entre 1 y 14")
         .optional(),
     ),
     email_tutor: z.preprocess(

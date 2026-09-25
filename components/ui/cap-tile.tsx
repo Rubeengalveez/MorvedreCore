@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils/cn";
+import { validCapNumber } from "@/lib/domain/cap-number";
 
 export type CapTileSize = "sm" | "md" | "lg";
 
@@ -29,12 +30,12 @@ export function CapTile({
   "aria-label": ariaLabel,
 }: CapTileProps) {
   const s = sizeMap[size];
-  const safeNumber = Math.max(0, Math.min(99, Math.floor(number)));
-  const display = safeNumber < 10 ? String(safeNumber) : String(safeNumber);
+  const safeNumber = validCapNumber(number);
+  const display = safeNumber == null ? "–" : String(safeNumber);
   return (
     <span
       role={ariaLabel ? "img" : undefined}
-      aria-label={ariaLabel ?? `Dorsal ${safeNumber}`}
+      aria-label={safeNumber == null ? "Sin gorro" : ariaLabel ?? `Gorro ${safeNumber}`}
       data-team-cap
       data-cap-size={size}
       className={cn(
