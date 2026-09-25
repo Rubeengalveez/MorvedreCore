@@ -140,12 +140,12 @@ export function LoginForm({ next, error }: LoginFormProps) {
 
         <Link
           href={"/reset-password" as Route}
-          className="text-pool-blue inline-flex min-h-12 items-center self-end rounded-lg px-1 text-sm font-bold hover:underline focus-visible:underline focus-visible:outline-none"
+          className="text-pool-blue -my-2 inline-flex min-h-12 items-center self-end rounded-lg px-1 text-sm font-bold hover:underline focus-visible:underline focus-visible:outline-none"
         >
           ¿Olvidaste la contraseña?
         </Link>
 
-        <div className="flex flex-col gap-3 pt-1">
+        <div className="flex flex-col gap-3">
           <Button type="submit" size="lg" className="w-full" disabled={isPending}>
             {isPending ? (
               <>
