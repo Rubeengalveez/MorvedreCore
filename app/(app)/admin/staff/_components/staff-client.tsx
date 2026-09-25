@@ -15,7 +15,7 @@ import {
   type AdminPermission,
 } from "@/lib/domain/permissions";
 import { cn } from "@/lib/utils/cn";
-import { assignRole, setProfileAdminPermission, unassignRole } from "@/server/actions/admin/players";
+import { assignRole, provisionPersonnelAccess, setProfileAdminPermission, unassignRole } from "@/server/actions/admin/players";
 
 import {
   StaffFormSheet,
@@ -33,6 +33,7 @@ export interface StaffClientProps {
   permissionsByProfile: Record<string, AdminPermission[]>;
   canGrantPermissions: boolean;
   boardProfileIds: string[];
+  accessCandidates: Array<{ id: string; full_name: string; email_contact: string | null }>;
 }
 
 export function StaffClient({
@@ -42,6 +43,7 @@ export function StaffClient({
   permissionsByProfile,
   canGrantPermissions,
   boardProfileIds,
+  accessCandidates,
 }: StaffClientProps) {
   const [teamFilter, setTeamFilter] = useState<string>("");
   const [search, setSearch] = useState("");
@@ -79,6 +81,10 @@ export function StaffClient({
       />
 
       {canGrantPermissions ? (
+        <PersonnelAccessManager candidates={accessCandidates} />
+      ) : null}
+
+      {canGrantPermissions ? (
         <DirectivaManager people={people} initialProfileIds={boardProfileIds} />
       ) : null}
 
@@ -111,6 +117,65 @@ export function StaffClient({
       />
     </div>
   );
+}
+
+function PersonnelAccessManager({ candidates }: {
+  candidates: Array<{ id: string; full_name: string; email_contact: string | null }>;
+}) {
+  const [personId, setPersonId] = useState("");
+  const [email, setEmail] = useState("");
+  const [issued, setIssued] = useState<{ email: string; temporaryPassword: string | null } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+
+  function issue() {
+    if (!personId) return;
+    setError(null);
+    setIssued(null);
+    startTransition(async () => {
+      try {
+        setIssued(await provisionPersonnelAccess({ profileId: personId, email }));
+        setPersonId("");
+        setEmail("");
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "No pudimos generar el acceso.");
+      }
+    });
+  }
+
+  return <section className="border-pool-blue/20 bg-paper-card shadow-elev-1 rounded-2xl border p-4">
+    <div className="flex items-center gap-2">
+      <ShieldCheck className="text-pool-blue h-6 w-6" aria-hidden="true" />
+      <h2 className="text-pool-deep text-lg font-extrabold">Dar acceso al personal</h2>
+    </div>
+    <p className="text-ink-700 mt-1 text-sm">Para entrenadores y personal con función asignada. Quien ya entra como jugador o familiar conserva su cuenta: asígnale el rol directamente.</p>
+    {error ? <p role="alert" className="text-danger mt-3 text-sm font-semibold">{error}</p> : null}
+    {issued ? <div role="status" className="border-success/30 bg-success/5 mt-3 rounded-xl border p-3">
+      <p className="text-pool-deep text-sm font-extrabold">Acceso creado para {issued.email}</p>
+      {issued.temporaryPassword ? <>
+        <p className="text-ink-700 mt-1 text-sm">Comparte esta contraseña provisional en privado. Solo aparece ahora; deberá cambiarla al entrar.</p>
+        <code className="text-pool-deep mt-2 block break-all font-mono font-bold">{issued.temporaryPassword}</code>
+      </> : <p className="text-ink-700 mt-1 text-sm">Su cuenta verificada de Google ya está vinculada. Puede volver a entrar con Google.</p>}
+      <Button type="button" size="sm" variant="secondary" className="mt-2" onClick={() => setIssued(null)}>Ocultar</Button>
+    </div> : null}
+    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+      <Select aria-label="Personal sin acceso" value={personId}
+        onChange={(event) => { setPersonId(event.target.value);
+          setEmail(candidates.find((person) => person.id === event.target.value)?.email_contact ?? ""); }}
+        className="min-w-0 flex-1">
+        <option value="">Selecciona una persona</option>
+        {candidates.map((person) => <option key={person.id} value={person.id}>{person.full_name}</option>)}
+      </Select>
+    </div>
+    <div className="mt-2 flex flex-col gap-1.5">
+      <label htmlFor="staff-access-email" className="text-pool-deep text-sm font-bold">Correo para entrar</label>
+      <Input id="staff-access-email" type="email" inputMode="email" autoComplete="email"
+        placeholder="nombre@correo.com" value={email} onChange={(event) => setEmail(event.target.value)} />
+    </div>
+    <Button type="button" className="mt-3 w-full sm:w-auto" disabled={!personId || !email || pending} onClick={issue}>
+      {pending ? "Generando…" : "Generar acceso"}
+    </Button>
+  </section>;
 }
 
 function DirectivaManager({ people, initialProfileIds }: { people: PersonOption[]; initialProfileIds: string[] }) {

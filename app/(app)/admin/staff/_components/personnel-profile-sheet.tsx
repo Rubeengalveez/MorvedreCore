@@ -47,7 +47,7 @@ export function PersonnelProfileSheet() {
         <SheetHeader>
           <SheetTitle>Dar de alta a una persona</SheetTitle>
           <SheetDescription>
-            Crea su perfil con el correo que usará para solicitar acceso. Después podrás asignarle un equipo o marcarla como directiva.
+            Crea su perfil y asígnale una función. Después podrás generar su acceso desde Personal.
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
@@ -66,7 +66,7 @@ export function PersonnelProfileSheet() {
               Forma parte de la directiva
             </label>
             <p className="text-ink-600 text-sm">
-              Los permisos de gestión se asignan por separado. La persona pedirá acceso desde «Personal y directiva» y tú aprobarás la vinculación.
+              Los permisos de gestión se asignan por separado. Si ya entra como jugador o familiar, usa ese mismo perfil y añade el rol que necesite.
             </p>
           </form>
         </SheetBody>

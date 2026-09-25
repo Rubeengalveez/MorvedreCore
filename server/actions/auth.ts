@@ -1,6 +1,7 @@
 "use server";
 
-import { randomBytes } from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAccessRequestNotification } from "@/lib/email/resend";
-import { findUniqueExactProfile, normalizeFullName, requiresTemporaryPassword } from "@/lib/domain/access-onboarding";
+import { findUniqueExactProfile, findUniqueFlexiblePlayer, normalizeFullName, requiresTemporaryPassword } from "@/lib/domain/access-onboarding";
 
 const signInSchema = z.object({
   email: z.string().email("Introduce un email válido."),
@@ -42,7 +43,7 @@ const submitAccessRequestSchema = z
   .object({
     email: z.string().email("Introduce un email válido."),
     fullName: z.string().trim().min(2, "Introduce tu nombre completo.").max(100, "Máximo 100 caracteres."),
-    role: z.enum(["player", "parent", "staff"], {
+    role: z.enum(["player", "parent"], {
       message: "Selecciona un tipo de cuenta.",
     }),
     birthYear: z.preprocess(
@@ -50,8 +51,7 @@ const submitAccessRequestSchema = z
       z.number().int().min(1900).max(new Date().getFullYear()).optional(),
     ),
     gender: z.enum(["male", "female", "other", "prefer_not_to_say"]).optional(),
-    teamId: z.string().uuid().optional(),
-    relation: z.enum(["mother", "father", "legal_guardian", "other"]).optional(),
+    relation: z.enum(["mother", "father", "other"]).optional(),
     children: z.string().optional(),
   })
   .refine(
@@ -66,10 +66,6 @@ const submitAccessRequestSchema = z
       path: ["birthYear"],
     },
   )
-  .refine((data) => data.role !== "player" || !!data.teamId, {
-    message: "Selecciona tu equipo.",
-    path: ["teamId"],
-  })
   .refine(
     (data: { role: string; relation?: string }) => {
       if (data.role === "parent" && !data.relation) {
@@ -198,24 +194,62 @@ async function rateLimitCheck(email: string) {
   return (emailCount ?? 0) >= 3 || (globalCount ?? 0) >= 300;
 }
 
-async function findCandidateProfile(fullName: string, birthYear: number, teamId: string) {
-  const supabase = createAdminClient();
-  const normalized = normalizeFullName(fullName);
-  const { data: currentSeason } = await supabase
-    .from("seasons").select("id").eq("is_current", true).maybeSingle();
-  if (!currentSeason) return null;
-  const { data: team } = await supabase
-    .from("teams").select("id").eq("id", teamId).eq("season_id", currentSeason.id).maybeSingle();
-  if (!team) return null;
-  const { data: rosters, error } = await supabase
-    .from("team_rosters")
-    .select("player:profiles!team_rosters_player_id_fkey(id, full_name, birth_year, auth_user_id, is_active)")
-    .eq("team_id", teamId).is("left_at", null).limit(300);
+async function consumeIdentityCheckBudget(): Promise<boolean> {
+  const requestHeaders = await headers();
+  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || requestHeaders.get("x-real-ip") || "unknown";
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!key) return false;
+  const fingerprint = createHmac("sha256", key).update(ip).digest("hex");
+  const admin = createAdminClient();
+  const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+  const [{ count: perIp, error: ipError }, { count: global, error: globalError }] = await Promise.all([
+    admin.from("access_identity_checks").select("id", { count: "exact", head: true })
+      .eq("requester_hash", fingerprint).gte("checked_at", since),
+    admin.from("access_identity_checks").select("id", { count: "exact", head: true })
+      .gte("checked_at", since),
+  ]);
+  if (ipError || globalError || (perIp ?? 0) >= 30 || (global ?? 0) >= 1000) return false;
+  const { error } = await admin.from("access_identity_checks").insert({ requester_hash: fingerprint });
+  if (error) return false;
+  await admin.from("access_identity_checks").delete()
+    .lt("checked_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+  return true;
+}
+
+async function findPlayerProfile(fullName: string, birthYear: number, allowLinked: boolean) {
+  const admin = createAdminClient();
+  const { data: profiles, error } = await admin.from("profiles")
+    .select("id, full_name, auth_user_id")
+    .eq("birth_year", birthYear).eq("is_active", true).limit(300);
   if (error) return null;
-  const matches = (rosters ?? []).map((row) => row.player).filter((profile) =>
-    profile && profile.birth_year === birthYear && profile.is_active && !profile.auth_user_id,
+  const candidate = findUniqueFlexiblePlayer(
+    (profiles ?? []).filter((profile) => allowLinked || !profile.auth_user_id), fullName,
   );
-  return findUniqueExactProfile(matches, normalized);
+  if (!candidate) return null;
+  const [{ data: playerRole }, { data: season }] = await Promise.all([
+    admin.from("user_roles").select("id").eq("profile_id", candidate.id)
+      .eq("role", "player").is("scope_team_id", null).maybeSingle(),
+    admin.from("seasons").select("id").eq("is_current", true).maybeSingle(),
+  ]);
+  if (!playerRole || !season) return null;
+  const { data: rosters } = await admin.from("team_rosters")
+    .select("team_id, team:teams!team_rosters_team_id_fkey(season_id)")
+    .eq("player_id", candidate.id).is("left_at", null).limit(20);
+  const currentRoster = rosters?.find((row) => row.team?.season_id === season.id);
+  return currentRoster ? { id: candidate.id, teamId: currentRoster.team_id } : null;
+}
+
+export async function checkPlayerIdentity(input: unknown): Promise<"found" | "missing" | "limited"> {
+  const parsed = z.object({
+    fullName: z.string().trim().min(5).max(100),
+    birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
+    forParent: z.boolean(),
+  }).safeParse(input);
+  if (!parsed.success) return "missing";
+  if (!await consumeIdentityCheckBudget()) return "limited";
+  const match = await findPlayerProfile(parsed.data.fullName, parsed.data.birthYear, parsed.data.forParent);
+  return match ? "found" : "missing";
 }
 
 export async function signIn(formData: FormData) {
@@ -395,7 +429,6 @@ export async function submitAccessRequest(
     role: formData.get("role"),
     birthYear: formData.get("birthYear") || undefined,
     gender: formData.get("gender") || undefined,
-    teamId: formData.get("teamId") || undefined,
     relation: formData.get("relation") || undefined,
     children: typeof rawChildren === "string" ? rawChildren : undefined,
   };
@@ -405,13 +438,16 @@ export async function submitAccessRequest(
     return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
   }
 
-  const { email, fullName, role, birthYear, gender, relation, teamId } = parsed.data;
+  const { email, fullName, role, birthYear, gender, relation } = parsed.data;
   const parsedChildren = role === "parent" ? parseChildClaims(parsed.data.children) : null;
   if (role === "parent" && !parsedChildren?.success) {
     return { error: "Escribe el nombre completo y año de nacimiento de cada hijo." };
   }
   const childrenClaims = parsedChildren?.success ? parsedChildren.data : [];
   let childrenIds: string[] = [];
+  if ((role === "player" || role === "parent") && !await consumeIdentityCheckBudget()) {
+    return { error: "Has hecho demasiadas comprobaciones. Inténtalo más tarde o habla con el administrador." };
+  }
 
   const admin = createAdminClient();
   const supabase = await createClient();
@@ -453,34 +489,15 @@ export async function submitAccessRequest(
   }
 
   let candidateProfileId: string | null = null;
+  let playerTeamId: string | null = null;
 
-  if (role === "player" && birthYear && teamId) {
-    const candidate = await findCandidateProfile(fullName, birthYear, teamId);
+  if (role === "player" && birthYear) {
+    const candidate = await findPlayerProfile(fullName, birthYear, false);
     if (!candidate) {
-      return { error: "No encontramos un jugador disponible con esos datos en ese equipo. Consulta con el club." };
+      return { error: "Revisa que el nombre esté bien escrito y completo y que el año de nacimiento sea correcto." };
     }
     candidateProfileId = candidate.id;
-  }
-
-  if (role === "staff") {
-    const { data: profiles } = await admin.from("profiles")
-      .select("id, full_name, email_contact")
-      .ilike("email_contact", email)
-      .is("auth_user_id", null).eq("is_active", true).limit(20);
-    const candidate = findUniqueExactProfile(
-      (profiles ?? []).filter((profile) => profile.email_contact?.toLowerCase() === email), fullName,
-    );
-    if (!candidate) {
-      return { error: "No encontramos un perfil de personal con ese nombre y correo. Consulta con el club." };
-    }
-    candidateProfileId = candidate.id;
-    const { data: staffRoles } = await admin.from("user_roles").select("role")
-      .eq("profile_id", candidateProfileId).in("role", ["coach", "delegate", "directiva", "admin"]);
-    const { data: staffAssignments } = await admin.from("team_staff").select("team_id")
-      .eq("profile_id", candidateProfileId).limit(1);
-    if (!staffRoles?.length && !staffAssignments?.length) {
-      return { error: "Tu perfil aún no tiene un rol de personal asignado. Consulta con el club." };
-    }
+    playerTeamId = candidate.teamId;
   }
 
   if (role === "parent") {
@@ -496,16 +513,11 @@ export async function submitAccessRequest(
 
   if (role === "parent") {
     for (const child of childrenClaims) {
-      const { data: matches, error } = await admin.from("profiles")
-        .select("id, full_name")
-        .eq("birth_year", child.birthYear)
-        .eq("is_active", true)
-        .limit(300);
-      const exact = findUniqueExactProfile(matches ?? [], child.fullName);
-      if (error || !exact) {
-        return { error: "No encontramos a uno de los jugadores con esos datos. Consulta con el club." };
+      const childProfile = await findPlayerProfile(child.fullName, child.birthYear, true);
+      if (!childProfile) {
+        return { error: "Revisa que el nombre del jugador esté bien escrito y completo y que el año de nacimiento sea correcto." };
       }
-      childrenIds.push(exact.id);
+      childrenIds.push(childProfile.id);
     }
     childrenIds = Array.from(new Set(childrenIds));
   }
@@ -521,7 +533,7 @@ export async function submitAccessRequest(
       relation: relation ?? null,
       candidate_profile_id: candidateProfileId,
       auth_user_id: googleUserId,
-      team_id: role === "player" ? teamId : null,
+      team_id: role === "player" ? playerTeamId : null,
     })
     .select()
     .single();
@@ -687,14 +699,15 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
       if (!candidate || candidate.auth_user_id || !candidate.is_active) {
         throw new Error("El perfil indicado ya no está disponible.");
       }
-      if (normalizeFullName(candidate.full_name) !== normalizeFullName(request.full_name)) {
+      if (request.role === "player"
+        ? !findUniqueFlexiblePlayer([candidate], request.full_name)
+        : normalizeFullName(candidate.full_name) !== normalizeFullName(request.full_name)) {
         throw new Error("El nombre ya no coincide con el perfil indicado.");
       }
       if (request.role !== "player" && candidate.email_contact?.toLowerCase() !== request.email.toLowerCase()) {
         throw new Error("El correo ya no coincide con el perfil indicado.");
       }
-      if (request.role === "player" &&
-        candidate.birth_year !== request.birth_year) {
+      if (request.role === "player" && candidate.birth_year !== request.birth_year) {
         throw new Error("Los datos del jugador ya no coinciden con su perfil.");
       }
       if (request.role === "player") {

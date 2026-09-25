@@ -33,6 +33,12 @@ export type Database = {
   };
   public: {
     Tables: {
+      access_identity_checks: {
+        Row: { id: number; requester_hash: string; checked_at: string };
+        Insert: { id?: number; requester_hash: string; checked_at?: string };
+        Update: { id?: number; requester_hash?: string; checked_at?: string };
+        Relationships: [];
+      };
       live_match_sheets: {
         Row: { match_id: string; owner_id: string; device_id: string; revision: number; mutation_id: string; document: Json; updated_at: string };
         Insert: { match_id: string; owner_id: string; device_id: string; revision: number; mutation_id: string; document: Json; updated_at?: string };

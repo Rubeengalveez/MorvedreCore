@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { findUniqueExactProfile, requiresTemporaryPassword } from "@/lib/domain/access-onboarding";
+import { findUniqueExactProfile, findUniqueFlexiblePlayer, requiresTemporaryPassword } from "@/lib/domain/access-onboarding";
 
 describe("vinculación de cuentas", () => {
   const profiles = [
@@ -14,6 +14,17 @@ describe("vinculación de cuentas", () => {
   it("no vincula un nombre ambiguo o inexistente", () => {
     expect(findUniqueExactProfile([...profiles, { id: "otra", full_name: "Ana Maria Perez" }], "Ana María Pérez")).toBeNull();
     expect(findUniqueExactProfile(profiles, "Carlos García")).toBeNull();
+  });
+
+  it("acepta un apellido y omitir el segundo nombre solo cuando la coincidencia es única", () => {
+    const players = [
+      { id: "uno", full_name: "María Isabel Pérez Gómez" },
+      { id: "dos", full_name: "María Luisa Sanz López" },
+    ];
+    expect(findUniqueFlexiblePlayer(players, "MARIA PEREZ")?.id).toBe("uno");
+    expect(findUniqueFlexiblePlayer(players, "Maria Isabel Perez")?.id).toBe("uno");
+    expect(findUniqueFlexiblePlayer(players, "María")).toBeNull();
+    expect(findUniqueFlexiblePlayer([...players, { id: "tres", full_name: "María Pérez Soler" }], "María Pérez")).toBeNull();
   });
 
   it("solo emite contraseña provisional cuando no hay una identidad de Google verificada", () => {

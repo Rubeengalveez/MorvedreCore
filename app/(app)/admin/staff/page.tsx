@@ -28,6 +28,7 @@ async function loadData(): Promise<{
   permissionsByProfile: Record<string, AdminPermission[]>;
   canGrantPermissions: boolean;
   boardProfileIds: string[];
+  accessCandidates: Array<{ id: string; full_name: string; email_contact: string | null }>;
 }> {
   const supabase = await createClient();
 
@@ -50,7 +51,7 @@ async function loadData(): Promise<{
       .order("label", { ascending: true }),
     supabase
       .from("profiles")
-      .select("id, full_name")
+      .select("id, full_name, email_contact, auth_user_id")
       .eq("is_active", true)
       .order("full_name", { ascending: true })
       .limit(2000),
@@ -100,14 +101,20 @@ async function loadData(): Promise<{
   });
 
   const people: PersonOption[] = (profilesData ?? []) as PersonOption[];
+  const staffIds = new Set((staffData ?? []).map((row) => row.profile_id));
+  for (const row of boardData ?? []) staffIds.add(row.profile_id);
+  const accessCandidates = (profilesData ?? [])
+    .filter((profile) => staffIds.has(profile.id) && !profile.auth_user_id)
+    .map((profile) => ({ id: profile.id, full_name: profile.full_name,
+      email_contact: profile.email_contact }));
 
   return { rows, teams, people, permissionsByProfile,
     boardProfileIds: [...new Set((boardData ?? []).map((row) => row.profile_id))],
-    canGrantPermissions: access.isAdmin };
+    canGrantPermissions: access.isAdmin, accessCandidates };
 }
 
 export default async function StaffPage() {
-  const { rows, teams, people, permissionsByProfile, boardProfileIds, canGrantPermissions } = await loadData();
+  const { rows, teams, people, permissionsByProfile, boardProfileIds, canGrantPermissions, accessCandidates } = await loadData();
 
   return (
     <AdminPageShell>
@@ -119,6 +126,7 @@ export default async function StaffPage() {
         permissionsByProfile={permissionsByProfile}
         boardProfileIds={boardProfileIds}
         canGrantPermissions={canGrantPermissions}
+        accessCandidates={accessCandidates}
       />
     </AdminPageShell>
   );

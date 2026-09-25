@@ -1,5 +1,12 @@
 # Log de decisiones
 
+## 2026-09-25 - Solicitud de acceso simplificada
+
+- La entrada pública permite solicitar acceso solo a jugadores y familiares. El personal recibe una cuenta directamente desde Administración; quienes ya son jugadores o familiares conservan su perfil y reciben los permisos adicionales allí.
+- La identificación de jugadores usa nombre y año de nacimiento. Acepta diferencias de mayúsculas, tildes, segundo nombre y segundo apellido solo cuando la coincidencia es única y pertenece a un jugador activo en la temporada actual. El equipo se obtiene del perfil, sin pedirlo al solicitante.
+- La comprobación previa devuelve únicamente encontrado o no encontrado, sin nombres ni listas. Las consultas quedan limitadas por origen y requieren revisión del administrador antes de conceder acceso.
+- La ayuda para entrar se abre en WhatsApp con un mensaje preparado. Las pantallas de solicitud conservan la estética del acceso y muestran una navegación de vuelta clara.
+
 ## 2026-09-15 - Criterio de MVP del partido con acta (goles + asistencias)
 
 - Si el partido cuenta con acta en directo (`live_match_sheets`): el MVP se determina sumando **goles + asistencias**. En caso de empate a contribuciones totales, desempata quien tenga menos expulsiones.

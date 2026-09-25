@@ -1,13 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { MdAutorenew } from "react-icons/md";
 
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { PlayerIdentityFields } from "@/components/auth/player-identity-fields";
 import { submitAccessRequest, type SubmitAccessRequestState } from "@/server/actions/auth";
 
 function SubmitButton() {
@@ -23,14 +23,15 @@ function SubmitButton() {
 export interface AccessRequestPlayerFormProps {
   email: string;
   lockedEmail?: boolean;
-  teams: Array<{ id: string; label: string }>;
 }
 
-export function AccessRequestPlayerForm({ email, lockedEmail = false, teams }: AccessRequestPlayerFormProps) {
+export function AccessRequestPlayerForm({ email, lockedEmail = false }: AccessRequestPlayerFormProps) {
   const [state, formAction] = useActionState<SubmitAccessRequestState, FormData>(
     submitAccessRequest,
     null,
   );
+  const [fullName, setFullName] = useState("");
+  const [birthYear, setBirthYear] = useState("");
 
   if (state?.success) {
     return (
@@ -74,59 +75,26 @@ export function AccessRequestPlayerForm({ email, lockedEmail = false, teams }: A
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="email" className="text-eyebrow text-ink-700">
-          Email
+          Correo electrónico
         </label>
         <Input
           id="email"
           type="email"
           name="email"
+          placeholder="Ej. nombre@correo.com"
+          inputMode="email"
+          spellCheck={false}
           defaultValue={email}
           readOnly={lockedEmail}
           required
           autoComplete="email"
-          className="bg-ink-100 text-ink-600 h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="teamId" className="text-eyebrow text-ink-700">Equipo principal</label>
-        <Select id="teamId" name="teamId" required defaultValue=""
-          className="bg-pool-ice focus:border-pool-blue focus:bg-paper min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4">
-          <option value="" disabled>Selecciona tu equipo</option>
-          {teams.map((team) => <option key={team.id} value={team.id}>{team.label}</option>)}
-        </Select>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor="fullName" className="text-eyebrow text-ink-700">
-          Nombre completo
-        </label>
-        <Input
-          id="fullName"
-          name="fullName"
-          type="text"
-          placeholder="Tu nombre y apellidos"
-          required
-          minLength={2}
           className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
       </div>
 
-      <div className="flex flex-col gap-1.5">
-          <label htmlFor="birthYear" className="text-eyebrow text-ink-700">
-            A&ntilde;o de nacimiento
-          </label>
-          <Input
-            id="birthYear"
-            name="birthYear"
-            type="number"
-            placeholder="2010"
-            min={1900}
-            max={2100}
-            required
-            className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
-          />
-      </div>
+      <PlayerIdentityFields idPrefix="request-player" fullName={fullName} birthYear={birthYear}
+        onNameChange={setFullName} onYearChange={setBirthYear} forParent={false}
+        supportMessage="Hola Rubén, estoy intentando solicitar acceso como jugador en Morvedre Core y no aparece mi perfil." />
 
       <SubmitButton />
     </form>

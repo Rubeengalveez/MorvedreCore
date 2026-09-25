@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import { LoginForm } from "@/components/auth/login-form";
 import { AuthErrorBanner, type AuthErrorCode } from "@/components/auth/auth-error-banner";
+import { supportWhatsAppUrl } from "@/lib/auth/support";
 
 export const metadata: Metadata = {
   title: "Acceso — Morvedre Core",
@@ -99,7 +100,9 @@ export default async function LoginPage({
         <p className="text-ink-500 text-center text-xs">
           &iquest;Problemas para entrar?{" "}
           <a
-            href="mailto:galvillo9@gmail.com"
+            href={supportWhatsAppUrl("Hola Rubén, estoy teniendo problemas con Morvedre Core.")}
+            target="_blank"
+            rel="noopener noreferrer"
             className="text-pool-blue font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
           >
             Escr&iacute;beme

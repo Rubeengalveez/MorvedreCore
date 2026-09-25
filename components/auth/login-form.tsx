@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { ArrowUpRight, Eye, EyeOff, Loader2, UserRoundPlus } from "lucide-react";
 import type { Route } from "next";
 
 import { Button } from "@/components/ui/button";
@@ -138,11 +138,6 @@ export function LoginForm({ next, error }: LoginFormProps) {
           ¿Olvidaste la contraseña?
         </Link>
 
-        <Link href={"/login/request" as Route}
-          className="text-pool-blue self-start text-sm font-bold hover:underline focus-visible:underline focus-visible:outline-none">
-          ¿Es tu primera vez? Solicita acceso
-        </Link>
-
         <div className="flex flex-col gap-3 pt-1">
           <Button type="submit" size="lg" className="w-full" disabled={isPending}>
             {isPending ? (
@@ -157,14 +152,7 @@ export function LoginForm({ next, error }: LoginFormProps) {
         </div>
       </form>
 
-      <div className="relative my-2">
-        <div className="absolute inset-0 flex items-center" aria-hidden="true">
-          <div className="border-ink-200 w-full border-t" />
-        </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-paper-card text-ink-600 px-2">o</span>
-        </div>
-      </div>
+      <p className="text-ink-600 my-2 text-center text-xs font-bold">o continúa con</p>
 
       <a
         href={googleRedirectUrl}
@@ -174,6 +162,18 @@ export function LoginForm({ next, error }: LoginFormProps) {
         <GoogleIcon />
         <span>Continuar con Google</span>
       </a>
+
+      <Link href={"/login/request" as Route}
+        className="bg-pool-foam/75 text-pool-deep focus-visible:ring-pool-blue mt-4 flex min-h-16 items-center gap-3 rounded-xl px-3 py-2 transition-colors hover:bg-pool-foam focus-visible:ring-2 focus-visible:outline-none">
+        <span className="bg-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+          <UserRoundPlus className="text-pool-blue h-5 w-5" aria-hidden="true" />
+        </span>
+        <span className="min-w-0 flex-1 text-sm leading-tight">
+          <span className="block font-extrabold">¿Aún no tienes acceso?</span>
+          <span className="text-ink-700 mt-0.5 block">Solicita tu cuenta al club</span>
+        </span>
+        <ArrowUpRight className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
+      </Link>
     </>
   );
 }

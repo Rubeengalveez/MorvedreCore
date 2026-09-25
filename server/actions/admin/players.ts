@@ -1,5 +1,6 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -29,6 +30,10 @@ const personnelProfileSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   directiva: z.boolean(),
 });
+const personnelAccessSchema = z.object({
+  profileId: z.string().uuid(),
+  email: z.string().trim().toLowerCase().email(),
+});
 
 export async function createPersonnelProfile(input: unknown): Promise<void> {
   await requireAdmin();
@@ -55,6 +60,64 @@ export async function createPersonnelProfile(input: unknown): Promise<void> {
     }
   }
   revalidatePath("/admin/staff");
+}
+
+export async function provisionPersonnelAccess(input: unknown): Promise<{ email: string; temporaryPassword: string | null }> {
+  await requireAdmin();
+  const parsed = personnelAccessSchema.safeParse(input);
+  if (!parsed.success) throw new Error("Selecciona una persona y escribe un correo válido.");
+  const admin = createAdminClient();
+  const { data: profile } = await admin.from("profiles")
+    .select("id, email_contact, auth_user_id, is_active")
+    .eq("id", parsed.data.profileId).maybeSingle();
+  if (!profile?.is_active || profile.auth_user_id) {
+    throw new Error("Esta persona necesita un perfil activo sin acceso previo.");
+  }
+  const [{ data: role }, { data: assignment }] = await Promise.all([
+    admin.from("user_roles").select("id").eq("profile_id", profile.id)
+      .in("role", ["coach", "delegate", "directiva", "admin"]).limit(1),
+    admin.from("team_staff").select("team_id").eq("profile_id", profile.id).limit(1),
+  ]);
+  if (!role?.length && !assignment?.length) {
+    throw new Error("Asigna primero su función en un equipo o en la directiva.");
+  }
+  const { data: existingAuth, error: lookupError } = await admin.rpc("get_auth_user_id_by_email", {
+    p_email: parsed.data.email,
+  }).maybeSingle();
+  if (lookupError) throw new Error("No pudimos verificar si el correo ya tiene acceso.");
+  let authUserId: string;
+  let temporaryPassword: string | null = null;
+  if (existingAuth) {
+    const { data: account, error } = await admin.auth.admin.getUserById(existingAuth);
+    if (error || !account.user?.email_confirmed_at ||
+      !account.user.identities?.some((identity) => identity.provider === "google") ||
+      account.user.email?.toLowerCase() !== parsed.data.email) {
+      throw new Error("Ese correo ya tiene cuenta. Usa el perfil existente o recupera su acceso.");
+    }
+    const { data: linkedProfile } = await admin.from("profiles").select("id")
+      .eq("auth_user_id", existingAuth).maybeSingle();
+    if (linkedProfile) throw new Error("Esa cuenta ya está vinculada a otro perfil. Asigna allí su función.");
+    authUserId = existingAuth;
+  } else {
+    temporaryPassword = `Mc-${randomBytes(12).toString("base64url")}9aA`;
+    const { data: account, error: createError } = await admin.auth.admin.createUser({
+      email: parsed.data.email,
+      password: temporaryPassword,
+      email_confirm: true,
+    });
+    if (createError || !account.user) throw new Error("No pudimos crear la cuenta.");
+    authUserId = account.user.id;
+  }
+  const { data: linked, error: linkError } = await admin.from("profiles")
+    .update({ auth_user_id: authUserId, email_contact: parsed.data.email,
+      must_change_password: temporaryPassword !== null })
+    .eq("id", profile.id).is("auth_user_id", null).select("id").maybeSingle();
+  if (linkError || !linked) {
+    if (temporaryPassword) await admin.auth.admin.deleteUser(authUserId);
+    throw new Error("No pudimos vincular la cuenta con su perfil.");
+  }
+  revalidatePath("/admin/staff");
+  return { email: parsed.data.email, temporaryPassword };
 }
 
 function throwIfError(error: { message: string } | null, fallback: string): void {

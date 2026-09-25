@@ -24,7 +24,7 @@ export default async function ParentRequestPage({
   return (
     <AuthRequestShell
       title="Solicitar acceso como padre/madre"
-      subtitle="Indica tus datos y selecciona a tus hijos. Basta con que estén dados de alta en el club."
+      subtitle="Indica tus datos y los de tus hijos. No necesitan tener cuenta propia."
     >
       <AccessRequestParentForm email={email} lockedEmail={!!googleUser} />
     </AuthRequestShell>
