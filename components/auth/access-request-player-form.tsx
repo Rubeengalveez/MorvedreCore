@@ -20,12 +20,7 @@ function SubmitButton() {
   );
 }
 
-export interface AccessRequestPlayerFormProps {
-  email: string;
-  lockedEmail?: boolean;
-}
-
-export function AccessRequestPlayerForm({ email, lockedEmail = false }: AccessRequestPlayerFormProps) {
+export function AccessRequestPlayerForm() {
   const [state, formAction] = useActionState<SubmitAccessRequestState, FormData>(
     submitAccessRequest,
     null,
@@ -55,9 +50,10 @@ export function AccessRequestPlayerForm({ email, lockedEmail = false }: AccessRe
         <div>
           <h3 className="font-display text-pool-deep text-xl font-extrabold">Solicitud enviada</h3>
           <p className="text-ink-600 mt-1 text-sm">
-            Revisaremos que tus datos coincidan con el perfil del club. Si usaste Google,
-            entra de nuevo con Google tras la aprobación. Si solicitaste acceso con correo,
-            recibirás una contraseña provisional que cambiarás al entrar.
+            Revisaremos que tus datos coincidan con el perfil del club.{" "}
+            {state.accessMethod === "google"
+              ? "Tras la aprobación, vuelve a entrar con Google."
+              : "Te entregaremos una contraseña provisional que cambiarás al entrar."}
           </p>
         </div>
       </div>
@@ -84,10 +80,8 @@ export function AccessRequestPlayerForm({ email, lockedEmail = false }: AccessRe
           placeholder="Ej. nombre@correo.com"
           inputMode="email"
           spellCheck={false}
-          defaultValue={email}
-          readOnly={lockedEmail}
           required
-          autoComplete="email"
+          autoComplete="off"
           className="bg-pool-ice focus:border-pool-blue focus:bg-paper h-[52px] min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4"
         />
       </div>

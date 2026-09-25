@@ -1,5 +1,10 @@
 # Log de decisiones
 
+## 2026-09-25 - Correo editable en dispositivos compartidos
+
+- Los formularios de acceso de jugador y familiar empiezan con el correo vacío y editable, incluso si el navegador conserva una sesión anterior de Google. Así se puede solicitar otra cuenta desde el mismo móvil.
+- Solo se vincula Google si el correo escrito coincide con el de una sesión verificada. Si se escribe otro correo, la solicitud sigue el flujo de contraseña provisional y la confirmación explica el método correspondiente.
+
 ## 2026-09-25 - Correo y guía visual de solicitud
 
 - La pantalla de elección de solicitud no muestra ni transmite el correo por URL. Solo un inicio de sesión verificado con Google rellena y bloquea el correo en el formulario; con correo y contraseña se escribe allí.

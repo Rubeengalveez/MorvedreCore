@@ -83,7 +83,7 @@ const accessRequestIdSchema = z.string().uuid("Identificador de solicitud invál
 
 export type PasswordResetState = { error?: string; success?: boolean } | null;
 export type UpdatePasswordState = { error?: string } | null;
-export type SubmitAccessRequestState = { error?: string; success?: boolean } | null;
+export type SubmitAccessRequestState = { error?: string; success?: boolean; accessMethod?: "google" | "email" } | null;
 export interface IssuedCredential {
   email: string;
   temporaryPassword: string;
@@ -450,15 +450,9 @@ export async function submitAccessRequest(
   const admin = createAdminClient();
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (user && user.email?.toLowerCase() !== email) {
-    return { error: "Usa el mismo correo con el que has entrado con Google." };
-  }
-  const googleUserId = user?.email_confirmed_at && user.identities?.some(
+  const googleUserId = user?.email?.toLowerCase() === email && user.email_confirmed_at && user.identities?.some(
     (identity) => identity.provider === "google",
   ) ? user.id : null;
-  if (user && !googleUserId) {
-    return { error: "Esta sesión ya tiene una cuenta. Sal y vuelve a intentarlo." };
-  }
 
   if (await rateLimitCheck(email)) {
     return {
@@ -575,7 +569,7 @@ export async function submitAccessRequest(
   const mail = await sendAdminAccessRequestNotification({ email, fullName, role });
   if (!mail.success) console.error("[submitAccessRequest] admin email notification error:", mail.error);
 
-  return { success: true };
+  return { success: true, accessMethod: googleUserId ? "google" : "email" };
 }
 
 export async function getAccessRequests(status?: "pending" | "approved" | "activated" | "rejected") {

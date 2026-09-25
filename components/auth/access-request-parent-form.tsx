@@ -19,7 +19,7 @@ function SubmitButton() {
   </Button>;
 }
 
-export function AccessRequestParentForm({ email, lockedEmail = false }: { email: string; lockedEmail?: boolean }) {
+export function AccessRequestParentForm() {
   const [state, action] = useActionState<SubmitAccessRequestState, FormData>(submitAccessRequest, null);
   const [children, setChildren] = useState<Child[]>([{ id: 0, fullName: "", birthYear: "" }]);
   const [relation, setRelation] = useState("");
@@ -43,8 +43,10 @@ export function AccessRequestParentForm({ email, lockedEmail = false }: { email:
   if (state?.success) return <div role="status" className="bg-pool-foam/60 text-pool-deep rounded-2xl p-5 text-center">
     <p className="text-lg font-extrabold">Solicitud enviada</p>
     <p className="mt-2 text-sm leading-relaxed">
-      Revisaremos tu vínculo familiar. Si usaste Google, entra de nuevo tras la aprobación.
-      Si usaste correo, te entregaremos una contraseña provisional.
+      Revisaremos tu vínculo familiar.{" "}
+      {state.accessMethod === "google"
+        ? "Tras la aprobación, vuelve a entrar con Google."
+        : "Te entregaremos una contraseña provisional que cambiarás al entrar."}
     </p>
   </div>;
 
@@ -65,8 +67,8 @@ export function AccessRequestParentForm({ email, lockedEmail = false }: { email:
     })))} />
     <div className={step === 1 ? "flex flex-col gap-1.5" : "hidden"}>
       <label htmlFor="parent-request-email" className="text-eyebrow text-ink-700">Correo electrónico</label>
-      <Input id="parent-request-email" name="email" type="email" required defaultValue={email} data-parent-step
-        readOnly={lockedEmail} autoComplete="email" inputMode="email" spellCheck={false}
+      <Input id="parent-request-email" name="email" type="email" required data-parent-step
+        autoComplete="off" inputMode="email" spellCheck={false}
         placeholder="Ej. nombre@correo.com"
         className="bg-pool-ice focus:border-pool-blue focus:bg-paper min-h-[52px] rounded-[var(--r-sm)] border-transparent px-4" />
     </div>
