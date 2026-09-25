@@ -131,7 +131,6 @@ export default async function ShopPage({
 }
 
 function ProductCard({ product }: { product: ShopProduct }) {
-  const variantText = product.sizes.length > 1 ? `${product.sizes.length} tallas` : "Talla única";
   return (
     <Card variant="interactive" asChild className="h-full">
       <Link href={`/shop/${product.id}` as Route} className="group flex flex-col">
@@ -166,22 +165,14 @@ function ProductCard({ product }: { product: ShopProduct }) {
             </StatusBadge>
           </div>
         </div>
-        <div className="flex min-h-32 flex-1 flex-col p-3.5">
+        <div className="flex min-h-24 flex-1 flex-col p-3">
           <h3 className="text-pool-deep line-clamp-2 text-base leading-snug font-extrabold">
             {product.title}
           </h3>
-          <p className="text-ink-500 mt-1 text-xs font-semibold">{variantText}</p>
-          <div className="mt-auto pt-3">
+          <div className="mt-auto pt-2">
             <span className="text-pool-deep block font-mono text-lg font-extrabold whitespace-nowrap tabular-nums sm:text-xl">
               {formatCents(product.price_cents, product.currency)}
             </span>
-            {product.personalization_enabled ? (
-              <div className="mt-1.5">
-                <StatusBadge variant="info" size="sm">
-                  Personalizable
-                </StatusBadge>
-              </div>
-            ) : null}
           </div>
         </div>
       </Link>
