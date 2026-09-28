@@ -71,8 +71,6 @@ async function main() {
     treasury_concepts: 5,
     treasury_period_closures: 4,
     treasury_lines: 250,
-    travel_offers: 14,
-    travel_reservations: 14,
     historical_player_stats: 120,
     historical_team_matchups: 50,
     news_posts: 12,
@@ -82,20 +80,6 @@ async function main() {
   for (const [table, minimum] of Object.entries(minimums)) {
     const actual = await countRows(table);
     assert(actual >= minimum, `${table} tiene ${actual} filas; se esperaban al menos ${minimum}.`);
-  }
-
-  const offers = await fetchAll(() => admin.from("travel_offers").select("id, seats_taken"));
-  const reservations = await fetchAll(() =>
-    admin.from("travel_reservations").select("offer_id, cancelled_at"),
-  );
-  for (const offer of offers) {
-    const active = reservations.filter(
-      (reservation) => reservation.offer_id === offer.id && reservation.cancelled_at == null,
-    ).length;
-    assert(
-      offer.seats_taken === active,
-      `El coche ${offer.id} indica ${offer.seats_taken} plazas ocupadas y tiene ${active}.`,
-    );
   }
 
   const played = await fetchAll(() =>

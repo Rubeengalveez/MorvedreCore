@@ -32,10 +32,10 @@ describe("EmptyState", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(
       screen.getByText(
-        /la escuela es formativa y no disputa partidos de competición ni genera actas/i,
+        /la escuela es formativa y no disputa partidos de competición/i,
       ),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/cuando se validen actas/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/cuando se registren resultados/i)).not.toBeInTheDocument();
   });
 
   it("renders training attendance explanation for Escuela on attendance metric with no admin buttons", () => {
@@ -68,7 +68,7 @@ describe("EmptyState", () => {
 
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
     expect(
-      screen.getByText(/cuando se validen actas, las posiciones se calculan solas/i),
+      screen.getByText(/cuando se registren resultados de partidos, las posiciones se calculan solas/i),
     ).toBeInTheDocument();
   });
 

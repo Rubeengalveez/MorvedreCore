@@ -56,14 +56,6 @@ const TABLES = [
     filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
   },
   {
-    table: "travel_reservations",
-    filter: { op: "neq", col: "offer_id", val: "00000000-0000-0000-0000-000000000000" },
-  },
-  {
-    table: "travel_offers",
-    filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
-  },
-  {
     table: "treasury_lines",
     filter: { op: "neq", col: "id", val: "00000000-0000-0000-0000-000000000000" },
   },
@@ -110,6 +102,10 @@ const TABLES = [
   {
     table: "match_callups",
     filter: { op: "neq", col: "match_id", val: "00000000-0000-0000-0000-000000000000" },
+  },
+  {
+    table: "team_callup_templates",
+    filter: { op: "neq", col: "team_id", val: "00000000-0000-0000-0000-000000000000" },
   },
   {
     table: "match_availability",

@@ -40,9 +40,32 @@ export type Database = {
         Relationships: [];
       };
       live_match_sheets: {
-        Row: { match_id: string; owner_id: string; device_id: string; revision: number; mutation_id: string; document: Json; updated_at: string };
-        Insert: { match_id: string; owner_id: string; device_id: string; revision: number; mutation_id: string; document: Json; updated_at?: string };
-        Update: { document?: Json; revision?: number; mutation_id?: string; device_id?: string; owner_id?: string; updated_at?: string };
+        Row: {
+          match_id: string;
+          owner_id: string;
+          device_id: string;
+          revision: number;
+          mutation_id: string;
+          document: Json;
+          updated_at: string;
+        };
+        Insert: {
+          match_id: string;
+          owner_id: string;
+          device_id: string;
+          revision: number;
+          mutation_id: string;
+          document: Json;
+          updated_at?: string;
+        };
+        Update: {
+          document?: Json;
+          revision?: number;
+          mutation_id?: string;
+          device_id?: string;
+          owner_id?: string;
+          updated_at?: string;
+        };
         Relationships: [];
       };
       access_request_children: {
@@ -82,11 +105,11 @@ export type Database = {
           },
         ];
       };
-        access_requests: {
-          Row: {
-            auth_user_id: string | null;
-            team_id: string | null;
-            approved_at: string | null;
+      access_requests: {
+        Row: {
+          auth_user_id: string | null;
+          team_id: string | null;
+          approved_at: string | null;
           approved_by_profile_id: string | null;
           birth_year: number | null;
           candidate_profile_id: string | null;
@@ -95,17 +118,17 @@ export type Database = {
           full_name: string;
           gender: string | null;
           id: string;
-            relation: string | null;
-            rejected_at: string | null;
-            rejected_by_profile_id: string | null;
-            role: string;
+          relation: string | null;
+          rejected_at: string | null;
+          rejected_by_profile_id: string | null;
+          role: string;
           status: string;
           updated_at: string;
         };
-          Insert: {
-            auth_user_id?: string | null;
-            team_id?: string | null;
-            approved_at?: string | null;
+        Insert: {
+          auth_user_id?: string | null;
+          team_id?: string | null;
+          approved_at?: string | null;
           approved_by_profile_id?: string | null;
           birth_year?: number | null;
           candidate_profile_id?: string | null;
@@ -114,17 +137,17 @@ export type Database = {
           full_name: string;
           gender?: string | null;
           id?: string;
-            relation?: string | null;
-            rejected_at?: string | null;
-            rejected_by_profile_id?: string | null;
-            role: string;
+          relation?: string | null;
+          rejected_at?: string | null;
+          rejected_by_profile_id?: string | null;
+          role: string;
           status?: string;
           updated_at?: string;
         };
-          Update: {
-            auth_user_id?: string | null;
-            team_id?: string | null;
-            approved_at?: string | null;
+        Update: {
+          auth_user_id?: string | null;
+          team_id?: string | null;
+          approved_at?: string | null;
           approved_by_profile_id?: string | null;
           birth_year?: number | null;
           candidate_profile_id?: string | null;
@@ -133,10 +156,10 @@ export type Database = {
           full_name?: string;
           gender?: string | null;
           id?: string;
-            relation?: string | null;
-            rejected_at?: string | null;
-            rejected_by_profile_id?: string | null;
-            role?: string;
+          relation?: string | null;
+          rejected_at?: string | null;
+          rejected_by_profile_id?: string | null;
+          role?: string;
           status?: string;
           updated_at?: string;
         };
@@ -162,34 +185,34 @@ export type Database = {
             referencedRelation: "profiles";
             referencedColumns: ["id"];
           },
-            {
-              foreignKeyName: "access_requests_candidate_profile_id_fkey";
-              columns: ["candidate_profile_id"];
-              isOneToOne: false;
-              referencedRelation: "profiles_public";
-              referencedColumns: ["id"];
-            },
-            {
-              foreignKeyName: "access_requests_team_id_fkey";
-              columns: ["team_id"];
-              isOneToOne: false;
-              referencedRelation: "teams";
-              referencedColumns: ["id"];
-            },
-            {
-              foreignKeyName: "access_requests_rejected_by_profile_id_fkey";
-              columns: ["rejected_by_profile_id"];
-              isOneToOne: false;
-              referencedRelation: "profiles";
-              referencedColumns: ["id"];
-            },
-            {
-              foreignKeyName: "access_requests_rejected_by_profile_id_fkey";
-              columns: ["rejected_by_profile_id"];
-              isOneToOne: false;
-              referencedRelation: "profiles_public";
-              referencedColumns: ["id"];
-            },
+          {
+            foreignKeyName: "access_requests_candidate_profile_id_fkey";
+            columns: ["candidate_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles_public";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "access_requests_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "access_requests_rejected_by_profile_id_fkey";
+            columns: ["rejected_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "access_requests_rejected_by_profile_id_fkey";
+            columns: ["rejected_by_profile_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles_public";
+            referencedColumns: ["id"];
+          },
         ];
       };
       audit_log: {
@@ -587,7 +610,6 @@ export type Database = {
           id: string;
           is_home: boolean;
           location: string | null;
-          logistics_enabled: boolean;
           maps_url: string | null;
           mvp_player_id: string | null;
           notes: string | null;
@@ -597,8 +619,6 @@ export type Database = {
           season_id: string;
           status: string;
           team_id: string;
-          travel_compensation_cents: number;
-          travel_meeting_point: string | null;
           updated_at: string;
         };
         Insert: {
@@ -609,7 +629,6 @@ export type Database = {
           id?: string;
           is_home?: boolean;
           location?: string | null;
-          logistics_enabled?: boolean;
           maps_url?: string | null;
           mvp_player_id?: string | null;
           notes?: string | null;
@@ -619,8 +638,6 @@ export type Database = {
           season_id: string;
           status?: string;
           team_id: string;
-          travel_compensation_cents?: number;
-          travel_meeting_point?: string | null;
           updated_at?: string;
         };
         Update: {
@@ -631,7 +648,6 @@ export type Database = {
           id?: string;
           is_home?: boolean;
           location?: string | null;
-          logistics_enabled?: boolean;
           maps_url?: string | null;
           mvp_player_id?: string | null;
           notes?: string | null;
@@ -641,8 +657,6 @@ export type Database = {
           season_id?: string;
           status?: string;
           team_id?: string;
-          travel_compensation_cents?: number;
-          travel_meeting_point?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -1616,6 +1630,49 @@ export type Database = {
           },
         ];
       };
+      team_callup_templates: {
+        Row: {
+          team_id: string;
+          player_id: string;
+          cap_number: number;
+          source_team_id: string | null;
+        };
+        Insert: {
+          team_id: string;
+          player_id: string;
+          cap_number: number;
+          source_team_id?: string | null;
+        };
+        Update: {
+          team_id?: string;
+          player_id?: string;
+          cap_number?: number;
+          source_team_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "team_callup_templates_team_id_fkey";
+            columns: ["team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "team_callup_templates_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "team_callup_templates_source_team_id_fkey";
+            columns: ["source_team_id"];
+            isOneToOne: false;
+            referencedRelation: "teams";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       team_rosters: {
         Row: {
           created_at: string;
@@ -2172,171 +2229,6 @@ export type Database = {
           },
         ];
       };
-      travel_offers: {
-        Row: {
-          cancelled: boolean;
-          created_at: string;
-          departure_at: string;
-          departure_from: string;
-          driver_id: string;
-          id: string;
-          match_id: string;
-          notes: string | null;
-          seats_taken: number;
-          seats_total: number;
-          updated_at: string;
-          vehicle_label: string;
-        };
-        Insert: {
-          cancelled?: boolean;
-          created_at?: string;
-          departure_at: string;
-          departure_from: string;
-          driver_id: string;
-          id?: string;
-          match_id: string;
-          notes?: string | null;
-          seats_taken?: number;
-          seats_total: number;
-          updated_at?: string;
-          vehicle_label: string;
-        };
-        Update: {
-          cancelled?: boolean;
-          created_at?: string;
-          departure_at?: string;
-          departure_from?: string;
-          driver_id?: string;
-          id?: string;
-          match_id?: string;
-          notes?: string | null;
-          seats_taken?: number;
-          seats_total?: number;
-          updated_at?: string;
-          vehicle_label?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "travel_offers_driver_id_fkey";
-            columns: ["driver_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "travel_offers_driver_id_fkey";
-            columns: ["driver_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles_public";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "travel_offers_match_id_fkey";
-            columns: ["match_id"];
-            isOneToOne: false;
-            referencedRelation: "matches";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      travel_reservations: {
-        Row: {
-          cancelled_at: string | null;
-          created_at: string;
-          match_id: string;
-          offer_id: string;
-          player_id: string;
-        };
-        Insert: {
-          cancelled_at?: string | null;
-          created_at?: string;
-          match_id: string;
-          offer_id: string;
-          player_id: string;
-        };
-        Update: {
-          cancelled_at?: string | null;
-          created_at?: string;
-          match_id?: string;
-          offer_id?: string;
-          player_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "travel_reservations_match_id_fkey";
-            columns: ["match_id"];
-            isOneToOne: false;
-            referencedRelation: "matches";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "travel_reservations_offer_id_fkey";
-            columns: ["offer_id"];
-            isOneToOne: false;
-            referencedRelation: "travel_offers";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "travel_reservations_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "travel_reservations_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
-            referencedRelation: "profiles_public";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      travel_companions: {
-        Row: {
-          cancelled_at: string | null;
-          created_at: string;
-          full_name: string;
-          id: string;
-          offer_id: string;
-          reservation_offer_id: string;
-          reservation_player_id: string;
-        };
-        Insert: {
-          cancelled_at?: string | null;
-          created_at?: string;
-          full_name: string;
-          id?: string;
-          offer_id: string;
-          reservation_offer_id: string;
-          reservation_player_id: string;
-        };
-        Update: {
-          cancelled_at?: string | null;
-          created_at?: string;
-          full_name?: string;
-          id?: string;
-          offer_id?: string;
-          reservation_offer_id?: string;
-          reservation_player_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "travel_companions_offer_id_fkey";
-            columns: ["offer_id"];
-            isOneToOne: false;
-            referencedRelation: "travel_offers";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "travel_companions_reservation_fkey";
-            columns: ["reservation_offer_id", "reservation_player_id"];
-            isOneToOne: false;
-            referencedRelation: "travel_reservations";
-            referencedColumns: ["offer_id", "player_id"];
-          },
-        ];
-      };
       treasury_concepts: {
         Row: {
           active: boolean;
@@ -2739,8 +2631,26 @@ export type Database = {
     };
     Functions: {
       archive_expired_news: { Args: never; Returns: number };
-      prepare_live_match_caps: { Args: { p_match: string; p_actor: string; p_players: Json }; Returns: undefined };
-      save_live_match_sheet: { Args: { p_match:string; p_actor:string; p_device:string; p_revision:number; p_mutation:string; p_document:Json; p_takeover?:boolean }; Returns:number };
+      replace_match_callup: {
+        Args: { p_match_id: string; p_players: Json; p_save_template: boolean };
+        Returns: undefined;
+      };
+      prepare_live_match_caps: {
+        Args: { p_match: string; p_actor: string; p_players: Json };
+        Returns: undefined;
+      };
+      save_live_match_sheet: {
+        Args: {
+          p_match: string;
+          p_actor: string;
+          p_device: string;
+          p_revision: number;
+          p_mutation: string;
+          p_document: Json;
+          p_takeover?: boolean;
+        };
+        Returns: number;
+      };
       archive_season: {
         Args: {
           p_new_end_date: string;
@@ -2765,10 +2675,6 @@ export type Database = {
       is_delegate_of: { Args: { team_id: string }; Returns: boolean };
       recalculate_opponent_stats: {
         Args: { p_opponent: string; p_season_id: string; p_team_id: string };
-        Returns: undefined;
-      };
-      reserve_travel_seat: {
-        Args: { p_offer_id: string; p_player_id: string };
         Returns: undefined;
       };
       swap_current_season: { Args: { target_id: string }; Returns: undefined };

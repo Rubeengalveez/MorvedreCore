@@ -8,6 +8,10 @@ const { markAttendanceMock } = vi.hoisted(() => ({
   markAttendanceMock: vi.fn().mockResolvedValue({ updated: 2 }),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), back: vi.fn() }),
+}));
+
 vi.mock("@/server/actions/admin", () => ({
   markAttendance: markAttendanceMock,
 }));
@@ -51,11 +55,11 @@ describe("AttendanceSheet", () => {
     render(<AttendanceSheet session={session} canEdit />);
 
     const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
-    expect(within(anaControls).getByRole("button", { name: "Presente" })).toHaveAttribute(
+    expect(within(anaControls).getByRole("button", { name: "Ha venido" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(within(anaControls).getByRole("button", { name: "Ausente" })).toHaveAttribute(
+    expect(within(anaControls).getByRole("button", { name: "No ha venido" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
@@ -68,7 +72,7 @@ describe("AttendanceSheet", () => {
         { player_id: session.players[1]!.id, present: true, reason: null },
       ],
     });
-    expect(await screen.findByText("Guardado automáticamente")).toBeVisible();
+    await waitFor(() => expect(screen.queryByText("Guardando cambios…")).not.toBeInTheDocument());
   });
 
   it("marks an absence with one tap and saves it without a save button", async () => {
@@ -78,7 +82,7 @@ describe("AttendanceSheet", () => {
     markAttendanceMock.mockClear();
 
     const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
-    fireEvent.click(within(anaControls).getByRole("button", { name: "Ausente" }));
+    fireEvent.click(within(anaControls).getByRole("button", { name: "No ha venido" }));
 
     await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
     expect(markAttendanceMock).toHaveBeenCalledWith({
@@ -107,7 +111,7 @@ describe("AttendanceSheet", () => {
 
     expect(markAttendanceMock).not.toHaveBeenCalled();
     const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
-    fireEvent.click(within(anaControls).getByRole("button", { name: "Presente" }));
+    fireEvent.click(within(anaControls).getByRole("button", { name: "Ha venido" }));
 
     await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
     expect(markAttendanceMock).toHaveBeenCalledWith({
@@ -154,7 +158,7 @@ describe("AttendanceSheet", () => {
     expect(screen.getByText("Lista todavía no disponible")).toBeVisible();
     expect(screen.getByText("Ana García")).toBeVisible();
     expect(screen.getByText("Pablo Pérez")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Presente" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Ausente" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ha venido" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "No ha venido" })).not.toBeInTheDocument();
   });
 });

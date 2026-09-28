@@ -1,11 +1,11 @@
 import { DelegateMatchEntry } from "@/components/matches/delegate-match-entry";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
-import { canUseLiveMatch } from "@/lib/domain/permissions";
+import { canManageTeam, canUseLiveMatch } from "@/lib/domain/permissions";
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { FileText, UserCheck, CarFront, Pencil, UsersRound } from "lucide-react";
+import { FileText, UserCheck, Pencil, UsersRound } from "lucide-react";
 
 import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
 import { Avatar } from "@/components/ui/avatar";
@@ -22,7 +22,6 @@ import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getMatchById,
   getMatchMvp,
-  isProfileCoachOfMatch,
   type CallupDetail,
   type MatchScorer,
 } from "@/server/queries/matches";
@@ -118,11 +117,10 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   const hasScore = match.final_score_us != null && match.final_score_them != null;
 
-  const [callups, mvp, statsList, isCoach] = await Promise.all([
+  const [callups, mvp, statsList] = await Promise.all([
     getCallupsWithPhotos(id).catch(() => [] as CallupDetailWithPhoto[]),
     getMatchMvp(id).catch(() => null as MatchScorer | null),
     getMatchStatsList(id).catch(() => []),
-    isProfileCoachOfMatch(id, ctx.activeProfile.id).catch(() => false),
   ]);
 
   const statsMap = new Map(statsList.map((s) => [s.player_id, s]));
@@ -132,7 +130,10 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     (callup) => callup.player_id === ctx.ownProfile.id || linkedProfileIds.has(callup.player_id),
   );
 
-  const delegate = canUseLiveMatch(await getRenderAdminAccess(), match.team_id);
+  const access = await getRenderAdminAccess();
+  const delegate = canUseLiveMatch(access, match.team_id);
+  const canEditCallup = canManageTeam(access, "match_operations", match.team_id);
+  const canEditMatch = canManageTeam(access, "match_schedule", match.team_id);
   const isPlayed = match.status === "played";
   const { data: liveSheet } = await (
     await createClient()
@@ -143,14 +144,25 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     .maybeSingle();
 
   const parsedSheet = sheetSchema.safeParse(liveSheet?.document);
-  const regulationScore = parsedSheet.success && parsedSheet.data.shootout ? {
-    home: score(parsedSheet.data, match.is_home ? "us" : "them"),
-    away: score(parsedSheet.data, match.is_home ? "them" : "us"),
-  } : null;
+  const regulationScore =
+    parsedSheet.success && parsedSheet.data.shootout
+      ? {
+          home: score(parsedSheet.data, match.is_home ? "us" : "them"),
+          away: score(parsedSheet.data, match.is_home ? "them" : "us"),
+        }
+      : null;
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <PageBackLink href="/calendar">Calendario</PageBackLink>
+      {canEditMatch ? (
+        <Link
+          href={`/admin/matches/${match.id}/editar?from=match` as Route}
+          className="border-pool-blue/40 bg-paper-card text-pool-deep focus-visible:outline-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 px-4 text-sm font-extrabold focus-visible:outline-2"
+        >
+          <Pencil className="h-4 w-4" aria-hidden="true" /> Editar partido
+        </Link>
+      ) : null}
       {delegate && (
         <DelegateMatchEntry matchId={match.id} started={Boolean(liveSheet)} finished={isPlayed} />
       )}
@@ -199,20 +211,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="flex flex-col gap-4">
-        {!match.is_home && match.logistics_enabled && !isPlayed ? (
-          <section className="bg-paper-card border-ink-200 shadow-elev-1 flex items-center gap-4 rounded-2xl border p-4">
-            <div className="bg-ball-gold text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-md">
-              <CarFront className="h-6 w-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <h2 className="text-ink-900 text-base font-black">Organizar desplazamiento</h2>
-              <p className="text-ink-500 text-sm">Coches, plazas y punto de salida</p>
-            </div>
-            <Button asChild size="sm">
-              <Link href={`/matches/${match.id}/travel` as Route}>Ver</Link>
-            </Button>
-          </section>
-        ) : null}
         {managedCallups.length > 0 &&
           (match.status === "scheduled" || match.status === "in_progress") && (
             <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-4">
@@ -230,10 +228,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   return (
                     <div
                       key={callup.player_id}
-                      className={cn(
-                        "flex flex-col gap-2",
-                        index > 0 && "border-ink-200 border-t pt-4",
-                      )}
+                      className={cn("flex flex-col gap-2", index > 0 && "pt-3")}
                     >
                       {isLinkedChild ? (
                         <div className="flex items-center gap-2">
@@ -273,19 +268,19 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               {callups.length}
             </span>
             <div className="ml-auto">
-              {isCoach && (
+              {canEditCallup && (
                 <Button
                   asChild
                   size="sm"
                   variant="outline"
-                  className="border-paper/30 text-paper hover:bg-paper/15 hover:border-paper/50 h-9 min-h-9 cursor-pointer rounded-xl px-3 text-xs font-extrabold transition-colors"
+                  className="border-paper/30 text-paper hover:bg-paper/15 hover:border-paper/50 min-h-12 cursor-pointer rounded-xl px-3 text-xs font-extrabold transition-colors"
                 >
                   <Link
                     href={`/admin/matches/${match.id}?from=match` as Route}
                     className="flex items-center gap-1.5"
                   >
                     <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Editar</span>
+                    <span>Editar convocatoria</span>
                   </Link>
                 </Button>
               )}
@@ -319,7 +314,11 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                       <div className="relative shrink-0">
                         <div
                           className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-base font-black shadow-sm"
-                          aria-label={validCapNumber(c.cap_number) != null ? `Gorro ${c.cap_number}` : "Sin gorro"}
+                          aria-label={
+                            validCapNumber(c.cap_number) != null
+                              ? `Gorro ${c.cap_number}`
+                              : "Sin gorro"
+                          }
                         >
                           {validCapNumber(c.cap_number) ?? "–"}
                         </div>

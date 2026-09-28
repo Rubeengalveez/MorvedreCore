@@ -55,7 +55,7 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
   let matchesQuery = supabase
     .from("matches")
     .select(
-      "id, season_id, team_id, opponent, competition_type, is_home, location, pool_name, maps_url, scheduled_at, status, logistics_enabled, notes, final_score_us, final_score_them, created_at, updated_at",
+      "id, season_id, team_id, opponent, competition_type, is_home, location, pool_name, maps_url, scheduled_at, status, notes, final_score_us, final_score_them, created_at, updated_at",
     )
     .order("scheduled_at", { ascending: true });
   if (teamScope) {
@@ -97,8 +97,8 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
   const teams: TeamRow[] = teamsAll
     .filter((team) => team.season_id === currentSeason?.id)
     .map((t) => ({
-    ...t,
-    season_label: seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
+      ...t,
+      season_label: seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
     }));
 
   const teamById = new Map<string, TeamRow>();
@@ -120,14 +120,16 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
       final_score_us: number | null;
       final_score_them: number | null;
     }>
-  ).filter((match) => match.season_id === currentSeason?.id).map((m) => {
-    const team = teamById.get(m.team_id);
-    return {
-      ...m,
-      team_label: team?.label ?? "Equipo",
-      team_color: team?.color ?? "var(--pool-blue)",
-    };
-  });
+  )
+    .filter((match) => match.season_id === currentSeason?.id)
+    .map((m) => {
+      const team = teamById.get(m.team_id);
+      return {
+        ...m,
+        team_label: team?.label ?? "Equipo",
+        team_color: team?.color ?? "var(--pool-blue)",
+      };
+    });
 
   return {
     ok: true,
@@ -163,7 +165,7 @@ export default async function MatchesPage() {
       <AdminPageShell>
         <AdminPageHeader
           title="Partidos"
-          description="Convocatorias, actas y logística de cada partido."
+          description="Partidos y convocatorias de cada equipo."
           icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
         />
         <EmptyState
@@ -184,7 +186,7 @@ export default async function MatchesPage() {
     <AdminPageShell>
       <AdminPageHeader
         title="Partidos"
-        description="Convocatorias, actas y logística de cada partido."
+        description="Partidos y convocatorias de cada equipo."
         icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
         action={
           currentEditableTeams.length > 0 ? (
@@ -203,7 +205,7 @@ export default async function MatchesPage() {
         }
       />
 
-      <section className="bg-pool-deep text-paper relative overflow-hidden rounded-2xl p-4 shadow-elev-1">
+      <section className="bg-pool-deep text-paper shadow-elev-1 relative overflow-hidden rounded-2xl p-4">
         <span className="lane-pattern absolute inset-0 opacity-15" aria-hidden="true" />
         <div className="relative flex flex-col gap-4">
           <div>
@@ -211,12 +213,16 @@ export default async function MatchesPage() {
               {currentSeason?.label ?? "Temporada actual"}
             </p>
             <h2 className="mt-1 text-xl font-extrabold">Operativa de partidos</h2>
-            <p className="text-paper/75 mt-1 text-sm">Crea, convoca y registra solo los partidos en curso.</p>
+            <p className="text-paper/75 mt-1 text-sm">
+              Crea, convoca y registra solo los partidos en curso.
+            </p>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
               <p className="text-paper/70 text-xs font-bold">Por jugar</p>
-              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{scheduledCount}</p>
+              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">
+                {scheduledCount}
+              </p>
             </div>
             <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
               <p className="text-paper/70 text-xs font-bold">Jugados</p>
@@ -234,15 +240,12 @@ export default async function MatchesPage() {
 
       {!error && currentEditableTeams.length === 0 ? (
         <Alert variant="info" title="No tienes equipos editables en la temporada actual">
-          Puedes consultar los partidos, pero para crear uno necesitas el permiso de gestión del equipo.
+          Puedes consultar los partidos, pero para crear uno necesitas el permiso de gestión del
+          equipo.
         </Alert>
       ) : null}
 
-      <MatchesList
-        teams={teams}
-        matches={matches}
-        defaultTeamId={defaultTeamId}
-      />
+      <MatchesList teams={teams} matches={matches} defaultTeamId={defaultTeamId} />
     </AdminPageShell>
   );
 }

@@ -141,7 +141,12 @@ export const createPlayerSchema = z.object({
     .min(1900, "Año entre 1900 y 2100.")
     .max(2100, "Año entre 1900 y 2100."),
   gender: genderEnum.optional(),
-  cap_number: z.number().int("Gorro entero.").min(1, "Gorro entre 1 y 14.").max(14, "Gorro entre 1 y 14.").optional(),
+  cap_number: z
+    .number()
+    .int("Gorro entero.")
+    .min(1, "Gorro entre 1 y 14.")
+    .max(14, "Gorro entre 1 y 14.")
+    .optional(),
   phone_e164: phoneSchema,
   email_contact: z.string().email("Email inválido.").optional(),
   photo_url: z.string().url("URL inválida.").optional(),
@@ -217,7 +222,12 @@ export const updateProfileSchema = z.object({
     nullIfEmpty,
     z.preprocess(
       (v) => (v == null ? null : Number(v)),
-      z.number().int("Gorro entero.").min(1, "Gorro entre 1 y 14.").max(14, "Gorro entre 1 y 14.").nullable(),
+      z
+        .number()
+        .int("Gorro entero.")
+        .min(1, "Gorro entre 1 y 14.")
+        .max(14, "Gorro entre 1 y 14.")
+        .nullable(),
     ),
   ),
   phone_e164: z.preprocess(
@@ -458,7 +468,6 @@ export const createMatchSchema = z.object({
     z.string().trim().max(100, "Máximo 100 caracteres.").nullable().optional(),
   ),
   scheduled_at: z.string().datetime({ offset: true, message: "Fecha inválida (ISO con offset)." }),
-  logistics_enabled: z.boolean().optional(),
   notes: z.preprocess(
     emptyToNull,
     z.string().trim().max(2000, "Máximo 2000 caracteres.").nullable().optional(),
@@ -491,7 +500,6 @@ export const updateMatchSchema = z
       .datetime({ offset: true, message: "Fecha inválida (ISO con offset)." })
       .optional(),
     status: matchStatusSchema.optional(),
-    logistics_enabled: z.boolean().optional(),
     notes: z.preprocess(
       emptyToNull,
       z.string().trim().max(2000, "Máximo 2000 caracteres.").nullable().optional(),

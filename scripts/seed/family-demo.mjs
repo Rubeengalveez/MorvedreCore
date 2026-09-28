@@ -110,7 +110,6 @@ async function ensureUpcomingCallup(seasonId, team, playerId, daysAhead) {
         pool_name: "Piscina Municipal Puerto de Sagunto",
         scheduled_at: scheduledAt.toISOString(),
         status: "scheduled",
-        logistics_enabled: false,
         notes: "Partido demo para probar la gestión de convocatorias familiares.",
       })
       .select("id")

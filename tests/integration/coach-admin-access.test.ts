@@ -15,6 +15,7 @@ const matchesLayout = source("app/(app)/admin/matches/layout.tsx");
 const trainingsPage = source("app/(app)/admin/trainings/page.tsx");
 const matchesPage = source("app/(app)/admin/matches/page.tsx");
 const matchDetail = source("app/(app)/admin/matches/[id]/page.tsx");
+const matchEdit = source("app/(app)/admin/matches/[id]/editar/page.tsx");
 const migration = source(
   "supabase/migrations/20260727223405_allow_coaches_manage_training_blocks.sql",
 ).toLowerCase();
@@ -39,7 +40,9 @@ describe("coach admin access", () => {
     expect(trainingsPage).toContain('teamsQuery = teamsQuery.in("id", teamScope)');
     expect(trainingsPage).toContain('blocksQuery = blocksQuery.in("team_id", teamScope)');
     expect(matchesPage).toContain('matchesQuery = matchesQuery.in("team_id", teamScope)');
-    expect(matchDetail).toContain("await loadMatch(id, teamScope)");
+    expect(matchDetail).toContain('getTeamScope(access, "match_operations")');
+    expect(matchDetail).toContain('matchQuery = matchQuery.in("team_id", scope)');
+    expect(matchEdit).toContain('canManageTeam(access, "match_schedule", data.team_id)');
   });
 
   it("lets coaches mutate training blocks only for their own teams", () => {

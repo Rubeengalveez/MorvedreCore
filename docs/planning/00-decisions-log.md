@@ -974,6 +974,7 @@ Las convocatorias admiten únicamente gorros del 1 al 14. Un jugador puede queda
 ### 2026-09-24 · Caducidad de noticias
 
 Las noticias con fecha de caducidad desaparecen de las vistas pública y de gestión al llegar esa fecha. Una tarea horaria las elimina de la base de datos junto con sus reacciones y notificaciones vinculadas. Esto sustituye el comportamiento anterior, que solo las desfijaba y las conservaba en administración.
+
 ## 2026-09-24 — Alta y acceso vinculados a perfiles del club
 
 - El administrador crea al jugador con nombre completo, año de nacimiento y equipo principal de la temporada actual. El jugador no puede darse de alta a sí mismo: solicita vincular el perfil existente indicando esos tres datos. Una coincidencia ambigua o ya vinculada bloquea la solicitud y se resuelve con el club.
@@ -983,3 +984,7 @@ Las noticias con fecha de caducidad desaparecen de las vistas pública y de gest
 - La solicitud iniciada con Google conserva la identidad de Google verificada. Tras la aprobación se accede con Google sin generar ni comunicar una contraseña provisional.
 - Las solicitudes avisan a los administradores por notificación dentro de la app y por correo configurado. El panel de solicitudes conserva el estado aunque falle una vía de aviso.
 - Las solicitudes públicas se validan en Server Actions y las tablas continúan bajo RLS. Los perfiles y los roles solo se vinculan tras aprobación administrativa.
+
+## 2026-09-28 — Convocatoria habitual y separación de tareas del partido
+
+La convocatoria se edita en una pantalla propia; los datos del encuentro tienen una entrada «Editar partido» independiente y el acta se abre desde la ficha del partido. Cada equipo puede guardar una convocatoria habitual que se copia automáticamente al crear sus próximos partidos. El editor ofrece además la convocatoria anterior y una propuesta automática, siempre con guardado explícito y opción de convertir el resultado en la nueva plantilla. Se retira la logística de coches al no utilizarse. Plan de implementación y límites de migración en `27-match-callup-simplification.md`.

@@ -24,22 +24,15 @@ Guía operativa para entrenadores y delegados del club (Vega, Vitaliy, Rubén y 
 ## 3. Preparar convocatorias de partido
 
 1. Entra en el partido desde el calendario o **Administración → Partidos**.
-2. En la pestaña **Convocatoria**, pulsa **Preparar propuesta**.
-3. Revisa la sugerencia y sus motivos. Tiene en cuenta continuidad, rendimiento, edad, asistencia y disciplina; la decisión final es tuya.
-4. Ajusta los jugadores si lo necesitas (añadir, quitar o cambiar porteros).
-5. **Dorsales**: Se asignan automáticamente según el número de gorro habitual del jugador, avisándote si hay algún conflicto.
-6. Pulsa **Confirmar selección** y comprueba la lista resultante y las respuestas de los jugadores.
+2. Pulsa **Editar convocatoria**. Si el equipo tiene una convocatoria habitual, ya aparecerá preparada al crear el partido.
+3. También puedes cargar la convocatoria del último partido o una propuesta automática. Revisa los nombres y gorros antes de guardar.
+4. Añade o quita jugadores si hace falta. Al añadir uno, aparece en la selección de arriba.
+5. Pulsa **Guardar convocatoria**. Marca «Usar esta convocatoria en próximos partidos» si quieres actualizar la habitual de ese equipo.
+6. Para cambiar fecha, rival o lugar usa **Editar partido**, separado de la convocatoria.
 
 ---
 
-## 4. Logística de coches y desplazamientos
-
-- En partidos fuera de casa, consulta la pestaña de **Coches / Viaje**.
-- Verás qué familias han ofrecido vehículo, cuántas plazas tienen disponibles y qué jugadores necesitan plaza asignada.
-
----
-
-## 5. Acta y estadísticas tras el partido
+## 4. Acta y estadísticas tras el partido
 
 1. Al terminar el partido, abre la ficha del encuentro.
 2. Introduce el resultado final (goles a favor y en contra) y los parciales por cuarto.

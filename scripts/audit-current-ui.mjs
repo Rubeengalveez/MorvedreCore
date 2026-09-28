@@ -110,7 +110,6 @@ for (const [table, name, route] of focusMode
   : [
       ["teams", "team-detail", (id) => `/team/${id}`],
       ["matches", "match-detail", (id) => `/matches/${id}`],
-      ["matches", "match-travel", (id) => `/matches/${id}/travel`],
       ["news_posts", "news-detail", (id) => `/news/${id}`],
       ["shop_products", "shop-product", (id) => `/shop/${id}`],
       ["shop_orders", "shop-order", (id) => `/shop/orders/${id}`],

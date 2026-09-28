@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { Calendar, MapPin } from "lucide-react";
+import { Calendar, MapPin, Pencil, UsersRound } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
 import { StatusBadge } from "@/components/ui/badge";
@@ -217,6 +217,20 @@ export function MatchesList({ teams, matches, defaultTeamId }: MatchesListProps)
                           Mapa
                         </a>
                       ) : null}
+                    </div>
+                    <div className="relative z-10 flex flex-wrap gap-2 pt-1">
+                      <Link
+                        href={`/admin/matches/${m.id}?from=admin` as Route}
+                        className="bg-pool-deep text-paper focus-visible:outline-pool-blue inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-extrabold focus-visible:outline-2"
+                      >
+                        <UsersRound className="h-4 w-4" aria-hidden="true" /> Convocatoria
+                      </Link>
+                      <Link
+                        href={`/admin/matches/${m.id}/editar?from=admin` as Route}
+                        className="border-pool-blue/40 bg-paper-card text-pool-deep focus-visible:outline-pool-blue inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 px-3 text-sm font-extrabold focus-visible:outline-2"
+                      >
+                        <Pencil className="h-4 w-4" aria-hidden="true" /> Editar partido
+                      </Link>
                     </div>
                     <p className="sr-only">{formatShortDate(m.scheduled_at)}</p>
                   </div>

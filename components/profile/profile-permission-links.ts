@@ -70,7 +70,7 @@ export function getProfilePermissionLinks(
       ? {
           href: "/admin/matches",
           label: "Gestionar partidos",
-          detail: "Convocatorias, actas y logística",
+          detail: "Convocatorias y actas",
           icon: ClipboardCheck,
         }
       : null,

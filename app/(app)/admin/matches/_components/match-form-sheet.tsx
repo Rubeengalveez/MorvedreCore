@@ -50,13 +50,12 @@ const formSchema = z.object({
   maps_url: mapsUrlInputSchema.optional(),
   pool_name: z.string().trim().max(100, "Máximo 100 caracteres.").optional(),
   scheduled_at_local: z.string().min(1, "Fecha y hora obligatorias."),
-  logistics_enabled: z.boolean(),
   notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
 
-type ActionState = { ok?: true; error?: string } | null;
+type ActionState = { ok: true; matchId: string } | { ok: false; error: string } | null;
 
 type TeamOption = Team & { season_label: string };
 
@@ -65,13 +64,13 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
     const localStr = String(formData.get("scheduled_at_local") ?? "");
     const dt = parseDateTimeLocal(localStr);
     if (!dt) {
-      return { error: "Fecha u hora inválidas." };
+      return { ok: false, error: "Fecha u hora inválidas." };
     }
     const seasonId = String(formData.get("season_id") ?? "");
     if (!seasonId) {
-      return { error: "Falta la temporada del partido." };
+      return { ok: false, error: "Falta la temporada del partido." };
     }
-    await createMatch({
+    const match = await createMatch({
       season_id: seasonId,
       team_id: String(formData.get("team_id") ?? ""),
       opponent: String(formData.get("opponent") ?? ""),
@@ -82,12 +81,11 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       maps_url: String(formData.get("maps_url") ?? "") || undefined,
       pool_name: String(formData.get("pool_name") ?? "") || undefined,
       scheduled_at: dt.toISOString(),
-      logistics_enabled: formData.get("logistics_enabled") === "true",
       notes: String(formData.get("notes") ?? "") || undefined,
     });
-    return { ok: true };
+    return { ok: true, matchId: match.id };
   } catch (err) {
-    return { error: err instanceof Error ? err.message : "No pudimos guardar." };
+    return { ok: false, error: err instanceof Error ? err.message : "No pudimos guardar." };
   }
 }
 
@@ -130,26 +128,20 @@ export function MatchFormSheet({
       maps_url: "",
       pool_name: "",
       scheduled_at_local: formatDateTimeLocal(new Date()),
-      logistics_enabled: false,
       notes: "",
     },
   });
 
   useEffect(() => {
     if (state?.ok) {
-      form.reset();
-      setOpen(false);
-      router.refresh();
+      router.push(`/admin/matches/${state.matchId}?from=admin`);
     }
-  }, [state, form, router]);
+  }, [state, router]);
 
   const onSubmit = form.handleSubmit((values) => {
     const fd = new FormData();
     const selectedTeam = teams.find((team) => team.id === values.team_id);
-    fd.append(
-      "season_id",
-      selectedTeam?.season_id ?? defaultSeasonId ?? "",
-    );
+    fd.append("season_id", selectedTeam?.season_id ?? defaultSeasonId ?? "");
     fd.append("team_id", values.team_id);
     fd.append("opponent", values.opponent);
     fd.append("competition_type", values.competition_type);
@@ -164,7 +156,6 @@ export function MatchFormSheet({
       fd.append("pool_name", values.pool_name);
     }
     fd.append("scheduled_at_local", values.scheduled_at_local);
-    fd.append("logistics_enabled", values.logistics_enabled ? "true" : "false");
     if (values.notes && values.notes.trim() !== "") {
       fd.append("notes", values.notes);
     }
@@ -183,7 +174,7 @@ export function MatchFormSheet({
           </span>
           <SheetTitle>Nuevo partido</SheetTitle>
           <SheetDescription>
-            Añade lo imprescindible ahora. La convocatoria y el acta se preparan después.
+            Añade los datos del encuentro. Después podrás revisar la convocatoria del equipo.
           </SheetDescription>
         </SheetHeader>
         <SheetBody>
@@ -194,13 +185,13 @@ export function MatchFormSheet({
               className="flex flex-col gap-5 pb-2"
               noValidate
             >
-              {state?.error ? (
+              {state?.ok === false ? (
                 <Alert variant="danger" title="No pudimos guardar">
                   {state.error}
                 </Alert>
               ) : null}
 
-              <section className="border-ink-200 bg-paper-card rounded-2xl border p-4 shadow-elev-1">
+              <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="text-pool-deep text-base font-extrabold">Partido</h3>
                   <p className="text-ink-600 text-xs">Lo necesario para publicarlo</p>
@@ -233,7 +224,9 @@ export function MatchFormSheet({
                             ))}
                           </Select>
                         </FormControl>
-                        <FormDescription>Solo aparecen equipos de la temporada actual.</FormDescription>
+                        <FormDescription>
+                          Solo aparecen equipos de la temporada actual.
+                        </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -299,7 +292,7 @@ export function MatchFormSheet({
                 </div>
               </section>
 
-              <section className="border-ink-200 bg-paper-card rounded-2xl border p-4 shadow-elev-1">
+              <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4">
                 <div className="flex items-baseline justify-between gap-3">
                   <h3 className="text-pool-deep text-base font-extrabold">Cuándo se juega</h3>
                   <p className="text-ink-600 text-xs">Fecha y competición</p>
@@ -356,13 +349,13 @@ export function MatchFormSheet({
 
               <details className="border-ink-200 bg-paper-card group rounded-2xl border">
                 <summary className="focus-visible:ring-pool-blue flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 font-extrabold focus-visible:ring-2 focus-visible:outline-none">
-                  Lugar, logística y notas
+                  Lugar y notas
                   <ChevronDown
                     className="h-5 w-5 transition-transform group-open:rotate-180"
                     aria-hidden="true"
                   />
                 </summary>
-                <div className="border-ink-200 space-y-4 border-t p-4">
+                <div className="space-y-4 p-4 pt-0">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <FormField
                       control={form.control}
@@ -437,54 +430,28 @@ export function MatchFormSheet({
 
                   <FormField
                     control={form.control}
-                    name="logistics_enabled"
+                    name="notes"
                     render={({ field }) => (
                       <FormItem>
-                        <label className="border-ink-200 bg-paper flex min-h-14 cursor-pointer items-start gap-3 rounded-xl border p-3">
-                          <input
-                            type="checkbox"
-                            checked={field.value}
-                            onChange={(event) => field.onChange(event.target.checked)}
-                            className="accent-pool-blue mt-0.5 h-5 w-5 shrink-0"
+                        <FormLabel>Notas (opcional)</FormLabel>
+                        <FormControl>
+                          <textarea
+                            rows={3}
+                            placeholder="Información útil para el equipo"
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                            className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                           />
-                          <span>
-                            <span className="text-pool-deep block text-sm font-extrabold">
-                              Organizar coches y viaje
-                            </span>
-                            <span className="text-ink-600 mt-0.5 block text-xs">
-                              Actívalo solo si este desplazamiento necesita logística.
-                            </span>
-                          </span>
-                        </label>
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
               </details>
-
-              <FormField
-                control={form.control}
-                name="notes"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Notas (opcional)</FormLabel>
-                    <FormControl>
-                      <textarea
-                        rows={3}
-                        placeholder="Información útil para el equipo"
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                        className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </form>
           </Form>
         </SheetBody>

@@ -28,7 +28,6 @@ export interface MatchDetail {
   notes: string | null;
   final_score_us: number | null;
   final_score_them: number | null;
-  logistics_enabled: boolean;
 }
 
 export interface MatchScorer {
@@ -51,7 +50,7 @@ export async function getMatchById(matchId: string): Promise<MatchDetail | null>
   const { data, error } = await supabase
     .from("matches")
     .select(
-      "id, season_id, team_id, opponent, competition_type, is_home, status, scheduled_at, location, maps_url, pool_name, notes, final_score_us, final_score_them, logistics_enabled, teams!matches_team_id_fkey(label, color)",
+      "id, season_id, team_id, opponent, competition_type, is_home, status, scheduled_at, location, maps_url, pool_name, notes, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color)",
     )
     .eq("id", matchId)
     .maybeSingle();
@@ -81,7 +80,6 @@ export async function getMatchById(matchId: string): Promise<MatchDetail | null>
     notes: (data as { notes: string | null }).notes,
     final_score_us: (data as { final_score_us: number | null }).final_score_us,
     final_score_them: (data as { final_score_them: number | null }).final_score_them,
-    logistics_enabled: (data as { logistics_enabled: boolean }).logistics_enabled,
   };
 }
 
@@ -192,11 +190,7 @@ export async function getMatchMvp(matchId: string): Promise<MatchScorer | null> 
       .eq("mvp", true)
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from("live_match_sheets")
-      .select("document")
-      .eq("match_id", matchId)
-      .maybeSingle(),
+    supabase.from("live_match_sheets").select("document").eq("match_id", matchId).maybeSingle(),
   ]);
 
   if (error) {
@@ -261,4 +255,3 @@ export async function isProfileCoachOfMatch(matchId: string, profileId: string):
 }
 
 export const isProfileMatchStaffOfMatch = isProfileCoachOfMatch;
-

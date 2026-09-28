@@ -148,7 +148,6 @@ export async function createMatch(input: {
   maps_url?: string | null;
   pool_name?: string | null;
   scheduled_at: string;
-  logistics_enabled?: boolean;
   notes?: string | null;
 }): Promise<MatchRow> {
   const parsed = createMatchSchema.safeParse(input);
@@ -171,7 +170,6 @@ export async function createMatch(input: {
       maps_url: parsed.data.maps_url ?? null,
       pool_name: parsed.data.pool_name ?? null,
       scheduled_at: parsed.data.scheduled_at,
-      logistics_enabled: parsed.data.logistics_enabled ?? false,
       notes: parsed.data.notes ?? null,
     })
     .select("*")
@@ -201,7 +199,6 @@ export async function updateMatch(
     pool_name: string | null;
     scheduled_at: string;
     status: "scheduled" | "in_progress" | "played" | "cancelled" | "postponed";
-    logistics_enabled: boolean;
     notes: string | null;
     final_score_us: number | null;
     final_score_them: number | null;
@@ -854,7 +851,10 @@ export async function validateMatchStats(matchId: string): Promise<void> {
   revalidatePath("/profile");
 }
 
-export async function suggestCallupForMatch(matchId: string): Promise<CallupSuggestion[]> {
+export async function suggestCallupForMatch(
+  matchId: string,
+  proposal = true,
+): Promise<CallupSuggestion[]> {
   const supabase = await createClient();
 
   const { data: match, error: matchError } = await supabase
@@ -979,7 +979,97 @@ export async function suggestCallupForMatch(matchId: string): Promise<CallupSugg
     allPlayers: players,
     allAvailability: availabilityRows,
   });
-  return prepareCallupProposal(suggestions, currentCallups ?? []);
+  return proposal ? prepareCallupProposal(suggestions, currentCallups ?? []) : suggestions;
+}
+
+const replaceMatchCallupSchema = z
+  .object({
+    match_id: z.string().uuid(),
+    players: z
+      .array(
+        z.object({
+          player_id: z.string().uuid(),
+          cap_number: z.number().int().min(1).max(14),
+        }),
+      )
+      .max(14),
+    save_template: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    if (new Set(value.players.map((player) => player.player_id)).size !== value.players.length) {
+      ctx.addIssue({ code: "custom", message: "Hay jugadores repetidos." });
+    }
+    if (new Set(value.players.map((player) => player.cap_number)).size !== value.players.length) {
+      ctx.addIssue({ code: "custom", message: "Cada jugador necesita un gorro diferente." });
+    }
+  });
+
+export async function replaceMatchCallupResult(
+  input: unknown,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const parsed = replaceMatchCallupSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: parsed.error.issues[0]?.message ?? "Revisa la convocatoria." };
+  }
+  try {
+    const supabase = await createClient();
+    const { data: match, error: matchError } = await supabase
+      .from("matches")
+      .select("team_id, scheduled_at, status")
+      .eq("id", parsed.data.match_id)
+      .maybeSingle();
+    throwIfError(matchError, "No pudimos cargar el partido.");
+    if (!match) throw new Error("El partido no existe.");
+    await requireMatchStaffOf(match.team_id);
+    if (match.status !== "scheduled" && match.status !== "postponed") {
+      throw new Error("La convocatoria ya no se puede cambiar desde aquí.");
+    }
+    const [{ data: existing, error: existingError }, suggestions] = await Promise.all([
+      supabase
+        .from("match_callups")
+        .select("player_id, status")
+        .eq("match_id", parsed.data.match_id),
+      suggestCallupForMatch(parsed.data.match_id, false),
+    ]);
+    throwIfError(existingError, "No pudimos revisar la convocatoria actual.");
+    const activeIds = new Set(
+      (existing ?? [])
+        .filter((row) => row.status === "called" || row.status === "confirmed")
+        .map((row) => row.player_id),
+    );
+    const eligible = new Map(suggestions.map((player) => [player.player_id, player]));
+    for (const player of parsed.data.players) {
+      const candidate = eligible.get(player.player_id);
+      if (
+        (!candidate && !activeIds.has(player.player_id)) ||
+        (candidate?.has_conflict && !activeIds.has(player.player_id))
+      ) {
+        throw new Error("Hay un jugador no disponible o incompatible. Revisa la selección.");
+      }
+    }
+    const { error } = await supabase.rpc("replace_match_callup", {
+      p_match_id: parsed.data.match_id,
+      p_players: parsed.data.players,
+      p_save_template: parsed.data.save_template,
+    });
+    if (error) {
+      throw new Error(
+        error.message.includes("acta") || error.message.includes("estadísticas")
+          ? error.message
+          : "No pudimos guardar la convocatoria. Revisa los gorros e inténtalo de nuevo.",
+      );
+    }
+    revalidatePath(`/admin/matches/${parsed.data.match_id}`);
+    revalidatePath(`/matches/${parsed.data.match_id}`);
+    revalidatePath("/admin/matches");
+    revalidatePath("/calendar");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "No pudimos guardar la convocatoria.",
+    };
+  }
 }
 
 export async function suggestCallupForMatchResult(

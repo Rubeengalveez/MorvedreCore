@@ -48,7 +48,6 @@ const formSchema = z.object({
   maps_url: mapsUrlInputSchema.optional(),
   pool_name: z.string().trim().max(100, "Máximo 100 caracteres.").optional(),
   scheduled_at_local: z.string().min(1, "Fecha y hora obligatorias."),
-  logistics_enabled: z.boolean(),
   notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
 });
 
@@ -124,7 +123,6 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
       maps_url: match.maps_url ?? "",
       pool_name: match.pool_name ?? "",
       scheduled_at_local: formatDateTimeLocal(new Date(match.scheduled_at)),
-      logistics_enabled: match.logistics_enabled,
       notes: match.notes ?? "",
     },
   });
@@ -148,7 +146,6 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
           maps_url: values.maps_url && values.maps_url.trim() !== "" ? values.maps_url : null,
           pool_name: values.pool_name && values.pool_name.trim() !== "" ? values.pool_name : null,
           scheduled_at: dt.toISOString(),
-          logistics_enabled: values.logistics_enabled,
           notes: values.notes && values.notes.trim() !== "" ? values.notes : null,
         });
         setSuccess(true);
@@ -379,25 +376,11 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
 
         <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
           <div>
-            <h3 className="text-pool-deep font-extrabold">Organización</h3>
-            <p className="text-ink-500 mt-0.5 text-sm">Desplazamiento y notas para el grupo.</p>
+            <h3 className="text-pool-deep font-extrabold">Notas para el equipo</h3>
+            <p className="text-ink-600 mt-0.5 text-sm">
+              Información que verán jugadores y familias.
+            </p>
           </div>
-          <FormField
-            control={form.control}
-            name="logistics_enabled"
-            render={({ field }) => (
-              <FormItem>
-                <Toggle
-                  value={field.value}
-                  onChange={field.onChange}
-                  label="Activar logística"
-                  description="Habilita la pestaña de logística (coches, viajes)."
-                />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name="notes"

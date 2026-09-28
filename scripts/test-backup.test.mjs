@@ -97,7 +97,7 @@ test("rejects duplicate or incomplete primary keys", async () => {
 
 test("validates a complete serialized synthetic export", () => {
   assert.deepEqual(validateBackup(JSON.parse(JSON.stringify(payload()))), {
-    tablesCount: 43,
+    tablesCount: Object.keys(BACKUP_TABLE_KEYS).length,
     totalRecords: 1,
   });
 });

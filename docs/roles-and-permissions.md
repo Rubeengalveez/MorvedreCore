@@ -30,7 +30,6 @@ La aplicación distingue estrictamente entre dos conceptos:
   * **Pase de lista diario:** Acceso global a la sección `/attendance` para pasar y corregir asistencia en **cualquier categoría de la temporada**, permitiendo cobertura mutua si un compañero falta.
   * **Entrenamientos:** Creación y modificación de bloques y sesiones de sus equipos asignados en `/admin/trainings`.
   * **Partidos y Convocatorias:** Creación de partidos, selección de convocados con la matriz de ascensos (`suggestCallup`), registro del borrador del acta y validación final de estadísticas (`/admin/matches/[id]`).
-  * **Logística:** Activación de coches y compensación por viaje para sus partidos visitantes.
 * **Límites:** No tienen acceso a Tesorería, Tienda, Fichas de familias ni permisos de personal.
 
 ### 2.3. Delegados de Equipo
@@ -40,7 +39,6 @@ La aplicación distingue estrictamente entre dos conceptos:
   * **Ajuste de Convocatorias:** Pueden modificar la convocatoria del entrenador (altas de última hora, bajas por indisposición, asignación de gorros).
   * **Acta del Partido:** Rellenan el borrador del acta (goles, expulsiones, MVP).
   * **Cierre del Acta:** Pueden validar y cerrar definitivamente el acta del partido si el entrenador no está presente.
-  * **Coches y Desplazamientos:** Coordinan plazas y conductores en `/matches/[id]/travel`.
 * **Límites:** **No pasan lista** en entrenamientos ni acceden a módulos administrativos generales (temporadas, tesorería, tienda, etc.).
 
 ### 2.4. Tesorería: Mónica

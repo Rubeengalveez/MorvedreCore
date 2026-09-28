@@ -48,7 +48,7 @@ Cuando un socio, padre o jugador nuevo rellena el formulario de solicitud de acc
 
 ## 5. Copias de seguridad (Backups) y seguridad
 
-- El exportador cubre las 41 tablas públicas actuales, con lectura paginada y verificación SHA-256. El workflow semanal requiere credenciales y una ejecución exitosa comprobada.
+- El exportador cubre las tablas públicas del manifiesto actual, con lectura paginada y verificación SHA-256. El workflow semanal requiere credenciales y una ejecución exitosa comprobada.
 - Para verificar manualmente el estado de la última copia en cualquier momento:
   ```bash
   node scripts/verify-backup.mjs

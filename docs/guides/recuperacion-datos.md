@@ -4,7 +4,7 @@ Responsable técnico: administración del proyecto. Estado a 5 de septiembre de 
 
 ## Qué contiene cada exportación
 
-`pnpm db:backup` genera un JSON local de las 41 tablas públicas enumeradas en `scripts/lib/backup-data.mjs`. Incluye datos personales, solicitudes, preferencias y suscripciones push: debe tratarse como información privada. No debe adjuntarse a incidencias, chats ni repositorios.
+`pnpm db:backup` genera un JSON local de las tablas públicas enumeradas en `scripts/lib/backup-data.mjs`. Incluye datos personales, solicitudes, preferencias y suscripciones push: debe tratarse como información privada. No debe adjuntarse a incidencias, chats ni repositorios.
 
 La lectura usa páginas ordenadas por clave primaria y comprueba el recuento exacto. Si cambia el número de filas, falta una página o aparece una clave repetida, falla. No detecta todas las modificaciones simultáneas que mantienen el mismo número de filas; realizarla en una ventana sin escrituras. Para una instantánea consistente de toda la base hace falta un respaldo de Postgres.
 
@@ -15,7 +15,7 @@ El JSON no contiene usuarios ni credenciales de Auth, archivos de Storage, secue
 1. Confirmar el proyecto de origen y la ventana sin cambios. Comprobar que el manifiesto coincide con todas las tablas públicas actuales.
 2. Ejecutar `pnpm test:backup` para validar el exportador sin credenciales ni datos reales.
 3. Ejecutar `pnpm db:backup` con las credenciales de servidor del proyecto. Si falla, no considerar que hay una copia nueva válida.
-4. Ejecutar `node scripts/verify-backup.mjs backups/NOMBRE.json` sobre el archivo concreto. Exige formato v1.2, las 41 tablas, claves y recuentos correctos y checksum SHA-256.
+4. Ejecutar `node scripts/verify-backup.mjs backups/NOMBRE.json` sobre el archivo concreto. Exige formato v1.2, el manifiesto actual, claves y recuentos correctos y checksum SHA-256.
 5. Con autorización para exportar al destino privado y aplicar retención, ejecutar `node scripts/backup-db.mjs --upload`. Verifica el objeto descargado antes de eliminar archivos de copia con más de 90 días. No imprime registros ni credenciales.
 6. Conservar la evidencia de fecha, tablas, recuentos, checksum y resultado del job. Los formatos anteriores se conservan, pero no pasan la verificación de cobertura v1.2.
 
