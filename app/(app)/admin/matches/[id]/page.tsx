@@ -144,16 +144,6 @@ export default async function MatchCallupPage({
       <h1 className="sr-only">
         Editar convocatoria: {teamLabel} contra {match.opponent}
       </h1>
-      <MatchEditorHeader
-        teamLabel={teamLabel}
-        opponent={match.opponent}
-        isHome={match.is_home}
-        scheduledAt={match.scheduled_at}
-        competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-        status={match.status}
-        scoreUs={match.final_score_us}
-        scoreThem={match.final_score_them}
-      />
       <CallupEditor
         key={id}
         matchId={id}
@@ -169,6 +159,18 @@ export default async function MatchCallupPage({
         editable={editable}
         backHref={backHref}
         backLabel={backLabel}
+        matchHeader={
+          <MatchEditorHeader
+            teamLabel={teamLabel}
+            opponent={match.opponent}
+            isHome={match.is_home}
+            scheduledAt={match.scheduled_at}
+            competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
+            status={match.status}
+            scoreUs={match.final_score_us}
+            scoreThem={match.final_score_them}
+          />
+        }
       />
     </AdminPageShell>
   );

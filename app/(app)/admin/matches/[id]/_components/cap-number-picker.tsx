@@ -27,13 +27,16 @@ export function CapNumberButton({
       aria-expanded={open}
       aria-label={label}
       className={cn(
-        "border-pool-blue/30 bg-pool-foam/60 text-pool-deep focus-visible:outline-pool-blue flex h-12 w-12 items-center justify-center gap-0.5 rounded-full border-2 px-1 font-mono text-lg font-extrabold focus-visible:outline-2 disabled:opacity-60",
+        "flex h-12 w-12 items-center justify-center gap-0.5 rounded-full border-2 px-1 font-mono text-base font-extrabold focus-visible:outline-2 focus-visible:outline-pool-blue disabled:opacity-60 transition-colors",
+        value != null
+          ? "border-pool-blue/30 bg-pool-foam/80 text-pool-deep"
+          : "border-amber-400 bg-amber-50 text-amber-900",
         open && "border-pool-blue bg-pool-blue text-paper",
       )}
     >
-      {value ?? "—"}
+      {value ?? "?"}
       <ChevronDown
-        className={cn("h-3.5 w-3.5 transition-transform", open && "rotate-180")}
+        className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")}
         aria-hidden="true"
       />
     </button>
@@ -54,9 +57,11 @@ export function CapNumberOptions({
   const available = MATCH_CAP_NUMBERS.filter((cap) => !occupied.has(cap) || cap === value);
 
   return (
-    <div className="border-pool-blue/20 bg-paper-card shadow-elev-1 rounded-xl border-2 p-3">
-      <p className="text-pool-deep mb-2 text-sm font-bold">Elige un gorro</p>
-      <div className="grid grid-cols-5 gap-2">
+    <div className="rounded-xl border-2 border-pool-blue/20 bg-paper-card p-3 shadow-elev-1">
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-pool-deep">
+        Elige un gorro
+      </p>
+      <div className="grid grid-cols-5 sm:grid-cols-7 gap-1.5">
         {available.map((cap) => (
           <button
             key={cap}
@@ -64,8 +69,10 @@ export function CapNumberOptions({
             onClick={() => onChange(cap)}
             aria-pressed={value === cap}
             className={cn(
-              "border-ink-200 text-pool-deep focus-visible:outline-pool-blue flex h-11 items-center justify-center rounded-lg border-2 font-mono text-base font-bold focus-visible:outline-2",
-              value === cap && "border-pool-blue bg-pool-blue text-paper",
+              "flex h-11 items-center justify-center rounded-lg border-2 font-mono text-base font-bold focus-visible:outline-2 focus-visible:outline-pool-blue transition-colors",
+              value === cap
+                ? "border-pool-blue bg-pool-blue text-paper"
+                : "border-ink-200 bg-white text-pool-deep hover:bg-pool-foam/50",
             )}
           >
             {cap}
@@ -79,8 +86,10 @@ export function CapNumberOptions({
           onClick={() => onChange(null)}
           aria-pressed={value === null}
           className={cn(
-            "border-ink-200 text-ink-600 focus-visible:outline-pool-blue mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border text-sm font-bold focus-visible:outline-2",
-            value === null && "border-pool-deep bg-pool-deep text-paper",
+            "mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-pool-blue transition-colors",
+            value === null
+              ? "border-pool-deep bg-pool-deep text-paper"
+              : "border-ink-200 bg-white text-ink-600 hover:bg-paper-sunk",
           )}
         >
           Sin gorro

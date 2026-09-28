@@ -6,18 +6,16 @@ import type { Route } from "next";
 import {
   ArrowLeft,
   Check,
-  ChevronDown,
   Loader2,
   RotateCcw,
   Search,
+  Sparkles,
   UserMinus,
   UserPlus,
   UsersRound,
-  WandSparkles,
 } from "lucide-react";
 
 import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
-import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
 import {
@@ -44,6 +42,7 @@ interface CallupEditorProps {
   editable: boolean;
   backHref: Route;
   backLabel: string;
+  matchHeader: React.ReactNode;
 }
 
 type Source = "template" | "previous" | "automatic";
@@ -53,6 +52,14 @@ function selectionKey(players: CallupPick[]): string {
     .sort((a, b) => a.player_id.localeCompare(b.player_id))
     .map((player) => `${player.player_id}:${player.cap_number ?? "-"}`)
     .join("|");
+}
+
+function normalizeSearch(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .trim();
 }
 
 export function CallupEditor({
@@ -66,15 +73,14 @@ export function CallupEditor({
   editable,
   backHref,
   backLabel,
+  matchHeader,
 }: CallupEditorProps) {
   const router = useRouter();
   const [draft, setDraft] = useState<CallupPick[]>(initial);
   const [baseline, setBaseline] = useState<CallupPick[]>(initial);
   const [template, setTemplate] = useState<CallupPick[]>(initialTemplate);
   const [saveTemplate, setSaveTemplate] = useState(false);
-  const [adding, setAdding] = useState(initial.length === 0);
   const [query, setQuery] = useState("");
-  const [lastAdded, setLastAdded] = useState("");
   const [openCap, setOpenCap] = useState<string | null>(null);
   const [pendingSource, setPendingSource] = useState<Source | null>(null);
   const [clearCapsOpen, setClearCapsOpen] = useState(false);
@@ -95,6 +101,7 @@ export function CallupEditor({
     [draft],
   );
   const dirty = selectionKey(draft) !== selectionKey(baseline);
+
   useEffect(() => {
     if (!dirty) return;
     const warn = (event: BeforeUnloadEvent) => {
@@ -104,30 +111,50 @@ export function CallupEditor({
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
-  const missingCaps = draft.filter((player) => player.cap_number == null).length;
-  const selected = [...draft].sort(
-    (a, b) =>
-      (a.cap_number ?? 99) - (b.cap_number ?? 99) ||
-      (byId.get(a.player_id)?.full_name ?? "").localeCompare(
-        byId.get(b.player_id)?.full_name ?? "",
-        "es",
-      ),
-  );
-  const available = candidates.filter(
-    (candidate) =>
-      !selectedIds.has(candidate.player_id) &&
-      candidate.full_name
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "")
-        .toLocaleLowerCase("es")
-        .includes(
-          query
-            .normalize("NFD")
-            .replace(/\p{Diacritic}/gu, "")
-            .toLocaleLowerCase("es")
-            .trim(),
-        ),
-  );
+
+  const assignedCount = draft.filter((player) => player.cap_number != null).length;
+  const missingCaps = draft.length - assignedCount;
+
+  const normalizedQuery = normalizeSearch(query);
+
+  const selected = useMemo(() => {
+    return [...draft]
+      .filter((pick) => {
+        if (!normalizedQuery) return true;
+        const candidate = byId.get(pick.player_id);
+        return candidate && normalizeSearch(candidate.full_name).includes(normalizedQuery);
+      })
+      .sort((a, b) => {
+        const aCap = a.cap_number ?? 99;
+        const bCap = b.cap_number ?? 99;
+        if (aCap !== bCap) return aCap - bCap;
+        const aName = byId.get(a.player_id)?.full_name ?? "";
+        const bName = byId.get(b.player_id)?.full_name ?? "";
+        return aName.localeCompare(bName, "es");
+      });
+  }, [draft, byId, normalizedQuery]);
+
+  const unselected = useMemo(() => {
+    return candidates
+      .filter((candidate) => {
+        if (selectedIds.has(candidate.player_id)) return false;
+        if (!normalizedQuery) return true;
+        return normalizeSearch(candidate.full_name).includes(normalizedQuery);
+      })
+      .sort((a, b) => {
+        if (a.is_current_team !== b.is_current_team) return a.is_current_team ? -1 : 1;
+        if (a.has_conflict !== b.has_conflict) return a.has_conflict ? 1 : -1;
+        return a.full_name.localeCompare(b.full_name, "es");
+      });
+  }, [candidates, selectedIds, normalizedQuery]);
+
+  function occupiedExcept(playerId: string): ReadonlySet<number> {
+    return new Set(
+      draft
+        .filter((item) => item.player_id !== playerId && item.cap_number != null)
+        .map((item) => item.cap_number!),
+    );
+  }
 
   function sourcePicks(source: Source): CallupPick[] {
     if (source === "template") return template;
@@ -144,15 +171,12 @@ export function CallupEditor({
   function applySource(source: Source) {
     const result = prepareCallupSource(sourcePicks(source), candidates, initialIds);
     setDraft(result.players);
-    setAdding(false);
-    setQuery("");
-    setLastAdded("");
     setOpenCap(null);
     setError("");
     setMessage(
       result.omitted > 0
-        ? `${result.players.length} jugadores preparados. ${result.omitted} no disponibles o ya no elegibles; revisa antes de guardar.`
-        : `${result.players.length} jugadores preparados. Pulsa «Guardar convocatoria» para aplicar el cambio.`,
+        ? `${result.players.length} jugadores preparados. ${result.omitted} no disponibles omitidos.`
+        : `${result.players.length} jugadores cargados en la convocatoria.`,
     );
     setPendingSource(null);
   }
@@ -163,18 +187,34 @@ export function CallupEditor({
   }
 
   function addPlayer(candidate: CallupCandidate) {
-    if (draft.length >= 14 || candidate.has_conflict) return;
+    if (draft.length >= 14 || candidate.has_conflict || !editable || pending) return;
     const cap = nextFreeCap(candidate.cap_number, occupied);
     setDraft((current) => [...current, { player_id: candidate.player_id, cap_number: cap }]);
-    setAdding(false);
-    setQuery("");
     setError("");
-    setMessage(
-      `${candidate.full_name} añadido a la selección. Guarda la convocatoria para confirmar.`,
+    setMessage("");
+  }
+
+  function removePlayer(playerId: string) {
+    if (!editable || pending) return;
+    setDraft((current) => current.filter((item) => item.player_id !== playerId));
+    if (openCap === playerId) setOpenCap(null);
+    setError("");
+    setMessage("");
+  }
+
+  function changeCap(playerId: string, cap: number | null) {
+    setDraft((current) =>
+      current.map((item) => (item.player_id === playerId ? { ...item, cap_number: cap } : item)),
     );
+    setOpenCap(null);
+    setError("");
   }
 
   function save() {
+    if (draft.length === 0) {
+      setError("Debes convocar al menos a un jugador para guardar.");
+      return;
+    }
     if (missingCaps > 0) {
       setError(
         `Asigna un gorro a ${missingCaps === 1 ? "un jugador" : `${missingCaps} jugadores`} antes de guardar.`,
@@ -206,276 +246,330 @@ export function CallupEditor({
   }
 
   return (
-    <section aria-labelledby="callup-title" className="pb-28">
+    <section aria-labelledby="callup-heading" className="flex flex-col gap-3 pb-4">
       <button
         type="button"
         onClick={() => (dirty ? setLeaveOpen(true) : router.push(backHref))}
-        className="text-pool-blue focus-visible:outline-pool-blue mb-2 -ml-2 inline-flex min-h-12 items-center gap-2 rounded-xl px-2 text-sm font-extrabold focus-visible:outline-2"
+        className="-ml-2 inline-flex min-h-11 w-fit items-center gap-1.5 rounded-xl px-2 text-sm font-extrabold text-pool-blue hover:text-pool-deep focus-visible:outline-2 focus-visible:outline-pool-blue transition-colors"
       >
         <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {backLabel}
       </button>
-      <div className="bg-pool-deep text-paper shadow-elev-2 rounded-2xl p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-blue-100">{teamLabel}</p>
-            <h2 id="callup-title" className="font-display text-xl font-extrabold">
-              Convocatoria
-            </h2>
-          </div>
-          <span
-            className="bg-paper text-pool-deep flex h-12 min-w-16 items-center justify-center rounded-xl px-2 font-mono text-lg font-extrabold"
-            aria-label={`${draft.length} de 14 jugadores seleccionados`}
-          >
-            {draft.length}/14
-          </span>
+
+      {matchHeader}
+
+      <div className="flex items-center justify-between gap-3 rounded-2xl border-2 border-pool-deep bg-white p-3.5 shadow-sm">
+        <div className="min-w-0">
+          <h2 id="callup-heading" className="flex items-center gap-2 text-lg font-black text-pool-deep">
+            <UsersRound className="h-5 w-5 text-pool-blue shrink-0" aria-hidden="true" />
+            <span>{draft.length} de 14 convocados</span>
+          </h2>
+          <p className="mt-0.5 text-xs sm:text-sm font-medium text-ink-600">
+            {draft.length === 14
+              ? "Convocatoria completa. Para añadir otro jugador, quita uno primero."
+              : `${14 - draft.length} plazas disponibles`}
+          </p>
         </div>
-        <p className="mt-2 text-sm text-blue-100">
-          {editable
-            ? "Elige quién juega y asigna un gorro a cada uno."
-            : "Este partido ya tiene acta o está cerrado. La convocatoria se muestra solo para consulta."}
-        </p>
+        <span
+          aria-hidden="true"
+          className={cn(
+            "grid h-12 min-w-12 shrink-0 place-items-center rounded-xl px-3 font-mono text-xl font-black",
+            draft.length === 14 ? "bg-success text-pool-deep" : "bg-pool-deep text-white",
+          )}
+        >
+          {draft.length}
+        </span>
       </div>
 
       {editable ? (
-        <div className="mt-4">
-          <h3 className="text-pool-deep text-base font-extrabold">Preparar en un toque</h3>
-          <div className="mt-2 grid grid-cols-2 gap-2">
+        <div className="rounded-2xl border-2 border-pool-blue/20 bg-paper-card p-3 shadow-xs">
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-ink-600">
+              Plantillas rápidas
+            </span>
+            {draft.length > 0 && assignedCount > 0 ? (
+              <button
+                type="button"
+                onClick={() => setClearCapsOpen(true)}
+                className="inline-flex min-h-8 items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-bold text-ink-600 hover:text-pool-deep focus-visible:outline-2 focus-visible:outline-pool-blue transition-colors"
+              >
+                <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Quitar gorros
+              </button>
+            ) : null}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => requestSource("template")}
               disabled={template.length === 0 || pending}
-              className="border-pool-blue/35 bg-paper-card text-pool-deep focus-visible:outline-pool-blue flex min-h-16 flex-col items-start justify-center rounded-xl border-2 p-3 text-left focus-visible:outline-2 disabled:opacity-50"
+              className="flex min-h-12 flex-col items-center justify-center rounded-xl border border-pool-blue/20 bg-white p-2 text-center transition-colors hover:bg-pool-foam focus-visible:outline-2 focus-visible:outline-pool-blue disabled:opacity-40"
             >
-              <span className="font-extrabold">Habitual del equipo</span>
-              <span className="text-ink-600 mt-0.5 text-sm">
-                {template.length ? `${template.length} jugadores` : "Todavía sin guardar"}
+              <span className="flex items-center gap-1 text-xs font-extrabold text-pool-deep">
+                ⭐ Habitual
+              </span>
+              <span className="text-[11px] font-medium text-ink-600">
+                {template.length > 0 ? `${template.length} jug.` : "Sin fijar"}
               </span>
             </button>
             <button
               type="button"
               onClick={() => requestSource("previous")}
               disabled={previous.length === 0 || pending}
-              className="border-pool-blue/35 bg-paper-card text-pool-deep focus-visible:outline-pool-blue flex min-h-16 flex-col items-start justify-center rounded-xl border-2 p-3 text-left focus-visible:outline-2 disabled:opacity-50"
+              className="flex min-h-12 flex-col items-center justify-center rounded-xl border border-pool-blue/20 bg-white p-2 text-center transition-colors hover:bg-pool-foam focus-visible:outline-2 focus-visible:outline-pool-blue disabled:opacity-40"
             >
-              <span className="font-extrabold">Último partido</span>
-              <span className="text-ink-600 mt-0.5 text-sm">
-                {previous.length
-                  ? (previousLabel ?? `${previous.length} jugadores`)
-                  : "No hay uno anterior"}
+              <span className="flex items-center gap-1 text-xs font-extrabold text-pool-deep">
+                ↺ Anterior
+              </span>
+              <span className="max-w-full truncate text-[11px] font-medium text-ink-600">
+                {previous.length > 0 ? (previousLabel ?? `${previous.length} jug.`) : "No hay"}
               </span>
             </button>
+            <button
+              type="button"
+              onClick={() => requestSource("automatic")}
+              disabled={pending || candidates.every((candidate) => candidate.has_conflict)}
+              className="flex min-h-12 flex-col items-center justify-center rounded-xl border border-pool-blue/20 bg-white p-2 text-center transition-colors hover:bg-pool-foam focus-visible:outline-2 focus-visible:outline-pool-blue disabled:opacity-40"
+            >
+              <span className="flex items-center gap-1 text-xs font-extrabold text-pool-deep">
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Sugerida
+              </span>
+              <span className="text-[11px] font-medium text-ink-600">Automática</span>
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={() => requestSource("automatic")}
-            disabled={pending || candidates.every((candidate) => candidate.has_conflict)}
-            className="bg-pool-foam border-pool-blue/35 text-pool-deep focus-visible:outline-pool-blue mt-2 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 px-3 font-extrabold focus-visible:outline-2 disabled:opacity-50"
-          >
-            <WandSparkles className="h-5 w-5" aria-hidden="true" /> Propuesta automática
-          </button>
+        </div>
+      ) : null}
+
+      {missingCaps > 0 ? (
+        <div
+          role="status"
+          className="flex items-center gap-2 rounded-xl border-2 border-amber-500/40 bg-amber-50 px-3.5 py-2.5 text-xs font-bold text-amber-950 sm:text-sm"
+        >
+          <span className="shrink-0 text-base" aria-hidden="true">
+            ⚠️
+          </span>
+          <span>
+            Gorros asignados: <strong>{assignedCount} de {draft.length}</strong>. Asigna los {missingCaps} que faltan para guardar.
+          </span>
         </div>
       ) : null}
 
       {error ? (
-        <div className="mt-3" role="alert">
-          <Alert variant="danger" title="Revisa la convocatoria">
-            {error}
-          </Alert>
+        <div
+          role="alert"
+          className="rounded-xl border-2 border-red-300 bg-red-50 px-3.5 py-2.5 text-xs font-bold text-red-900 sm:text-sm"
+        >
+          {error}
         </div>
       ) : null}
-      <p className="text-pool-deep mt-3 min-h-5 text-sm font-bold" role="status" aria-live="polite">
-        {message || (dirty ? "Cambios sin guardar" : "Convocatoria guardada")}
-      </p>
 
-      <div className="mt-3 flex items-center justify-between gap-2">
-        <h3 className="text-pool-deep flex items-center gap-2 text-lg font-extrabold">
-          <UsersRound className="h-5 w-5" aria-hidden="true" /> Jugadores elegidos
-        </h3>
-        {editable && draft.length > 0 ? (
-          <button
-            type="button"
-            onClick={() => setClearCapsOpen(true)}
-            className="text-pool-blue focus-visible:outline-pool-blue flex min-h-11 items-center gap-1 text-sm font-bold focus-visible:outline-2"
-          >
-            <RotateCcw className="h-4 w-4" aria-hidden="true" /> Repartir gorros
-          </button>
-        ) : null}
-      </div>
-      {selected.length === 0 ? (
-        <p className="bg-paper-card text-ink-700 mt-2 rounded-xl p-4 text-sm">
-          Todavía no has elegido jugadores. Usa una opción de arriba o pulsa «Añadir jugador».
+      {message ? (
+        <p role="status" aria-live="polite" className="text-xs font-bold text-success sm:text-sm">
+          {message}
         </p>
-      ) : (
-        <ul className="mt-2 grid gap-2">
-          {selected.map((pick) => {
-            const player = byId.get(pick.player_id);
-            const name = player?.full_name ?? "Jugador del equipo";
-            const capOpen = openCap === pick.player_id;
-            return (
+      ) : null}
+
+      <div className="relative">
+        <Search
+          className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-ink-500"
+          aria-hidden="true"
+        />
+        <input
+          type="search"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Buscar jugador por nombre…"
+          className="h-11 w-full rounded-xl border-2 border-ink-200 bg-white pr-3 pl-9 text-sm text-ink-900 placeholder:text-ink-500 focus-visible:outline-2 focus-visible:outline-pool-blue"
+        />
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-wide text-pool-deep">
+            <span>Convocados</span>
+            <span className="rounded-full bg-pool-foam px-2 py-0.5 font-mono text-xs font-black text-pool-deep">
+              {draft.length}/14
+            </span>
+          </h3>
+        </div>
+
+        {draft.length === 0 ? (
+          <div className="rounded-2xl border-2 border-dashed border-ink-200 bg-white/70 p-4 text-center">
+            <p className="text-sm font-bold text-ink-700">No hay jugadores convocados todavía</p>
+            <p className="mt-1 text-xs text-ink-500">
+              Toca el botón <strong className="text-pool-deep">+</strong> en cualquier jugador de abajo o usa una plantilla rápida.
+            </p>
+          </div>
+        ) : selected.length === 0 ? (
+          <p className="rounded-xl bg-paper-card p-3 text-center text-xs font-semibold text-ink-600">
+            Ningún convocado coincide con «{query}».
+          </p>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {selected.map((pick) => {
+              const candidate = byId.get(pick.player_id);
+              const name = candidate?.full_name ?? "Jugador del equipo";
+              const isCapOpen = openCap === pick.player_id;
+              return (
+                <li
+                  key={pick.player_id}
+                  className={cn(
+                    "rounded-2xl border-2 bg-white p-2.5 shadow-sm transition-all",
+                    pick.cap_number == null ? "border-amber-400 bg-amber-50/20" : "border-pool-blue",
+                  )}
+                >
+                  <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_3rem] items-center gap-2.5">
+                    <CapNumberButton
+                      value={pick.cap_number}
+                      open={isCapOpen}
+                      disabled={!editable || pending}
+                      label={`Gorro de ${name}: ${pick.cap_number ?? "sin asignar"}. Toca para cambiar`}
+                      onClick={() => setOpenCap((curr) => (curr === pick.player_id ? null : pick.player_id))}
+                    />
+
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-extrabold text-ink-900 sm:text-base">
+                        <AdaptivePlayerName name={name} />
+                      </p>
+                      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                        {pick.cap_number != null ? (
+                          <span className="text-xs font-bold text-success">
+                            Gorro #{pick.cap_number}
+                          </span>
+                        ) : (
+                          <span className="text-xs font-bold text-amber-800">
+                            ⚠️ Sin gorro
+                          </span>
+                        )}
+                        {candidate?.has_conflict ? (
+                          <span className="rounded bg-red-100 px-1.5 py-0.2 text-[11px] font-bold text-red-800">
+                            No disponible
+                          </span>
+                        ) : null}
+                        {candidate && !candidate.is_current_team ? (
+                          <span className="rounded bg-pool-foam px-1.5 py-0.2 text-[11px] font-bold text-pool-deep">
+                            Refuerzo
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {editable ? (
+                      <button
+                        type="button"
+                        onClick={() => removePlayer(pick.player_id)}
+                        disabled={pending}
+                        aria-label={`Quitar a ${name} de la convocatoria`}
+                        className="grid h-12 w-12 place-items-center rounded-xl bg-red-50 text-red-700 hover:bg-red-100 focus-visible:outline-2 focus-visible:outline-red-600 disabled:opacity-40 transition-colors"
+                      >
+                        <UserMinus className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                    ) : null}
+                  </div>
+
+                  {isCapOpen ? (
+                    <div className="mt-2.5">
+                      <CapNumberOptions
+                        value={pick.cap_number}
+                        occupied={occupiedExcept(pick.player_id)}
+                        onChange={(cap) => changeCap(pick.player_id, cap)}
+                      />
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2 pt-1">
+        <div className="flex items-center justify-between">
+          <h3 className="flex items-center gap-1.5 text-sm font-extrabold uppercase tracking-wide text-ink-600">
+            <span>Disponibles para convocar</span>
+            <span className="rounded-full bg-ink-200/60 px-2 py-0.5 font-mono text-xs font-bold text-ink-700">
+              {candidates.length - draft.length}
+            </span>
+          </h3>
+        </div>
+
+        {unselected.length === 0 ? (
+          <div className="rounded-xl border border-ink-200 bg-paper-sunk/40 p-3 text-center text-xs font-semibold text-ink-600">
+            {normalizedQuery
+              ? `Ningún jugador disponible coincide con «${query}».`
+              : "Todos los jugadores de la lista ya están convocados."}
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-2">
+            {unselected.map((candidate) => (
               <li
-                key={pick.player_id}
-                className="border-pool-blue/30 bg-paper-card shadow-elev-1 rounded-xl border-2 p-2.5"
+                key={candidate.player_id}
+                className="rounded-2xl border-2 border-ink-200/80 bg-paper-sunk/60 p-2.5 opacity-90 transition-all hover:bg-white"
               >
-                <div className="flex min-h-12 items-center gap-2">
-                  <CapNumberButton
-                    value={pick.cap_number}
-                    open={capOpen}
-                    disabled={!editable || pending}
-                    label={`Gorro de ${name}: ${pick.cap_number ?? "sin asignar"}. Cambiar`}
-                    onClick={() => setOpenCap(capOpen ? null : pick.player_id)}
-                  />
-                  <span className="text-pool-deep min-w-0 flex-1 text-base font-extrabold">
-                    <AdaptivePlayerName name={name} />
+                <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_3rem] items-center gap-2.5">
+                  <span
+                    aria-hidden="true"
+                    className="grid h-12 w-12 place-items-center rounded-full border-2 border-dashed border-ink-300 font-mono text-base font-bold text-ink-400"
+                  >
+                    –
                   </span>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-ink-800 sm:text-base">
+                      <AdaptivePlayerName name={candidate.full_name} />
+                    </p>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                      {candidate.has_conflict ? (
+                        <span className="rounded bg-red-100 px-1.5 py-0.2 text-[11px] font-bold text-red-800">
+                          No disponible este día
+                        </span>
+                      ) : (
+                        <span className="text-xs font-medium text-ink-500">
+                          Disponible para convocar
+                        </span>
+                      )}
+                      {!candidate.is_current_team ? (
+                        <span className="rounded bg-ink-200 px-1.5 py-0.2 text-[11px] font-bold text-ink-700">
+                          Otro equipo
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
                   {editable ? (
                     <button
                       type="button"
-                      onClick={() => {
-                        setDraft((current) =>
-                          current.filter((item) => item.player_id !== pick.player_id),
-                        );
-                        setOpenCap(null);
-                        setMessage(`${name} quitado de la selección. Guarda para confirmar.`);
-                      }}
-                      disabled={pending}
-                      aria-label={`Quitar a ${name}`}
-                      className="text-danger border-danger/30 bg-danger/5 focus-visible:outline-danger flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 focus-visible:outline-2"
+                      onClick={() => addPlayer(candidate)}
+                      disabled={draft.length >= 14 || candidate.has_conflict || pending}
+                      aria-label={`Añadir a ${candidate.full_name}`}
+                      className="grid h-12 w-12 place-items-center rounded-xl bg-pool-deep text-white hover:bg-pool-blue focus-visible:outline-2 focus-visible:outline-pool-blue disabled:opacity-35 transition-colors"
                     >
-                      <UserMinus className="h-5 w-5" aria-hidden="true" />
+                      <UserPlus className="h-5 w-5" aria-hidden="true" />
                     </button>
                   ) : null}
                 </div>
-                {player?.has_conflict ? (
-                  <p className="text-danger mt-1 pl-14 text-sm font-bold">
-                    No disponible este día. Revisa su asistencia.
-                  </p>
-                ) : null}
-                {capOpen ? (
-                  <div className="mt-2">
-                    <CapNumberOptions
-                      value={pick.cap_number}
-                      occupied={
-                        new Set(
-                          draft
-                            .filter((item) => item.player_id !== pick.player_id)
-                            .map((item) => item.cap_number)
-                            .filter((cap): cap is number => cap != null),
-                        )
-                      }
-                      onChange={(cap) => {
-                        setDraft((current) =>
-                          current.map((item) =>
-                            item.player_id === pick.player_id ? { ...item, cap_number: cap } : item,
-                          ),
-                        );
-                        setOpenCap(null);
-                        setMessage(`Gorro de ${name} actualizado. Guarda la convocatoria.`);
-                      }}
-                    />
-                  </div>
-                ) : null}
               </li>
-            );
-          })}
-        </ul>
-      )}
+            ))}
+          </ul>
+        )}
+      </div>
 
       {editable ? (
-        <div className="mt-4">
-          <button
-            type="button"
-            aria-expanded={adding}
-            onClick={() => {
-              setLastAdded("");
-              setAdding((current) => !current);
-            }}
-            className="border-pool-deep bg-paper-card text-pool-deep focus-visible:outline-pool-blue flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 px-3 text-base font-extrabold focus-visible:outline-2"
-          >
-            <UserPlus className="h-5 w-5" aria-hidden="true" /> Añadir jugador{" "}
-            <ChevronDown
-              className={cn("ml-auto h-5 w-5 transition-transform", adding && "rotate-180")}
-              aria-hidden="true"
-            />
-          </button>
-          {lastAdded ? (
-            <p
-              className="text-pool-deep bg-pool-foam mt-2 rounded-xl px-3 py-2 text-sm font-bold"
-              role="status"
-            >
-              {lastAdded} añadido. Pulsa «Guardar convocatoria» para confirmar.
-            </p>
-          ) : null}
-          {adding ? (
-            <div className="bg-pool-ice mt-2 rounded-xl p-3">
-              <label htmlFor="callup-player-search" className="text-pool-deep text-sm font-bold">
-                Busca en el club
-              </label>
-              <div className="relative mt-1">
-                <Search
-                  className="text-ink-600 pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2"
-                  aria-hidden="true"
-                />
-                <input
-                  id="callup-player-search"
-                  type="search"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  placeholder="Nombre o apellido"
-                  className="border-ink-300 bg-paper-card text-ink-900 focus-visible:outline-pool-blue min-h-12 w-full rounded-xl border-2 pr-3 pl-10 text-base focus-visible:outline-2"
-                />
-              </div>
-              <ul className="mt-2 grid max-h-72 gap-1.5 overflow-y-auto overscroll-contain">
-                {available.map((player) => (
-                  <li key={player.player_id}>
-                    <button
-                      type="button"
-                      onClick={() => addPlayer(player)}
-                      disabled={draft.length >= 14 || player.has_conflict || pending}
-                      className="bg-paper-card border-pool-blue/25 text-pool-deep focus-visible:outline-pool-blue flex min-h-14 w-full items-center gap-3 rounded-xl border-2 px-3 text-left focus-visible:outline-2 disabled:opacity-55"
-                    >
-                      <span className="min-w-0 flex-1 font-bold">
-                        <AdaptivePlayerName name={player.full_name} />
-                        <span className="text-ink-600 block text-xs font-semibold">
-                          {player.has_conflict
-                            ? "No disponible"
-                            : player.is_current_team
-                              ? "Este equipo"
-                              : "Otro equipo compatible"}
-                        </span>
-                      </span>
-                      {player.has_conflict ? null : (
-                        <UserPlus className="h-5 w-5 shrink-0" aria-hidden="true" />
-                      )}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {available.length === 0 ? (
-                <p className="text-ink-700 py-3 text-sm">No quedan jugadores con ese nombre.</p>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {editable ? (
-        <div className="border-pool-blue/30 bg-paper-card shadow-elev-4 sticky bottom-[calc(var(--bottom-nav-height)+.5rem)] z-20 mt-4 rounded-2xl border-2 p-3">
-          <label className="text-pool-deep flex min-h-12 cursor-pointer items-center gap-3 text-sm font-bold">
+        <div className="sticky bottom-[calc(var(--bottom-nav-height)+0.5rem)] z-20 mt-4 rounded-2xl border-2 border-pool-blue/30 bg-white/95 p-3.5 shadow-elev-4 backdrop-blur-md">
+          <label className="flex min-h-11 cursor-pointer items-center gap-2.5 text-xs font-bold text-pool-deep sm:text-sm">
             <input
               type="checkbox"
               checked={saveTemplate}
               onChange={(event) => setSaveTemplate(event.target.checked)}
-              className="accent-pool-blue h-5 w-5 shrink-0"
+              className="h-5 w-5 shrink-0 rounded border-2 border-pool-blue text-pool-blue accent-pool-blue focus-visible:outline-pool-blue"
             />
-            Usar esta convocatoria en próximos partidos de {teamLabel}
+            <span>Guardar como convocatoria habitual de {teamLabel}</span>
           </label>
           <Button
             type="button"
             size="lg"
             variant="deep"
             onClick={save}
-            disabled={pending || missingCaps > 0 || (!dirty && !saveTemplate)}
-            className="mt-1 w-full rounded-xl"
+            disabled={pending || draft.length === 0 || missingCaps > 0 || (!dirty && !saveTemplate)}
+            className="mt-2 w-full rounded-xl"
           >
             {pending ? (
               <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
@@ -485,12 +579,18 @@ export function CallupEditor({
             {pending ? "Guardando…" : "Guardar convocatoria"}
           </Button>
           {missingCaps > 0 ? (
-            <p className="text-danger mt-1 text-center text-sm font-bold">
-              Faltan {missingCaps} {missingCaps === 1 ? "gorro" : "gorros"}
+            <p className="mt-1.5 text-center text-xs font-bold text-amber-700">
+              Faltan {missingCaps} {missingCaps === 1 ? "gorro" : "gorros"} por asignar para guardar
             </p>
           ) : null}
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-4 rounded-2xl border-2 border-ink-200 bg-paper-sunk p-4 text-center">
+          <p className="text-sm font-bold text-ink-700">
+            Esta convocatoria ya no se puede modificar porque el partido ya tiene acta o está cerrado.
+          </p>
+        </div>
+      )}
 
       <ConfirmActionSheet
         open={pendingSource !== null}
@@ -498,7 +598,7 @@ export function CallupEditor({
           if (!open) setPendingSource(null);
         }}
         title="¿Cambiar la selección?"
-        description="Los jugadores que ves ahora se sustituirán en el borrador. Podrás revisarlo antes de guardar."
+        description="Se sustituirá el borrador actual con los jugadores de la plantilla seleccionada. Podrás revisarlo antes de guardar."
         confirmLabel="Sí, preparar selección"
         cancelLabel="Mantener selección"
         variant="warning"
@@ -509,8 +609,8 @@ export function CallupEditor({
       <ConfirmActionSheet
         open={clearCapsOpen}
         onOpenChange={setClearCapsOpen}
-        title="¿Repartir los gorros de nuevo?"
-        description="Los jugadores seguirán elegidos. Tendrás que asignar un gorro a cada uno antes de guardar."
+        title="¿Quitar todos los gorros?"
+        description="Los jugadores seguirán en la convocatoria, pero tendrás que asignarles un gorro a cada uno antes de guardar."
         confirmLabel="Sí, quitar gorros"
         cancelLabel="Mantener gorros"
         variant="warning"
@@ -524,7 +624,7 @@ export function CallupEditor({
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
         title="¿Salir sin guardar?"
-        description="Los cambios de esta convocatoria aún no están guardados."
+        description="Tienes cambios en la convocatoria que aún no has guardado."
         confirmLabel="Salir sin guardar"
         cancelLabel="Seguir editando"
         variant="warning"
