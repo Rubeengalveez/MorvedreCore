@@ -53,7 +53,10 @@ export function ActaShootout({
             const totals = playerTotals(s, "them", number);
             return !totals.red && totals.exclusions < 3;
           })
-          .map((number) => ({ cap: number, name: validCapNumber(number) == null ? "Sin gorro" : `Gorro ${number}` }));
+          .map((number) => ({
+            cap: number,
+            name: validCapNumber(number) == null ? "Sin gorro" : `Gorro ${number}`,
+          }));
   const keeper = availableKeepers.find((player) => player.cap === s.keeper);
   const label = (side: "us" | "them") => (side === "us" ? "Morvedre" : record.opponent);
   const turnIsUs = state.nextSide === "us";
@@ -158,15 +161,16 @@ export function ActaShootout({
           {tanda.shots.length > 0 && (
             <div className="grid grid-cols-2 divide-x divide-[#c7d6e4] border-t border-slate-100 bg-[#f6f9fc] px-2 py-2.5">
               {sides.map((side) => (
-                <div key={side} className="flex min-h-6 flex-wrap items-center justify-center gap-1.5 px-1">
+                <div
+                  key={side}
+                  className="flex min-h-6 flex-wrap items-center justify-center gap-1.5 px-1"
+                >
                   {tanda.shots
                     .filter((shot) => shot.side === side)
                     .map((shot) => {
                       const isGoal = shot.outcome === "goal";
                       const player =
-                        side === "us"
-                          ? s.players.find((p) => p.cap === shot.cap)
-                          : undefined;
+                        side === "us" ? s.players.find((p) => p.cap === shot.cap) : undefined;
                       const tooltip = `${validCapNumber(shot.cap) == null ? "Sin gorro" : `#${shot.cap}`}${player ? ` · ${player.name}` : ""} · ${shootoutOutcomeLabels[shot.outcome]}`;
                       return (
                         <span
@@ -214,7 +218,9 @@ export function ActaShootout({
                   <span className="flex min-w-0 gap-1 text-base font-extrabold">
                     {keeper ? (
                       <>
-                        <span className="shrink-0">{validCapNumber(keeper.cap) == null ? "Sin gorro" : `#${keeper.cap}`} ·</span>
+                        <span className="shrink-0">
+                          {validCapNumber(keeper.cap) == null ? "Sin gorro" : `#${keeper.cap}`} ·
+                        </span>
                         <ActaPlayerName name={keeper.name} />
                       </>
                     ) : (
@@ -282,7 +288,7 @@ export function ActaShootout({
             </section>
           ) : (
             <section
-              className={`overflow-hidden rounded-2xl shadow-sm ring-1 ${turnIsUs ? "bg-white ring-[#b8cada]" : "bg-[#fff8d8] ring-[#e4c45c]"}`}
+              className={`overflow-hidden rounded-2xl shadow-sm ring-2 ${turnIsUs ? "bg-white ring-[#b8cada]" : "bg-[#fff0bd] ring-[#a77600]"}`}
             >
               <div
                 className={`flex items-center gap-3 px-4 py-3 ${turnIsUs ? "bg-[#062048] text-white" : "bg-[#f4c430] text-[#062048]"}`}

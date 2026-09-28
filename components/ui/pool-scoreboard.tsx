@@ -15,7 +15,6 @@ export interface PoolScoreboardProps {
   outcome?: PoolScoreboardOutcome | null;
   isHome?: boolean;
   period?: number | null;
-  clock?: string | null;
   mvp?: {
     name: string;
     cap?: number | null;
@@ -53,7 +52,6 @@ export function PoolScoreboard({
   outcome = null,
   isHome,
   period = null,
-  clock = null,
   mvp = null,
   className,
 }: PoolScoreboardProps) {
@@ -114,7 +112,7 @@ export function PoolScoreboard({
         </time>
       </header>
 
-      <div className="grid grid-cols-[minmax(0,1fr)_1.5rem_minmax(0,1fr)] items-center gap-x-2 px-3 py-3 text-center sm:px-5">
+      <div className="grid grid-cols-[minmax(0,1fr)_5rem_minmax(0,1fr)] items-center gap-x-2 px-3 py-3 text-center sm:px-5">
         <TeamScore
           label={homeTeam.label}
           venue="Local"
@@ -122,7 +120,7 @@ export function PoolScoreboard({
           showScore={showScore}
           align="left"
         />
-        <MatchCenter mode={mode} period={period} clock={clock} />
+        <MatchCenter mode={mode} period={period} />
         <TeamScore
           label={awayTeam.label}
           venue="Visitante"
@@ -132,7 +130,11 @@ export function PoolScoreboard({
         />
       </div>
 
-      {regulationScore && <p className="pb-3 text-center text-sm font-bold text-pool-deep">({homeScore}–{awayScore}) <span className="font-medium text-ink-600">con penaltis</span></p>}
+      {regulationScore && (
+        <p className="text-pool-deep pb-3 text-center text-sm font-bold">
+          ({homeScore}–{awayScore}) <span className="text-ink-600 font-medium">con penaltis</span>
+        </p>
+      )}
       {mvp ? (
         <footer className="border-ink-200 bg-paper-sunk/65 text-ink-600 flex min-w-0 items-center gap-1.5 overflow-hidden border-t px-4 py-2 text-xs whitespace-nowrap sm:text-sm">
           <span className="min-w-0 truncate">
@@ -182,20 +184,11 @@ function TeamScore({
   );
 }
 
-function MatchCenter({
-  mode,
-  period,
-  clock,
-}: {
-  mode: PoolScoreboardMode;
-  period: number | null;
-  clock: string | null;
-}) {
+function MatchCenter({ mode, period }: { mode: PoolScoreboardMode; period: number | null }) {
   if (mode === "live") {
     return (
-      <div className="text-goggle-red col-start-2 flex flex-col items-center text-center">
-        <span className="font-mono text-lg font-extrabold tabular-nums">{clock ?? "00:00"}</span>
-        <span className="text-ink-600 text-xs font-bold">{period ?? 1}º periodo</span>
+      <div className="text-ink-600 col-start-2 flex h-[3.75rem] -translate-y-6 items-center justify-center self-end text-center text-xs font-bold whitespace-nowrap">
+        {period ?? 1}º periodo
       </div>
     );
   }

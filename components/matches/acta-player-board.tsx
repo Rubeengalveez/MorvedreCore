@@ -7,7 +7,7 @@ import { validCapNumber } from "@/lib/domain/cap-number";
 function sanctionStyle(count: number, red: boolean) {
   if (red || count >= 3) return "bg-red-100 text-red-950";
   if (count === 2) return "bg-orange-100 text-orange-950";
-  if (count === 1) return "bg-amber-50 text-amber-950";
+  if (count === 1) return "border border-[#a77600] bg-[#fff0bd] text-[#4e3600]";
   return "bg-white text-[#062048]";
 }
 

@@ -6,9 +6,9 @@ export const actionLabels = {
   goal_penalty: "Gol de penalti",
   assist: "Asistencia",
   shot_out: "Tiro fuera / palo",
-  shot_saved: "Parada del rival",
-  shot_blocked: "Tiro bloqueado",
-  shot_corner: "Tiro a córner",
+  shot_saved: "Parada del portero rival",
+  shot_blocked: "Parada del portero rival",
+  shot_corner: "Parada del portero rival",
   penalty_missed: "Penalti fallado",
   exclusion: "Expulsión",
   penalty: "Penalti cometido",
@@ -57,13 +57,17 @@ const pendingSchema = z.discriminatedUnion("kind", [
 
 export const shootoutSchema = z.object({
   firstSide: z.enum(["us", "them"]),
-  shots: z.array(z.object({
-    id: z.string().uuid(),
-    side: z.enum(["us", "them"]),
-    cap: z.number().int().min(1).max(99),
-    keeper: z.number().int().min(1).max(99).nullable(),
-    outcome: z.enum(["goal", "save", "out", "post"]),
-  })).max(200),
+  shots: z
+    .array(
+      z.object({
+        id: z.string().uuid(),
+        side: z.enum(["us", "them"]),
+        cap: z.number().int().min(1).max(99),
+        keeper: z.number().int().min(1).max(99).nullable(),
+        outcome: z.enum(["goal", "save", "out", "post"]),
+      }),
+    )
+    .max(200),
 });
 
 export type Shootout = z.infer<typeof shootoutSchema>;
@@ -73,17 +77,30 @@ export function shootoutState(tanda: Shootout) {
   const them = tanda.shots.filter((shot) => shot.side === "them");
   const goalsUs = us.filter((shot) => shot.outcome === "goal").length;
   const goalsThem = them.filter((shot) => shot.outcome === "goal").length;
-  const decided = us.length <= 5 && them.length <= 5
-    ? goalsUs > goalsThem + Math.max(0, 5 - them.length) || goalsThem > goalsUs + Math.max(0, 5 - us.length)
-    : us.length === them.length && goalsUs !== goalsThem;
+  const decided =
+    us.length <= 5 && them.length <= 5
+      ? goalsUs > goalsThem + Math.max(0, 5 - them.length) ||
+        goalsThem > goalsUs + Math.max(0, 5 - us.length)
+      : us.length === them.length && goalsUs !== goalsThem;
   return {
-    goalsUs, goalsThem,
-    winner: decided ? (goalsUs > goalsThem ? "us" : "them") as Side : null,
-    nextSide: tanda.shots.length % 2 === 0 ? tanda.firstSide : tanda.firstSide === "us" ? "them" as const : "us" as const,
+    goalsUs,
+    goalsThem,
+    winner: decided ? ((goalsUs > goalsThem ? "us" : "them") as Side) : null,
+    nextSide:
+      tanda.shots.length % 2 === 0
+        ? tanda.firstSide
+        : tanda.firstSide === "us"
+          ? ("them" as const)
+          : ("us" as const),
   };
 }
 
-export const shootoutOutcomeLabels = { goal: "Gol", save: "Parado", out: "Fuera", post: "Al palo" } as const;
+export const shootoutOutcomeLabels = {
+  goal: "Gol",
+  save: "Parado",
+  out: "Fuera",
+  post: "Al palo",
+} as const;
 
 export const sheetSchema = z
   .object({
@@ -120,23 +137,39 @@ export const sheetSchema = z
   })
   .superRefine((s, ctx) => {
     const fail = (message: string) => ctx.addIssue({ code: "custom", message });
-    if (s.pending && s.phase !== "playing") fail("Completa la jugada pendiente antes de cambiar de fase.");
+    if (s.pending && s.phase !== "playing")
+      fail("Completa la jugada pendiente antes de cambiar de fase.");
     if (s.phase === "shootout" && !s.shootout) fail("Falta preparar la tanda.");
     if (s.shootout) {
-      if (s.period !== s.periods || !["shootout", "finished"].includes(s.phase) || s.pending || score(s as LiveSheet, "us") !== score(s as LiveSheet, "them")) {
-        fail("La tanda solo puede empezar al terminar el último cuarto con empate y sin jugadas pendientes.");
+      if (
+        s.period !== s.periods ||
+        !["shootout", "finished"].includes(s.phase) ||
+        s.pending ||
+        score(s as LiveSheet, "us") !== score(s as LiveSheet, "them")
+      ) {
+        fail(
+          "La tanda solo puede empezar al terminar el último cuarto con empate y sin jugadas pendientes.",
+        );
       }
       const previous: Shootout = { firstSide: s.shootout.firstSide, shots: [] };
       const ids = new Set<string>();
       for (const shot of s.shootout.shots) {
         const state = shootoutState(previous);
-        if (state.winner || shot.side !== state.nextSide || ids.has(shot.id)) fail("Revisa el orden de los penaltis de la tanda.");
-        if (!(shot.side === "us" ? s.players.some((p) => p.cap === shot.cap) : s.opponentCaps.includes(shot.cap))) fail("El lanzador no está en el acta.");
-        if (shot.side === "them" && !s.players.some((p) => p.cap === shot.keeper)) fail("Selecciona el portero de la tanda.");
+        if (state.winner || shot.side !== state.nextSide || ids.has(shot.id))
+          fail("Revisa el orden de los penaltis de la tanda.");
+        if (
+          !(shot.side === "us"
+            ? s.players.some((p) => p.cap === shot.cap)
+            : s.opponentCaps.includes(shot.cap))
+        )
+          fail("El lanzador no está en el acta.");
+        if (shot.side === "them" && !s.players.some((p) => p.cap === shot.keeper))
+          fail("Selecciona el portero de la tanda.");
         ids.add(shot.id);
         previous.shots.push(shot);
       }
-      if (s.phase === "finished" && !shootoutState(s.shootout).winner) fail("La tanda todavía no tiene ganador.");
+      if (s.phase === "finished" && !shootoutState(s.shootout).winner)
+        fail("La tanda todavía no tiene ganador.");
     }
     if (s.period > s.periods) fail("El periodo no es válido.");
     if (
@@ -350,9 +383,17 @@ export function playerTotals(sheet: LiveSheet, side: Side, cap: number) {
     receivedOut: events.filter((event) => event.kind === "keeper_out").length,
     shots: goals + missedShots.length,
     missedShots: missedShots.length,
-    shotsOut: events.filter((event) => event.kind === "shot_out").length,
+    shotsOut: events.filter(
+      (event) =>
+        event.kind === "shot_out" ||
+        (event.kind === "penalty_missed" && event.missOutcome === "out"),
+    ).length,
     shotsBlocked: events.filter(
-      (event) => event.kind === "shot_blocked" || event.kind === "shot_saved",
+      (event) =>
+        event.kind === "shot_blocked" ||
+        event.kind === "shot_saved" ||
+        event.kind === "shot_corner" ||
+        (event.kind === "penalty_missed" && event.missOutcome === "save"),
     ).length,
     shotsCorner: events.filter((event) => event.kind === "shot_corner").length,
     penaltiesMissed: events.filter((event) => event.kind === "penalty_missed").length,
@@ -382,7 +423,11 @@ export function defaultPeriods(category: string) {
 }
 
 export function finalScore(sheet: LiveSheet, side: Side) {
-  return score(sheet, side) + (sheet.shootout?.shots.filter((shot) => shot.side === side && shot.outcome === "goal").length ?? 0);
+  return (
+    score(sheet, side) +
+    (sheet.shootout?.shots.filter((shot) => shot.side === side && shot.outcome === "goal").length ??
+      0)
+  );
 }
 
 export function timeoutCount(sheet: LiveSheet, side: Side) {

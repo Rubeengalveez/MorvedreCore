@@ -5,10 +5,12 @@ export function ActaScoreboard({
   record,
   status,
   onShare,
+  onBack,
 }: {
   record: LiveRecord;
   status: string;
   onShare: () => void;
+  onBack: () => void;
 }) {
   const s = record.sheet;
   const left: Side = record.homeAway === "away" ? "them" : "us";
@@ -16,13 +18,14 @@ export function ActaScoreboard({
   return (
     <header className="shrink-0 bg-[#062048] pt-[env(safe-area-inset-top)] text-white shadow-[0_4px_18px_rgba(6,32,72,0.2)]">
       <div data-acta-navigation className="flex min-h-12 items-center px-1.5">
-        <a
-          href={`/matches/${record.matchId}`}
+        <button
+          type="button"
+          onClick={onBack}
           aria-label="Volver al partido"
           className="grid min-h-12 min-w-12 place-items-center rounded-xl active:bg-white/15"
         >
           <ArrowLeft size={23} strokeWidth={2.25} aria-hidden="true" />
-        </a>
+        </button>
         <h1 className="min-w-0 flex-1 text-base font-extrabold tracking-tight">Acta en directo</h1>
         {s.phase === "finished" ? (
           <button

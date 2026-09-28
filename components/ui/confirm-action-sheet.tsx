@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2, Trash2 } from "lucide-react";
+import { ArrowLeft, CircleAlert, Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -21,11 +21,13 @@ export interface ConfirmActionSheetProps {
   title: string;
   description: string;
   confirmLabel?: string;
+  secondaryLabel?: string;
   cancelLabel?: string;
   variant?: ConfirmActionSheetVariant;
   isPending?: boolean;
   error?: string | null;
   onConfirm: () => void | Promise<void>;
+  onSecondary?: () => void | Promise<void>;
 }
 
 const BUTTON_VARIANTS = {
@@ -40,11 +42,13 @@ export function ConfirmActionSheet({
   title,
   description,
   confirmLabel = "Confirmar",
+  secondaryLabel,
   cancelLabel = "Cancelar",
   variant = "danger",
   isPending = false,
   error,
   onConfirm,
+  onSecondary,
 }: ConfirmActionSheetProps) {
   function handleOpenChange(nextOpen: boolean) {
     if (!isPending) onOpenChange(nextOpen);
@@ -65,8 +69,16 @@ export function ConfirmActionSheet({
       >
         <SheetHeader className="pr-16">
           <div className="flex items-start gap-3">
-            <span className="bg-danger/10 text-danger flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-              <Trash2 className="h-5 w-5" aria-hidden="true" />
+            <span
+              className={`${variant === "danger" ? "bg-danger/10 text-danger" : "bg-pool-foam text-pool-deep"} flex h-11 w-11 shrink-0 items-center justify-center rounded-xl`}
+            >
+              {variant === "danger" ? (
+                <Trash2 className="h-5 w-5" aria-hidden="true" />
+              ) : variant === "warning" ? (
+                <CircleAlert className="h-5 w-5" aria-hidden="true" />
+              ) : (
+                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+              )}
             </span>
             <div className="min-w-0 pt-0.5">
               <SheetTitle className="text-lg leading-tight">{title}</SheetTitle>
@@ -100,6 +112,18 @@ export function ConfirmActionSheet({
             ) : null}
             {isPending ? "Procesando…" : confirmLabel}
           </Button>
+          {secondaryLabel && onSecondary ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="lg"
+              className="w-full rounded-xl"
+              disabled={isPending}
+              onClick={() => void onSecondary()}
+            >
+              {secondaryLabel}
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="ghost"

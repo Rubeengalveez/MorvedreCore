@@ -6,19 +6,16 @@ import { DelegateMatchEntry } from "@/components/matches/delegate-match-entry";
 import { canUseLiveMatch, deriveAdminCapabilities } from "@/lib/domain/permissions";
 afterEach(cleanup);
 const id = "10000000-0000-4000-8000-000000000001";
-it("la carga y el error siempre permiten volver al mismo partido", async () => {
+it("la carga y el error mantienen la salida al partido visible", async () => {
   history.replaceState({}, "", `/acta?match=${id}`);
   const view = render(<LiveMatchEntryState error="" />);
   await waitFor(() =>
-    expect(screen.getByRole("link", { name: "Volver al partido" })).toHaveAttribute(
-      "href",
-      `/matches/${id}`,
-    ),
+    expect(screen.getByRole("button", { name: "Volver al partido" })).toBeInTheDocument(),
   );
   expect(screen.getByRole("status")).toHaveTextContent("Preparando tu acta");
   view.rerender(<LiveMatchEntryState error="No tienes permiso" />);
   expect(screen.getByRole("alert")).toHaveTextContent("No tienes permiso");
-  expect(screen.getByRole("link")).not.toHaveAttribute("href", "/admin/matches");
+  expect(screen.getByRole("button", { name: "Volver al partido" })).toBeInTheDocument();
 });
 it("señala los gorros repetidos y permite corregirlos en la misma pantalla", () => {
   render(
@@ -41,6 +38,30 @@ it("señala los gorros repetidos y permite corregirlos en la misma pantalla", ()
   fireEvent.change(screen.getByRole("combobox", { name: /Álex/ }), { target: { value: "1" } });
   expect(save).toBeEnabled();
   expect(screen.queryByText("Gorro repetido")).toBeNull();
+});
+it("desasignar gorros requiere confirmación y avisa si se sale sin guardar", () => {
+  render(
+    <LiveMatchEntryState
+      error=""
+      preparation={{
+        opponent: "Rival",
+        team: "Infantil",
+        reason: "caps",
+        players: [
+          { id, name: "Álex", cap: 1 },
+          { id: "p2", name: "Marcos", cap: 2 },
+        ],
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Desasignar todos los gorros" }));
+  expect(
+    screen.getByRole("heading", { name: "¿Desasignar todos los gorros?" }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Sí, desasignar gorros" }));
+  expect(screen.getByRole("button", { name: "Guardar gorros y abrir acta" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Volver al partido" }));
+  expect(screen.getByRole("heading", { name: "Tienes cambios sin guardar" })).toBeInTheDocument();
 });
 it("permite elegir un máximo de 14 cuando una convocatoria antigua tiene más jugadores", () => {
   const players = Array.from({ length: 16 }, (_, index) => ({

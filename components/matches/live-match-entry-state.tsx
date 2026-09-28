@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
-import { ArrowLeft, ClipboardList, AlertCircle, Check, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ArrowLeft, ClipboardList, AlertCircle, Check, Loader2, Unlink2 } from "lucide-react";
 import { prepareLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
+import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
+import { useActaBackGuard } from "./use-acta-back-guard";
 
 const subscribeToLocation = (notify: () => void) => {
   window.addEventListener("popstate", notify);
@@ -32,8 +34,50 @@ export function LiveMatchEntryState({
   );
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [clearCapsOpen, setClearCapsOpen] = useState(false);
+  const skipUnloadRef = useRef(false);
   const validId = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(matchId);
   const back = validId ? `/matches/${matchId}` : "/calendar";
+  const initialSelectedIds =
+    preparation?.players
+      .slice(0, preparation.reason === "too_many" ? 14 : preparation.players.length)
+      .map((player) => player.id) ?? [];
+  const dirty =
+    Boolean(preparation) &&
+    JSON.stringify([caps, [...selectedIds].sort()]) !==
+      JSON.stringify([
+        preparation?.players.map((player) => player.cap || 0),
+        initialSelectedIds.sort(),
+      ]);
+  const leave = useActaBackGuard(() => {
+    if (saving) return;
+    if (clearCapsOpen) setClearCapsOpen(false);
+    else if (leaveOpen) setLeaveOpen(false);
+    else requestLeave();
+  }, Boolean(preparation));
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      if (skipUnloadRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  function requestLeave() {
+    if (dirty) setLeaveOpen(true);
+    else leave(back);
+  }
+
+  function exitWithoutSaving() {
+    skipUnloadRef.current = true;
+    setLeaveOpen(false);
+    leave(back);
+  }
   const selectedCaps = caps.filter((_, index) =>
     selectedIds.has(preparation?.players[index]?.id ?? ""),
   );
@@ -42,7 +86,7 @@ export function LiveMatchEntryState({
     selectedCaps.length <= 14 &&
     selectedCaps.every((cap) => cap > 0 && cap <= 14) &&
     new Set(selectedCaps).size === selectedCaps.length;
-  async function save() {
+  async function save(target?: string) {
     if (!preparation || saving) return;
     setSaving(true);
     setSaveError("");
@@ -57,7 +101,9 @@ export function LiveMatchEntryState({
         setSaveError(result.error);
         return;
       }
-      location.reload();
+      skipUnloadRef.current = true;
+      if (target) leave(target);
+      else location.reload();
     } catch {
       setSaveError("No pudimos conectar. Tus cambios siguen aquí; vuelve a intentarlo.");
     } finally {
@@ -71,13 +117,14 @@ export function LiveMatchEntryState({
     >
       <header className="bg-pool-deep pt-[env(safe-area-inset-top)] text-white">
         <div className="mx-auto max-w-lg px-4 pb-6">
-          <a
-            href={back}
+          <button
+            type="button"
+            onClick={requestLeave}
             className="mb-4 -ml-2 inline-flex min-h-12 items-center gap-2 rounded-lg px-2 text-base font-semibold hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300"
           >
             <ArrowLeft size={20} aria-hidden="true" />
             {validId ? "Volver al partido" : "Ver calendario"}
-          </a>
+          </button>
           <div className="flex items-center gap-3">
             <ClipboardList size={32} aria-hidden="true" />
             <div>
@@ -112,8 +159,17 @@ export function LiveMatchEntryState({
                   {selectedIds.size} de 14 elegidos
                 </p>
               )}
+              <button
+                type="button"
+                disabled={saving || selectedCaps.every((cap) => cap === 0)}
+                onClick={() => setClearCapsOpen(true)}
+                className="text-pool-deep mt-4 inline-flex min-h-12 items-center gap-2 rounded-xl border-2 border-[#87add0] bg-white px-4 text-sm font-bold disabled:opacity-50"
+              >
+                <Unlink2 size={18} aria-hidden="true" />
+                Desasignar todos los gorros
+              </button>
             </div>
-            <div className="divide-y divide-slate-200 rounded-xl border border-slate-300 bg-white">
+            <div className="grid gap-2">
               {preparation.players.map((p, i) => {
                 const selected = selectedIds.has(p.id);
                 const duplicate =
@@ -129,7 +185,7 @@ export function LiveMatchEntryState({
                 return (
                   <div
                     key={p.id}
-                    className={`flex items-center justify-between gap-3 p-3 ${invalid ? "bg-amber-50" : selected ? "" : "bg-slate-100 text-slate-600"}`}
+                    className={`flex items-center justify-between gap-3 rounded-xl border-2 p-3 ${invalid ? "border-[#a77600] bg-[#fff0bd]" : selected ? "border-[#b8cada] bg-white" : "border-slate-300 bg-slate-100 text-slate-600"}`}
                   >
                     {preparation.reason === "too_many" && (
                       <label className="grid h-12 w-12 shrink-0 place-items-center rounded-lg focus-within:outline-2 focus-within:outline-blue-700">
@@ -206,7 +262,7 @@ export function LiveMatchEntryState({
                 {saveError}
               </p>
             )}
-            <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-300 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+            <div className="fixed inset-x-0 bottom-0 z-20 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_25px_rgba(6,32,72,0.12)]">
               <div className="mx-auto max-w-lg">
                 <p className="mb-2 text-sm text-slate-600" role="status">
                   {validCaps
@@ -268,6 +324,37 @@ export function LiveMatchEntryState({
           </div>
         )}
       </div>
+      <ConfirmActionSheet
+        open={clearCapsOpen}
+        onOpenChange={setClearCapsOpen}
+        title="¿Desasignar todos los gorros?"
+        description="Los jugadores seguirán elegidos, pero tendrás que asignarles un gorro antes de abrir el acta."
+        confirmLabel="Sí, desasignar gorros"
+        cancelLabel="Mantener gorros"
+        variant="warning"
+        onConfirm={() => {
+          setCaps((current) =>
+            current.map((cap, index) =>
+              selectedIds.has(preparation?.players[index]?.id ?? "") ? 0 : cap,
+            ),
+          );
+          setClearCapsOpen(false);
+        }}
+      />
+      <ConfirmActionSheet
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        title="Tienes cambios sin guardar"
+        description="Puedes guardar los gorros antes de salir o volver a editarlos."
+        confirmLabel={validCaps ? "Guardar y salir" : "Salir sin guardar"}
+        secondaryLabel={validCaps ? "Salir sin guardar" : undefined}
+        cancelLabel="Seguir editando"
+        variant="warning"
+        isPending={saving}
+        error={saveError}
+        onConfirm={() => (validCaps ? void save(back) : exitWithoutSaving())}
+        onSecondary={validCaps ? exitWithoutSaving : undefined}
+      />
     </main>
   );
 }
