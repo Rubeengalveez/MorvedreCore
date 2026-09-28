@@ -1,8 +1,7 @@
 "use client";
 
-import { Check, ChevronDown } from "lucide-react";
-
 import { cn } from "@/lib/utils/cn";
+import { Eyebrow } from "@/components/ui/eyebrow";
 
 export const MATCH_CAP_NUMBERS = Array.from({ length: 14 }, (_, index) => index + 1);
 
@@ -27,18 +26,25 @@ export function CapNumberButton({
       aria-expanded={open}
       aria-label={label}
       className={cn(
-        "flex h-12 w-12 items-center justify-center gap-0.5 rounded-full border-2 px-1 font-mono text-base font-extrabold focus-visible:outline-2 focus-visible:outline-pool-blue disabled:opacity-60 transition-colors",
+        "relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg font-mono font-black tabular-nums transition-all focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none",
         value != null
-          ? "border-pool-blue/30 bg-pool-foam/80 text-pool-deep"
-          : "border-amber-400 bg-amber-50 text-amber-900",
-        open && "border-pool-blue bg-pool-blue text-paper",
+          ? "bg-pool-deep text-paper shadow-elev-1 hover:bg-pool-blue active:scale-95"
+          : "border-2 border-dashed border-warning/60 bg-amber-50 text-amber-900 hover:bg-amber-100",
+        open && "ring-2 ring-pool-blue ring-offset-2",
+        disabled && "opacity-50 cursor-not-allowed",
       )}
     >
-      {value ?? "?"}
-      <ChevronDown
-        className={cn("h-3 w-3 shrink-0 transition-transform", open && "rotate-180")}
-        aria-hidden="true"
-      />
+      {value != null ? (
+        <>
+          <span
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-1 bg-white/25"
+          />
+          <span className="text-lg leading-none">{value}</span>
+        </>
+      ) : (
+        <span className="text-[10px] font-extrabold uppercase tracking-tight">Sin nº</span>
+      )}
     </button>
   );
 }
@@ -57,11 +63,11 @@ export function CapNumberOptions({
   const available = MATCH_CAP_NUMBERS.filter((cap) => !occupied.has(cap) || cap === value);
 
   return (
-    <div className="rounded-xl border-2 border-pool-blue/20 bg-paper-card p-3 shadow-elev-1">
-      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-pool-deep">
-        Elige un gorro
-      </p>
-      <div className="grid grid-cols-5 sm:grid-cols-7 gap-1.5">
+    <div className="rounded-xl border border-ink-200 bg-paper-sunk/80 p-3 shadow-inner">
+      <Eyebrow tone="default" className="mb-2 block">
+        Selecciona un dorsal (1 al 14)
+      </Eyebrow>
+      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
         {available.map((cap) => (
           <button
             key={cap}
@@ -69,14 +75,13 @@ export function CapNumberOptions({
             onClick={() => onChange(cap)}
             aria-pressed={value === cap}
             className={cn(
-              "flex h-11 items-center justify-center rounded-lg border-2 font-mono text-base font-bold focus-visible:outline-2 focus-visible:outline-pool-blue transition-colors",
+              "flex h-11 items-center justify-center rounded-lg font-mono text-base font-extrabold tabular-nums transition-all focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none",
               value === cap
-                ? "border-pool-blue bg-pool-blue text-paper"
-                : "border-ink-200 bg-white text-pool-deep hover:bg-pool-foam/50",
+                ? "bg-pool-deep text-paper shadow-elev-2 scale-105"
+                : "border border-ink-200 bg-paper-card text-pool-deep hover:bg-pool-foam hover:border-pool-blue/40",
             )}
           >
             {cap}
-            {value === cap ? <Check className="ml-1 h-3.5 w-3.5" aria-hidden="true" /> : null}
           </button>
         ))}
       </div>
@@ -86,14 +91,13 @@ export function CapNumberOptions({
           onClick={() => onChange(null)}
           aria-pressed={value === null}
           className={cn(
-            "mt-2 flex min-h-11 w-full items-center justify-center rounded-lg border-2 text-sm font-bold focus-visible:outline-2 focus-visible:outline-pool-blue transition-colors",
+            "mt-2 flex min-h-10 w-full items-center justify-center rounded-lg border text-xs font-extrabold uppercase tracking-wider transition-colors focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none",
             value === null
               ? "border-pool-deep bg-pool-deep text-paper"
-              : "border-ink-200 bg-white text-ink-600 hover:bg-paper-sunk",
+              : "border-ink-200 bg-paper-card text-ink-600 hover:bg-paper-sunk",
           )}
         >
-          Sin gorro
-          {value === null ? <Check className="ml-2 h-4 w-4" aria-hidden="true" /> : null}
+          Dejar sin dorsal
         </button>
       ) : null}
     </div>

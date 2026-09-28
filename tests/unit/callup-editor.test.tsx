@@ -74,7 +74,7 @@ describe("CallupEditor", () => {
     expect(screen.getAllByText("Pau Martínez")[0]).toBeInTheDocument();
     expect(screen.getAllByText("Lucas Gómez")[0]).toBeInTheDocument();
     expect(screen.getByText("Otro equipo")).toBeInTheDocument();
-    expect(screen.getByText("No disponible este día")).toBeInTheDocument();
+    expect(screen.getAllByText("No disponible")[0]).toBeInTheDocument();
   });
 
   it("añade un jugador disponible con un toque y le asigna gorro libre", () => {
@@ -170,7 +170,7 @@ describe("CallupEditor", () => {
       />,
     );
 
-    const clearButton = screen.getByRole("button", { name: /Quitar gorros/i });
+    const clearButton = screen.getByRole("button", { name: /Desasignar gorros/i });
     fireEvent.click(clearButton);
 
     expect(screen.getByText("¿Quitar todos los gorros?")).toBeInTheDocument();
@@ -178,8 +178,8 @@ describe("CallupEditor", () => {
     const confirmClear = screen.getByRole("button", { name: "Sí, quitar gorros" });
     fireEvent.click(confirmClear);
 
-    expect(screen.getByText("⚠️ Sin gorro")).toBeInTheDocument();
-    expect(screen.getAllByRole("status")[0]).toHaveTextContent("Gorros asignados: 0 de 1");
+    expect(screen.getByText("Sin dorsal")).toBeInTheDocument();
+    expect(screen.getByText(/Gorros pendientes de asignar/i)).toBeInTheDocument();
   });
 
   it("pide confirmación al pulsar volver si hay cambios sin guardar", () => {
