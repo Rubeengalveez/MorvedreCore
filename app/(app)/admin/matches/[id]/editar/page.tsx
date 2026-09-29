@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 import type { Route } from "next";
 
 import { AdminPageShell } from "@/components/admin/admin-page";
-import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { canManageTeam } from "@/lib/domain/permissions";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
@@ -39,18 +38,12 @@ export default async function EditMatchPage({
 
   return (
     <AdminPageShell className="gap-3">
-      <PageBackLink href={backHref}>
-        {origin === "match" ? "Volver al partido" : "Volver a partidos"}
-      </PageBackLink>
-      <header className="bg-pool-deep text-paper shadow-elev-2 rounded-2xl px-4 py-4">
-        <h1 className="font-display text-xl font-extrabold">Editar partido</h1>
-        <p className="mt-1 text-sm font-semibold text-blue-100">
-          {team.label} · {match.opponent}
-        </p>
-      </header>
-      <section>
-        <MatchDetailsForm match={match} />
-      </section>
+      <MatchDetailsForm
+        match={match}
+        teamLabel={team.label}
+        backHref={backHref}
+        backLabel={origin === "match" ? "Volver al partido" : "Volver a partidos"}
+      />
     </AdminPageShell>
   );
 }

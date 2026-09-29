@@ -6,18 +6,9 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Loader2, RotateCcw, Search, UserMinus, UserPlus } from "lucide-react";
 
 import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
+import { ActaDecisionSheet } from "@/components/ui/acta-decision-sheet";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   nextFreeCap,
   prepareCallupSource,
@@ -98,7 +89,9 @@ export function CallupEditor({
       new Set(draft.map((player) => player.cap_number).filter((cap): cap is number => cap != null)),
     [draft],
   );
-  const dirty = selectionKey(draft) !== selectionKey(baseline);
+  const draftKey = selectionKey(draft);
+  const dirty = draftKey !== selectionKey(baseline);
+  const differsFromDefault = template.length > 0 && draftKey !== selectionKey(template);
   const missingCaps = draft.filter((player) => player.cap_number == null).length;
   const selected = [...draft].sort(
     (a, b) =>
@@ -202,10 +195,7 @@ export function CallupEditor({
   }
 
   return (
-    <section
-      aria-labelledby="callup-title"
-      className={cn(editable && dirty ? "pb-[calc(var(--bottom-nav-height)+7rem)]" : "pb-3")}
-    >
+    <section aria-labelledby="callup-title" className={cn(editable && dirty ? "pb-12" : "pb-3")}>
       <button
         type="button"
         onClick={() => (dirty ? setLeaveOpen(true) : router.push(backHref))}
@@ -236,25 +226,15 @@ export function CallupEditor({
         </time>
       </header>
 
-      {editable ? (
-        template.length > 0 ? (
-          <div className="bg-paper-card shadow-elev-1 mt-4 flex items-center gap-3 rounded-2xl px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <h2 className="text-pool-deep text-sm font-extrabold">Convocatoria por defecto</h2>
-              <p className="text-ink-700 mt-0.5 text-sm leading-snug">
-                {template.length} jugadores · Se copia al crear partidos de {teamLabel}.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={requestSource}
-              disabled={pending}
-              className="border-pool-blue text-pool-blue focus-visible:outline-pool-blue min-h-12 shrink-0 rounded-xl border-2 px-3 text-sm font-extrabold focus-visible:outline-2"
-            >
-              Usar aquí
-            </button>
-          </div>
-        ) : null
+      {editable && differsFromDefault ? (
+        <button
+          type="button"
+          onClick={requestSource}
+          disabled={pending}
+          className="border-pool-blue bg-paper-card text-pool-deep focus-visible:outline-pool-blue mt-4 flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 px-3 text-sm font-extrabold focus-visible:outline-2"
+        >
+          <RotateCcw className="h-4 w-4" aria-hidden="true" /> Volver a la convocatoria por defecto
+        </button>
       ) : null}
 
       {error ? (
@@ -280,21 +260,31 @@ export function CallupEditor({
       {editable ? (
         <>
           <div className="mt-4 grid grid-cols-[minmax(0,1fr)_auto] gap-2">
-            <button
-              type="button"
-              aria-expanded={adding}
-              aria-controls="callup-add-panel"
-              disabled={draft.length >= 14 || pending}
-              onClick={() => {
-                setAdding((current) => !current);
-                setQuery("");
-                setVisibleCount(8);
-              }}
-              className="bg-pool-blue text-paper focus-visible:outline-pool-blue disabled:bg-ink-300 disabled:text-pool-deep flex min-h-14 w-full items-center justify-center gap-2 rounded-xl px-3 text-base font-extrabold focus-visible:outline-2"
-            >
-              <UserPlus className="h-5 w-5" aria-hidden="true" />{" "}
-              {draft.length >= 14 ? "14 jugadores" : adding ? "Cerrar lista" : "Añadir jugador"}
-            </button>
+            {draft.length >= 14 ? (
+              <span
+                className="border-pool-deep bg-paper-card text-pool-deep flex min-h-14 items-center justify-center gap-1 rounded-xl border-2 px-2 text-sm font-extrabold"
+                role="status"
+                aria-label="Convocatoria completa, 14 de 14 jugadores"
+              >
+                <Check className="h-4 w-4" aria-hidden="true" /> 14/14 jugadores
+              </span>
+            ) : (
+              <button
+                type="button"
+                aria-expanded={adding}
+              aria-controls={adding ? "callup-add-panel" : undefined}
+                disabled={pending}
+                onClick={() => {
+                  setAdding((current) => !current);
+                  setQuery("");
+                  setVisibleCount(8);
+                }}
+                className="bg-pool-blue text-paper focus-visible:outline-pool-blue flex min-h-14 w-full items-center justify-center gap-2 rounded-xl px-3 text-base font-extrabold focus-visible:outline-2 disabled:opacity-50"
+              >
+                <UserPlus className="h-5 w-5" aria-hidden="true" />{" "}
+                {adding ? "Cerrar lista" : "Añadir jugador"}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setClearCapsOpen(true)}
@@ -329,7 +319,7 @@ export function CallupEditor({
               {available.length === 0 ? (
                 <p className="text-ink-700 py-3 text-sm">No hay más jugadores con ese nombre.</p>
               ) : (
-                <ul className="mt-2 grid gap-2">
+                <ul className="mt-2 grid max-h-72 gap-2 overflow-y-auto overscroll-contain">
                   {available.slice(0, visibleCount).map((candidate) => (
                     <li key={candidate.player_id}>
                       <button
@@ -367,6 +357,13 @@ export function CallupEditor({
                   Ver más jugadores
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={() => setAdding(false)}
+                className="border-pool-blue text-pool-deep focus-visible:outline-pool-blue bg-paper mt-2 min-h-12 w-full rounded-xl border-2 text-sm font-extrabold focus-visible:outline-2"
+              >
+                Cerrar lista de jugadores
+              </button>
             </div>
           ) : null}
         </>
@@ -487,113 +484,75 @@ export function CallupEditor({
         </div>
       ) : null}
 
-      <ConfirmActionSheet
+      <ActaDecisionSheet
         open={pendingSource}
-        onOpenChange={(open) => {
-          if (!open) setPendingSource(false);
-        }}
-        title="¿Usar la convocatoria por defecto?"
-        description="Sustituirá los jugadores que ves ahora. Revisa los gorros y guarda después."
-        confirmLabel="Usar en este partido"
-        cancelLabel="Mantener jugadores actuales"
-        variant="pool"
-        onConfirm={applySource}
+        onOpenChange={setPendingSource}
+        title="Volver a la convocatoria por defecto"
+        description="Sustituirá la lista actual de este partido."
+        actions={[
+          { label: "Usar lista por defecto", tone: "primary", onClick: applySource },
+          { label: "Seguir editando", onClick: () => setPendingSource(false) },
+        ]}
       />
-      <ConfirmActionSheet
+      <ActaDecisionSheet
         open={clearCapsOpen}
         onOpenChange={setClearCapsOpen}
-        title="¿Quitar todos los gorros?"
-        description="Los jugadores se quedan en la lista. Tendrás que asignar de nuevo sus gorros antes de guardar."
-        confirmLabel="Quitar gorros"
-        cancelLabel="Mantener gorros"
-        variant="pool"
-        onConfirm={() => {
-          setDraft((current) => current.map((player) => ({ ...player, cap_number: null })));
-          setClearCapsOpen(false);
-          setMessage("");
-          setError("");
-        }}
+        title="Quitar todos los gorros"
+        description="Los jugadores seguirán convocados."
+        actions={[
+          { label: "Mantener gorros", tone: "primary", onClick: () => setClearCapsOpen(false) },
+          {
+            label: "Quitar gorros",
+            tone: "danger",
+            onClick: () => {
+              setDraft((current) => current.map((player) => ({ ...player, cap_number: null })));
+              setClearCapsOpen(false);
+              setMessage("");
+              setError("");
+            },
+          },
+        ]}
       />
-      <ConfirmActionSheet
+      <ActaDecisionSheet
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
-        title="¿Salir sin guardar?"
-        description="Los cambios de esta convocatoria aún no están guardados."
-        confirmLabel="Salir sin guardar"
-        cancelLabel="Seguir editando"
-        variant="danger"
-        onConfirm={() => {
-          setLeaveOpen(false);
-          router.push(backHref);
-        }}
+        title="Cambios sin guardar"
+        description="Si sales, perderás los cambios de esta convocatoria."
+        actions={[
+          { label: "Seguir editando", tone: "primary", onClick: () => setLeaveOpen(false) },
+          {
+            label: "Salir sin guardar",
+            tone: "danger",
+            onClick: () => {
+              setLeaveOpen(false);
+              router.push(backHref);
+            },
+          },
+        ]}
       />
-      <Sheet
+      <ActaDecisionSheet
         open={saveOpen}
-        onOpenChange={(open) => {
-          if (!pending) setSaveOpen(open);
-        }}
-      >
-        <SheetContent
-          size="lg"
-          className="bg-paper-card max-h-[min(85dvh,34rem)] gap-3 rounded-t-[1.25rem]"
-          onEscapeKeyDown={(event) => {
-            if (pending) event.preventDefault();
-          }}
-          onPointerDownOutside={(event) => {
-            if (pending) event.preventDefault();
-          }}
-        >
-          <SheetHeader className="pr-14">
-            <SheetTitle>¿Dónde guardamos esta convocatoria?</SheetTitle>
-            <SheetDescription>
-              Los cambios de este partido se guardan en ambos casos.
-            </SheetDescription>
-          </SheetHeader>
-          <SheetBody className="pt-2">
-            <p className="text-ink-700 text-sm leading-relaxed">
-              Si eliges guardarla por defecto, estos jugadores y gorros aparecerán automáticamente
-              al crear los próximos partidos de {teamLabel}. Los partidos ya creados no cambian.
-            </p>
-            {error ? (
-              <p role="alert" className="text-danger mt-3 text-sm font-bold">
-                {error}
-              </p>
-            ) : null}
-          </SheetBody>
-          <SheetFooter className="border-0 pt-1">
-            <Button
-              type="button"
-              variant="deep"
-              size="lg"
-              className="w-full rounded-xl text-center whitespace-normal"
-              disabled={pending}
-              onClick={() => save(false)}
-            >
-              {pending ? "Guardando…" : "Guardar solo este partido"}
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              size="lg"
-              className="h-auto min-h-14 w-full rounded-xl py-2 text-center whitespace-normal"
-              disabled={pending}
-              onClick={() => save(true)}
-            >
-              {pending ? "Guardando…" : "Guardar también como predeterminada"}
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              size="lg"
-              className="w-full"
-              disabled={pending}
-              onClick={() => setSaveOpen(false)}
-            >
-              Seguir editando
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+        onOpenChange={setSaveOpen}
+        title="Guardar convocatoria"
+        description="Elige si esta lista se repetirá en los próximos partidos."
+        pending={pending}
+        error={error}
+        actions={[
+          {
+            label: "Solo este partido",
+            detail: "No cambia la lista por defecto",
+            tone: "primary",
+            onClick: () => save(false),
+          },
+          {
+            label: "Este y los próximos",
+            detail: `Nueva lista por defecto de ${teamLabel}`,
+            tone: "outline",
+            onClick: () => save(true),
+          },
+          { label: "Seguir editando", onClick: () => setSaveOpen(false) },
+        ]}
+      />
     </section>
   );
 }

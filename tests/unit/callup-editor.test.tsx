@@ -73,6 +73,8 @@ describe("CallupEditor", () => {
     expect(screen.getByRole("button", { name: "Añadir a Pau Martínez" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Añadir a Lucas Gómez" })).toBeVisible();
     expect(screen.getByText("No disponible")).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar lista de jugadores" }));
+    expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
   });
 
   it("añade un jugador disponible con un toque y le asigna gorro libre", () => {
@@ -100,11 +102,9 @@ describe("CallupEditor", () => {
     expect(screen.getByRole("button", { name: /Gorro de Pau Martínez: 3/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Guardar convocatoria" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Guardar convocatoria" }));
-    expect(screen.getByText("¿Dónde guardamos esta convocatoria?")).toBeVisible();
-    expect(screen.getByRole("button", { name: "Guardar solo este partido" })).toBeVisible();
-    expect(
-      screen.getByRole("button", { name: "Guardar también como predeterminada" }),
-    ).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Guardar convocatoria" })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Solo este partido/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: /Este y los próximos/ })).toBeVisible();
   });
 
   it("quita un jugador convocado con un toque y lo devuelve a disponibles", () => {
@@ -176,7 +176,7 @@ describe("CallupEditor", () => {
     const clearButton = screen.getByRole("button", { name: /Quitar gorros/i });
     fireEvent.click(clearButton);
 
-    expect(screen.getByText("¿Quitar todos los gorros?")).toBeInTheDocument();
+    expect(screen.getByText("Quitar todos los gorros")).toBeInTheDocument();
 
     const confirmClear = screen.getByRole("button", { name: "Quitar gorros" });
     fireEvent.click(confirmClear);
@@ -209,12 +209,36 @@ describe("CallupEditor", () => {
     const backButton = screen.getByRole("button", { name: /Volver a partidos/i });
     fireEvent.click(backButton);
 
-    expect(screen.getByText("¿Salir sin guardar?")).toBeInTheDocument();
+    expect(screen.getByText("Cambios sin guardar")).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalled();
 
     const confirmExit = screen.getByRole("button", { name: "Salir sin guardar" });
     fireEvent.click(confirmExit);
 
     expect(mockPush).toHaveBeenCalledWith("/admin/matches");
+  });
+
+  it("permite volver a la convocatoria por defecto cuando la lista del partido es distinta", () => {
+    render(
+      <CallupEditor
+        matchId="match-1"
+        teamLabel="Cadete B"
+        opponent="Rival de prueba"
+        scheduledAt="2026-09-29T16:00:00.000Z"
+        initial={INITIAL_PICKS}
+        candidates={CANDIDATES}
+        template={[{ player_id: "p2", cap_number: 3 }]}
+        editable={true}
+        backHref="/admin/matches"
+        backLabel="Volver a partidos"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Volver a la convocatoria por defecto" }));
+    expect(
+      screen.getByRole("heading", { name: "Volver a la convocatoria por defecto" }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Usar lista por defecto" }));
+    expect(screen.getByRole("button", { name: /Gorro de Pau Martínez: 3/ })).toBeVisible();
   });
 });

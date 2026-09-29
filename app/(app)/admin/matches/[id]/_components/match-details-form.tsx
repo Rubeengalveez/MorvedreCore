@@ -1,14 +1,17 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarDays, ClipboardPenLine, Loader2, MapPin } from "lucide-react";
-import { useState, useTransition } from "react";
+import { ArrowLeft, CalendarDays, ClipboardPenLine, Loader2, MapPin } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
+import { ActaDecisionSheet } from "@/components/ui/acta-decision-sheet";
 import { Button } from "@/components/ui/button";
+import { useActaBackGuard } from "@/components/matches/use-acta-back-guard";
 import {
   Form,
   FormControl,
@@ -92,13 +95,18 @@ function VenueChoice({ value, onChange }: { value: boolean; onChange: (v: boolea
 
 export interface MatchDetailsFormProps {
   match: MatchRow;
+  teamLabel: string;
+  backHref: Route;
+  backLabel: string;
 }
 
-export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
+export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: MatchDetailsFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
   const [pending, startTransition] = useTransition();
+  const skipUnloadRef = useRef(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -115,7 +123,30 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
     },
   });
 
-  const onSubmit = form.handleSubmit((values) => {
+  const dirty = form.formState.isDirty;
+  const leave = useActaBackGuard(() => {
+    if (leaveOpen) setLeaveOpen(false);
+    else requestLeave();
+  }, true);
+
+  useEffect(() => {
+    if (!dirty) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      if (skipUnloadRef.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty]);
+
+  function requestLeave() {
+    if (pending) return;
+    if (dirty) setLeaveOpen(true);
+    else leave(backHref);
+  }
+
+  function save(values: FormValues, exitAfterSave: boolean) {
     setError(null);
     setSuccess(false);
     const dt = parseDateTimeLocal(values.scheduled_at_local);
@@ -136,267 +167,323 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
           scheduled_at: dt.toISOString(),
           notes: values.notes && values.notes.trim() !== "" ? values.notes : null,
         });
-        setSuccess(true);
         form.reset(values);
-        router.refresh();
+        if (exitAfterSave) {
+          skipUnloadRef.current = true;
+          setLeaveOpen(false);
+          leave(backHref);
+        } else {
+          setSuccess(true);
+          router.refresh();
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : "No pudimos guardar.");
       }
     });
-  });
+  }
+
+  const onSubmit = form.handleSubmit((values) => save(values, false));
 
   return (
-    <Form {...form}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
-        {error ? (
-          <Alert variant="danger" title="Error">
-            {error}
-          </Alert>
-        ) : null}
-        {success ? (
-          <Alert variant="success" title="Cambios guardados">
-            Los datos del partido se han actualizado.
-          </Alert>
-        ) : null}
+    <>
+      <button
+        type="button"
+        onClick={requestLeave}
+        className="text-pool-blue focus-visible:outline-pool-blue -ml-2 inline-flex min-h-12 w-fit items-center gap-2 rounded-xl px-2 text-sm font-extrabold focus-visible:outline-2"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> {backLabel}
+      </button>
+      <header className="bg-pool-deep text-paper shadow-elev-2 rounded-2xl px-4 py-4">
+        <h1 className="font-display text-xl font-extrabold">Editar partido</h1>
+        <p className="mt-1 text-sm font-semibold text-blue-100">
+          {teamLabel} · {match.opponent}
+        </p>
+      </header>
+      <Form {...form}>
+        <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+          {error ? (
+            <Alert variant="danger" title="Error">
+              {error}
+            </Alert>
+          ) : null}
+          {success ? (
+            <Alert variant="success" title="Cambios guardados">
+              Los datos del partido se han actualizado.
+            </Alert>
+          ) : null}
 
-        <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center gap-3">
-            <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-              <ClipboardPenLine className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <h2 className="text-pool-deep font-display text-lg font-extrabold">
-              Rival y competición
-            </h2>
-          </div>
-          <FormField
-            control={form.control}
-            name="opponent"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Rival</FormLabel>
-                <FormControl>
-                  <Input
-                    className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="competition_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Competición</FormLabel>
-                  <FormControl>
-                    <Select
-                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                      value={field.value}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    >
-                      {COMPETITION_OPTIONS.map((c) => (
-                        <option key={c.value} value={c.value}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Estado</FormLabel>
-                  <FormControl>
-                    <Select
-                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                      value={field.value}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    >
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s.value} value={s.value}>
-                          {s.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="is_home"
-            render={({ field }) => (
-              <FormItem>
-                <VenueChoice value={field.value} onChange={field.onChange} />
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </section>
-
-        <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center gap-3">
-            <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-              <CalendarDays className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <h2 className="text-pool-deep font-display text-lg font-extrabold">Fecha y lugar</h2>
-          </div>
-          <FormField
-            control={form.control}
-            name="scheduled_at_local"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Fecha y hora</FormLabel>
-                <FormControl>
-                  <Input
-                    className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                    type="datetime-local"
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-            <FormField
-              control={form.control}
-              name="location"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Lugar</FormLabel>
-                  <FormControl>
-                    <Input
-                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="pool_name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Piscina</FormLabel>
-                  <FormControl>
-                    <Input
-                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <FormField
-            control={form.control}
-            name="maps_url"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
-                <FormControl>
-                  <Input
-                    className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                    type="url"
-                    inputMode="url"
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    placeholder="https://maps.app.goo.gl/..."
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                </FormControl>
-                <FormDescription>
-                  En Google Maps, toca Compartir y copia aquí el enlace de la piscina.
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </section>
-
-        <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
-          <div className="flex items-center gap-3">
-            <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-              <MapPin className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <div>
+          <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                <ClipboardPenLine className="h-5 w-5" aria-hidden="true" />
+              </span>
               <h2 className="text-pool-deep font-display text-lg font-extrabold">
-                Indicaciones para el equipo
+                Rival y competición
               </h2>
-              <p className="text-ink-700 text-sm">Visible para jugadores y familias.</p>
             </div>
-          </div>
-          <FormField
-            control={form.control}
-            name="notes"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Notas</FormLabel>
-                <FormControl>
-                  <textarea
-                    rows={3}
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                    className="border-pool-blue/70 bg-paper text-ink-900 placeholder:text-ink-600 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded-xl border-2 px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </section>
+            <FormField
+              control={form.control}
+              name="opponent"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Rival</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-        <SubmitButton label="Guardar cambios" pending={pending} />
-      </form>
-    </Form>
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="competition_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Competición</FormLabel>
+                    <FormControl>
+                      <Select
+                        className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      >
+                        {COMPETITION_OPTIONS.map((c) => (
+                          <option key={c.value} value={c.value}>
+                            {c.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="status"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <FormControl>
+                      <Select
+                        className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                        value={field.value}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      >
+                        {STATUS_OPTIONS.map((s) => (
+                          <option key={s.value} value={s.value}>
+                            {s.label}
+                          </option>
+                        ))}
+                      </Select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="is_home"
+              render={({ field }) => (
+                <FormItem>
+                  <VenueChoice value={field.value} onChange={field.onChange} />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </section>
+
+          <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                <CalendarDays className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <h2 className="text-pool-deep font-display text-lg font-extrabold">Fecha y lugar</h2>
+            </div>
+            <FormField
+              control={form.control}
+              name="scheduled_at_local"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Fecha y hora</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                      type="datetime-local"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lugar</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="pool_name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Piscina</FormLabel>
+                    <FormControl>
+                      <Input
+                        className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="maps_url"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                      type="url"
+                      inputMode="url"
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      placeholder="https://maps.app.goo.gl/..."
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    En Google Maps, toca Compartir y copia aquí el enlace de la piscina.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </section>
+
+          <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+            <div className="flex items-center gap-3">
+              <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                <MapPin className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <h2 className="text-pool-deep font-display text-lg font-extrabold">
+                  Indicaciones para el equipo
+                </h2>
+                <p className="text-ink-700 text-sm">Visible para jugadores y familias.</p>
+              </div>
+            </div>
+            <FormField
+              control={form.control}
+              name="notes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Notas</FormLabel>
+                  <FormControl>
+                    <textarea
+                      rows={3}
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      className="border-pool-blue/70 bg-paper text-ink-900 placeholder:text-ink-600 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded-xl border-2 px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </section>
+
+          <SubmitButton label="Guardar cambios" pending={pending} />
+        </form>
+      </Form>
+      <ActaDecisionSheet
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        title="Cambios sin guardar"
+        description="Guarda antes de salir o descarta los cambios."
+        context="Editar partido"
+        pending={pending}
+        error={error}
+        actions={[
+          {
+            label: "Guardar y volver",
+            tone: "primary",
+            onClick: () =>
+              void form.handleSubmit(
+                (values) => save(values, true),
+                () => {
+                  setLeaveOpen(false);
+                  setError("Revisa los campos marcados para guardar.");
+                },
+              )(),
+          },
+          { label: "Seguir editando", onClick: () => setLeaveOpen(false) },
+          {
+            label: "Salir sin guardar",
+            tone: "danger",
+            onClick: () => {
+              skipUnloadRef.current = true;
+              setLeaveOpen(false);
+              leave(backHref);
+            },
+          },
+        ]}
+      />
+    </>
   );
 }

@@ -996,3 +996,7 @@ La convocatoria del partido muestra jugadores y gorros, sin estados «pendiente 
 ### 2026-09-29 · Una sola convocatoria por defecto
 
 El editor ofrece únicamente la convocatoria por defecto del equipo. Se retiran las entradas «anterior» y «automática». Guardar una edición exige elegir entre aplicarla solo al partido actual o también a los próximos partidos del equipo. La segunda opción actualiza la plantilla que se copia al crear partidos futuros; no modifica los ya creados. La confirmación de quitar gorros usa la misma lámina inferior que las demás acciones y explica que los jugadores siguen convocados.
+
+### 2026-09-29 · Ajustes de edición tras revisión móvil
+
+Los diálogos de convocatoria reutilizan la estructura y animación de las láminas del acta, con decisiones breves y contrastadas. Al cambiar la lista de un partido que difiere de la plantilla, se puede volver explícitamente a la convocatoria por defecto. El formulario «Editar partido» avisa al salir con cambios y ofrece guardar y volver, seguir editando o descartar. El estado del partido vuelve a compartir una única línea con la competición y la fecha.

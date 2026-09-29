@@ -95,21 +95,16 @@ export function PoolScoreboard({
         className,
       )}
     >
-      <header className="bg-pool-deep text-paper grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 py-2.5">
+      <header className="bg-pool-deep text-paper flex min-h-12 items-center justify-between gap-2 px-3 py-2.5">
         <p className="font-display min-w-0 truncate text-sm font-extrabold tracking-wide uppercase">
           {competitionLabel}
         </p>
-        <time dateTime={scheduledAt} className="text-sm font-semibold whitespace-nowrap">
-          {formatDate(scheduledAt)}
-        </time>
-        <span
-          className={cn(
-            "col-span-2 justify-self-center rounded-full px-3 py-0.5 text-sm font-bold",
-            statusTone,
-          )}
-        >
+        <span className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-sm font-bold", statusTone)}>
           {statusLabel}
         </span>
+        <time dateTime={scheduledAt} className="shrink-0 text-sm font-semibold whitespace-nowrap">
+          {formatDate(scheduledAt)}
+        </time>
       </header>
 
       <div className="grid grid-cols-[minmax(0,1fr)_5rem_minmax(0,1fr)] items-center gap-x-2 px-3 py-3 text-center sm:px-5">
