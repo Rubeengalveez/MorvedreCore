@@ -992,3 +992,7 @@ La convocatoria se edita en una pantalla propia; los datos del encuentro tienen 
 ### 2026-09-29 · Convocatoria sin respuestas de asistencia
 
 La convocatoria del partido muestra jugadores y gorros, sin estados «pendiente de respuesta» ni botones de confirmación. Las familias comunican ausencias al entrenador por el canal del equipo. Se retira la acción de respuesta y su interfaz de ficha y calendario; los estados históricos permanecen en la base para conservar registros antiguos. El editor móvil separa la selección de la búsqueda y mantiene el guardado visible. Se corrige la cabecera comprimida de la ficha del partido.
+
+### 2026-09-29 · Una sola convocatoria por defecto
+
+El editor ofrece únicamente la convocatoria por defecto del equipo. Se retiran las entradas «anterior» y «automática». Guardar una edición exige elegir entre aplicarla solo al partido actual o también a los próximos partidos del equipo. La segunda opción actualiza la plantilla que se copia al crear partidos futuros; no modifica los ya creados. La confirmación de quitar gorros usa la misma lámina inferior que las demás acciones y explica que los jugadores siguen convocados.

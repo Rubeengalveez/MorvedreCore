@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CircleAlert, Loader2, Trash2 } from "lucide-react";
+import { CircleAlert, Info, Loader2, Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -57,9 +57,9 @@ export function ConfirmActionSheet({
   return (
     <Sheet open={open} onOpenChange={handleOpenChange}>
       <SheetContent
-        size="sm"
+        size="lg"
         showClose={!isPending}
-        className="bg-paper-card gap-3"
+        className="bg-paper-card max-h-[min(80dvh,32rem)] gap-3 rounded-t-[20px]"
         onEscapeKeyDown={(event) => {
           if (isPending) event.preventDefault();
         }}
@@ -77,7 +77,7 @@ export function ConfirmActionSheet({
               ) : variant === "warning" ? (
                 <CircleAlert className="h-5 w-5" aria-hidden="true" />
               ) : (
-                <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                <Info className="h-5 w-5" aria-hidden="true" />
               )}
             </span>
             <div className="min-w-0 pt-0.5">
@@ -86,7 +86,7 @@ export function ConfirmActionSheet({
             </div>
           </div>
         </SheetHeader>
-        <SheetBody className="flex flex-col gap-3 pt-1">
+        <SheetBody className="flex-none pt-1">
           {error ? (
             <p
               role="alert"

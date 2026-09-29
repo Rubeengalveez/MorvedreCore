@@ -59,8 +59,6 @@ describe("CallupEditor", () => {
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
-        previous={[]}
-        previousLabel={null}
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
@@ -87,8 +85,6 @@ describe("CallupEditor", () => {
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
-        previous={[]}
-        previousLabel={null}
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
@@ -103,6 +99,12 @@ describe("CallupEditor", () => {
     expect(screen.getByLabelText("2 de 14 jugadores convocados")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Gorro de Pau Martínez: 3/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Guardar convocatoria" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar convocatoria" }));
+    expect(screen.getByText("¿Dónde guardamos esta convocatoria?")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Guardar solo este partido" })).toBeVisible();
+    expect(
+      screen.getByRole("button", { name: "Guardar también como predeterminada" }),
+    ).toBeVisible();
   });
 
   it("quita un jugador convocado con un toque y lo devuelve a disponibles", () => {
@@ -115,8 +117,6 @@ describe("CallupEditor", () => {
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
-        previous={[]}
-        previousLabel={null}
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
@@ -143,8 +143,6 @@ describe("CallupEditor", () => {
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
-        previous={[]}
-        previousLabel={null}
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
@@ -152,7 +150,7 @@ describe("CallupEditor", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
-    const searchInput = screen.getByRole("searchbox", { name: "Buscar jugador" });
+    const searchInput = screen.getByRole("searchbox", { name: "¿A quién añades?" });
     fireEvent.change(searchInput, { target: { value: "Lucas" } });
 
     expect(screen.getAllByText("Lucas Gómez")[0]).toBeInTheDocument();
@@ -169,8 +167,6 @@ describe("CallupEditor", () => {
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
-        previous={[]}
-        previousLabel={null}
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
@@ -200,8 +196,6 @@ describe("CallupEditor", () => {
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
-        previous={[]}
-        previousLabel={null}
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"

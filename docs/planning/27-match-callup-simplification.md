@@ -23,6 +23,10 @@ Fecha: 28 de septiembre de 2026. Punto de retorno Git: `codex/before-match-callu
 8. La confirmación de asistencia a partidos deja de formar parte de la convocatoria. Las familias consultan la lista y comunican ausencias al entrenador; los estados históricos de la base se conservan para no alterar registros anteriores. La ficha, el calendario y el editor ya no muestran respuestas pendientes.
 9. En móvil, el encabezado de la ficha separa el título y el número de convocados del acceso a edición. El editor enseña primero la selección actual, pliega la lista de candidatos, ofrece fuentes rápidas y mantiene visible el guardado sobre la navegación inferior.
 
+## Ajuste de producto del 29 de septiembre de 2026
+
+La validación con el club elimina las fuentes «anterior» y «automática» del editor. Solo queda una convocatoria por defecto por equipo, que se copia al crear un partido. Al guardar cambios, el delegado elige expresamente entre «solo este partido» y «también como predeterminada». El editor no cambia partidos ya creados. Quitar gorros conserva los jugadores y requiere volver a asignar números antes de guardar. La selección y el guardado se presentan como pasos separados para reducir errores durante el partido.
+
 ## Orden de trabajo
 
 1. Etiquetar el estado Git y añadir esta planificación y la decisión al registro.

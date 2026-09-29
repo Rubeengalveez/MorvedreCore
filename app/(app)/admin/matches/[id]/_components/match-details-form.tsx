@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
+import { CalendarDays, ClipboardPenLine, Loader2, MapPin } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -62,42 +62,31 @@ function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   );
 }
 
-function Toggle({
-  value,
-  onChange,
-  label,
-  description,
-}: {
-  value: boolean;
-  onChange: (v: boolean) => void;
-  label: string;
-  description?: string;
-}) {
+function VenueChoice({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex flex-col gap-0.5">
-        <span className="text-ink-900 text-sm font-semibold">{label}</span>
-        {description ? <span className="text-ink-600 text-xs">{description}</span> : null}
+    <fieldset>
+      <legend className="text-pool-deep mb-2 text-sm font-bold">¿Dónde se juega?</legend>
+      <div className="grid grid-cols-2 gap-2">
+        {[
+          { home: true, label: "En casa" },
+          { home: false, label: "Fuera" },
+        ].map((option) => (
+          <label key={option.label} className="cursor-pointer">
+            <input
+              type="radio"
+              name="match-venue"
+              value={String(option.home)}
+              checked={value === option.home}
+              onChange={() => onChange(option.home)}
+              className="peer sr-only"
+            />
+            <span className="border-pool-blue/70 bg-paper text-pool-deep peer-checked:border-pool-deep peer-checked:bg-pool-deep peer-checked:text-paper peer-focus-visible:outline-pool-blue flex min-h-14 items-center justify-center rounded-xl border-2 px-3 text-base font-extrabold peer-focus-visible:outline-2">
+              {option.label}
+            </span>
+          </label>
+        ))}
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={value}
-        onClick={() => onChange(!value)}
-        className={
-          "focus-visible:ring-pool-blue focus-visible:ring-offset-paper relative inline-flex h-12 w-14 shrink-0 cursor-pointer items-center rounded-xl transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none " +
-          (value ? "bg-pool-blue" : "bg-ink-300")
-        }
-      >
-        <span
-          aria-hidden="true"
-          className={
-            "bg-paper inline-block h-6 w-6 rounded-lg transition-transform " +
-            (value ? "translate-x-7" : "translate-x-1")
-          }
-        />
-      </button>
-    </div>
+    </fieldset>
   );
 }
 
@@ -158,7 +147,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+      <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         {error ? (
           <Alert variant="danger" title="Error">
             {error}
@@ -170,10 +159,14 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
           </Alert>
         ) : null}
 
-        <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
-          <div>
-            <h3 className="text-pool-deep font-extrabold">Partido</h3>
-            <p className="text-ink-500 mt-0.5 text-sm">Rival, competición y situación actual.</p>
+        <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+              <ClipboardPenLine className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <h2 className="text-pool-deep font-display text-lg font-extrabold">
+              Rival y competición
+            </h2>
           </div>
           <FormField
             control={form.control}
@@ -183,6 +176,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                 <FormLabel>Rival</FormLabel>
                 <FormControl>
                   <Input
+                    className="border-pool-blue/70 min-h-14 rounded-xl border-2"
                     value={field.value}
                     onChange={field.onChange}
                     onBlur={field.onBlur}
@@ -204,6 +198,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                   <FormLabel>Competición</FormLabel>
                   <FormControl>
                     <Select
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -230,6 +225,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                   <FormLabel>Estado</FormLabel>
                   <FormControl>
                     <Select
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -254,22 +250,19 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
             name="is_home"
             render={({ field }) => (
               <FormItem>
-                <Toggle
-                  value={field.value}
-                  onChange={field.onChange}
-                  label="Juegas en casa"
-                  description="Si lo desactivas, el partido se juega fuera."
-                />
+                <VenueChoice value={field.value} onChange={field.onChange} />
                 <FormMessage />
               </FormItem>
             )}
           />
         </section>
 
-        <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
-          <div>
-            <h3 className="text-pool-deep font-extrabold">Cuándo y dónde</h3>
-            <p className="text-ink-500 mt-0.5 text-sm">Información que verá todo el equipo.</p>
+        <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+              <CalendarDays className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <h2 className="text-pool-deep font-display text-lg font-extrabold">Fecha y lugar</h2>
           </div>
           <FormField
             control={form.control}
@@ -279,6 +272,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                 <FormLabel>Fecha y hora</FormLabel>
                 <FormControl>
                   <Input
+                    className="border-pool-blue/70 min-h-14 rounded-xl border-2"
                     type="datetime-local"
                     value={field.value}
                     onChange={field.onChange}
@@ -301,6 +295,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                   <FormLabel>Lugar</FormLabel>
                   <FormControl>
                     <Input
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
                       value={field.value ?? ""}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -321,6 +316,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                   <FormLabel>Piscina</FormLabel>
                   <FormControl>
                     <Input
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
                       value={field.value ?? ""}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -342,6 +338,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                 <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
                 <FormControl>
                   <Input
+                    className="border-pool-blue/70 min-h-14 rounded-xl border-2"
                     type="url"
                     inputMode="url"
                     autoCapitalize="none"
@@ -363,12 +360,17 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
           />
         </section>
 
-        <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
-          <div>
-            <h3 className="text-pool-deep font-extrabold">Notas para el equipo</h3>
-            <p className="text-ink-600 mt-0.5 text-sm">
-              Información que verán jugadores y familias.
-            </p>
+        <section className="bg-paper-card shadow-elev-1 flex flex-col gap-4 rounded-2xl p-4 sm:p-5">
+          <div className="flex items-center gap-3">
+            <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+              <MapPin className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <h2 className="text-pool-deep font-display text-lg font-extrabold">
+                Indicaciones para el equipo
+              </h2>
+              <p className="text-ink-700 text-sm">Visible para jugadores y familias.</p>
+            </div>
           </div>
           <FormField
             control={form.control}
@@ -384,7 +386,7 @@ export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
                     onBlur={field.onBlur}
                     name={field.name}
                     ref={field.ref}
-                    className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    className="border-pool-blue/70 bg-paper text-ink-900 placeholder:text-ink-600 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded-xl border-2 px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                   />
                 </FormControl>
                 <FormMessage />

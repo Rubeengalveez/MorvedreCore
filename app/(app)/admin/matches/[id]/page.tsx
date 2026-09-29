@@ -37,62 +37,22 @@ export default async function MatchCallupPage({
 
   const teamJoin = match.teams;
   const teamLabel = (Array.isArray(teamJoin) ? teamJoin[0]?.label : teamJoin?.label) ?? "Morvedre";
-  const [callupsResult, templateResult, earlierResult, sheetResult, statsResult, suggestions] =
-    await Promise.all([
-      supabase
-        .from("match_callups")
-        .select("player_id, cap_number, status, profiles!match_callups_player_id_fkey(full_name)")
-        .eq("match_id", id),
-      supabase
-        .from("team_callup_templates")
-        .select("player_id, cap_number")
-        .eq("team_id", match.team_id)
-        .order("cap_number"),
-      supabase
-        .from("matches")
-        .select("id, scheduled_at")
-        .eq("team_id", match.team_id)
-        .lt("scheduled_at", match.scheduled_at)
-        .neq("status", "cancelled")
-        .order("scheduled_at", { ascending: false })
-        .limit(30),
-      supabase.from("live_match_sheets").select("match_id").eq("match_id", id).maybeSingle(),
-      supabase.from("match_stats").select("player_id").eq("match_id", id).limit(1),
-      suggestCallupForMatch(id, false),
-    ]);
-  if (
-    callupsResult.error ||
-    templateResult.error ||
-    earlierResult.error ||
-    sheetResult.error ||
-    statsResult.error
-  ) {
-    throw new Error("No pudimos cargar la convocatoria. Inténtalo de nuevo.");
-  }
-
-  let previous: CallupPick[] = [];
-  let previousLabel: string | null = null;
-  for (const oldMatch of earlierResult.data ?? []) {
-    const { data, error } = await supabase
+  const [callupsResult, templateResult, sheetResult, statsResult, suggestions] = await Promise.all([
+    supabase
       .from("match_callups")
-      .select("player_id, cap_number, status")
-      .eq("match_id", oldMatch.id);
-    if (error) throw new Error("No pudimos revisar la convocatoria anterior.");
-    const players = (data ?? [])
-      .filter(
-        (player) =>
-          (player.status === "called" || player.status === "confirmed") &&
-          player.cap_number != null,
-      )
-      .map((player) => ({ player_id: player.player_id, cap_number: player.cap_number }));
-    if (players.length === 0) continue;
-    previous = players;
-    previousLabel = new Intl.DateTimeFormat("es-ES", {
-      day: "numeric",
-      month: "short",
-      timeZone: "Europe/Madrid",
-    }).format(new Date(oldMatch.scheduled_at));
-    break;
+      .select("player_id, cap_number, status, profiles!match_callups_player_id_fkey(full_name)")
+      .eq("match_id", id),
+    supabase
+      .from("team_callup_templates")
+      .select("player_id, cap_number")
+      .eq("team_id", match.team_id)
+      .order("cap_number"),
+    supabase.from("live_match_sheets").select("match_id").eq("match_id", id).maybeSingle(),
+    supabase.from("match_stats").select("player_id").eq("match_id", id).limit(1),
+    suggestCallupForMatch(id, false),
+  ]);
+  if (callupsResult.error || templateResult.error || sheetResult.error || statsResult.error) {
+    throw new Error("No pudimos cargar la convocatoria. Inténtalo de nuevo.");
   }
 
   const callups = callupsResult.data ?? [];
@@ -143,8 +103,6 @@ export default async function MatchCallupPage({
           player_id: player.player_id,
           cap_number: player.cap_number,
         }))}
-        previous={previous}
-        previousLabel={previousLabel}
         editable={editable}
         backHref={backHref}
         backLabel={backLabel}

@@ -143,15 +143,17 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      <PageBackLink href="/calendar">Calendario</PageBackLink>
-      {canEditMatch ? (
-        <Link
-          href={`/admin/matches/${match.id}/editar?from=match` as Route}
-          className="border-pool-blue/40 bg-paper-card text-pool-deep focus-visible:outline-pool-blue inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 px-4 text-sm font-extrabold focus-visible:outline-2"
-        >
-          <Pencil className="h-4 w-4" aria-hidden="true" /> Editar partido
-        </Link>
-      ) : null}
+      <div className="flex items-center justify-between gap-2">
+        <PageBackLink href="/calendar">Calendario</PageBackLink>
+        {canEditMatch ? (
+          <Link
+            href={`/admin/matches/${match.id}/editar?from=match` as Route}
+            className="text-pool-blue focus-visible:outline-pool-blue inline-flex min-h-12 shrink-0 items-center gap-1.5 rounded-xl px-2 text-sm font-extrabold focus-visible:outline-2"
+          >
+            <Pencil className="h-4 w-4" aria-hidden="true" /> Editar partido
+          </Link>
+        ) : null}
+      </div>
       {delegate && (
         <DelegateMatchEntry matchId={match.id} started={Boolean(liveSheet)} finished={isPlayed} />
       )}
