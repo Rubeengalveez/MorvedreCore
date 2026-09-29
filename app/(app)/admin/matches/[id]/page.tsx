@@ -8,17 +8,9 @@ import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import { suggestCallupForMatch } from "@/server/actions/admin/matches";
 
 import { CallupEditor, type CallupCandidate, type CallupPick } from "./_components/callup-editor";
-import { MatchEditorHeader } from "./_components/match-editor-header";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-const COMPETITION_LABELS: Record<string, string> = {
-  league: "Liga",
-  cup: "Copa",
-  tournament: "Torneo",
-  friendly: "Amistoso",
-};
 
 export default async function MatchCallupPage({
   params,
@@ -141,9 +133,6 @@ export default async function MatchCallupPage({
 
   return (
     <AdminPageShell className="gap-3">
-      <h1 className="sr-only">
-        Editar convocatoria: {teamLabel} contra {match.opponent}
-      </h1>
       <CallupEditor
         key={id}
         matchId={id}
@@ -159,18 +148,8 @@ export default async function MatchCallupPage({
         editable={editable}
         backHref={backHref}
         backLabel={backLabel}
-        matchHeader={
-          <MatchEditorHeader
-            teamLabel={teamLabel}
-            opponent={match.opponent}
-            isHome={match.is_home}
-            scheduledAt={match.scheduled_at}
-            competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-            status={match.status}
-            scoreUs={match.final_score_us}
-            scoreThem={match.final_score_them}
-          />
-        }
+        opponent={match.opponent}
+        scheduledAt={match.scheduled_at}
       />
     </AdminPageShell>
   );

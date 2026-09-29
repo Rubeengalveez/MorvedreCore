@@ -174,7 +174,8 @@ export async function getCalendarData(input: {
       .from("match_callups")
       .select("match_id, player_id, status, cap_number")
       .eq("player_id", profileId)
-      .in("match_id", matchIds);
+      .in("match_id", matchIds)
+      .in("status", ["called", "confirmed"]);
 
     for (const c of (callupsData ?? []) as Array<{
       match_id: string;

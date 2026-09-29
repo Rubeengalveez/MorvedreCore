@@ -46,9 +46,7 @@ const CANDIDATES: CallupCandidate[] = [
   },
 ];
 
-const INITIAL_PICKS: CallupPick[] = [
-  { player_id: "p1", cap_number: 7 },
-];
+const INITIAL_PICKS: CallupPick[] = [{ player_id: "p1", cap_number: 7 }];
 
 describe("CallupEditor", () => {
   it("muestra convocados arriba y disponibles abajo con conteos correctos", () => {
@@ -56,6 +54,8 @@ describe("CallupEditor", () => {
       <CallupEditor
         matchId="match-1"
         teamLabel="Cadete B"
+        opponent="Rival de prueba"
+        scheduledAt="2026-09-29T16:00:00.000Z"
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
@@ -64,17 +64,17 @@ describe("CallupEditor", () => {
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
-        matchHeader={<div>Header del partido</div>}
       />,
     );
 
-    expect(screen.getByText("1 de 14 convocados")).toBeInTheDocument();
+    expect(screen.getByLabelText("1 de 14 jugadores convocados")).toBeInTheDocument();
     expect(screen.getAllByText("Rubén Galvillo")[0]).toBeInTheDocument();
-    expect(screen.getByText("Gorro #7")).toBeInTheDocument();
-    expect(screen.getAllByText("Pau Martínez")[0]).toBeInTheDocument();
-    expect(screen.getAllByText("Lucas Gómez")[0]).toBeInTheDocument();
-    expect(screen.getByText("Otro equipo")).toBeInTheDocument();
-    expect(screen.getAllByText("No disponible")[0]).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Gorro de Rubén Galvillo: 7/ })).toBeVisible();
+    expect(screen.queryByText("Pau Martínez")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
+    expect(screen.getByRole("button", { name: "Añadir a Pau Martínez" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Añadir a Lucas Gómez" })).toBeVisible();
+    expect(screen.getByText("No disponible")).toBeVisible();
   });
 
   it("añade un jugador disponible con un toque y le asigna gorro libre", () => {
@@ -82,6 +82,8 @@ describe("CallupEditor", () => {
       <CallupEditor
         matchId="match-1"
         teamLabel="Cadete B"
+        opponent="Rival de prueba"
+        scheduledAt="2026-09-29T16:00:00.000Z"
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
@@ -90,15 +92,17 @@ describe("CallupEditor", () => {
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
-        matchHeader={<div>Header del partido</div>}
       />,
     );
 
+    expect(screen.queryByRole("button", { name: "Guardar convocatoria" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
     const addPauButton = screen.getByRole("button", { name: "Añadir a Pau Martínez" });
     fireEvent.click(addPauButton);
 
-    expect(screen.getByText("2 de 14 convocados")).toBeInTheDocument();
-    expect(screen.getByText("Gorro #3")).toBeInTheDocument();
+    expect(screen.getByLabelText("2 de 14 jugadores convocados")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Gorro de Pau Martínez: 3/ })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Guardar convocatoria" })).toBeEnabled();
   });
 
   it("quita un jugador convocado con un toque y lo devuelve a disponibles", () => {
@@ -106,6 +110,8 @@ describe("CallupEditor", () => {
       <CallupEditor
         matchId="match-1"
         teamLabel="Cadete B"
+        opponent="Rival de prueba"
+        scheduledAt="2026-09-29T16:00:00.000Z"
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
@@ -114,19 +120,17 @@ describe("CallupEditor", () => {
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
-        matchHeader={<div>Header del partido</div>}
       />,
     );
 
     const removeButton = screen.getByRole("button", {
-      name: "Quitar a Rubén Galvillo de la convocatoria",
+      name: "Quitar a Rubén Galvillo",
     });
     fireEvent.click(removeButton);
 
-    expect(screen.getByText("0 de 14 convocados")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Añadir a Rubén Galvillo" }),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("0 de 14 jugadores convocados")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
+    expect(screen.getByRole("button", { name: "Añadir a Rubén Galvillo" })).toBeVisible();
   });
 
   it("filtra jugadores en tiempo real con el buscador", () => {
@@ -134,6 +138,8 @@ describe("CallupEditor", () => {
       <CallupEditor
         matchId="match-1"
         teamLabel="Cadete B"
+        opponent="Rival de prueba"
+        scheduledAt="2026-09-29T16:00:00.000Z"
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
@@ -142,11 +148,11 @@ describe("CallupEditor", () => {
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
-        matchHeader={<div>Header del partido</div>}
       />,
     );
 
-    const searchInput = screen.getByPlaceholderText("Buscar jugador por nombre…");
+    fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
+    const searchInput = screen.getByRole("searchbox", { name: "Buscar jugador" });
     fireEvent.change(searchInput, { target: { value: "Lucas" } });
 
     expect(screen.getAllByText("Lucas Gómez")[0]).toBeInTheDocument();
@@ -158,6 +164,8 @@ describe("CallupEditor", () => {
       <CallupEditor
         matchId="match-1"
         teamLabel="Cadete B"
+        opponent="Rival de prueba"
+        scheduledAt="2026-09-29T16:00:00.000Z"
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
@@ -166,20 +174,19 @@ describe("CallupEditor", () => {
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
-        matchHeader={<div>Header del partido</div>}
       />,
     );
 
-    const clearButton = screen.getByRole("button", { name: /Desasignar gorros/i });
+    const clearButton = screen.getByRole("button", { name: /Quitar gorros/i });
     fireEvent.click(clearButton);
 
     expect(screen.getByText("¿Quitar todos los gorros?")).toBeInTheDocument();
 
-    const confirmClear = screen.getByRole("button", { name: "Sí, quitar gorros" });
+    const confirmClear = screen.getByRole("button", { name: "Quitar gorros" });
     fireEvent.click(confirmClear);
 
-    expect(screen.getByText("Sin dorsal")).toBeInTheDocument();
-    expect(screen.getByText(/Gorros pendientes de asignar/i)).toBeInTheDocument();
+    expect(screen.getByText("Sin nº")).toBeInTheDocument();
+    expect(screen.getByText(/Faltan 1 gorro por asignar/i)).toBeInTheDocument();
   });
 
   it("pide confirmación al pulsar volver si hay cambios sin guardar", () => {
@@ -188,6 +195,8 @@ describe("CallupEditor", () => {
       <CallupEditor
         matchId="match-1"
         teamLabel="Cadete B"
+        opponent="Rival de prueba"
+        scheduledAt="2026-09-29T16:00:00.000Z"
         initial={INITIAL_PICKS}
         candidates={CANDIDATES}
         template={[]}
@@ -196,10 +205,10 @@ describe("CallupEditor", () => {
         editable={true}
         backHref="/admin/matches"
         backLabel="Volver a partidos"
-        matchHeader={<div>Header del partido</div>}
       />,
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
     const addPauButton = screen.getByRole("button", { name: "Añadir a Pau Martínez" });
     fireEvent.click(addPauButton);
 

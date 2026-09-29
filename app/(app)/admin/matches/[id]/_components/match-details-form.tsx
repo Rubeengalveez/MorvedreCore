@@ -22,7 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
 import { mapsUrlInputSchema } from "@/lib/domain/maps";
-import { updateMatch, type MatchRow, type Team } from "@/server/actions/admin";
+import { updateMatch, type MatchRow } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
   { value: "league", label: "Liga" },
@@ -103,10 +103,9 @@ function Toggle({
 
 export interface MatchDetailsFormProps {
   match: MatchRow;
-  team: Pick<Team, "id" | "label" | "color">;
 }
 
-export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
+export function MatchDetailsForm({ match }: MatchDetailsFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
@@ -170,16 +169,6 @@ export function MatchDetailsForm({ match, team }: MatchDetailsFormProps) {
             Los datos del partido se han actualizado.
           </Alert>
         ) : null}
-
-        <div className="border-ink-300 bg-pool-foam/40 flex items-center gap-2 rounded-md border p-3 text-sm">
-          <span
-            aria-hidden="true"
-            className="inline-block h-3 w-3 rounded-full"
-            style={{ backgroundColor: team.color }}
-          />
-          <span className="text-pool-deep font-semibold">{team.label}</span>
-          <span className="text-ink-600">· temporada</span>
-        </div>
 
         <section className="border-ink-200 bg-paper-card flex flex-col gap-5 rounded-2xl border p-4 sm:p-5">
           <div>

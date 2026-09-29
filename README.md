@@ -1,6 +1,6 @@
 # Morvedre Core
 
-PWA propia del Club Waterpolo Morvedre (Puerto de Sagunto, Valencia). Centraliza gestión deportiva, comunicación interna, logística de partidos y tesorería del club — sin comisiones, sin dependencia de plataformas externas, con el objetivo de coste 0.
+PWA propia del Club Waterpolo Morvedre (Puerto de Sagunto, Valencia). Centraliza gestión deportiva, comunicación interna y tesorería del club — sin comisiones, sin dependencia de plataformas externas, con el objetivo de coste 0.
 
 ## Estado
 

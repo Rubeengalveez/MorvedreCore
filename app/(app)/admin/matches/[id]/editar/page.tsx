@@ -6,20 +6,12 @@ import { PageBackLink } from "@/components/ui/page-back-link";
 import { createClient } from "@/lib/supabase/server";
 import { canManageTeam } from "@/lib/domain/permissions";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
-import type { MatchRow, Team } from "@/server/actions/admin";
+import type { MatchRow } from "@/server/actions/admin";
 
 import { MatchDetailsForm } from "../_components/match-details-form";
-import { MatchEditorHeader } from "../_components/match-editor-header";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
-const COMPETITION_LABELS: Record<string, string> = {
-  league: "Liga",
-  cup: "Copa",
-  tournament: "Torneo",
-  friendly: "Amistoso",
-};
 
 export default async function EditMatchPage({
   params,
@@ -50,26 +42,14 @@ export default async function EditMatchPage({
       <PageBackLink href={backHref}>
         {origin === "match" ? "Volver al partido" : "Volver a partidos"}
       </PageBackLink>
-      <h1 className="sr-only">Editar partido contra {match.opponent}</h1>
-      <MatchEditorHeader
-        teamLabel={team.label}
-        opponent={match.opponent}
-        isHome={match.is_home}
-        scheduledAt={match.scheduled_at}
-        competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-        status={match.status}
-        scoreUs={match.final_score_us}
-        scoreThem={match.final_score_them}
-      />
+      <header className="bg-pool-deep text-paper shadow-elev-2 rounded-2xl px-4 py-4">
+        <h1 className="font-display text-xl font-extrabold">Editar partido</h1>
+        <p className="mt-1 text-sm font-semibold text-blue-100">
+          {team.label} · {match.opponent}
+        </p>
+      </header>
       <section>
-        <div className="mb-4">
-          <p className="text-pool-blue text-sm font-extrabold">{team.label}</p>
-          <h2 className="font-display text-pool-deep text-xl font-extrabold">Editar partido</h2>
-          <p className="text-ink-700 mt-1 text-sm">
-            Cambia el rival, la fecha o la información que verá el equipo.
-          </p>
-        </div>
-        <MatchDetailsForm match={match} team={team as Pick<Team, "id" | "label" | "color">} />
+        <MatchDetailsForm match={match} />
       </section>
     </AdminPageShell>
   );

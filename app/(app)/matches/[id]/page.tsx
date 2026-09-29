@@ -7,9 +7,7 @@ import type { Route } from "next";
 import { notFound, redirect } from "next/navigation";
 import { FileText, UserCheck, Pencil, UsersRound } from "lucide-react";
 
-import { RsvpButtons, type RsvpStatus } from "@/components/matches/rsvp-buttons";
-import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
 import { sheetSchema, score } from "@/lib/domain/live-match";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -26,7 +24,6 @@ import {
   type MatchScorer,
 } from "@/server/queries/matches";
 import { createClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils/cn";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -54,20 +51,18 @@ export async function generateMetadata({
   };
 }
 
-interface CallupDetailWithPhoto extends CallupDetail {
-  photo_url: string | null;
-}
-
-async function getCallupsWithPhotos(matchId: string): Promise<CallupDetailWithPhoto[]> {
+async function getVisibleCallups(matchId: string): Promise<CallupDetail[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("match_callups")
     .select(
-      "match_id, player_id, cap_number, status, confirmed_at, source_team_id, profiles!match_callups_player_id_fkey(full_name, photo_url)",
+      "match_id, player_id, cap_number, status, confirmed_at, source_team_id, profiles!match_callups_player_id_fkey(full_name)",
     )
     .eq("match_id", matchId)
+    .in("status", ["called", "confirmed"])
     .order("cap_number", { ascending: true });
-  const out: CallupDetailWithPhoto[] = [];
+  if (error) throw error;
+  const out: CallupDetail[] = [];
   for (const row of (data ?? []) as Array<{
     match_id: string;
     player_id: string;
@@ -78,12 +73,11 @@ async function getCallupsWithPhotos(matchId: string): Promise<CallupDetailWithPh
     profiles: unknown;
   }>) {
     const profile = Array.isArray(row.profiles) ? row.profiles[0] : row.profiles;
-    const profileObj = profile as { full_name?: string; photo_url?: string | null } | null;
+    const profileObj = profile as { full_name?: string } | null;
     out.push({
       match_id: row.match_id,
       player_id: row.player_id,
       full_name: profileObj?.full_name ?? "Sin nombre",
-      photo_url: profileObj?.photo_url ?? null,
       cap_number: row.cap_number,
       status: row.status,
       confirmed_at: row.confirmed_at,
@@ -118,17 +112,12 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   const hasScore = match.final_score_us != null && match.final_score_them != null;
 
   const [callups, mvp, statsList] = await Promise.all([
-    getCallupsWithPhotos(id).catch(() => [] as CallupDetailWithPhoto[]),
+    getVisibleCallups(id).catch(() => [] as CallupDetail[]),
     getMatchMvp(id).catch(() => null as MatchScorer | null),
     getMatchStatsList(id).catch(() => []),
   ]);
 
   const statsMap = new Map(statsList.map((s) => [s.player_id, s]));
-
-  const linkedProfileIds = new Set(ctx.linkedProfiles.map((profile) => profile.id));
-  const managedCallups = callups.filter(
-    (callup) => callup.player_id === ctx.ownProfile.id || linkedProfileIds.has(callup.player_id),
-  );
 
   const access = await getRenderAdminAccess();
   const delegate = canUseLiveMatch(access, match.team_id);
@@ -211,54 +200,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="flex flex-col gap-4">
-        {managedCallups.length > 0 &&
-          (match.status === "scheduled" || match.status === "in_progress") && (
-            <section className="bg-paper-card border-ink-200 shadow-elev-1 flex flex-col gap-3 rounded-2xl border p-4">
-              <h2 className="text-pool-deep flex items-center gap-2 text-base font-black">
-                <span className="bg-pool-foam text-pool-blue flex h-9 w-9 items-center justify-center rounded-xl">
-                  <UserCheck className="h-5 w-5" aria-hidden="true" />
-                </span>
-                {ctx.linkedProfiles.length > 0
-                  ? "Asistencia de tu familia"
-                  : "Confirmar asistencia"}
-              </h2>
-              <div className="flex flex-col gap-4">
-                {managedCallups.map((callup, index) => {
-                  const isLinkedChild = linkedProfileIds.has(callup.player_id);
-                  return (
-                    <div
-                      key={callup.player_id}
-                      className={cn("flex flex-col gap-2", index > 0 && "pt-3")}
-                    >
-                      {isLinkedChild ? (
-                        <div className="flex items-center gap-2">
-                          <Avatar src={callup.photo_url} name={callup.full_name} size={32} />
-                          <span className="text-pool-deep min-w-0 flex-1 truncate text-sm font-extrabold">
-                            {callup.full_name}
-                          </span>
-                          {validCapNumber(callup.cap_number) != null ? (
-                            <span className="text-pool-deep bg-pool-foam rounded-lg px-2.5 py-0.5 font-mono text-sm font-bold">
-                              #{callup.cap_number}
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      <RsvpButtons
-                        matchId={match.id}
-                        currentStatus={callup.status as RsvpStatus}
-                        playerId={isLinkedChild ? callup.player_id : undefined}
-                        playerName={isLinkedChild ? callup.full_name.split(/\s+/)[0] : undefined}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-
         <section className="bg-paper-card border-ink-200 shadow-elev-1 overflow-hidden rounded-2xl border">
-          <div className="bg-pool-deep text-paper flex min-h-14 items-center gap-3 px-4 py-2.5">
-            <h2 className="text-xl font-black">Convocatoria</h2>
+          <div className="bg-pool-deep text-paper flex min-h-14 items-center gap-2.5 px-4 py-2.5">
+            <h2 className="text-lg font-black">Convocatoria</h2>
             <span
               className="bg-paper/15 text-paper inline-flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1 text-sm font-extrabold"
               aria-label={`${callups.length} ${callups.length === 1 ? "jugador" : "jugadores"}`}
@@ -267,27 +211,18 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <UsersRound className="h-4 w-4" aria-hidden="true" />
               {callups.length}
             </span>
-            <div className="ml-auto">
-              {canEditCallup && (
-                <Button
-                  asChild
-                  size="sm"
-                  variant="outline"
-                  className="border-paper/30 text-paper hover:bg-paper/15 hover:border-paper/50 min-h-12 cursor-pointer rounded-xl px-3 text-xs font-extrabold transition-colors"
-                >
-                  <Link
-                    href={`/admin/matches/${match.id}?from=match` as Route}
-                    className="flex items-center gap-1.5"
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    <span>Editar convocatoria</span>
-                  </Link>
-                </Button>
-              )}
-            </div>
           </div>
 
-          <div className="p-2.5 sm:p-3">
+          <div className="p-3">
+            {canEditCallup ? (
+              <Link
+                href={`/admin/matches/${match.id}?from=match` as Route}
+                className="border-pool-blue/40 bg-pool-foam text-pool-deep focus-visible:outline-pool-blue mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 px-3 text-sm font-extrabold focus-visible:outline-2"
+              >
+                <Pencil className="h-4 w-4" aria-hidden="true" />
+                Editar convocatoria
+              </Link>
+            ) : null}
             {callups.length === 0 ? (
               <EmptyState
                 icon={<UserCheck className="h-6 w-6" aria-hidden="true" />}
@@ -298,70 +233,24 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {callups.map((c) => {
                   const stats = statsMap.get(c.player_id);
-                  const isConfirmed = c.status === "confirmed";
-                  const isDeclined =
-                    c.status === "declined" || c.status === "withdrawn" || c.status === "no_show";
-
                   return (
                     <li
                       key={c.player_id}
-                      className={cn(
-                        "bg-paper-sunk/55 border-ink-200 flex items-center gap-3 rounded-xl border px-3.5 select-none",
-                        isPlayed ? "min-h-14 py-2.5" : "min-h-16 py-3",
-                      )}
+                      className="bg-paper-sunk/55 border-ink-200 flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 select-none"
                     >
-                      {/* Cap number circle with status dot */}
-                      <div className="relative shrink-0">
-                        <div
-                          className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-base font-black shadow-sm"
-                          aria-label={
-                            validCapNumber(c.cap_number) != null
-                              ? `Gorro ${c.cap_number}`
-                              : "Sin gorro"
-                          }
-                        >
-                          {validCapNumber(c.cap_number) ?? "–"}
-                        </div>
-                        {!isPlayed && (
-                          <span
-                            className={cn(
-                              "border-paper-card absolute -right-0.5 -bottom-0.5 h-3.5 w-3.5 rounded-full border-2",
-                              isConfirmed
-                                ? "bg-emerald-500"
-                                : isDeclined
-                                  ? "bg-red-500"
-                                  : "bg-ink-300",
-                            )}
-                          />
-                        )}
+                      <div
+                        className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-base font-black"
+                        aria-label={
+                          validCapNumber(c.cap_number) != null
+                            ? `Gorro ${c.cap_number}`
+                            : "Sin gorro"
+                        }
+                      >
+                        {validCapNumber(c.cap_number) ?? "–"}
                       </div>
-
-                      {/* Name (single line when played) */}
-                      <div className="flex min-w-0 flex-1 flex-col justify-center">
-                        <span className="text-ink-900 truncate text-sm font-bold">
-                          {c.full_name}
-                        </span>
-                        {!isPlayed && (
-                          <span
-                            className={cn(
-                              "mt-0.5 text-xs font-semibold",
-                              isConfirmed
-                                ? "text-success"
-                                : isDeclined
-                                  ? "text-danger"
-                                  : "text-ink-500",
-                            )}
-                          >
-                            {isConfirmed
-                              ? "Asistencia confirmada"
-                              : isDeclined
-                                ? "No puede asistir"
-                                : "Pendiente de respuesta"}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Stats badges (only played matches) */}
+                      <span className="text-ink-900 min-w-0 flex-1 text-sm font-bold">
+                        <AdaptivePlayerName name={c.full_name} />
+                      </span>
                       {isPlayed && stats && (stats.goals > 0 || stats.exclusions > 0) && (
                         <div className="flex shrink-0 items-center gap-1.5">
                           {stats.goals > 0 && (

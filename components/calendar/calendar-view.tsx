@@ -41,7 +41,6 @@ export interface CalendarViewProps {
   eventsByDay: CalendarData;
   isCoach: boolean;
   isAdmin: boolean;
-  activeProfileId: string;
   availabilityByDay: Map<string, boolean>;
   userAttendanceBySession?: Map<string, boolean>;
   showAttendance?: boolean;
@@ -61,7 +60,6 @@ export function CalendarView({
   eventsByDay,
   isCoach,
   isAdmin,
-  activeProfileId,
   availabilityByDay,
   userAttendanceBySession,
   showAttendance,
@@ -285,7 +283,6 @@ export function CalendarView({
             selectedIso={selectedIso}
             isCoach={isCoach}
             isAdmin={isAdmin}
-            activeProfileId={activeProfileId}
           />
         )}
       </div>
@@ -298,7 +295,6 @@ export function CalendarView({
         day={selectedDay}
         isCoach={isCoach || isAdmin}
         isAdmin={isAdmin}
-        activeProfileId={activeProfileId}
       />
     </div>
   );

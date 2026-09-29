@@ -160,13 +160,13 @@ function EventBody({
             <p className="text-pool-deep line-clamp-1 text-xs font-semibold">{event.callup_name}</p>
             {event.callup_status ? (
               <Eyebrow tone="muted">
-                {event.callup_status === "confirmed" ? "Confirmado" : "Convocado"}
+                Convocado
               </Eyebrow>
             ) : null}
           </div>
         </div>
       ) : null}
-      <div className="border-ink-300 text-ink-600 flex flex-wrap items-center gap-x-3 gap-y-1 border-t pt-2 text-xs">
+      <div className="text-ink-600 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
         <span className="inline-flex items-center gap-1">
           <Clock className="h-3 w-3" />
           {timeStr}

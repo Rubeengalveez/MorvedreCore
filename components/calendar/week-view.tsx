@@ -16,7 +16,6 @@ export interface WeekViewProps {
   showAttendance?: boolean;
   isCoach: boolean;
   isAdmin: boolean;
-  activeProfileId: string;
 }
 
 function getDayLabels(startIso: string): { iso: string; date: Date }[] {
@@ -39,7 +38,6 @@ export function WeekView({
   availabilityByDay = new Map(),
   isCoach,
   isAdmin,
-  activeProfileId,
 }: WeekViewProps) {
   const days = getDayLabels(startIso);
   const todayIsoValue = todayIso();
@@ -82,7 +80,7 @@ export function WeekView({
                 )}
               </div>
 
-              <div className="border-ink-200/50 flex-1 border-b py-3 pl-2 last:border-b-0">
+              <div className="flex-1 py-3 pl-2">
                 {!hasEvents ? (
                   <div className="bg-pool-ice border-ink-200/30 text-ink-500 font-display flex items-center gap-2.5 rounded-xl border px-4 py-3.5 text-sm font-semibold select-none">
                     <span className="bg-ink-400 h-1.5 w-1.5 rounded-full opacity-60" />
@@ -98,8 +96,6 @@ export function WeekView({
                         key={m.id}
                         match={m}
                         isCoach={isCoach || isAdmin}
-                        activeProfileId={activeProfileId}
-                        onChanged={() => {}}
                         compact
                       />
                     ))}

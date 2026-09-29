@@ -20,6 +20,8 @@ Fecha: 28 de septiembre de 2026. Punto de retorno Git: `codex/before-match-callu
 5. Al guardar una convocatoria, el usuario puede marcar «Usarla en próximos partidos de este equipo». Esto actualiza la plantilla habitual en la misma transacción. El cambio de plantilla no altera partidos anteriores.
 6. Las convocatorias iniciadas o con acta existente no se sustituyen desde este editor para evitar inconsistencias en jugadas y estadísticas. La edición de gorros antes de iniciar el acta sigue disponible en el flujo del delegado.
 7. Se retira la interfaz y el código de logística. Una migración archiva los registros existentes en el esquema privado y elimina los objetos públicos específicos de coches y los campos de configuración. Los registros de partidos y convocatorias se conservan.
+8. La confirmación de asistencia a partidos deja de formar parte de la convocatoria. Las familias consultan la lista y comunican ausencias al entrenador; los estados históricos de la base se conservan para no alterar registros anteriores. La ficha, el calendario y el editor ya no muestran respuestas pendientes.
+9. En móvil, el encabezado de la ficha separa el título y el número de convocados del acceso a edición. El editor enseña primero la selección actual, pliega la lista de candidatos, ofrece fuentes rápidas y mantiene visible el guardado sobre la navegación inferior.
 
 ## Orden de trabajo
 

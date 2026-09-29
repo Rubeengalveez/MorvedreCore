@@ -27,7 +27,7 @@ Si tienes varios hijos en el club o tú también formas parte del equipo o staff
 ## 3. Asistencia a entrenamientos y partidos
 
 - **Entrenamientos**: En **Calendario** o **Inicio** verás las sesiones. El entrenador registra la asistencia real; comunica las ausencias por el canal acordado con el equipo.
-- **Partidos y convocatorias**: Abre el partido y revisa si tu hijo está convocado. Utiliza los controles de confirmación o rechazo que aparecen en la ficha y comprueba que se guarda tu respuesta.
+- **Partidos y convocatorias**: Abre el partido y revisa si tu hijo está convocado. Si no puede acudir, avisa al entrenador por el canal acordado con el equipo.
 
 ---
 

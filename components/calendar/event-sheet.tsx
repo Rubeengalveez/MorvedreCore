@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useTransition, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { type ReactNode } from "react";
 import Link from "next/link";
-import { Loader2, ChevronRight, Check, X, Clock3 } from "lucide-react";
+import { ChevronRight, X, Clock3 } from "lucide-react";
 import type { Route } from "next";
 
 import { CalendarMarker } from "./calendar-key";
@@ -23,7 +22,6 @@ import {
   formatTimeOfDay,
   formatTimeRangeFromDuration,
 } from "@/lib/domain/calendar";
-import { setMyCallupStatus } from "@/server/actions/admin";
 import type { CalendarEventDay } from "@/server/queries/calendar";
 import { cn } from "@/lib/utils/cn";
 
@@ -33,7 +31,6 @@ export interface EventSheetProps {
   iso: string | null;
   day: CalendarEventDay | null;
   isCoach: boolean;
-  activeProfileId: string;
   isAdmin: boolean;
 }
 
@@ -79,15 +76,7 @@ function EventMetaRow({ icon, children }: { icon: ReactNode; children: ReactNode
   );
 }
 
-export function EventSheet({
-  open,
-  onOpenChange,
-  iso,
-  day,
-  isCoach,
-  activeProfileId,
-  isAdmin,
-}: EventSheetProps) {
+export function EventSheet({ open, onOpenChange, iso, day, isCoach, isAdmin }: EventSheetProps) {
   const dateLabel = iso ? formatLongDate(`${iso}T12:00:00`) : "";
 
   return (
@@ -111,14 +100,7 @@ export function EventSheet({
               ))}
               {day.matches.map((m) => (
                 <li key={m.id}>
-                  <MatchRow
-                    match={m}
-                    isCoach={isCoach || isAdmin}
-                    activeProfileId={activeProfileId}
-                    onChanged={() => {
-                      onOpenChange(false);
-                    }}
-                  />
+                  <MatchRow match={m} isCoach={isCoach || isAdmin} />
                 </li>
               ))}
             </ul>
@@ -207,7 +189,7 @@ export function TrainingRow({
         ) : null}
 
         {training.cancelled ? (
-          <div className="bg-red-50 border-danger text-danger flex items-start gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold">
+          <div className="border-danger text-danger flex items-start gap-2 rounded-xl border bg-red-50 px-3 py-2.5 text-sm font-bold">
             <X className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <p className="min-w-0 break-words">
               <span className="font-black">Cancelado.</span>{" "}
@@ -234,18 +216,12 @@ export function TrainingRow({
 
 export function MatchRow({
   match,
-  activeProfileId,
-  onChanged,
   compact = false,
 }: {
   match: NonNullable<CalendarEventDay["matches"][number]>;
   isCoach: boolean;
-  activeProfileId: string;
-  onChanged: () => void;
   compact?: boolean;
 }) {
-  const router = useRouter();
-  const isCalled = match.callup_status != null;
   const href = `/matches/${match.id}` as Route;
   const homeTeam = match.is_home ? "Morvedre" : match.opponent;
   const awayTeam = match.is_home ? match.opponent : "Morvedre";
@@ -380,19 +356,6 @@ export function MatchRow({
           />
         ) : null}
 
-        {isCalled && match.callup_status && (
-          <div className={cn("border-ink-200/40 border-t", compact ? "pt-2" : "mt-1.5 pt-3")}>
-            <PremiumRsvpSection
-              matchId={match.id}
-              currentStatus={match.callup_status}
-              onChanged={onChanged}
-              router={router}
-              playerId={activeProfileId}
-              compact={compact}
-            />
-          </div>
-        )}
-
         <div className="select-none">
           <Button
             asChild
@@ -411,98 +374,5 @@ export function MatchRow({
         </div>
       </div>
     </article>
-  );
-}
-
-function PremiumRsvpSection({
-  matchId,
-  currentStatus,
-  onChanged,
-  router,
-  playerId,
-  compact = false,
-}: {
-  matchId: string;
-  currentStatus: string;
-  onChanged: () => void;
-  router: ReturnType<typeof useRouter>;
-  playerId: string;
-  compact?: boolean;
-}) {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function send(status: "confirmed" | "declined" | "withdrawn") {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await setMyCallupStatus({ match_id: matchId, status });
-        onChanged();
-        router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "No pudimos guardar tu respuesta.");
-      }
-    });
-  }
-
-  const isConfirmed = currentStatus === "confirmed";
-  const isDeclined =
-    currentStatus === "declined" || currentStatus === "withdrawn" || currentStatus === "no_show";
-
-  return (
-    <div className="flex flex-col gap-2 select-none">
-      <span className="text-ink-600 text-xs font-black tracking-wider uppercase">
-        {compact ? "¿Asistes?" : "¿Confirmas tu asistencia?"}
-      </span>
-
-      <div className={cn("flex w-full", compact ? "gap-2" : "gap-2.5")}>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => send("confirmed")}
-          className={cn(
-            "focus-visible:ring-pool-blue flex flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
-            compact ? "min-h-12 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
-            isConfirmed
-              ? "bg-success text-paper border-success shadow-sm"
-              : "bg-paper border-success/25 text-success hover:bg-success/10",
-          )}
-        >
-          {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin text-current" aria-hidden="true" />
-          ) : (
-            <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
-          )}
-          <span>{isConfirmed ? "Asistiré" : "Confirmar"}</span>
-        </button>
-
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => send("declined")}
-          className={cn(
-            "focus-visible:ring-pool-blue flex flex-1 cursor-pointer touch-manipulation items-center justify-center gap-1.5 rounded-xl border font-extrabold transition-[background-color,border-color,color,box-shadow,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
-            compact ? "min-h-12 min-w-0 px-2 text-xs whitespace-nowrap" : "min-h-12 text-sm",
-            isDeclined
-              ? "bg-danger text-paper border-danger shadow-sm"
-              : "bg-paper border-danger/25 text-danger hover:bg-danger/10",
-          )}
-        >
-          {pending ? (
-            <Loader2 className="h-4 w-4 animate-spin text-current" aria-hidden="true" />
-          ) : (
-            <X className="h-4 w-4 shrink-0" aria-hidden="true" />
-          )}
-          <span>{isDeclined ? "No puedo ir" : "Denegar"}</span>
-        </button>
-      </div>
-
-      {error ? (
-        <p className="text-danger mt-0.5 text-sm font-semibold" role="alert">
-          {error}
-        </p>
-      ) : null}
-      <p className="sr-only">Convocatoria para el jugador {playerId}</p>
-    </div>
   );
 }

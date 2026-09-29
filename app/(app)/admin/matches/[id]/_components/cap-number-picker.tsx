@@ -26,24 +26,21 @@ export function CapNumberButton({
       aria-expanded={open}
       aria-label={label}
       className={cn(
-        "relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg font-mono font-black tabular-nums transition-all focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none",
+        "focus-visible:ring-pool-blue relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg font-mono font-black tabular-nums transition-all focus-visible:ring-2 focus-visible:outline-none",
         value != null
           ? "bg-pool-deep text-paper shadow-elev-1 hover:bg-pool-blue active:scale-95"
-          : "border-2 border-dashed border-warning/60 bg-amber-50 text-amber-900 hover:bg-amber-100",
-        open && "ring-2 ring-pool-blue ring-offset-2",
-        disabled && "opacity-50 cursor-not-allowed",
+          : "border-warning/60 border-2 border-dashed bg-amber-50 text-amber-900 hover:bg-amber-100",
+        open && "ring-pool-blue ring-2 ring-offset-2",
+        disabled && "cursor-not-allowed opacity-50",
       )}
     >
       {value != null ? (
         <>
-          <span
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-1 bg-white/25"
-          />
+          <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 bg-white/25" />
           <span className="text-lg leading-none">{value}</span>
         </>
       ) : (
-        <span className="text-[10px] font-extrabold uppercase tracking-tight">Sin nº</span>
+        <span className="text-[10px] font-extrabold tracking-tight uppercase">Sin nº</span>
       )}
     </button>
   );
@@ -63,11 +60,11 @@ export function CapNumberOptions({
   const available = MATCH_CAP_NUMBERS.filter((cap) => !occupied.has(cap) || cap === value);
 
   return (
-    <div className="rounded-xl border border-ink-200 bg-paper-sunk/80 p-3 shadow-inner">
+    <div className="border-ink-200 bg-paper-sunk/80 rounded-xl border p-3 shadow-inner">
       <Eyebrow tone="default" className="mb-2 block">
-        Selecciona un dorsal (1 al 14)
+        Selecciona un gorro (1 al 14)
       </Eyebrow>
-      <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+      <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
         {available.map((cap) => (
           <button
             key={cap}
@@ -75,10 +72,10 @@ export function CapNumberOptions({
             onClick={() => onChange(cap)}
             aria-pressed={value === cap}
             className={cn(
-              "flex h-11 items-center justify-center rounded-lg font-mono text-base font-extrabold tabular-nums transition-all focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none",
+              "focus-visible:ring-pool-blue flex min-h-12 items-center justify-center rounded-lg font-mono text-base font-extrabold tabular-nums transition-all focus-visible:ring-2 focus-visible:outline-none",
               value === cap
                 ? "bg-pool-deep text-paper shadow-elev-2 scale-105"
-                : "border border-ink-200 bg-paper-card text-pool-deep hover:bg-pool-foam hover:border-pool-blue/40",
+                : "border-ink-200 bg-paper-card text-pool-deep hover:bg-pool-foam hover:border-pool-blue/40 border",
             )}
           >
             {cap}
@@ -91,13 +88,13 @@ export function CapNumberOptions({
           onClick={() => onChange(null)}
           aria-pressed={value === null}
           className={cn(
-            "mt-2 flex min-h-10 w-full items-center justify-center rounded-lg border text-xs font-extrabold uppercase tracking-wider transition-colors focus-visible:ring-2 focus-visible:ring-pool-blue focus-visible:outline-none",
+            "focus-visible:ring-pool-blue mt-2 flex min-h-12 w-full items-center justify-center rounded-lg border text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none",
             value === null
               ? "border-pool-deep bg-pool-deep text-paper"
               : "border-ink-200 bg-paper-card text-ink-600 hover:bg-paper-sunk",
           )}
         >
-          Dejar sin dorsal
+          Dejar sin gorro
         </button>
       ) : null}
     </div>

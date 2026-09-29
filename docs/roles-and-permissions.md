@@ -79,27 +79,27 @@ La aplicación distingue estrictamente entre dos conceptos:
        │
        ▼
 [ Menor de Edad (< 18) ] ────────── Cumple 18 años ──────────► [ Jugador Adulto (≥ 18) ]
-• Autonomía deportiva (ver, RSVP)                             • Pedidos directos a tienda
+• Autonomía deportiva (ver convocatorias)                     • Pedidos directos a tienda
 • Bloqueo total de importes de cuotas                         • Ve sus cuotas en Tesorería
 • Pedido tienda: "Pendiente aprobación padre"                 • Autonomía legal y económica
        ▲                                                             ▲
        │                                                             │
 [ Cuenta Tutor / Padre ]                                      [ Cuenta Tutor / Padre ]
 • Gestiona y autoriza pedidos tienda                           • Sigue viéndolo como hijo
-• Responde RSVP por sus hijos                                  • Consulta deportiva familiar
+• Consulta convocatorias de sus hijos                          • Consulta deportiva familiar
 • Ve la cuota familiar mensual (ambos padres)
 ```
 
 ### 3.1. Cuentas de Menores de Edad (< 18 años)
 * **Obligatoriedad:** Todo jugador federado dispone de correo de cuenta (propio o familiar) para acceder a su perfil.
-* **Autonomía deportiva:** Puede consultar su equipo, el calendario, los rankings oficiales y marcar su disponibilidad / RSVP para partidos.
+* **Autonomía deportiva:** Puede consultar su equipo, el calendario, los rankings oficiales y sus convocatorias para partidos.
 * **Protección económica y de compras:**
   * **Tesorería invisible:** Las políticas RLS impiden que un menor lea importes de tesorería, líneas de cobro o saldos.
   * **Veto familiar en compras:** Todo pedido realizado por un menor nace en estado `pending_parent`. No llega a la tienda ni a Sol hasta que un tutor adulto lo autoriza expresamente.
 
 ### 3.2. Cuentas de Tutores (Padre / Madre)
 * **Identidad unificada:** Los padres conservan siempre su cuenta personal sin suplantar perfiles. El panel "Espacio familiar" reúne a todos sus hijos en una sola vista.
-* **Gestión deportiva delegada:** El tutor puede responder el RSVP de cualquiera de sus hijos convocados directamente desde su cuenta.
+* **Convocatorias familiares:** El tutor puede consultar los partidos y la convocatoria de sus hijos desde su cuenta.
 * **Autorización de compras:** Recibe aviso inmediato ante solicitudes de compra de sus hijos y puede aprobarlas o rechazarlas con un clic.
 * **Transparencia en cuotas:** Si un menor tiene dos tutores vinculados (padre y madre), **ambos pueden consultar la cuota mensual** que se pasará al cobro, garantizando máxima claridad.
 

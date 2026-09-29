@@ -82,15 +82,14 @@ test.describe("Experiencia familiar", () => {
     }
   });
 
-  test("el tutor responde una convocatoria sin suplantar al hijo", async ({ page }) => {
+  test("el tutor consulta la convocatoria de su hijo sin suplantarlo", async ({ page }) => {
     test.skip(!familyMatchId, "Partido de familia demo no configurado.");
     await login(page, "familia.demo@morvedre-core.test");
     await page.goto(`/matches/${familyMatchId}`);
 
-    await expect(page.getByRole("heading", { name: "Asistencia de tu familia" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Convocatoria" })).toBeVisible();
     await expect(page.getByText("Lucía Torres Demo", { exact: true }).first()).toBeVisible();
-    await page.getByRole("button", { name: "Confirmar asistencia" }).click();
-    await expect(page.getByRole("button", { name: "Asistiré" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Pendiente de respuesta")).toHaveCount(0);
 
     if (screenshotDir) {
       mkdirSync(screenshotDir, { recursive: true });

@@ -4,7 +4,7 @@
 
 ## Qué es esto
 
-**Morvedre Core** es la PWA propia del Club Waterpolo Morvedre (Puerto de Sagunto, Valencia). Centraliza gestión deportiva, comunicativa, logística y de tesorería sin comisiones de una plataforma intermediaria.
+**Morvedre Core** es la PWA propia del Club Waterpolo Morvedre (Puerto de Sagunto, Valencia). Centraliza gestión deportiva, comunicación y tesorería sin comisiones de una plataforma intermediaria.
 
 150-250 personas en el club (jugadores desde Benjamín hasta Absoluto + padres + staff + directiva). El usuario (Rubén / `galvillo9@gmail.com`) es admin total, entrenador de Cadete B y Juvenil, y jugador. **El club nunca usó Cluber**: la app se construye desde cero con objetivo de coste 0 y autosuficiencia tecnológica.
 
@@ -71,7 +71,7 @@ Un build correcto no acredita el cierre completo de la auditoría. Las verificac
 - 5 funciones de dominio (training, callups, stats, attendance, calendar)
 - Server actions: training (8), matches (11), availability (2), notifications (3)
 - Panel: /admin/trainings + /admin/matches (con convocatoria sugerida)
-- Vistas: /calendar (month view), /matches/[id] (con RSVP), /profile (con disponibilidad), /notifications (buzón)
+- Vistas: /calendar (month view), /matches/[id] (convocatoria), /profile (con disponibilidad), /notifications (buzón)
 - Bottom nav 5 tabs: Inicio, Calendario, Rankings, Equipo, Tienda. Top bar: Noticias (megáfono), Admin (priv.), Notificaciones, Perfil/avatar.
 
 ### Decisiones cerradas (ver `docs/planning/00-decisions-log.md`)

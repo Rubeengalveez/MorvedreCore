@@ -173,7 +173,6 @@ export default async function CalendarPage() {
           availabilityByDay={availabilityByDay}
           isCoach={isCoach}
           isAdmin={isAdmin}
-          activeProfileId={activeProfile.id}
           userAttendanceBySession={userAttendanceBySession}
           showAttendance={attendanceProfileIds.length > 0}
         />

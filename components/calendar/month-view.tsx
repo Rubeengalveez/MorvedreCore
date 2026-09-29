@@ -18,7 +18,6 @@ export interface MonthViewProps {
   onDayClick: (iso: string) => void;
   selectedIso?: string;
   availabilityByDay?: Map<string, boolean>;
-  activeProfileId?: string;
   userAttendanceBySession?: Map<string, boolean>;
 }
 

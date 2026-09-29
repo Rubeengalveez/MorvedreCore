@@ -988,3 +988,7 @@ Las noticias con fecha de caducidad desaparecen de las vistas pública y de gest
 ## 2026-09-28 — Convocatoria habitual y separación de tareas del partido
 
 La convocatoria se edita en una pantalla propia; los datos del encuentro tienen una entrada «Editar partido» independiente y el acta se abre desde la ficha del partido. Cada equipo puede guardar una convocatoria habitual que se copia automáticamente al crear sus próximos partidos. El editor ofrece además la convocatoria anterior y una propuesta automática, siempre con guardado explícito y opción de convertir el resultado en la nueva plantilla. Se retira la logística de coches al no utilizarse. Plan de implementación y límites de migración en `27-match-callup-simplification.md`.
+
+### 2026-09-29 · Convocatoria sin respuestas de asistencia
+
+La convocatoria del partido muestra jugadores y gorros, sin estados «pendiente de respuesta» ni botones de confirmación. Las familias comunican ausencias al entrenador por el canal del equipo. Se retira la acción de respuesta y su interfaz de ficha y calendario; los estados históricos permanecen en la base para conservar registros antiguos. El editor móvil separa la selección de la búsqueda y mantiene el guardado visible. Se corrige la cabecera comprimida de la ficha del partido.

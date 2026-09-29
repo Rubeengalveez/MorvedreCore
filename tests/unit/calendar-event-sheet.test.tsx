@@ -1,16 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { MatchRow, TrainingRow } from "@/components/calendar/event-sheet";
 import type { CalendarMatch, CalendarTraining } from "@/server/queries/calendar";
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
-}));
-
-vi.mock("@/server/actions/admin", () => ({
-  setMyCallupStatus: vi.fn(),
-}));
 
 const training: CalendarTraining = {
   id: "550e8400-e29b-41d4-a716-446655440001",
@@ -76,7 +68,7 @@ describe("calendar event sheet cards", () => {
   });
 
   it("keeps match teams, venue and callup action in a clear semantic structure", () => {
-    render(<MatchRow match={match} isCoach activeProfileId="profile-1" onChanged={vi.fn()} />);
+    render(<MatchRow match={match} isCoach />);
 
     expect(screen.getByRole("heading", { name: "CN Terrassa contra Morvedre" })).toBeVisible();
     expect(screen.getByText(/Partido · Torneo/)).toBeVisible();
