@@ -1,6 +1,8 @@
 import { sheetSchema, type LiveSheet, type LivePlayer } from "./live-match";
+import { identifyLiveSheet } from "./live-match-identity";
 
 export function reconcileLiveRoster(sheet: LiveSheet, current: LivePlayer[]): LiveSheet {
+  sheet = identifyLiveSheet(sheet);
   if (
     !current.length ||
     current.length > 14 ||
@@ -21,7 +23,9 @@ export function reconcileLiveRoster(sheet: LiveSheet, current: LivePlayer[]): Li
       sheet.events.some((e) => (e.side === "us" && e.cap === old.cap) || e.keeper === old.cap) ||
       sheet.baseline.some((b) => b.cap === old.cap && (b.goals > 0 || b.exclusions > 0)) ||
       sheet.keeperStints?.some((stint) => stint.cap === old.cap) ||
-      sheet.shootout?.shots.some((shot) => (shot.side === "us" && shot.cap === old.cap) || shot.keeper === old.cap);
+      sheet.shootout?.shots.some(
+        (shot) => (shot.side === "us" && shot.cap === old.cap) || shot.keeper === old.cap,
+      );
     if (!referenced) continue;
     let cap = old.cap;
     if (used.has(cap))
@@ -40,20 +44,30 @@ export function reconcileLiveRoster(sheet: LiveSheet, current: LivePlayer[]): Li
       ? { ...sheet.pending, shooter_cap: remap(sheet.pending.shooter_cap) }
       : sheet.pending;
   const keeperId = sheet.players.find((p) => p.cap === sheet.keeper)?.id;
+  const keeperCap = current.find((p) => p.id === keeperId)?.cap;
   return sheetSchema.parse({
     ...sheet,
     players,
     keeper:
-      current.find((p) => p.id === keeperId)?.cap ??
-      current.find((p) => p.cap === 1 || p.cap === 13)?.cap ??
-      null,
+      keeperCap === 1 || keeperCap === 13
+        ? keeperCap
+        : (current.find((p) => p.cap === 1 || p.cap === 13)?.cap ?? null),
     events: sheet.events.map((e) => ({
       ...e,
       cap: e.side === "us" ? remap(e.cap) : e.cap,
       keeper: remap(e.keeper),
     })),
     keeperStints: sheet.keeperStints?.map((stint) => ({ ...stint, cap: mapping.get(stint.cap)! })),
-    shootout: sheet.shootout ? { ...sheet.shootout, shots: sheet.shootout.shots.map((shot) => ({ ...shot, cap: shot.side === "us" ? mapping.get(shot.cap)! : shot.cap, keeper: remap(shot.keeper) })) } : undefined,
+    shootout: sheet.shootout
+      ? {
+          ...sheet.shootout,
+          shots: sheet.shootout.shots.map((shot) => ({
+            ...shot,
+            cap: shot.side === "us" ? mapping.get(shot.cap)! : shot.cap,
+            keeper: remap(shot.keeper),
+          })),
+        }
+      : undefined,
     baseline: sheet.baseline
       .filter((b) => mapping.has(b.cap))
       .map((b) => ({ ...b, cap: mapping.get(b.cap)! })),

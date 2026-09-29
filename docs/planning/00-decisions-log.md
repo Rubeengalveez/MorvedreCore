@@ -1000,3 +1000,11 @@ El editor ofrece únicamente la convocatoria por defecto del equipo. Se retiran 
 ### 2026-09-29 · Ajustes de edición tras revisión móvil
 
 Los diálogos de convocatoria reutilizan la estructura y animación de las láminas del acta, con decisiones breves y contrastadas. Al cambiar la lista de un partido que difiere de la plantilla, se puede volver explícitamente a la convocatoria por defecto. El formulario «Editar partido» avisa al salir con cambios y ofrece guardar y volver, seguir editando o descartar. El estado del partido vuelve a compartir una única línea con la competición y la fecha.
+
+### 2026-09-29 · Sede única del partido
+
+El partido muestra un solo campo «Lugar» y un enlace a Maps; el campo separado «Piscina» deja de editarse y mostrarse. Los partidos de liga como local proponen Piscina Internúcleos y su ubicación en avenida Fausto Caruana s/n, Sagunto. La sede sigue siendo editable para casos excepcionales y los partidos ya guardados conservan su lugar.
+
+### 2026-09-29 · Corrección de convocatoria durante un acta
+
+Las jugadas del acta se asocian al ID estable del jugador; el gorro que figuraba al registrarlas se conserva como referencia. Cambiar gorros mantiene las estadísticas con cada jugador. Si un convocado era erróneo, el delegado lo reemplaza desde «Editar convocatoria» y confirma el traslado de todas sus acciones al jugador correcto; no se modela una sustitución real entre ambos. Un jugador sin acciones puede quitarse sin traslado. Los gorros 1 y 13 son siempre los porteros, independientemente del nombre. La edición se guarda primero en el móvil y se sincroniza junto con el acta al volver la conexión. La convocatoria por defecto del equipo no cambia.

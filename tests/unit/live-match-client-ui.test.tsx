@@ -77,6 +77,24 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("interfaz del acta", () => {
+  it("muestra el relevo con acciones claras y permite cancelar", () => {
+    const takeover = vi.fn();
+    mock.hook.mockReturnValue({ ...mock.hook(), writable: false, takeover });
+    render(<LiveMatchClient />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Tomar el relevo en este móvil" }));
+    const dialog = screen.getByRole("dialog", { name: "¿Tomar el relevo?" });
+    expect(within(dialog).getByText("Comprueba el otro móvil")).toBeInTheDocument();
+    expect(within(dialog).getByText(/Debe mostrar «Guardado»/)).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("dialog", { name: "¿Tomar el relevo?" })).toBeNull();
+    expect(takeover).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Tomar el relevo en este móvil" }));
+    fireEvent.click(screen.getByRole("button", { name: "Tomar el relevo" }));
+    expect(takeover).toHaveBeenCalledOnce();
+  });
+
   it("Atrás cierra el panel antes de ofrecer salir del acta", async () => {
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
@@ -87,6 +105,9 @@ describe("interfaz del acta", () => {
     );
     fireEvent.popState(window);
     expect(screen.getByRole("heading", { name: "¿Salir del acta?" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Salir" })).toHaveClass("bg-red-800");
+    fireEvent.click(screen.getByRole("button", { name: "Seguir anotando" }));
+    expect(screen.queryByRole("heading", { name: "¿Salir del acta?" })).toBeNull();
     expect(mock.change).not.toHaveBeenCalled();
   });
 
@@ -145,8 +166,8 @@ describe("interfaz del acta", () => {
     });
   });
   it.each([
-    ["Parada", "save"],
-    ["Fuera / palo", "out"],
+    ["Parada por el portero", "save"],
+    ["Sin gol: fuera, palo o sin tiro válido", "out"],
   ] as const)("guarda el destino %s de un penalti en un solo tiro", async (label, outcome) => {
     const penalty = event("penalty", { side: "them", cap: 4 });
     const current = record([penalty]);
@@ -301,6 +322,9 @@ describe("interfaz del acta", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Corregir jugadas" })[0]);
     fireEvent.click(screen.getByRole("button", { name: "Anular" }));
     expect(screen.getByRole("heading", { name: "Anular jugada" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: "Jugada seleccionada para anular" }),
+    ).toHaveTextContent("Cuarto 1");
     expect(screen.getByRole("button", { name: "Sí, anular esta jugada" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Atrás" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Cerrar" })).toBeInTheDocument();

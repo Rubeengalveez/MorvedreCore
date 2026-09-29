@@ -1,8 +1,10 @@
 import { sheetSchema, type LiveRecord } from "@/lib/domain/live-match";
+import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import { generateUuid } from "@/lib/utils/uuid";
 
 export type StoredMatch = LiveRecord & {
-  flight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number };
+  rosterEdit?: boolean;
+  flight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number; rosterEdit?: boolean };
   takeoverFlight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number };
 };
 const DB = "morvedre-live-acta-v1";
@@ -29,7 +31,7 @@ export async function readLocalMatch(id: string): Promise<StoredMatch | undefine
           return reject(
             new Error("El acta local no se puede leer. No borres los datos de este navegador."),
           );
-        resolve({ ...request.result, sheet: parsed.data });
+        resolve({ ...request.result, sheet: identifyLiveSheet(parsed.data) });
       };
       request.onerror = () => reject(request.error);
     });

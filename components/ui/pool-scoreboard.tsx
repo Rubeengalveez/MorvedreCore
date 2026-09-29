@@ -15,6 +15,7 @@ export interface PoolScoreboardProps {
   outcome?: PoolScoreboardOutcome | null;
   isHome?: boolean;
   period?: number | null;
+  liveLabel?: string | null;
   mvp?: {
     name: string;
     cap?: number | null;
@@ -52,6 +53,7 @@ export function PoolScoreboard({
   outcome = null,
   isHome,
   period = null,
+  liveLabel = null,
   mvp = null,
   className,
 }: PoolScoreboardProps) {
@@ -115,7 +117,7 @@ export function PoolScoreboard({
           showScore={showScore}
           align="left"
         />
-        <MatchCenter mode={mode} period={period} />
+        <MatchCenter mode={mode} period={period} liveLabel={liveLabel} />
         <TeamScore
           label={awayTeam.label}
           venue="Visitante"
@@ -179,11 +181,19 @@ function TeamScore({
   );
 }
 
-function MatchCenter({ mode, period }: { mode: PoolScoreboardMode; period: number | null }) {
+function MatchCenter({
+  mode,
+  period,
+  liveLabel,
+}: {
+  mode: PoolScoreboardMode;
+  period: number | null;
+  liveLabel: string | null;
+}) {
   if (mode === "live") {
     return (
       <div className="text-ink-600 col-start-2 flex h-[3.75rem] -translate-y-6 items-center justify-center self-end text-center text-xs font-bold whitespace-nowrap">
-        {period ?? 1}º periodo
+        {liveLabel ?? (period == null ? "En juego" : `${period}º periodo`)}
       </div>
     );
   }

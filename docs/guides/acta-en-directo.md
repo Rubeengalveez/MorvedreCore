@@ -29,6 +29,8 @@ Pulsa **Terminar cuarto**, revisa el marcador y confirma. Durante el descanso, t
 
 Cada cambio se guarda primero en este móvil. El estado indica si está pendiente de envío; la sincronización se reintenta al recuperar conexión. También se conservan las preguntas pendientes de asistencia o lanzamiento. Puedes recargar el acta ya preparada sin conexión. Desde la pantalla sin conexión aparece **Retomar acta del partido**.
 
+Si detectas un gorro o jugador equivocado, sal del acta y elige **Corregir convocatoria**. La pantalla funciona con los jugadores preparados en este móvil. Cambiar un gorro conserva las jugadas de esa persona. Si el jugador era erróneo y ya tiene acciones, elige quién ocupa su lugar: verás el resumen antes de guardar y todas sus acciones pasarán al jugador correcto. Los cambios quedan guardados en el móvil y se envían en una sola operación con el acta cuando vuelva la conexión. Los gorros 1 y 13 siguen siendo los porteros. Esta corrección no modifica la convocatoria por defecto de otros partidos.
+
 No borres los datos del navegador mientras haya jugadas pendientes. La aplicación impide cerrar sesión si todavía tiene datos por enviar. Si aparece un error de almacenamiento, la jugada no se da por guardada. Si otro dispositivo ha tomado el control, el primero deja de sincronizar. Un relevo cuya respuesta se pierda se recupera con el mismo identificador, sin repetir la operación.
 
 ## Consultar y compartir

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import type { Route } from "next";
 
 import { AdminPageShell } from "@/components/admin/admin-page";
@@ -54,10 +54,17 @@ export default async function MatchCallupPage({
   if (callupsResult.error || templateResult.error || sheetResult.error || statsResult.error) {
     throw new Error("No pudimos cargar la convocatoria. Inténtalo de nuevo.");
   }
+  if (sheetResult.data && match.status !== "played") {
+    const origin = from === "match" ? "match" : "admin";
+    redirect(`/acta/convocatoria?match=${id}&from=${origin}` as Route);
+  }
 
   const callups = callupsResult.data ?? [];
   const initial: CallupPick[] = callups
-    .filter((player) => player.status === "called" || player.status === "confirmed")
+    .filter(
+      (player) =>
+        (player.status === "called" || player.status === "confirmed") && player.cap_number !== null,
+    )
     .map((player) => ({ player_id: player.player_id, cap_number: player.cap_number }));
   const byId = new Map<string, CallupCandidate>(
     suggestions.map((player) => [

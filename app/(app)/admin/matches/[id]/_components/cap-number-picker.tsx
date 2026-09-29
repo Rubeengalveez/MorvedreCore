@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils/cn";
-import { Eyebrow } from "@/components/ui/eyebrow";
 
 export const MATCH_CAP_NUMBERS = Array.from({ length: 14 }, (_, index) => index + 1);
 
@@ -29,7 +28,7 @@ export function CapNumberButton({
         "focus-visible:ring-pool-blue relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg font-mono font-black tabular-nums transition-all focus-visible:ring-2 focus-visible:outline-none",
         value != null
           ? "bg-pool-deep text-paper shadow-elev-1 hover:bg-pool-blue active:scale-95"
-          : "border-warning/60 border-2 border-dashed bg-amber-50 text-amber-900 hover:bg-amber-100",
+          : "border-pool-blue bg-pool-ice text-pool-deep hover:bg-pool-foam border-2 border-dashed",
         open && "ring-pool-blue ring-2 ring-offset-2",
         disabled && "cursor-not-allowed opacity-50",
       )}
@@ -49,54 +48,56 @@ export function CapNumberButton({
 export function CapNumberOptions({
   value,
   occupied,
-  allowNone = true,
   onChange,
 }: {
   value: number | null;
   occupied: ReadonlySet<number>;
-  allowNone?: boolean;
   onChange: (value: number | null) => void;
 }) {
-  const available = MATCH_CAP_NUMBERS.filter((cap) => !occupied.has(cap) || cap === value);
-
   return (
-    <div className="border-ink-200 bg-paper-sunk/80 rounded-xl border p-3 shadow-inner">
-      <Eyebrow tone="default" className="mb-2 block">
-        Selecciona un gorro (1 al 14)
-      </Eyebrow>
+    <div className="border-pool-blue bg-pool-ice rounded-xl border-2 p-3">
+      <p className="text-pool-deep mb-3 text-sm font-extrabold">Elige un gorro</p>
       <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">
-        {available.map((cap) => (
+        {MATCH_CAP_NUMBERS.map((cap) => (
           <button
             key={cap}
             type="button"
             onClick={() => onChange(cap)}
             aria-pressed={value === cap}
-            className={cn(
-              "focus-visible:ring-pool-blue flex min-h-12 items-center justify-center rounded-lg font-mono text-base font-extrabold tabular-nums transition-all focus-visible:ring-2 focus-visible:outline-none",
+            aria-label={
               value === cap
-                ? "bg-pool-deep text-paper shadow-elev-2 scale-105"
-                : "border-ink-200 bg-paper-card text-pool-deep hover:bg-pool-foam hover:border-pool-blue/40 border",
+                ? `Gorro ${cap}, asignado a este jugador`
+                : occupied.has(cap)
+                  ? `Intercambiar con el gorro ${cap}`
+                  : `Asignar gorro ${cap}`
+            }
+            className={cn(
+              "focus-visible:ring-pool-deep flex min-h-12 items-center justify-center rounded-lg border-2 font-mono text-base font-extrabold tabular-nums transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
+              value === cap
+                ? "border-pool-deep bg-pool-deep text-paper shadow-elev-1"
+                : occupied.has(cap)
+                  ? "border-pool-blue bg-pool-blue text-paper hover:bg-pool-deep"
+                  : "border-pool-blue bg-paper-card text-pool-deep hover:bg-pool-foam",
             )}
           >
             {cap}
           </button>
         ))}
-      </div>
-      {allowNone ? (
         <button
           type="button"
           onClick={() => onChange(null)}
           aria-pressed={value === null}
+          aria-label={value === null ? "Sin gorro, seleccionado" : "Dejar sin gorro"}
           className={cn(
-            "focus-visible:ring-pool-blue mt-2 flex min-h-12 w-full items-center justify-center rounded-lg border text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+            "focus-visible:ring-pool-deep col-span-2 flex min-h-12 items-center justify-center rounded-lg border-2 px-2 text-sm font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none sm:col-span-7",
             value === null
               ? "border-pool-deep bg-pool-deep text-paper"
-              : "border-ink-200 bg-paper-card text-ink-600 hover:bg-paper-sunk",
+              : "border-pool-blue bg-paper-card text-pool-deep hover:bg-pool-foam",
           )}
         >
-          Dejar sin gorro
+          Sin gorro
         </button>
-      ) : null}
+      </div>
     </div>
   );
 }

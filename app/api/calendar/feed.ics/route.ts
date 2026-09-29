@@ -111,7 +111,6 @@ function matchToVEvent(m: CalendarMatch, teamLabel: string, teamColor: string): 
     [
       `Competición: ${m.competition_type}`,
       m.location ? `Sede: ${m.location}` : "",
-      m.pool_name ? `Piscina: ${m.pool_name}` : "",
       m.notes ? `Notas: ${m.notes}` : "",
     ]
       .filter(Boolean)

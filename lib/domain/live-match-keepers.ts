@@ -21,6 +21,7 @@ export function selectMatchKeeper(
   cap: number,
   mode: "start" | "change" | "correct",
 ): LiveSheet {
+  if (cap !== 1 && cap !== 13) throw new Error("Solo los gorros 1 y 13 pueden ser porteros.");
   if (sheet.phase === "ready" && mode !== "start") return { ...sheet, keeper: cap };
   const period = mode === "start" && sheet.phase === "break" ? sheet.period + 1 : sheet.period;
   const stints = [...(sheet.keeperStints ?? [])];

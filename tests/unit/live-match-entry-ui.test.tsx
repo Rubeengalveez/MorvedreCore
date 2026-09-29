@@ -55,10 +55,8 @@ it("desasignar gorros requiere confirmación y avisa si se sale sin guardar", ()
     />,
   );
   fireEvent.click(screen.getByRole("button", { name: "Desasignar todos los gorros" }));
-  expect(
-    screen.getByRole("heading", { name: "¿Desasignar todos los gorros?" }),
-  ).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Sí, desasignar gorros" }));
+  expect(screen.getByRole("heading", { name: "¿Quitar todos los gorros?" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Quitar gorros" }));
   expect(screen.getByRole("button", { name: "Guardar gorros y abrir acta" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Volver al partido" }));
   expect(screen.getByRole("heading", { name: "Tienes cambios sin guardar" })).toBeInTheDocument();
@@ -82,11 +80,16 @@ it("permite elegir un máximo de 14 cuando una convocatoria antigua tiene más j
   expect(screen.getByRole("checkbox", { name: "Elegir a Jugador 15" })).toBeEnabled();
 });
 it("muestra solo el acta en directo", () => {
-  render(<DelegateMatchEntry matchId={id} started={false} finished={false} />);
-  expect(screen.getByRole("link", { name: /Abrir acta en directo/ })).toHaveAttribute(
+  const { rerender } = render(<DelegateMatchEntry matchId={id} started={false} finished={false} />);
+  expect(screen.getByRole("link", { name: "Abrir acta" })).toHaveAttribute(
     "href",
     `/acta?match=${id}`,
   );
+  rerender(<DelegateMatchEntry matchId={id} started finished={false} />);
+  expect(screen.getByText("En curso")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Abrir acta" })).toBeVisible();
+  rerender(<DelegateMatchEntry matchId={id} started finished />);
+  expect(screen.getByRole("link", { name: "Ver acta" })).toBeVisible();
   expect(screen.queryByRole("link", { name: /Solo goles y expulsiones/ })).toBeNull();
 });
 it("solo una asignación de delegado del equipo concede acceso", () => {

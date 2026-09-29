@@ -70,14 +70,14 @@ describe("cuartos de portería", () => {
     expect(keeperQuarters(s, 1)).toEqual([1]);
     expect(sheetSchema.safeParse(s).success).toBe(true);
   });
-  it("conserva la identidad del portero al cambiar los gorros de la convocatoria", () => {
+  it("conserva el historial del jugador y deja el portero actual en el gorro 1 o 13", () => {
     const first = selectMatchKeeper(sheet(), 1, "start");
     const remapped = reconcileLiveRoster(
       first,
       players.map((p) => (p.cap === 1 ? { ...p, cap: 8 } : p)),
     );
     expect(keeperQuarters(remapped, 8)).toEqual([1]);
-    expect(remapped.keeper).toBe(8);
+    expect(remapped.keeper).toBe(13);
   });
   it("rechaza cuartos futuros y porteros ajenos a la convocatoria", () => {
     expect(

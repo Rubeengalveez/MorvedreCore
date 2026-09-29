@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { ArrowLeft, ClipboardList, AlertCircle, Check, Loader2, Unlink2 } from "lucide-react";
 import { prepareLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
-import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import { useActaBackGuard } from "./use-acta-back-guard";
 
 const subscribeToLocation = (notify: () => void) => {
@@ -85,6 +85,7 @@ export function LiveMatchEntryState({
     selectedCaps.length > 0 &&
     selectedCaps.length <= 14 &&
     selectedCaps.every((cap) => cap > 0 && cap <= 14) &&
+    selectedCaps.some((cap) => cap === 1 || cap === 13) &&
     new Set(selectedCaps).size === selectedCaps.length;
   async function save(target?: string) {
     if (!preparation || saving) return;
@@ -113,7 +114,7 @@ export function LiveMatchEntryState({
   return (
     <main
       id="main-content"
-      className={`bg-paper text-pool-deep min-h-dvh ${preparation ? "pb-40" : "pb-[max(1rem,env(safe-area-inset-bottom))]"}`}
+      className={`text-pool-deep min-h-dvh ${preparation ? "bg-paper pb-40" : error ? "bg-paper pb-[max(1rem,env(safe-area-inset-bottom))]" : "bg-pool-ice flex flex-col pb-[max(1rem,env(safe-area-inset-bottom))]"}`}
     >
       <header className="bg-pool-deep pt-[env(safe-area-inset-top)] text-white">
         <div className="mx-auto max-w-lg px-4 pb-6">
@@ -134,7 +135,9 @@ export function LiveMatchEntryState({
           </div>
         </div>
       </header>
-      <div className="mx-auto max-w-lg space-y-5 px-4 py-6">
+      <div
+        className={`mx-auto w-full max-w-lg ${preparation || error ? "space-y-5 px-4 py-6" : "flex flex-1 items-center justify-center px-5 py-8"}`}
+      >
         {preparation ? (
           <>
             <div>
@@ -144,12 +147,16 @@ export function LiveMatchEntryState({
               <h2 className="mt-2 text-2xl font-bold">
                 {preparation.reason === "too_many"
                   ? "Elige los 14 que juegan"
-                  : "Revisa los gorros"}
+                  : preparation.reason === "keeper"
+                    ? "Asigna un portero"
+                    : "Revisa los gorros"}
               </h2>
               <p className="mt-2 text-base leading-relaxed">
                 {preparation.reason === "too_many"
                   ? `Hay ${preparation.players.length} jugadores en la convocatoria. Marca un máximo de 14 y revisa que sus gorros no se repitan.`
-                  : `Tus ${preparation.players.length} jugadores ya están convocados. Solo falta que cada uno tenga un número diferente.`}
+                  : preparation.reason === "keeper"
+                    ? "Para abrir el acta, uno de los jugadores debe llevar el gorro 1 o 13. Ese gorro será el portero, independientemente del nombre."
+                    : `Tus ${preparation.players.length} jugadores ya están convocados. Solo falta que cada uno tenga un número diferente.`}
               </p>
               {preparation.reason === "too_many" && (
                 <p
@@ -267,9 +274,12 @@ export function LiveMatchEntryState({
                 <p className="mb-2 text-sm text-slate-600" role="status">
                   {validCaps
                     ? `${selectedCaps.length} jugadores listos para abrir el acta.`
-                    : selectedIds.size > 14
-                      ? "Solo pueden jugar 14 personas."
-                      : "Elige al menos un jugador y corrige los gorros señalados."}
+                    : selectedCaps.length > 0 &&
+                        !selectedCaps.some((cap) => cap === 1 || cap === 13)
+                      ? "Asigna el gorro 1 o 13 a un portero."
+                      : selectedIds.size > 14
+                        ? "Solo pueden jugar 14 personas."
+                        : "Elige al menos un jugador y corrige los gorros señalados."}
                 </p>
                 <button
                   onClick={() => void save()}
@@ -301,59 +311,81 @@ export function LiveMatchEntryState({
             </button>
           </>
         ) : (
-          <div role="status" aria-live="polite">
-            <div className="mb-4 flex items-center gap-3">
-              <Loader2 size={24} className="motion-safe:animate-spin" aria-hidden="true" />
-              <h2 className="text-xl font-bold">Preparando tu acta…</h2>
-            </div>
-            <p className="text-base text-slate-600">
-              Estamos recuperando la convocatoria y las jugadas guardadas.
-            </p>
+          <div role="status" aria-live="polite" aria-busy="true" className="text-center">
             <div
               aria-hidden="true"
-              className="mt-6 space-y-3 rounded-xl border border-slate-200 bg-white p-4 motion-safe:animate-pulse"
+              className="bg-pool-deep shadow-elev-2 relative mx-auto mb-7 grid h-20 w-20 place-items-center rounded-2xl text-white"
             >
-              <div className="h-14 rounded-lg bg-blue-100" />
-              {[1, 2, 3].map((n) => (
-                <div key={n} className="flex gap-3">
-                  <div className="h-12 w-12 rounded-lg bg-slate-200" />
-                  <div className="h-12 flex-1 rounded-lg bg-slate-100" />
-                </div>
-              ))}
+              <ClipboardList className="h-9 w-9" />
+              <span className="bg-ball-gold text-pool-deep ring-pool-ice absolute -right-2 -bottom-2 grid h-9 w-9 place-items-center rounded-full ring-4">
+                <Loader2 className="h-5 w-5 motion-safe:animate-spin" />
+              </span>
             </div>
+            <p className="text-pool-blue text-xs font-extrabold tracking-widest uppercase">
+              Acta en directo
+            </p>
+            <h2 className="font-display mt-2 text-2xl font-extrabold">Preparando tu acta…</h2>
+            <p className="text-ink-700 mx-auto mt-3 max-w-xs text-base leading-relaxed">
+              Recuperando la convocatoria y las jugadas guardadas.
+            </p>
           </div>
         )}
       </div>
-      <ConfirmActionSheet
+      <ActaGuardSheet
         open={clearCapsOpen}
         onOpenChange={setClearCapsOpen}
-        title="¿Desasignar todos los gorros?"
-        description="Los jugadores seguirán elegidos, pero tendrás que asignarles un gorro antes de abrir el acta."
-        confirmLabel="Sí, desasignar gorros"
-        cancelLabel="Mantener gorros"
-        variant="warning"
-        onConfirm={() => {
-          setCaps((current) =>
-            current.map((cap, index) =>
-              selectedIds.has(preparation?.players[index]?.id ?? "") ? 0 : cap,
-            ),
-          );
-          setClearCapsOpen(false);
-        }}
+        context="Preparar acta"
+        title="¿Quitar todos los gorros?"
+        summary="Los jugadores siguen elegidos"
+        description="Solo se borran los números. Asígnalos de nuevo antes de abrir el acta."
+        icon="warning"
+        actions={[
+          {
+            label: "Quitar gorros",
+            tone: "danger",
+            onClick: () => {
+              setCaps((current) =>
+                current.map((cap, index) =>
+                  selectedIds.has(preparation?.players[index]?.id ?? "") ? 0 : cap,
+                ),
+              );
+              setClearCapsOpen(false);
+            },
+          },
+          { label: "Mantener gorros", tone: "primary", onClick: () => setClearCapsOpen(false) },
+        ]}
       />
-      <ConfirmActionSheet
+      <ActaGuardSheet
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
+        context="Preparar acta"
         title="Tienes cambios sin guardar"
-        description="Puedes guardar los gorros antes de salir o volver a editarlos."
-        confirmLabel={validCaps ? "Guardar y salir" : "Salir sin guardar"}
-        secondaryLabel={validCaps ? "Salir sin guardar" : undefined}
-        cancelLabel="Seguir editando"
-        variant="warning"
-        isPending={saving}
+        summary={validCaps ? "Puedes guardar la convocatoria" : "Faltan gorros por asignar"}
+        description={
+          validCaps
+            ? "Guarda los gorros antes de volver al partido."
+            : "Completa los gorros para guardarlos o descarta los cambios."
+        }
+        icon="warning"
+        pending={saving}
         error={saveError}
-        onConfirm={() => (validCaps ? void save(back) : exitWithoutSaving())}
-        onSecondary={validCaps ? exitWithoutSaving : undefined}
+        actions={[
+          ...(validCaps
+            ? [
+                {
+                  label: "Guardar y salir",
+                  tone: "primary" as const,
+                  onClick: () => void save(back),
+                },
+              ]
+            : []),
+          {
+            label: "Seguir editando",
+            tone: validCaps ? ("secondary" as const) : ("primary" as const),
+            onClick: () => setLeaveOpen(false),
+          },
+          { label: "Salir sin guardar", tone: "danger", onClick: exitWithoutSaving },
+        ]}
       />
     </main>
   );

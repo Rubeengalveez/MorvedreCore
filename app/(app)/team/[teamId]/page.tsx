@@ -344,7 +344,7 @@ function MatchLedgerRow({
   const time = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(
     date,
   );
-  const location = match.location ?? match.pool_name;
+  const location = match.location;
   const hasMaps = isSafeMapsUrl(match.maps_url);
   const locationText = location ?? (match.is_home ? "Partido en casa" : "Partido como visitante");
 

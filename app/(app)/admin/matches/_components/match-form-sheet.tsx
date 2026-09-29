@@ -2,7 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarPlus, ChevronDown, Loader2 } from "lucide-react";
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/sheet";
 import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
 import { mapsUrlInputSchema } from "@/lib/domain/maps";
+import { HOME_LEAGUE_LOCATION, HOME_LEAGUE_MAPS_URL } from "@/lib/domain/match-venue";
 import { createMatch, type Team } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
@@ -48,7 +49,6 @@ const formSchema = z.object({
   is_home: z.boolean(),
   location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
   maps_url: mapsUrlInputSchema.optional(),
-  pool_name: z.string().trim().max(100, "Máximo 100 caracteres.").optional(),
   scheduled_at_local: z.string().min(1, "Fecha y hora obligatorias."),
   notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
 });
@@ -79,7 +79,6 @@ async function submitAction(_prev: ActionState, formData: FormData): Promise<Act
       is_home: formData.get("is_home") === "true",
       location: String(formData.get("location") ?? "") || undefined,
       maps_url: String(formData.get("maps_url") ?? "") || undefined,
-      pool_name: String(formData.get("pool_name") ?? "") || undefined,
       scheduled_at: dt.toISOString(),
       notes: String(formData.get("notes") ?? "") || undefined,
     });
@@ -115,8 +114,8 @@ export function MatchFormSheet({
   const [open, setOpen] = useState(false);
   const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
   const [isSaving, startTransition] = useTransition();
+  const previousVenueRef = useRef("true:league");
 
-  const defaultTeam = defaultTeamId ? (teams.find((t) => t.id === defaultTeamId) ?? null) : null;
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -124,13 +123,34 @@ export function MatchFormSheet({
       opponent: "",
       competition_type: "league",
       is_home: true,
-      location: defaultTeam?.home_pool ?? "",
-      maps_url: "",
-      pool_name: "",
+      location: HOME_LEAGUE_LOCATION,
+      maps_url: HOME_LEAGUE_MAPS_URL,
       scheduled_at_local: formatDateTimeLocal(new Date()),
       notes: "",
     },
   });
+
+  const isHome = form.watch("is_home");
+  const competition = form.watch("competition_type");
+
+  useEffect(() => {
+    const venue = `${isHome}:${competition}`;
+    const changed = previousVenueRef.current !== venue;
+    previousVenueRef.current = venue;
+    if (isHome && competition === "league") {
+      const location = form.getValues("location");
+      if (changed || !location) form.setValue("location", HOME_LEAGUE_LOCATION);
+      if (
+        changed ||
+        ((!location || location === HOME_LEAGUE_LOCATION) && !form.getValues("maps_url"))
+      ) {
+        form.setValue("maps_url", HOME_LEAGUE_MAPS_URL);
+      }
+    } else {
+      if (form.getValues("location") === HOME_LEAGUE_LOCATION) form.setValue("location", "");
+      if (form.getValues("maps_url") === HOME_LEAGUE_MAPS_URL) form.setValue("maps_url", "");
+    }
+  }, [isHome, competition, form]);
 
   useEffect(() => {
     if (state?.ok) {
@@ -151,9 +171,6 @@ export function MatchFormSheet({
     }
     if (values.maps_url && values.maps_url.trim() !== "") {
       fd.append("maps_url", values.maps_url);
-    }
-    if (values.pool_name && values.pool_name.trim() !== "") {
-      fd.append("pool_name", values.pool_name);
     }
     fd.append("scheduled_at_local", values.scheduled_at_local);
     if (values.notes && values.notes.trim() !== "") {
@@ -209,7 +226,11 @@ export function MatchFormSheet({
                             onChange={(event) => {
                               field.onChange(event);
                               const team = teams.find((item) => item.id === event.target.value);
-                              if (form.getValues("is_home") && team?.home_pool) {
+                              if (
+                                form.getValues("is_home") &&
+                                form.getValues("competition_type") !== "league" &&
+                                team?.home_pool
+                              ) {
                                 form.setValue("location", team.home_pool);
                               }
                             }}
@@ -269,11 +290,15 @@ export function MatchFormSheet({
                                 const team = teams.find(
                                   (item) => item.id === form.getValues("team_id"),
                                 );
-                                if (team?.home_pool) form.setValue("location", team.home_pool);
+                                if (
+                                  form.getValues("competition_type") !== "league" &&
+                                  team?.home_pool
+                                )
+                                  form.setValue("location", team.home_pool);
                               }}
                               className={`focus-visible:ring-pool-blue min-h-12 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none ${field.value ? "bg-pool-deep text-paper" : "text-ink-600"}`}
                             >
-                              En casa
+                              Local
                             </button>
                             <button
                               type="button"
@@ -281,7 +306,7 @@ export function MatchFormSheet({
                               onClick={() => field.onChange(false)}
                               className={`focus-visible:ring-pool-blue min-h-12 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none ${!field.value ? "bg-pool-deep text-paper" : "text-ink-600"}`}
                             >
-                              Fuera
+                              Visitante
                             </button>
                           </div>
                         </FormControl>
@@ -356,49 +381,26 @@ export function MatchFormSheet({
                   />
                 </summary>
                 <div className="space-y-4 p-4 pt-0">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Lugar</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Piscina del Puerto"
-                              value={field.value ?? ""}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              name={field.name}
-                              ref={field.ref}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="pool_name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Piscina</FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Piscina municipal"
-                              value={field.value ?? ""}
-                              onChange={field.onChange}
-                              onBlur={field.onBlur}
-                              name={field.name}
-                              ref={field.ref}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
+                  <FormField
+                    control={form.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Lugar</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="Piscina del Puerto"
+                            value={field.value ?? ""}
+                            onChange={field.onChange}
+                            onBlur={field.onBlur}
+                            name={field.name}
+                            ref={field.ref}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   <FormField
                     control={form.control}

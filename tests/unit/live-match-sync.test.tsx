@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor, cleanup } from "@testing-library/react";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { StoredMatch } from "@/lib/pwa/live-match-store";
+import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), load: vi.fn(), sync: vi.fn() }));
 vi.mock("@/lib/pwa/live-match-store", () => ({
@@ -225,9 +226,28 @@ it("upgrades a version 1 draft without losing historical outcomes or baselines",
     });
   });
   expect(stored.sheet).toMatchObject({
-    version: 2,
+    version: 3,
     baseline: [{ cap: 1, goals: 3, exclusions: 2 }],
     baselineThem: 4,
   });
-  expect(stored.sheet.events).toContainEqual(historicalShot);
+  expect(stored.sheet.events[0]).toMatchObject(historicalShot);
+  expect(stored.sheet.events[0].playerId).toBe(record.sheet.players[0].id);
+});
+
+it("envía una corrección de convocatoria guardada sin conexión como una sola mutación", async () => {
+  stored = {
+    ...structuredClone(record),
+    sheet: identifyLiveSheet(record.sheet),
+    rosterEdit: true,
+    dirty: true,
+  };
+  mocks.load.mockResolvedValue({ ok: true, data: structuredClone(record) });
+  const { result } = renderHook(() => useLiveMatch());
+  await waitFor(() =>
+    expect(mocks.sync).toHaveBeenCalledWith(
+      expect.objectContaining({ rosterEdit: true, sheet: expect.objectContaining({ version: 3 }) }),
+    ),
+  );
+  await waitFor(() => expect(result.current.record?.dirty).toBe(false));
+  expect(stored.rosterEdit).toBe(false);
 });

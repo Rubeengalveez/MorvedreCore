@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
-import { ActaDecisionSheet } from "@/components/ui/acta-decision-sheet";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import { Button } from "@/components/ui/button";
 import { useActaBackGuard } from "@/components/matches/use-acta-back-guard";
 import {
@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
 import { mapsUrlInputSchema } from "@/lib/domain/maps";
+import { HOME_LEAGUE_LOCATION, HOME_LEAGUE_MAPS_URL } from "@/lib/domain/match-venue";
 import { updateMatch, type MatchRow } from "@/server/actions/admin";
 
 const COMPETITION_OPTIONS = [
@@ -49,7 +50,6 @@ const formSchema = z.object({
   is_home: z.boolean(),
   location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
   maps_url: mapsUrlInputSchema.optional(),
-  pool_name: z.string().trim().max(100, "Máximo 100 caracteres.").optional(),
   scheduled_at_local: z.string().min(1, "Fecha y hora obligatorias."),
   notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
 });
@@ -58,7 +58,7 @@ type FormValues = z.infer<typeof formSchema>;
 
 function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
   return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
+    <Button type="submit" size="lg" variant="deep" className="w-full" disabled={pending}>
       {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
       {pending ? "Guardando..." : label}
     </Button>
@@ -71,8 +71,8 @@ function VenueChoice({ value, onChange }: { value: boolean; onChange: (v: boolea
       <legend className="text-pool-deep mb-2 text-sm font-bold">¿Dónde se juega?</legend>
       <div className="grid grid-cols-2 gap-2">
         {[
-          { home: true, label: "En casa" },
-          { home: false, label: "Fuera" },
+          { home: true, label: "Local" },
+          { home: false, label: "Visitante" },
         ].map((option) => (
           <label key={option.label} className="cursor-pointer">
             <input
@@ -107,6 +107,7 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const skipUnloadRef = useRef(false);
+  const previousVenueRef = useRef(`${match.is_home}:${match.competition_type}`);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -117,11 +118,35 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
       is_home: match.is_home,
       location: match.location ?? "",
       maps_url: match.maps_url ?? "",
-      pool_name: match.pool_name ?? "",
       scheduled_at_local: formatDateTimeLocal(new Date(match.scheduled_at)),
       notes: match.notes ?? "",
     },
   });
+
+  const isHome = form.watch("is_home");
+  const competition = form.watch("competition_type");
+
+  useEffect(() => {
+    const venue = `${isHome}:${competition}`;
+    const changed = previousVenueRef.current !== venue;
+    previousVenueRef.current = venue;
+    if (isHome && competition === "league") {
+      const location = form.getValues("location");
+      if (changed || !location)
+        form.setValue("location", HOME_LEAGUE_LOCATION, { shouldDirty: true });
+      if (
+        changed ||
+        ((!location || location === HOME_LEAGUE_LOCATION) && !form.getValues("maps_url"))
+      ) {
+        form.setValue("maps_url", HOME_LEAGUE_MAPS_URL, { shouldDirty: true });
+      }
+    } else {
+      if (form.getValues("location") === HOME_LEAGUE_LOCATION)
+        form.setValue("location", "", { shouldDirty: true });
+      if (form.getValues("maps_url") === HOME_LEAGUE_MAPS_URL)
+        form.setValue("maps_url", "", { shouldDirty: true });
+    }
+  }, [isHome, competition, form]);
 
   const dirty = form.formState.isDirty;
   const leave = useActaBackGuard(() => {
@@ -163,7 +188,7 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
           is_home: values.is_home,
           location: values.location && values.location.trim() !== "" ? values.location : null,
           maps_url: values.maps_url && values.maps_url.trim() !== "" ? values.maps_url : null,
-          pool_name: values.pool_name && values.pool_name.trim() !== "" ? values.pool_name : null,
+          pool_name: null,
           scheduled_at: dt.toISOString(),
           notes: values.notes && values.notes.trim() !== "" ? values.notes : null,
         });
@@ -339,49 +364,26 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
               )}
             />
 
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Lugar</FormLabel>
-                    <FormControl>
-                      <Input
-                        className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="pool_name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Piscina</FormLabel>
-                    <FormControl>
-                      <Input
-                        className="border-pool-blue/70 min-h-14 rounded-xl border-2"
-                        value={field.value ?? ""}
-                        onChange={field.onChange}
-                        onBlur={field.onBlur}
-                        name={field.name}
-                        ref={field.ref}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="location"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Lugar</FormLabel>
+                  <FormControl>
+                    <Input
+                      className="border-pool-blue/70 min-h-14 rounded-xl border-2"
+                      value={field.value ?? ""}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}
@@ -451,12 +453,14 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
           <SubmitButton label="Guardar cambios" pending={pending} />
         </form>
       </Form>
-      <ActaDecisionSheet
+      <ActaGuardSheet
         open={leaveOpen}
         onOpenChange={setLeaveOpen}
         title="Cambios sin guardar"
-        description="Guarda antes de salir o descarta los cambios."
+        summary="Has cambiado los datos del partido"
+        description="Guárdalos ahora o sal sin aplicar los cambios."
         context="Editar partido"
+        icon="warning"
         pending={pending}
         error={error}
         actions={[
@@ -472,7 +476,7 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
                 },
               )(),
           },
-          { label: "Seguir editando", onClick: () => setLeaveOpen(false) },
+          { label: "Seguir editando", tone: "secondary", onClick: () => setLeaveOpen(false) },
           {
             label: "Salir sin guardar",
             tone: "danger",

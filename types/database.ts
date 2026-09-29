@@ -68,6 +68,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      live_match_roster_changes: {
+        Row: {
+          id: number;
+          match_id: string;
+          actor_id: string;
+          revision: number;
+          before_players: Json;
+          after_players: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          match_id: string;
+          actor_id: string;
+          revision: number;
+          before_players: Json;
+          after_players: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          match_id?: string;
+          actor_id?: string;
+          revision?: number;
+          before_players?: Json;
+          after_players?: Json;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "live_match_roster_changes_match_id_fkey";
+            columns: ["match_id"];
+            isOneToOne: false;
+            referencedRelation: "matches";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "live_match_roster_changes_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       access_request_children: {
         Row: {
           child_profile_id: string;
@@ -2648,6 +2693,7 @@ export type Database = {
           p_mutation: string;
           p_document: Json;
           p_takeover?: boolean;
+          p_roster_edit?: boolean;
         };
         Returns: number;
       };

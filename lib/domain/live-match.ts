@@ -37,9 +37,13 @@ export const eventSchema = z.object({
   id: z.string().uuid(),
   side: z.enum(["us", "them"]),
   cap: z.number().int().min(1).max(99).nullable(),
+  playerId: z.string().uuid().nullable().optional(),
+  capAtEvent: z.number().int().min(1).max(99).nullable().optional(),
   kind: z.enum(Object.keys(actionLabels) as [ActionKind, ...ActionKind[]]),
   period: z.number().int().min(1).max(8),
   keeper: z.number().int().min(1).max(99).nullable(),
+  keeperId: z.string().uuid().nullable().optional(),
+  keeperCapAtEvent: z.number().int().min(1).max(99).nullable().optional(),
   deleted: z.boolean().default(false),
   related_event_id: z.string().uuid().nullable().optional(),
   origin: z.enum(["manual", "goal_flow", "penalty_flow"]).optional(),
@@ -63,7 +67,11 @@ export const shootoutSchema = z.object({
         id: z.string().uuid(),
         side: z.enum(["us", "them"]),
         cap: z.number().int().min(1).max(99),
+        playerId: z.string().uuid().nullable().optional(),
+        capAtEvent: z.number().int().min(1).max(99).optional(),
         keeper: z.number().int().min(1).max(99).nullable(),
+        keeperId: z.string().uuid().nullable().optional(),
+        keeperCapAtEvent: z.number().int().min(1).max(99).nullable().optional(),
         outcome: z.enum(["goal", "save", "out", "post"]),
       }),
     )
@@ -104,7 +112,7 @@ export const shootoutOutcomeLabels = {
 
 export const sheetSchema = z
   .object({
-    version: z.union([z.literal(1), z.literal(2)]),
+    version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
     players: z.array(playerSchema).min(1).max(30),
     opponentCaps: z.array(z.number().int().min(1).max(99)).min(1).max(30),
     periods: z.number().int().min(1).max(8),
@@ -117,6 +125,8 @@ export const sheetSchema = z
         z.object({
           period: z.number().int().min(1).max(8),
           cap: z.number().int().min(1).max(99),
+          playerId: z.string().uuid().optional(),
+          capAtEvent: z.number().int().min(1).max(99).optional(),
           afterEventId: z.string().max(100).nullable(),
         }),
       )
@@ -128,6 +138,7 @@ export const sheetSchema = z
       .array(
         z.object({
           cap: z.number().int().min(1).max(99),
+          playerId: z.string().uuid().optional(),
           goals: z.number().int().min(0).max(99),
           exclusions: z.number().int().min(0).max(3),
         }),
@@ -139,6 +150,8 @@ export const sheetSchema = z
     const fail = (message: string) => ctx.addIssue({ code: "custom", message });
     if (s.pending && s.phase !== "playing")
       fail("Completa la jugada pendiente antes de cambiar de fase.");
+    if (s.version === 3 && s.keeper !== null && s.keeper !== 1 && s.keeper !== 13)
+      fail("El portero en juego debe llevar el gorro 1 o 13.");
     if (s.phase === "shootout" && !s.shootout) fail("Falta preparar la tanda.");
     if (s.shootout) {
       if (
@@ -165,6 +178,18 @@ export const sheetSchema = z
           fail("El lanzador no está en el acta.");
         if (shot.side === "them" && !s.players.some((p) => p.cap === shot.keeper))
           fail("Selecciona el portero de la tanda.");
+        if (
+          s.version === 3 &&
+          shot.side === "us" &&
+          shot.playerId !== s.players.find((player) => player.cap === shot.cap)?.id
+        )
+          fail("El lanzador de la tanda no corresponde a su gorro.");
+        if (
+          s.version === 3 &&
+          shot.keeper !== null &&
+          shot.keeperId !== s.players.find((player) => player.cap === shot.keeper)?.id
+        )
+          fail("El portero de la tanda no corresponde a su gorro.");
         ids.add(shot.id);
         previous.shots.push(shot);
       }
@@ -189,6 +214,13 @@ export const sheetSchema = z
     ) {
       fail("Los totales previos no son válidos.");
     }
+    if (
+      s.version === 3 &&
+      s.baseline.some(
+        (entry) => entry.playerId !== s.players.find((player) => player.cap === entry.cap)?.id,
+      )
+    )
+      fail("Los totales previos no corresponden al jugador.");
     if (s.keeper !== null && !s.players.some((player) => player.cap === s.keeper)) {
       fail("El portero no está convocado.");
     }
@@ -203,6 +235,13 @@ export const sheetSchema = z
     ) {
       fail("Revisa los cuartos registrados de portería.");
     }
+    if (
+      s.version === 3 &&
+      s.keeperStints?.some(
+        (stint) => stint.playerId !== s.players.find((player) => player.cap === stint.cap)?.id,
+      )
+    )
+      fail("El historial de portería no corresponde al jugador.");
 
     for (const event of s.events) {
       const bench = event.kind === "timeout" || event.kind.startsWith("coach_");
@@ -216,6 +255,21 @@ export const sheetSchema = z
           : s.opponentCaps.includes(event.cap!))
       ) {
         fail("El gorro no está en el acta.");
+      }
+      if (
+        s.version === 3 &&
+        event.side === "us" &&
+        !bench &&
+        event.playerId !== s.players.find((player) => player.cap === event.cap)?.id
+      ) {
+        fail("La jugada no corresponde al jugador de ese gorro.");
+      }
+      if (
+        s.version === 3 &&
+        event.keeper !== null &&
+        event.keeperId !== s.players.find((player) => player.cap === event.keeper)?.id
+      ) {
+        fail("El portero de la jugada no corresponde a su gorro.");
       }
       if (
         event.side === "them" &&
@@ -334,6 +388,14 @@ export interface LiveRecord {
   device: string;
   sheet: LiveSheet;
   dirty: boolean;
+  callupCandidates?: Array<{
+    player_id: string;
+    full_name: string;
+    cap_number: number | null;
+    has_conflict: boolean;
+    is_current_team: boolean;
+  }>;
+  callupTemplate?: Array<{ player_id: string; cap_number: number | null }>;
 }
 
 export const isGoal = (kind: ActionKind) =>
@@ -351,8 +413,19 @@ export function activeEvents(sheet: LiveSheet): MatchEvent[] {
 }
 
 export function playerTotals(sheet: LiveSheet, side: Side, cap: number) {
-  const events = activeEvents(sheet).filter((event) => event.side === side && event.cap === cap);
-  const base = side === "us" ? sheet.baseline.find((entry) => entry.cap === cap) : undefined;
+  const playerId =
+    side === "us" ? sheet.players.find((player) => player.cap === cap)?.id : undefined;
+  const events = activeEvents(sheet).filter(
+    (event) =>
+      event.side === side &&
+      (side === "us" && event.playerId ? event.playerId === playerId : event.cap === cap),
+  );
+  const base =
+    side === "us"
+      ? sheet.baseline.find((entry) =>
+          entry.playerId ? entry.playerId === playerId : entry.cap === cap,
+        )
+      : undefined;
   const goals = events.filter((event) => isGoal(event.kind)).length + (base?.goals ?? 0);
   const exclusions =
     events.filter((event) => event.kind === "exclusion" || event.kind === "penalty").length +
@@ -361,7 +434,10 @@ export function playerTotals(sheet: LiveSheet, side: Side, cap: number) {
     (event) => event.kind === "save" || event.kind === "penalty_save",
   ).length;
   const conceded = activeEvents(sheet).filter(
-    (event) => event.side === "them" && isGoal(event.kind) && event.keeper === cap,
+    (event) =>
+      event.side === "them" &&
+      isGoal(event.kind) &&
+      (event.keeperId ? event.keeperId === playerId : event.keeper === cap),
   ).length;
   const typedGoals = events.filter((event) => isGoal(event.kind));
   const missedShots = events.filter((event) => isMissedShot(event.kind));
@@ -441,7 +517,11 @@ export function percentage(numerator: number, denominator: number): number | nul
 
 export function describeEvent(event: MatchEvent, sheet: LiveSheet) {
   const player =
-    event.side === "us" ? sheet.players.find((entry) => entry.cap === event.cap)?.name : "";
+    event.side === "us"
+      ? sheet.players.find((entry) =>
+          event.playerId ? entry.id === event.playerId : entry.cap === event.cap,
+        )?.name
+      : "";
   const label =
     event.kind === "goal" && event.origin === "penalty_flow"
       ? "Gol de penalti"

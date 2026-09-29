@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { loadLiveMatch, syncLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
 import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
-import { sheetSchema, type LiveSheet } from "@/lib/domain/live-match";
+import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
+import type { LiveSheet } from "@/lib/domain/live-match";
 import {
   liveDevice,
   readLocalMatch,
@@ -50,6 +51,7 @@ export function useLiveMatch() {
               sheet: latest.sheet,
               mutation: latest.mutation,
               revision: latest.revision,
+              rosterEdit: latest.rosterEdit,
             },
           }));
           r = current.current!;
@@ -64,15 +66,18 @@ export function useLiveMatch() {
           sheet: saved.sheet
             ? latest.mutation === flight.mutation
               ? saved.sheet
-              : reconcileLiveRoster(
-                  latest.sheet,
-                  saved.sheet.players.filter((p) => !p.retired),
-                )
+              : latest.rosterEdit
+                ? latest.sheet
+                : reconcileLiveRoster(
+                    latest.sheet,
+                    saved.sheet.players.filter((p) => !p.retired),
+                  )
             : latest.sheet,
           revision: saved.revision,
           owner: saved.owner,
           device: liveDevice(),
           dirty: latest.mutation !== flight.mutation,
+          rosterEdit: latest.mutation === flight.mutation ? false : latest.rosterEdit,
           flight: undefined,
         }));
         setError("");
@@ -126,7 +131,12 @@ export function useLiveMatch() {
                   "Este móvil tiene jugadas pendientes de otra sesión. Vuelve a esa cuenta para enviarlas antes de abrir el acta aquí.",
                 );
               if (cached && (cached.dirty || cached.flight) && cached.viewer === remote.viewer)
-                next = { ...cached, canEdit: remote.canEdit };
+                next = {
+                  ...cached,
+                  canEdit: remote.canEdit,
+                  callupCandidates: remote.callupCandidates ?? cached.callupCandidates,
+                  callupTemplate: remote.callupTemplate ?? cached.callupTemplate,
+                };
               else if (cached?.takeoverFlight && cached.viewer === remote.viewer)
                 next =
                   remote.device === liveDevice() &&
@@ -209,10 +219,7 @@ export function useLiveMatch() {
     localWriting.current = true;
     setBusy(true);
     try {
-      const checked = sheetSchema.safeParse({ ...sheet, version: 2 });
-      if (!checked.success)
-        throw new Error(checked.error.issues[0]?.message ?? "Revisa la jugada.");
-      const parsed = checked.data;
+      const parsed = identifyLiveSheet(sheet, current.current?.sheet);
       await writeQueue.current;
       await persist((latest) => ({
         ...latest,

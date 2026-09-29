@@ -20,7 +20,7 @@ export function ActaKeeperControl({
         type="button"
         disabled={disabled}
         onClick={onChange}
-        className="flex min-h-16 w-full items-center gap-2 rounded-xl border border-slate-300 bg-white px-3 py-3 text-left active:bg-slate-100 disabled:opacity-60"
+        className="flex min-h-16 w-full items-center gap-2 rounded-xl border border-[#062048] bg-white px-3 py-3 text-left active:bg-slate-100 disabled:opacity-60"
         aria-label={
           keeper
             ? `Portero en juego, ${validCapNumber(keeper.cap) == null ? "sin gorro" : `gorro ${keeper.cap}`}, ${keeper.name}. Cambiar portero`

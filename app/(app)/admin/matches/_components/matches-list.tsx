@@ -199,18 +199,15 @@ export function MatchesList({ teams, matches, defaultTeamId }: MatchesListProps)
                       <StatusBadge variant={m.is_home ? "brand" : "neutral"} size="sm">
                         {m.is_home ? "Local" : "Visitante"}
                       </StatusBadge>
-                      {m.pool_name ? (
-                        <span className="text-ink-600 text-xs">{m.pool_name}</span>
-                      ) : null}
                       {m.location ? (
-                        <span className="text-ink-600 text-xs">· {m.location}</span>
+                        <span className="text-ink-600 text-xs">{m.location}</span>
                       ) : null}
                       {safeMaps ? (
                         <a
                           href={m.maps_url ?? "#"}
                           target="_blank"
                           rel="noopener noreferrer"
-                          aria-label={`Abrir ${m.location ?? m.pool_name ?? "la ubicación"} en Google Maps`}
+                          aria-label={`Abrir ${m.location ?? "la ubicación"} en Google Maps`}
                           className="text-pool-blue hover:text-pool-deep bg-pool-foam relative z-10 inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs font-extrabold transition-colors"
                         >
                           <MapPin className="h-3.5 w-3.5" aria-hidden="true" />

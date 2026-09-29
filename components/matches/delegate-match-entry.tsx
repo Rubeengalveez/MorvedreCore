@@ -12,36 +12,29 @@ export function DelegateMatchEntry({
   return (
     <section
       aria-label="Acta del delegado"
-      className="border-pool-deep overflow-hidden rounded-2xl border-2 bg-white"
+      className="border-pool-deep/75 bg-paper-card shadow-elev-1 rounded-2xl border-2 p-4"
     >
-      <div className="flex items-center gap-3 px-4 pt-4">
-        <ClipboardList className="shrink-0" size={28} aria-hidden="true" />
-        <div>
-          <p className="text-sm font-semibold text-slate-600">Para ti, delegado</p>
-          <h2 className="text-xl font-extrabold">Acta del partido</h2>
+      <div className="flex items-center gap-3">
+        <span className="bg-pool-deep text-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+          <ClipboardList size={24} aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-pool-deep text-lg leading-tight font-extrabold">Acta del partido</h2>
         </div>
+        {started && !finished ? (
+          <span className="bg-paper-card border-pool-blue/40 text-pool-deep shrink-0 rounded-lg border px-2 py-1 text-xs font-extrabold">
+            En curso
+          </span>
+        ) : null}
       </div>
-      <p className="px-4 py-3 text-base text-slate-600">
-        {finished
-          ? "Consulta el acta y compártela con el equipo."
-          : "Registra desde aquí las jugadas del partido."}
+      <p className="text-ink-700 mt-3 text-sm leading-snug font-medium">
+        {finished ? "Consulta o comparte el acta." : "Anota las jugadas en directo."}
       </p>
       <a
         href={`/acta?match=${matchId}`}
-        className="bg-pool-deep mx-3 mb-3 flex min-h-16 items-center justify-between gap-3 rounded-xl px-4 py-3 text-white hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700"
+        className="bg-pool-deep text-paper focus-visible:outline-pool-blue mt-4 flex min-h-14 w-full items-center justify-between gap-3 rounded-xl px-4 py-3 text-base font-extrabold hover:bg-blue-900 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        <span>
-          <strong className="block text-lg">
-            {finished
-              ? "Ver acta del partido"
-              : started
-                ? "Continuar acta en directo"
-                : "Abrir acta en directo"}
-          </strong>
-          <span className="mt-1 block text-sm text-blue-100">
-            {finished ? "Resumen y PDF" : "Durante el partido · Jugada a jugada"}
-          </span>
-        </span>
+        <span>{finished ? "Ver acta" : "Abrir acta"}</span>
         <ChevronRight className="shrink-0" aria-hidden="true" />
       </a>
     </section>

@@ -24,6 +24,7 @@ const serwist = new Serwist({
     ...PRECACHE_ENTRIES,
     { url: "/offline", revision: ACTA_SHELL_REVISION },
     { url: "/acta", revision: ACTA_SHELL_REVISION },
+    { url: "/acta/convocatoria", revision: ACTA_SHELL_REVISION },
   ],
   precacheOptions: {
     cleanupOutdatedCaches: true,
@@ -37,6 +38,15 @@ const serwist = new Serwist({
         url: "/acta",
         matcher({ request }) {
           return request.destination === "document" && new URL(request.url).pathname === "/acta";
+        },
+      },
+      {
+        url: "/acta/convocatoria",
+        matcher({ request }) {
+          return (
+            request.destination === "document" &&
+            new URL(request.url).pathname === "/acta/convocatoria"
+          );
         },
       },
       {

@@ -9,7 +9,8 @@ import { FileText, UserCheck, Pencil, UsersRound } from "lucide-react";
 
 import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
 import { PoolScoreboard } from "@/components/ui/pool-scoreboard";
-import { sheetSchema, score } from "@/lib/domain/live-match";
+import { sheetSchema } from "@/lib/domain/live-match";
+import { getMatchScoreboardState } from "@/lib/domain/match-scoreboard-state";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
@@ -60,6 +61,7 @@ async function getVisibleCallups(matchId: string): Promise<CallupDetail[]> {
     )
     .eq("match_id", matchId)
     .in("status", ["called", "confirmed"])
+    .not("cap_number", "is", null)
     .order("cap_number", { ascending: true });
   if (error) throw error;
   const out: CallupDetail[] = [];
@@ -109,8 +111,6 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   if (!ctx) redirect("/login");
   if (!match) notFound();
 
-  const hasScore = match.final_score_us != null && match.final_score_them != null;
-
   const [callups, mvp, statsList] = await Promise.all([
     getVisibleCallups(id).catch(() => [] as CallupDetail[]),
     getMatchMvp(id).catch(() => null as MatchScorer | null),
@@ -133,13 +133,13 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
     .maybeSingle();
 
   const parsedSheet = sheetSchema.safeParse(liveSheet?.document);
-  const regulationScore =
-    parsedSheet.success && parsedSheet.data.shootout
-      ? {
-          home: score(parsedSheet.data, match.is_home ? "us" : "them"),
-          away: score(parsedSheet.data, match.is_home ? "them" : "us"),
-        }
-      : null;
+  const scoreboard = getMatchScoreboardState({
+    status: match.status,
+    isHome: match.is_home,
+    finalScoreUs: match.final_score_us,
+    finalScoreThem: match.final_score_them,
+    sheet: parsedSheet.success ? parsedSheet.data : null,
+  });
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
@@ -163,8 +163,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
 
       <div className="flex flex-col gap-3">
         <PoolScoreboard
-          regulationScore={regulationScore}
-          mode={hasScore ? "final" : "preview"}
+          className="border-pool-deep/75 border-2"
+          regulationScore={scoreboard.regulationScore}
+          mode={scoreboard.mode}
           homeTeam={{
             label: match.is_home ? "Morvedre" : match.opponent,
             color: match.is_home ? match.team_color : "#64748B",
@@ -173,8 +174,10 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             label: match.is_home ? match.opponent : "Morvedre",
             color: match.is_home ? "#64748B" : match.team_color,
           }}
-          homeScore={match.is_home ? match.final_score_us : match.final_score_them}
-          awayScore={match.is_home ? match.final_score_them : match.final_score_us}
+          homeScore={scoreboard.homeScore}
+          awayScore={scoreboard.awayScore}
+          period={scoreboard.period}
+          liveLabel={scoreboard.liveLabel}
           scheduledAt={match.scheduled_at}
           competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
           isHome={match.is_home}
@@ -190,9 +193,9 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
               : null
           }
         />
-        {match.pool_name || match.location || match.maps_url ? (
+        {match.location || match.maps_url ? (
           <MapLocationLink
-            name={match.pool_name || match.location}
+            name={match.location}
             address={match.location}
             mapsUrl={match.maps_url}
             compact
@@ -202,7 +205,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="flex flex-col gap-4">
-        <section className="bg-paper-card border-ink-200 shadow-elev-1 overflow-hidden rounded-2xl border">
+        <section className="bg-paper-card border-pool-deep/75 shadow-elev-1 overflow-hidden rounded-2xl border-2">
           <div className="bg-pool-deep text-paper flex min-h-14 items-center gap-2.5 px-4 py-2.5">
             <h2 className="text-lg font-black">Convocatoria</h2>
             <span
@@ -216,9 +219,13 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           </div>
 
           <div className="p-3">
-            {canEditCallup ? (
+            {canEditCallup && (!liveSheet || delegate) ? (
               <Link
-                href={`/admin/matches/${match.id}?from=match` as Route}
+                href={
+                  (liveSheet
+                    ? `/acta/convocatoria?match=${match.id}&from=match`
+                    : `/admin/matches/${match.id}?from=match`) as Route
+                }
                 className="border-pool-blue/40 bg-pool-foam text-pool-deep focus-visible:outline-pool-blue mb-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl border-2 px-3 text-sm font-extrabold focus-visible:outline-2"
               >
                 <Pencil className="h-4 w-4" aria-hidden="true" />
@@ -238,7 +245,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
                   return (
                     <li
                       key={c.player_id}
-                      className="bg-paper-sunk/55 border-ink-200 flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 select-none"
+                      className="bg-paper-card border-pool-deep/55 shadow-elev-1 flex min-h-14 items-center gap-3 rounded-xl border px-3 py-2 select-none"
                     >
                       <div
                         className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-mono text-base font-black"
