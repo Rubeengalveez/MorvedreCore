@@ -1,5 +1,12 @@
 # Log de decisiones
 
+## 2026-09-30 - MVP visible en la ficha del partido
+
+- El MVP de un partido terminado se muestra en una tarjeta independiente bajo el marcador, con contorno oscuro, nombre, gorro, goles y asistencias. En un empate de MVP se muestran todos los ganadores.
+- El cierre consulta las estadísticas del partido directamente: ya no depende de que aparezcan dentro de las primeras 1.000 estadísticas de temporada. Los delegados tienen autorización para completar este cálculo al cerrar su acta.
+- La lectura usa el acta terminada y el cálculo existente de goles y asistencias para recuperar la presentación de partidos antiguos cuya marca de MVP no llegó a guardarse. No se altera su resultado ni sus jugadas.
+- Se limita la generación de páginas a dos trabajadores para completar las compilaciones locales sin agotar la memoria del equipo.
+
 ## 2026-09-30 - Avisos concretos de plazas en la rotación
 
 - La falta de plazas para que todos participen se distingue de las alineaciones incompletas. El aviso identifica el equipo, los jugadores de campo o porteros pendientes, las plazas disponibles hasta el cuarto 4 y cuántos deben descansar tras jugar los tres primeros cuartos.

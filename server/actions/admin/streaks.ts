@@ -5,7 +5,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { requireAdmin, requireAttendanceManagerOf, requireCoachOf } from "./_helpers";
+import { requireAdmin, requireAttendanceManagerOf, requireMatchStaffOf } from "./_helpers";
 import { computeMvp, type MvpCandidate } from "@/lib/domain/mvp";
 import { playerTotals, type LiveSheet } from "@/lib/domain/live-match";
 import {
@@ -115,9 +115,7 @@ async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promis
         .from("match_callups")
         .select("match_id, player_id, status, matches!match_callups_match_id_fkey(season_id)")
         .eq("matches.season_id", seasonId),
-      supabase
-        .from("live_match_sheets")
-        .select("match_id, document"),
+      supabase.from("live_match_sheets").select("match_id, document"),
     ]);
   return {
     matches: (matchesRes.data ?? []) as unknown as MatchRowLite[],
@@ -198,7 +196,7 @@ export async function recomputeStreaksForMatch(
   const m = match as MatchRowLite;
   if (m.status !== "played") return;
   if (!client) {
-    await requireCoachOf(m.team_id);
+    await requireMatchStaffOf(m.team_id);
   }
 
   await recomputeStreaksForMatchInternal(m);
@@ -207,11 +205,20 @@ export async function recomputeStreaksForMatch(
 async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<void> {
   const seasonId = match.season_id;
   const admin = createAdminClient();
-  const data = await loadSeasonData(seasonId, admin);
+  const [data, statsResult] = await Promise.all([
+    loadSeasonData(seasonId, admin),
+    admin
+      .from("match_stats")
+      .select("match_id, player_id, goals, exclusions, mvp")
+      .eq("match_id", match.id),
+  ]);
+  if (statsResult.error)
+    throw new Error("No pudimos cargar las estadísticas para calcular el MVP.");
+  const statsForMatch = (statsResult.data ?? []) as MatchStatLite[];
+  data.matchStats = [...data.matchStats.filter((s) => s.match_id !== match.id), ...statsForMatch];
 
-  const statsForMatch = data.matchStats.filter((s) => s.match_id === match.id);
-
-  let sheetDoc = (data.sheets.find((s) => s.match_id === match.id)?.document ?? null) as LiveSheet | null;
+  let sheetDoc = (data.sheets.find((s) => s.match_id === match.id)?.document ??
+    null) as LiveSheet | null;
   if (!sheetDoc) {
     const { data: directSheet } = await admin
       .from("live_match_sheets")

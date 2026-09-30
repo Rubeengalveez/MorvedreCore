@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
-import { playerTotals, type LiveSheet } from "@/lib/domain/live-match";
+import { computeMvp } from "@/lib/domain/mvp";
+import { playerTotals, sheetSchema } from "@/lib/domain/live-match";
 
 export interface CallupDetail {
   match_id: string;
@@ -180,42 +181,45 @@ export async function getMatchTopScorers(matchId: string, limit = 3): Promise<Ma
   ).map((row) => toScorer(row, capMap));
 }
 
-export async function getMatchMvp(matchId: string): Promise<MatchScorer | null> {
+export async function getMatchMvps(matchId: string): Promise<MatchScorer[]> {
   const supabase = await createClient();
   const [{ data, error }, { data: sheetRow }] = await Promise.all([
     supabase
       .from("match_stats")
-      .select("player_id, goals, mvp, profiles!match_stats_player_id_fkey(full_name)")
+      .select("player_id, goals, exclusions, mvp, profiles!match_stats_player_id_fkey(full_name)")
       .eq("match_id", matchId)
-      .eq("mvp", true)
-      .limit(1)
-      .maybeSingle(),
+      .order("player_id"),
     supabase.from("live_match_sheets").select("document").eq("match_id", matchId).maybeSingle(),
   ]);
-
-  if (error) {
-    throw new Error("No pudimos cargar el MVP.");
-  }
-  if (!data) return null;
+  if (error) throw new Error("No pudimos cargar el MVP.");
+  if (!data?.length) return [];
+  const parsed = sheetSchema.safeParse(sheetRow?.document);
+  const document = parsed.success && parsed.data.phase === "finished" ? parsed.data : null;
   const capMap = await getCapNumbersForMatch(matchId);
-  const row = data as {
-    player_id: string;
-    goals: number;
-    mvp: boolean;
-    profiles: unknown;
-  };
-  const scorer = toScorer(row, capMap);
-  if (sheetRow?.document) {
-    const doc = sheetRow.document as LiveSheet;
-    if (Array.isArray(doc.players)) {
-      const player = doc.players.find((p) => p.id === row.player_id);
-      if (player) {
-        const totals = playerTotals(doc, "us", player.cap);
-        scorer.assists = totals.assists;
-      }
+  const candidates = data.map((row) => {
+    const player = document?.players.find((p) => p.id === row.player_id);
+    const scorer = toScorer(row, capMap);
+    if (player && document) {
+      const totals = playerTotals(document, "us", player.cap);
+      scorer.goals = totals.goals;
+      scorer.assists = totals.assists;
+      scorer.cap_number = player.cap;
     }
-  }
-  return scorer;
+    return { ...scorer, exclusions: row.exclusions };
+  });
+  const stored = candidates.filter((row) => row.mvp);
+  const winnerIds =
+    document || !stored.length
+      ? computeMvp(candidates, { useAssists: Boolean(document) }).player_ids
+      : stored.map((row) => row.player_id);
+  return candidates
+    .filter((row) => winnerIds.includes(row.player_id))
+    .map((row) => ({ ...row, mvp: true }))
+    .sort((a, b) => (a.cap_number ?? 99) - (b.cap_number ?? 99));
+}
+
+export async function getMatchMvp(matchId: string): Promise<MatchScorer | null> {
+  return (await getMatchMvps(matchId))[0] ?? null;
 }
 
 export async function isProfileCoachOfMatch(matchId: string, profileId: string): Promise<boolean> {

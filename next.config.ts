@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
     "192.168.68.64:3000",
   ],
   experimental: {
+    cpus: 2,
     optimizePackageImports: ["lucide-react", "react-icons"],
     serverActions: {},
   },

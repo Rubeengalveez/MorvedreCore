@@ -1,4 +1,5 @@
 import { DelegateMatchEntry } from "@/components/matches/delegate-match-entry";
+import { MatchMvpCard } from "@/components/matches/match-mvp-card";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import { canManageTeam, canUseLiveMatch } from "@/lib/domain/permissions";
 import type { Metadata } from "next";
@@ -20,7 +21,7 @@ import { validCapNumber } from "@/lib/domain/cap-number";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import {
   getMatchById,
-  getMatchMvp,
+  getMatchMvps,
   type CallupDetail,
   type MatchScorer,
 } from "@/server/queries/matches";
@@ -111,9 +112,11 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   if (!ctx) redirect("/login");
   if (!match) notFound();
 
-  const [callups, mvp, statsList] = await Promise.all([
+  const [callups, mvps, statsList] = await Promise.all([
     getVisibleCallups(id).catch(() => [] as CallupDetail[]),
-    getMatchMvp(id).catch(() => null as MatchScorer | null),
+    match.status === "played"
+      ? getMatchMvps(id).catch(() => [] as MatchScorer[])
+      : Promise.resolve([] as MatchScorer[]),
     getMatchStatsList(id).catch(() => []),
   ]);
 
@@ -182,17 +185,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
           competitionLabel={COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
           isHome={match.is_home}
           location={null}
-          mvp={
-            isPlayed && mvp
-              ? {
-                  name: mvp.full_name,
-                  cap: validCapNumber(mvp.cap_number),
-                  goals: mvp.goals,
-                  assists: mvp.assists ?? 0,
-                }
-              : null
-          }
         />
+        {isPlayed && <MatchMvpCard players={mvps} />}
         {match.location || match.maps_url ? (
           <MapLocationLink
             name={match.location}
