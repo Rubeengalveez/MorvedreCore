@@ -199,6 +199,47 @@ describe("participación de categorías inferiores", () => {
     };
     expect(rotationAdvice(sheet, "us", 3, proposed).some((a) => a.key === "capacity")).toBe(true);
   });
+  it.each(["us", "them"] as const)(
+    "explica la falta de plazas y el descanso del equipo %s sin llamarlo falta de datos",
+    (side) => {
+      let sheet = fixture("benjamin");
+      for (const period of [1, 2]) sheet = start(sheet, period, [2, 3, 4, 5, 6]);
+      const proposed = {
+        period: 3,
+        side,
+        keeper: side === "us" ? id(1) : "1",
+        field: [2, 3, 4, 5, 6].map((n) => (side === "us" ? id(n) : String(n))),
+      };
+      const warnings = rotationAdvice(sheet, side, 3, proposed);
+      const capacity = warnings.find((a) => a.kind === "capacity");
+      expect(capacity?.message).toContain(`${side === "us" ? "Morvedre" : "Rival"}:`);
+      expect(capacity?.message).toContain(
+        "7 jugadores de campo sin haber jugado y solo 5 plazas en el cuarto 4",
+      );
+      expect(capacity?.message).toContain("Al menos 2 jugadores no podrían cumplir");
+      expect(capacity?.message).toContain("6 jugadores habrían jugado los cuartos 1, 2 y 3");
+      expect(capacity?.message).toContain("deberían descansar en el cuarto 4");
+      expect(warnings.some((a) => a.kind === "missing")).toBe(false);
+    },
+  );
+  it("no avisa de falta de plazas si los pendientes caben y distingue las plazas de portero", () => {
+    let sheet = fixture("benjamin");
+    for (const period of [1, 2]) sheet = start(sheet, period, [2, 3, 4, 5, 6]);
+    const proposed = {
+      period: 3,
+      side: "us" as const,
+      keeper: id(13),
+      field: [7, 8, 9, 10, 11].map(id),
+    };
+    expect(rotationAdvice(sheet, "us", 3, proposed).some((a) => a.kind === "capacity")).toBe(false);
+    sheet = start(sheet, 3, [2, 3, 4, 5, 6]);
+    const capacity = rotationAdvice(sheet, "us", 4, { ...proposed, period: 4, keeper: id(1) }).find(
+      (a) => a.kind === "capacity",
+    );
+    expect(capacity?.message).toContain(
+      "1 portero terminaría los cuatro primeros cuartos sin jugar",
+    );
+  });
   it("corrige un portero de un cuarto anterior con su identidad y sin cambiar el cuarto actual", () => {
     let sheet = start(fixture(), 1);
     sheet = identifyLiveSheet({

@@ -1,5 +1,10 @@
 # Log de decisiones
 
+## 2026-09-30 - Avisos concretos de plazas en la rotación
+
+- La falta de plazas para que todos participen se distingue de las alineaciones incompletas. El aviso identifica el equipo, los jugadores de campo o porteros pendientes, las plazas disponibles hasta el cuarto 4 y cuántos deben descansar tras jugar los tres primeros cuartos.
+- La confirmación de rotación ajusta su altura al contenido, con desplazamiento interno y acciones visibles cuando hay muchos avisos.
+
 ## 2026-09-30 - Guardado y salida de la edición
 
 - Guardar una convocatoria o los datos de un partido vuelve al destino de origen después de guardar correctamente. Los errores conservan la edición.

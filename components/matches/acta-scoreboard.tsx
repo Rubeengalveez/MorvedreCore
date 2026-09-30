@@ -24,7 +24,7 @@ export function ActaScoreboard({
       : status;
   return (
     <header className="shrink-0 bg-[#062048] pt-[env(safe-area-inset-top)] text-white shadow-[0_4px_18px_rgba(6,32,72,0.2)]">
-      <div data-acta-navigation className="flex min-h-12 items-center px-1.5">
+      <div data-acta-navigation className="flex min-h-12 items-center gap-1 px-1.5">
         <button
           type="button"
           onClick={onBack}
@@ -33,7 +33,9 @@ export function ActaScoreboard({
         >
           <ArrowLeft size={23} strokeWidth={2.25} aria-hidden="true" />
         </button>
-        <h1 className="min-w-0 flex-1 text-base font-extrabold tracking-tight">Acta en directo</h1>
+        <h1 className="min-w-0 flex-1 truncate text-base font-extrabold tracking-tight">
+          Acta en directo
+        </h1>
         {s.phase === "finished" ? (
           <button
             type="button"
@@ -49,11 +51,13 @@ export function ActaScoreboard({
             type="button"
             onClick={onParticipation}
             aria-label="Revisar participación"
-            title="Cuartos jugados"
-            className="flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-xl border border-white/60 px-2 text-sm font-bold active:bg-white/15"
+            title="Ver los cuartos jugados"
+            className="grid min-h-12 min-w-12 shrink-0 place-items-center rounded-lg px-1"
           >
-            <ListChecks size={21} aria-hidden="true" />
-            <span className="max-[359px]:sr-only">Cuartos</span>
+            <span className="flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-blue-200/80 bg-white/10 px-2.5 text-sm leading-none font-bold whitespace-nowrap active:bg-white/20">
+              <ListChecks size={18} className="shrink-0" aria-hidden="true" />
+              <span>Quién jugó</span>
+            </span>
           </button>
         ) : (
           <span className="h-12 w-12" aria-hidden="true" />

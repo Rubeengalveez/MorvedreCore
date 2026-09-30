@@ -63,7 +63,7 @@ export function ActaGuardSheet({
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content
           {...focus}
-          className={`${styles.panel} ${styles.panelGuard} ${tall ? "h-[min(94dvh,52rem)]" : "max-h-[min(92dvh,38rem)]"}`}
+          className={`${styles.panel} ${styles.panelGuard} ${tall ? "max-h-[min(94dvh,52rem)]" : "max-h-[min(92dvh,38rem)]"}`}
           onEscapeKeyDown={(event) => pending && event.preventDefault()}
           onPointerDownOutside={(event) => pending && event.preventDefault()}
         >
@@ -92,22 +92,18 @@ export function ActaGuardSheet({
             role={!stickyActions ? "region" : undefined}
             aria-label={!stickyActions ? `Contenido de ${title}` : undefined}
             tabIndex={!stickyActions ? 0 : undefined}
-            className={`min-h-0 ${stickyActions ? "flex flex-col overflow-hidden" : "overflow-y-auto overscroll-contain"} ${tall ? "flex-1" : ""} px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]`}
+            className={`min-h-0 ${stickyActions ? "flex flex-col overflow-hidden" : "overflow-y-auto overscroll-contain"} px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]`}
           >
             <div
               key={scrollKey}
               role={stickyActions ? "region" : undefined}
               aria-label={stickyActions ? `Contenido de ${title}` : undefined}
               tabIndex={stickyActions ? 0 : undefined}
-              className={
-                stickyActions
-                  ? `min-h-0 overflow-y-auto overscroll-contain ${tall ? "flex-1" : ""}`
-                  : undefined
-              }
+              className={stickyActions ? "min-h-0 overflow-y-auto overscroll-contain" : undefined}
             >
               {body && (
                 <Dialog.Description className="sr-only">
-                  {title}. Revisa la información y elige una opción.
+                  {description ?? `${title}. Revisa la información y elige una opción.`}
                 </Dialog.Description>
               )}
               {body ?? (

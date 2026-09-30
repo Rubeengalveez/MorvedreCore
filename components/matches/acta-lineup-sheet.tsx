@@ -112,6 +112,7 @@ export function ActaLineupSheet({
         .filter(
           (a) =>
             a.kind === "missing" ||
+            a.kind === "capacity" ||
             (a.kind === "rest" ? selected.has(a.key) : !selected.has(a.key)),
         )
         .map((a) => ({ ...a, side: lineup.side })),
@@ -201,6 +202,7 @@ export function ActaLineupSheet({
         onOpenChange={(open) => !open && setConfirming(false)}
         context={`Cuarto ${request.period}`}
         title={keeperWarning && !warnings.length ? "Corregir portero" : "Revisa la rotación"}
+        description="Comprueba los avisos de cada equipo antes de registrar la selección."
         icon="warning"
         pending={busy}
         stickyActions
@@ -254,7 +256,7 @@ export function ActaLineupSheet({
                     {team}
                   </h3>
                   <div className="space-y-3 p-3">
-                    {(["rest", "play", "out", "missing"] as const).map((kind) => {
+                    {(["capacity", "rest", "play", "out", "missing"] as const).map((kind) => {
                       const list = messages.filter((warning) => warning.kind === kind);
                       if (!list.length) return null;
                       return (
@@ -276,7 +278,9 @@ export function ActaLineupSheet({
                                 ? "Faltan por jugar"
                                 : kind === "out"
                                   ? "Expulsados"
-                                  : "Faltan datos"}
+                                  : kind === "capacity"
+                                    ? "No todos podrán jugar"
+                                    : "Faltan alineaciones"}
                           </h4>
                           <div
                             className={team === "Rival" ? "flex flex-wrap gap-2" : "space-y-1.5"}
@@ -306,7 +310,7 @@ export function ActaLineupSheet({
                               ) : (
                                 <p
                                   key={warning.key}
-                                  className="text-pool-deep text-base leading-snug"
+                                  className="text-pool-deep text-base leading-snug whitespace-pre-line"
                                 >
                                   {warning.message}
                                 </p>

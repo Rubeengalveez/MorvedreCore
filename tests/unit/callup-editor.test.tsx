@@ -753,7 +753,7 @@ describe("CallupEditor", () => {
 
     expect(screen.getByLabelText("2 de 14 jugadores convocados")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Añadir jugador" })).toBeNull();
-    expect(screen.getByText("Pau Martínez añadido con el gorro 3.")).toBeVisible();
+    expect(screen.queryByText("Pau Martínez añadido con el gorro 3.")).toBeNull();
     expect(screen.getByRole("button", { name: /Gorro de Pau Martínez: 3/ })).toBeVisible();
     expect(screen.getByRole("button", { name: "Guardar convocatoria" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Guardar convocatoria" }));

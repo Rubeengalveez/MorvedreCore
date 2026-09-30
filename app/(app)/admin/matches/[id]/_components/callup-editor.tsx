@@ -94,7 +94,6 @@ export function CallupEditor({
   const [confirmTemplate, setConfirmTemplate] = useState(false);
   const [clearCapsOpen, setClearCapsOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
-  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [pending, startTransition] = useTransition();
   const allowLeave = useRef(false);
@@ -233,9 +232,6 @@ export function CallupEditor({
     setAdding(false);
     setReplaceFrom(null);
     setError("");
-    setMessage(
-      result.omitted > 0 ? `${result.omitted} jugadores no disponibles se han omitido.` : "",
-    );
     setPendingSource(false);
   }
 
@@ -254,7 +250,6 @@ export function CallupEditor({
     }
     const cap = nextFreeCap(candidate.cap_number, occupied);
     setDraft((current) => [...current, { player_id: candidate.player_id, cap_number: cap }]);
-    setMessage(`${candidate.full_name} añadido con el gorro ${cap}.`);
     setError("");
     setAdding(false);
   }
@@ -280,7 +275,6 @@ export function CallupEditor({
     });
     setPendingReplacement(null);
     setReplaceFrom(null);
-    setMessage("");
     setError("");
   }
 
@@ -303,7 +297,6 @@ export function CallupEditor({
       current.map((item) => (item.player_id === playerId ? { ...item, cap_number: cap } : item)),
     );
     setOpenCap(null);
-    setMessage("");
     setError("");
   }
 
@@ -320,7 +313,6 @@ export function CallupEditor({
     );
     setPendingCapSwap(null);
     setOpenCap(null);
-    setMessage("");
     setError("");
   }
 
@@ -447,15 +439,6 @@ export function CallupEditor({
           </Alert>
         </div>
       ) : null}
-      {message ? (
-        <p
-          className="border-pool-blue bg-paper-card text-pool-deep mt-3 rounded-xl border-l-4 px-3 py-2 text-sm font-bold"
-          role="status"
-          aria-live="polite"
-        >
-          {message}
-        </p>
-      ) : null}
 
       <div className="mt-5 flex items-center justify-between gap-2">
         <h2 className="text-pool-deep text-lg font-extrabold">Convocados</h2>
@@ -560,7 +543,6 @@ export function CallupEditor({
                           current.filter((item) => item.player_id !== pick.player_id),
                         );
                         setOpenCap(null);
-                        setMessage("");
                         setError("");
                       }}
                       disabled={pending}
@@ -760,7 +742,6 @@ export function CallupEditor({
             onClick: () => {
               setDraft((current) => current.map((player) => ({ ...player, cap_number: null })));
               setClearCapsOpen(false);
-              setMessage("");
               setError("");
             },
           },

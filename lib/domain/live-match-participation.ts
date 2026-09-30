@@ -176,7 +176,7 @@ export function rotationAdvice(
     key: string;
     name: string;
     message: string;
-    kind: "rest" | "play" | "missing";
+    kind: "rest" | "play" | "missing" | "capacity";
   }[] = [];
   for (const p of participants(sheet, side)) {
     const played = playedPeriods(sheet, side, p.key, period).length;
@@ -200,14 +200,41 @@ export function rotationAdvice(
     const remaining = 4 - period;
     const keepers = unplayed.filter((p) => [1, 13].includes(p.cap)).length;
     const field = unplayed.length - keepers;
-    if (keepers > remaining || field > remaining * matchRules(sheet.category).fieldPlayers)
+    const fieldPlaces = remaining * matchRules(sheet.category).fieldPlayers;
+    if (keepers > remaining || field > fieldPlaces) {
+      const team = side === "us" ? "Morvedre" : "Rival";
+      const nextPeriods = remaining === 1 ? "el cuarto 4" : "los cuartos que quedan hasta el 4";
+      const reasons: string[] = [];
+      if (field > fieldPlaces)
+        reasons.push(
+          remaining === 0
+            ? `Con esta selección, ${field} ${field === 1 ? "jugador de campo terminaría" : "jugadores de campo terminarían"} los cuatro primeros cuartos sin jugar. ${field === 1 ? "Debe" : "Deben"} jugar en este cuarto.`
+            : `Quedarían ${field} jugadores de campo sin haber jugado y solo ${fieldPlaces} plazas en ${nextPeriods}. ${field - fieldPlaces === 1 ? "Al menos 1 jugador no podría" : `Al menos ${field - fieldPlaces} jugadores no podrían`} cumplir la norma de jugar antes del cuarto 5.`,
+        );
+      if (keepers > remaining)
+        reasons.push(
+          remaining === 0
+            ? `Con esta selección, ${keepers} ${keepers === 1 ? "portero terminaría" : "porteros terminarían"} los cuatro primeros cuartos sin jugar.`
+            : `Quedarían ${keepers} ${keepers === 1 ? "portero pendiente" : "porteros pendientes"} de jugar y solo ${remaining} ${remaining === 1 ? "plaza de portería" : "plazas de portería"} en ${nextPeriods}. Las plazas de portería y de campo se cuentan por separado.`,
+        );
+      if (period === 3) {
+        const resting = participants(sheet, side).filter(
+          (p) =>
+            p.key !== fixed &&
+            playedPeriods(sheet, side, p.key, period).length + Number(selected.has(p.key)) >= 3,
+        ).length;
+        if (resting > 0)
+          reasons.push(
+            `Además, ${resting} ${resting === 1 ? "jugador habría jugado" : "jugadores habrían jugado"} los cuartos 1, 2 y 3 y ${resting === 1 ? "debería" : "deberían"} descansar en el cuarto 4.`,
+          );
+      }
       advice.push({
         key: "capacity",
-        name: "Revisa quién falta por jugar",
-        kind: "missing",
-        message:
-          "Con esta selección no quedan suficientes plazas en los siguientes cuartos. Avísalo al entrenador o al árbitro.",
+        name: "No todos podrán jugar",
+        kind: "capacity",
+        message: `${team}: ${reasons.join("\n\n")}`,
       });
+    }
   }
   return advice;
 }

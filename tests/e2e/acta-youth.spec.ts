@@ -1,6 +1,55 @@
 import { test, expect } from "@playwright/test";
 import { fixture, id, openLocal, readLocal, capture } from "./helpers/acta";
 
+test("concreta las plazas pendientes por equipo y ajusta el aviso a su contenido", async ({
+  page,
+}) => {
+  const record = fixture();
+  record.sheet.category = "benjamin";
+  record.sheet.period = 2;
+  record.sheet.phase = "break";
+  record.sheet.participation!.opponentConfirmed = true;
+  for (const period of [1, 2]) {
+    record.sheet.participation!.lineups.push(
+      { period, side: "us", keeper: id(1), field: [2, 3, 4, 5, 6].map(id) },
+      { period, side: "them", keeper: "1", field: [2, 3, 4, 5, 6].map(String) },
+    );
+  }
+  record.lineupDraft = {
+    period: 3,
+    mode: "start",
+    step: "us",
+    baseMutation: record.mutation,
+    us: { keeper: id(1), field: [2, 3, 4, 5, 6].map(id) },
+    them: { keeper: "13", field: [7, 8, 9, 10, 11].map(String) },
+  };
+  await openLocal(page, record);
+  await page
+    .getByRole("button", { name: "Toca aquí para empezar el cuarto 3", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Continuar con Rival" }).click();
+  await page.getByRole("button", { name: "Listo, empezar cuarto" }).click();
+  const dialog = page.getByRole("dialog", { name: "Revisa la rotación" });
+  const own = dialog.getByRole("region", { name: "Avisos de Morvedre" });
+  await expect(own.getByRole("heading", { name: "No todos podrán jugar" })).toBeVisible();
+  await expect(own).toContainText(
+    "Morvedre: Quedarían 7 jugadores de campo sin haber jugado y solo 5 plazas en el cuarto 4",
+  );
+  await expect(own).toContainText("6 jugadores habrían jugado los cuartos 1, 2 y 3");
+  await expect(dialog.getByText("Faltan datos", { exact: true })).toHaveCount(0);
+  await expect(dialog.getByRole("region", { name: "Avisos de Rival" })).toHaveCount(0);
+  const blank = await dialog
+    .getByRole("region", { name: "Contenido de Revisa la rotación" })
+    .evaluate((node) => {
+      return (
+        node.getBoundingClientRect().bottom - node.lastElementChild!.getBoundingClientRect().bottom
+      );
+    });
+  expect(blank).toBeLessThanOrEqual(1);
+  await expect(dialog.getByRole("button", { name: "Volver a revisar" })).toBeInViewport();
+  await capture(page, "capacity-confirmation");
+});
+
 test("recupera el borrador y anota tras recargar sin red", async ({ page, context }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -262,6 +311,14 @@ test("mantiene filas uniformes, nombres en una línea y avisos visibles a 320 px
   }
   await page.setViewportSize({ width: 320, height: 740 });
   await openLocal(page, record);
+  const participation = page.getByRole("button", { name: "Revisar participación", exact: true });
+  await expect(participation).toHaveText("Quién jugó");
+  const control = await participation.boundingBox();
+  const score = await page.locator("[data-acta-score]").boundingBox();
+  expect(control).not.toBeNull();
+  expect(score).not.toBeNull();
+  expect(control!.height).toBeGreaterThanOrEqual(48);
+  expect(control!.y + control!.height).toBeLessThanOrEqual(score!.y);
   await capture(page, "board-320");
   const board = page.getByRole("region", { name: "Jugadores y estadísticas del partido" });
   expect(
