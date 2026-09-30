@@ -2,6 +2,7 @@
 
 ## 2026-09-30 - MVP visible en la ficha del partido
 
+- La tarjeta se compacta en una fila por ganador, de altura similar a la ubicación: etiqueta textual MVP con fondo azul claro y contorno oscuro, gorro, nombre adaptable y dos indicadores compactos de goles/asistencias sin cabecera adicional.
 - El MVP de un partido terminado se muestra en una tarjeta independiente bajo el marcador, con contorno oscuro, nombre, gorro, goles y asistencias. En un empate de MVP se muestran todos los ganadores.
 - El cierre consulta las estadísticas del partido directamente: ya no depende de que aparezcan dentro de las primeras 1.000 estadísticas de temporada. Los delegados tienen autorización para completar este cálculo al cerrar su acta.
 - La lectura usa el acta terminada y el cálculo existente de goles y asistencias para recuperar la presentación de partidos antiguos cuya marca de MVP no llegó a guardarse. No se altera su resultado ni sus jugadas.
