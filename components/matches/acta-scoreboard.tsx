@@ -1,4 +1,4 @@
-import { ArrowLeft, Share2 } from "lucide-react";
+import { ArrowLeft, ListChecks, Share2 } from "lucide-react";
 import { finalScore, score, type LiveRecord, type Side } from "@/lib/domain/live-match";
 
 export function ActaScoreboard({
@@ -6,15 +6,22 @@ export function ActaScoreboard({
   status,
   onShare,
   onBack,
+  onParticipation,
 }: {
   record: LiveRecord;
   status: string;
   onShare: () => void;
   onBack: () => void;
+  onParticipation?: () => void;
 }) {
   const s = record.sheet;
   const left: Side = record.homeAway === "away" ? "them" : "us";
   const right: Side = left === "us" ? "them" : "us";
+  const compactStatus = status.startsWith("Sin conexión")
+    ? "Sin conexión"
+    : status.includes("Enviando")
+      ? "Enviando…"
+      : status;
   return (
     <header className="shrink-0 bg-[#062048] pt-[env(safe-area-inset-top)] text-white shadow-[0_4px_18px_rgba(6,32,72,0.2)]">
       <div data-acta-navigation className="flex min-h-12 items-center px-1.5">
@@ -36,6 +43,17 @@ export function ActaScoreboard({
           >
             <Share2 size={20} strokeWidth={2.25} aria-hidden="true" />
             <span className="max-[359px]:sr-only">Compartir</span>
+          </button>
+        ) : onParticipation ? (
+          <button
+            type="button"
+            onClick={onParticipation}
+            aria-label="Revisar participación"
+            title="Cuartos jugados"
+            className="flex min-h-12 min-w-12 items-center justify-center gap-2 rounded-xl border border-white/60 px-2 text-sm font-bold active:bg-white/15"
+          >
+            <ListChecks size={21} aria-hidden="true" />
+            <span className="max-[359px]:sr-only">Cuartos</span>
           </button>
         ) : (
           <span className="h-12 w-12" aria-hidden="true" />
@@ -80,27 +98,36 @@ export function ActaScoreboard({
       </div>
       <div
         data-acta-meta
-        className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm text-blue-50"
+        className="flex min-h-9 items-center justify-between gap-2 overflow-hidden px-3 py-2 text-sm whitespace-nowrap text-blue-50"
       >
-        <span className="font-bold">
-          {s.phase === "finished"
-            ? "Partido terminado"
-            : s.phase === "shootout"
-              ? "Tanda de penaltis"
-              : `Cuarto ${s.period}/${s.periods}${s.phase === "break" ? " · Descanso" : ""}`}
+        <span className="min-w-0 flex-1 truncate font-bold">
+          {s.phase === "finished" ? (
+            "Partido terminado"
+          ) : s.phase === "shootout" ? (
+            "Tanda de penaltis"
+          ) : (
+            <>
+              <span data-acta-meta-word>Cuarto </span>
+              {s.period}/{s.periods}
+              {s.phase === "break" ? " · Descanso" : ""}
+            </>
+          )}
           {s.phase !== "finished" && s.phase !== "shootout" && (
             <span className="font-medium text-blue-200">
               {" "}
-              · Parcial {score(s, left, s.period)}–{score(s, right, s.period)}
+              · <span data-acta-meta-word>Parcial </span>
+              {score(s, left, s.period)}–{score(s, right, s.period)}
             </span>
           )}
         </span>
         <span
-          className="text-right text-sm font-semibold text-blue-100"
+          className="max-w-[40%] shrink-0 truncate text-right text-sm font-semibold text-blue-100"
           role="status"
           aria-live="polite"
+          title={status}
+          aria-label={status}
         >
-          {status}
+          {compactStatus}
         </span>
       </div>
     </header>

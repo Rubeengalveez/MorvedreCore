@@ -8,7 +8,7 @@ El acta en directo está reservada al delegado de ese equipo, incluso para consu
 
 ## Antes de empezar
 
-Abre el acta con conexión y comprueba jugadores, gorros y número de cuartos. Se proponen seis hasta Infantil y cuatro desde Cadete; puedes elegir 2, 4 o 6. En categorías superiores puedes ajustar el número de gorros rivales hasta 14. En categorías inferiores eliges los gorros realmente inscritos, aunque no sean consecutivos. Pulsa **Empezar partido**. Lleva el acta desde un único móvil; el cambio de dispositivo se hace con conexión y después de sincronizar las jugadas pendientes.
+Abre el acta con conexión y comprueba jugadores, gorros y número de cuartos. Se proponen seis hasta Infantil y cuatro desde Cadete; puedes elegir 2, 4 o 6. En categorías superiores puedes ajustar el número de gorros rivales hasta 14. En categorías inferiores eliges los gorros realmente inscritos, aunque no sean consecutivos. Pulsa **Empezar partido**. Durante el descanso no puedes cambiar el portero en juego; elígelo al iniciar el siguiente cuarto. Lleva el acta desde un único móvil; el cambio de dispositivo se hace con conexión y después de sincronizar las jugadas pendientes.
 
 ## Quién juega en categorías inferiores
 
@@ -18,13 +18,13 @@ En Infantil, Alevín, Benjamín y Escuela, al empezar cada cuarto del 1 al 4:
 2. Pulsa **Continuar con Rival** y haz lo mismo con sus gorros.
 3. Pulsa **Listo, empezar cuarto**. Ambas selecciones y el comienzo se guardan juntos en el móvil.
 
-Cada ficha muestra en gris los cuartos que ya jugó y en azul el cuarto actual si está jugando. Al terminar el tercero aparece un resumen de quién debe jugar o descansar, separado entre Morvedre y Rival; en la selección del cuarto las fichas lo indican. Si una selección incumple la rotación, revisa con el entrenador o el árbitro. Puedes registrar lo ocurrido confirmando el aviso.
+Las filas conservan su tamaño: en el extremo de cada equipo aparecen solo los cuartos jugados, en gris, y el actual en azul si está jugando. En la selección de jugadores, las marcas van junto al nombre o a la derecha del gorro rival; una luna indica que no está seleccionado o descansó. Los cuartos anteriores sin datos aparecen como **?**, sin dar por hecho un descanso. Al terminar el tercero aparece un resumen de quién debe jugar o descansar, separado entre Morvedre y Rival; en la selección del cuarto las fichas lo indican. Si una selección incumple la rotación, revisa con el entrenador o el árbitro. Puedes registrar lo ocurrido confirmando el aviso.
 
 Si atribuyes una acción a alguien que no seleccionaste, la app pregunta si está jugando y te lleva a revisar la alineación. Los asistentes y lanzadores de penalti se eligen entre quienes están en el agua. Los gorros 1 y 13 siempre son porteros. La excepción de portero único debe marcarse expresamente en Alevín/Infantil.
 
-Desde **Corregir → Revisar participación** consultas una tabla ordenada por gorro. Cambia entre Morvedre y Rival y toca el cuarto que necesites corregir. También puedes corregir o anular una sustitución registrada. En Infantil, una sanción definitiva pide quién entra; ambos jugadores cuentan como participantes. Si el sustituto juega los cuatro primeros, se avisa de que debe descansar el quinto. Una expulsión temporal no añade un sustituto.
+Durante los cuatro primeros cuartos, pulsa **Cuartos** en la cabecera para consultar la participación sin desplazar la tabla. También puedes entrar desde **Corregir → Revisar participación**. La tabla está ordenada por gorro. Cambia entre Morvedre y Rival y toca el cuarto que necesites corregir. También puedes corregir o anular una sustitución registrada. En Infantil, una sanción definitiva pide quién entra; ambos jugadores cuentan como participantes. Si el sustituto juega los cuatro primeros, se avisa de que debe descansar el quinto. Una expulsión temporal no añade un sustituto.
 
-Desde el quinto desaparecen las marcas y la selección de campo, conservando el descanso excepcional si procede. Puedes consultar los primeros cuatro desde **Corregir → Revisar participación**, y quedan incluidos en el PDF. Los cuartos sin datos se muestran con un punto en la tabla y con **?** en el PDF; no significan descanso.
+Desde el quinto desaparecen las marcas, el acceso de cabecera y la selección de campo. No se muestra un aviso de cierre de rotación; se conserva el descanso excepcional si procede. Puedes consultar los primeros cuatro desde **Corregir → Revisar participación**, y quedan incluidos en el PDF. Los cuartos sin datos se muestran con un punto en la tabla y con **?** en el PDF; no significan descanso.
 
 ## Durante el juego
 

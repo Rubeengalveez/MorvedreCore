@@ -20,6 +20,7 @@ export function ActaFlowSheet({
   pending = false,
   closeLabel = "Cerrar",
   scrollKey,
+  fitContent = false,
 }: {
   open?: boolean;
   onClose: () => void;
@@ -33,6 +34,7 @@ export function ActaFlowSheet({
   pending?: boolean;
   closeLabel?: string;
   scrollKey?: string | number;
+  fitContent?: boolean;
 }) {
   const focus = useActaDialogFocus();
   return (
@@ -41,7 +43,7 @@ export function ActaFlowSheet({
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content
           {...focus}
-          className={`${styles.panel} ${styles.panelGuard} h-[min(94dvh,52rem)]`}
+          className={`${styles.panel} ${styles.panelGuard} ${fitContent ? "max-h-[min(94dvh,52rem)]" : "h-[min(94dvh,52rem)]"}`}
           onEscapeKeyDown={(e) => pending && e.preventDefault()}
           onPointerDownOutside={(e) => pending && e.preventDefault()}
         >
@@ -119,7 +121,8 @@ export function ActaSelectionSheet({
   actions,
   pending,
   error,
-}: ActaGuardSheetProps) {
+  fitContent = true,
+}: ActaGuardSheetProps & { fitContent?: boolean }) {
   return (
     <ActaFlowSheet
       open={open}
@@ -128,6 +131,7 @@ export function ActaSelectionSheet({
       title={title}
       pending={pending}
       error={error ?? undefined}
+      fitContent={fitContent}
       footer={
         <div className="grid gap-2">
           {actions.map((action) => (

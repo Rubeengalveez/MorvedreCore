@@ -10,6 +10,7 @@ import {
   participants,
   lineupFor,
   lineupIssues,
+  lineupSelectionMessage,
   playedPeriods,
   rotationAdvice,
   saveLineups,
@@ -203,6 +204,7 @@ export function ActaLineupSheet({
         icon="warning"
         pending={busy}
         stickyActions
+        tall={warnings.length > 0}
         scrollKey={warningTeam}
         error={error}
         body={
@@ -345,63 +347,65 @@ export function ActaLineupSheet({
     const totals = playerTotals(sheet, side, p.cap);
     const out = totals.red || totals.exclusions >= rules.exclusionLimit;
     const history = playedPeriods(sheet, side, p.key, request.period);
+    const warning = out
+      ? "Expulsado"
+      : hint?.kind === "rest"
+        ? "Debe descansar"
+        : hint
+          ? "Debe jugar"
+          : null;
     return (
       <button
         key={p.key}
+        data-acta-lineup-player={side}
         type="button"
         aria-label={side === "us" ? `${p.cap} ${p.name}` : String(p.cap)}
         aria-pressed={selected}
         onClick={() => select(p.key, keeper)}
-        className={`flex h-16 min-w-0 items-center gap-2 rounded-xl border-2 px-2 text-left transition-colors motion-reduce:transition-none ${selected ? "border-pool-blue text-pool-deep bg-blue-50" : "border-pool-deep/70 text-pool-deep bg-white"} ${side === "them" ? "h-24 flex-col justify-center gap-2" : ""}`}
+        className={`flex ${side === "them" ? "h-[4.5rem]" : "h-16"} min-w-0 items-center gap-2 rounded-xl border-2 px-2 text-left transition-colors motion-reduce:transition-none ${out || hint?.kind === "rest" ? "text-pool-deep border-red-800 bg-red-50" : hint?.kind === "play" ? "text-pool-deep border-emerald-800 bg-emerald-50" : selected ? "border-pool-blue text-pool-deep bg-blue-50" : "border-pool-deep/70 text-pool-deep bg-white"}`}
       >
-        <span
-          className={`flex shrink-0 items-center gap-0.5 ${side === "them" ? "w-full justify-between" : "flex-col"}`}
+        <strong
+          className={`relative grid shrink-0 place-items-center rounded-lg border text-xl font-extrabold ${side === "us" ? "h-8 w-8" : "h-10 w-10"} ${selected ? "border-pool-deep bg-pool-deep text-white" : "text-pool-deep border-slate-500 bg-slate-200"}`}
         >
-          <strong
-            className={`grid shrink-0 place-items-center rounded-lg text-xl font-extrabold ${side === "us" ? "h-8 w-8" : "h-9 w-9"} ${selected ? "bg-pool-deep text-white" : "text-pool-deep bg-slate-100"}`}
-          >
-            {p.cap}
-          </strong>
-          {side === "them" && selected && (
-            <Check size={18} className="text-pool-blue shrink-0" aria-hidden="true" />
-          )}
-          {(hint || out) && (
+          {p.cap}
+          {selected && (
             <span
-              title={out ? "Expulsado" : hint?.kind === "rest" ? "Debe descansar" : "Debe jugar"}
-              className={`grid place-items-center rounded-md ${side === "us" ? "h-5 w-5" : "h-7 w-7"} ${out ? "border border-red-800 bg-red-50 text-red-800" : "border-pool-deep text-pool-deep border bg-amber-100"}`}
+              className="bg-pool-blue absolute -top-2 -right-1 grid h-4 w-4 place-items-center rounded-full text-white"
+              aria-hidden="true"
             >
-              {out ? (
-                <CircleAlert size={side === "us" ? 16 : 20} aria-hidden="true" />
-              ) : hint?.kind === "rest" ? (
-                <Moon size={side === "us" ? 16 : 20} aria-hidden="true" />
-              ) : (
-                <Play size={side === "us" ? 16 : 20} aria-hidden="true" />
-              )}
-              <span className="sr-only">
-                {out ? "Expulsado" : hint?.kind === "rest" ? "Debe descansar" : "Debe jugar"}
-              </span>
+              <Check size={12} strokeWidth={3} />
             </span>
           )}
-        </span>
+        </strong>
         {side === "us" && (
-          <span className="min-w-0 flex-1 text-base font-bold">
+          <span data-acta-lineup-name className="min-w-0 flex-1 text-base font-bold">
             <ActaPlayerName name={p.name} />
           </span>
         )}
-        {request.period > 1 && (
+        {warning && (
+          <span
+            title={warning}
+            data-acta-lineup-warning
+            className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${out || hint?.kind === "rest" ? "text-red-800" : "text-emerald-800"}`}
+          >
+            {out ? (
+              <CircleAlert size={20} aria-hidden="true" />
+            ) : hint?.kind === "rest" ? (
+              <Moon size={20} aria-hidden="true" />
+            ) : (
+              <Play size={20} aria-hidden="true" />
+            )}
+            <span className="sr-only">{warning}</span>
+          </span>
+        )}
+        <span data-acta-lineup-history className={side === "them" ? "ml-auto" : "shrink-0"}>
           <ActaQuarterMarks
             played={history}
+            known={[1, 2, 3, 4].filter((period) => Boolean(lineupFor(sheet, side, period)))}
             period={request.period}
             current={selected}
-            compact={side === "us"}
-            small={side === "them"}
+            compact
           />
-        )}
-        <span
-          aria-hidden="true"
-          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${selected ? "bg-pool-blue text-white" : "border-2 border-slate-500"} ${side === "them" ? "sr-only absolute" : ""}`}
-        >
-          {selected && <Check size={18} />}
         </span>
       </button>
     );
@@ -409,13 +413,23 @@ export function ActaLineupSheet({
   function advance() {
     if (side === "us" && (request.mode === "start" || !draft.them.keeper)) {
       if (!selection.keeper || selection.field.length !== rules.fieldPlayers) {
-        setError(`Elige un portero y ${rules.fieldPlayers} jugadores de campo.`);
+        setError(
+          lineupSelectionMessage(
+            sheet,
+            lineups.find((lineup) => lineup.side === side)!,
+          ),
+        );
         return;
       }
       void update({ ...draftRef.current, step: "them" });
     } else {
       if (!canComplete) {
-        setError(structures[0] ?? "Elige los porteros de ambos equipos.");
+        const incomplete = lineups.find((lineup) => lineupIssues(sheet, lineup).length > 0);
+        setError(
+          incomplete
+            ? lineupSelectionMessage(sheet, incomplete)
+            : "Revisa los porteros de ambos equipos.",
+        );
         return;
       }
       if (warnings.length || keeperWarning) {
@@ -436,7 +450,7 @@ export function ActaLineupSheet({
       controls={
         <div className="space-y-2">
           {request.mode === "start" && (
-            <div className="grid grid-cols-2 gap-2 text-base font-bold">
+            <div data-acta-lineup-steps className="grid grid-cols-2 gap-2 text-base font-bold">
               {(["us", "them"] as const).map((team) => (
                 <span
                   key={team}
@@ -454,31 +468,6 @@ export function ActaLineupSheet({
             <p className="text-sm font-semibold">
               Comprueba si está jugando el gorro {request.suggested}.
             </p>
-          )}
-          {activeAdvice.length > 0 && (
-            <div
-              role="status"
-              className="border-pool-deep text-pool-deep space-y-1 rounded-lg border bg-amber-100 px-3 py-2 text-base leading-snug font-semibold"
-            >
-              {(["rest", "play"] as const).map((kind) => {
-                const list = options.filter((p) =>
-                  activeAdvice.some((a) => a.key === p.key && a.kind === kind),
-                );
-                return list.length ? (
-                  <p key={kind} className="flex items-start gap-2">
-                    {kind === "rest" ? (
-                      <Moon size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-                    ) : (
-                      <Play size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
-                    )}
-                    <span>
-                      {kind === "rest" ? "Deben descansar" : "Deben jugar"}:{" "}
-                      <strong>{list.map((p) => p.cap).join(", ")}</strong>
-                    </span>
-                  </p>
-                ) : null;
-              })}
-            </div>
           )}
         </div>
       }
@@ -498,6 +487,40 @@ export function ActaLineupSheet({
       }
     >
       <div className="space-y-4">
+        {activeAdvice.length > 0 && (
+          <div data-acta-lineup-legend role="status" className="grid grid-cols-2 gap-2">
+            {(["rest", "play"] as const).map((kind) => {
+              const list = options.filter((p) =>
+                activeAdvice.some((a) => a.key === p.key && a.kind === kind),
+              );
+              return list.length ? (
+                <div
+                  key={kind}
+                  className={`rounded-lg border px-2 py-2 ${kind === "rest" ? "border-red-800 bg-red-50 text-red-900" : "border-emerald-800 bg-emerald-50 text-emerald-900"}`}
+                >
+                  <p className="flex items-center gap-1 text-sm font-extrabold">
+                    {kind === "rest" ? (
+                      <Moon size={18} className="shrink-0" aria-hidden="true" />
+                    ) : (
+                      <Play size={18} className="shrink-0" aria-hidden="true" />
+                    )}
+                    {kind === "rest" ? "Deben descansar" : "Deben jugar"}
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {list.map((p) => (
+                      <span
+                        key={p.key}
+                        className="grid h-7 min-w-7 place-items-center rounded border border-current bg-white px-1 text-base font-extrabold"
+                      >
+                        {p.cap}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })}
+          </div>
+        )}
         <section aria-label="Portero del cuarto" className="space-y-2">
           <div className="flex items-center justify-between text-base font-extrabold">
             <h3>Portero</h3>
@@ -505,7 +528,10 @@ export function ActaLineupSheet({
               {selection.keeper ? "1 de 1" : "Elige uno"}
             </span>
           </div>
-          <div className={side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2"}>
+          <div
+            data-acta-lineup-grid={side}
+            className={side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2"}
+          >
             {keepers.map((p) => playerButton(p, true))}
           </div>
           {rules.singleKeeper && keepers.length === 1 && request.period === 1 && (
@@ -532,9 +558,8 @@ export function ActaLineupSheet({
             </span>
           </div>
           <div
-            className={
-              side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2 min-[390px]:grid-cols-3"
-            }
+            data-acta-lineup-grid={side}
+            className={side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2"}
           >
             {options.filter((p) => ![1, 13].includes(p.cap)).map((p) => playerButton(p, false))}
           </div>

@@ -121,6 +121,45 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("interfaz del acta", () => {
+  it("al salir de un acta cerrada ofrece consulta y no corregir convocatoria", () => {
+    const current = record();
+    current.sheet.phase = "finished";
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Volver al partido" }));
+    expect(screen.getByRole("button", { name: "Seguir viendo el acta" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Corregir convocatoria" })).toBeNull();
+    expect(
+      screen.getByText("Puedes volver a consultar las jugadas y estadísticas."),
+    ).toBeInTheDocument();
+  });
+
+  it.each([false, true])(
+    "bloquea el cambio de portero durante el descanso, categoría joven: %s",
+    (youth) => {
+      const current = youth ? youthRecord(2) : record();
+      current.sheet.phase = "break";
+      mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+      render(<LiveMatchClient />);
+      const keeper = screen.getByRole("button", { name: /Portero en juego/ });
+      expect(keeper).toBeDisabled();
+      fireEvent.click(keeper);
+      expect(screen.queryByRole("dialog")).toBeNull();
+      expect(mock.change).not.toHaveBeenCalled();
+    },
+  );
+  it("elimina el aviso de cierre de rotación antes del quinto cuarto", () => {
+    const current = youthRecord(4);
+    current.sheet.phase = "break";
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    expect(screen.queryByText("Revisa los cuatro primeros cuartos")).toBeNull();
+    expect(screen.queryByText("Ver avisos de rotación")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Toca aquí para empezar el cuarto 5" }),
+    ).toBeEnabled();
+  });
+
   it("muestra el relevo con acciones claras y permite cancelar", () => {
     const takeover = vi.fn();
     mock.hook.mockReturnValue({ ...mock.hook(), writable: false, takeover });
@@ -710,14 +749,13 @@ describe("alineaciones del acta infantil", () => {
     const notice = screen.getByRole("region", { name: "Avisos antes del cuarto 4" });
     expect(within(notice).getAllByText("Deben descansar")).toHaveLength(2);
     expect(within(notice).getAllByText("Deben jugar")).toHaveLength(2);
-    expect(
-      screen.getByRole("button", { name: "Elegir jugadores del cuarto 4" }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Elegir jugadores del cuarto 4" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Revisar participación" })).toBeInTheDocument();
   });
   it("muestra solo quienes juegan en el selector y renderiza el límite de expulsiones", () => {
     mock.hook.mockReturnValue({ ...mock.hook(), record: youthRecord() });
     render(<LiveMatchClient />);
-    expect(screen.queryByRole("button", { name: "Revisar participación" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Revisar participación" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Morvedre" }));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).queryByRole("button", { name: /Morvedre, gorro 9/ })).toBeNull();

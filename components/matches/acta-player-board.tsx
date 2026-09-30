@@ -90,10 +90,23 @@ export function ActaPlayerBoard({
                 type="button"
                 disabled={!playing}
                 onClick={() => onPlayer(side, cap)}
-                className={`h-24 min-w-0 gap-1 ${side === "them" ? "flex flex-row flex-wrap items-center justify-center" : "grid grid-cols-[2.625rem_minmax(0,1fr)] items-center"} border-t border-[#062048] px-1.5 py-1 text-left enabled:active:brightness-95`}
+                className={`relative h-20 min-w-0 gap-1 ${side === "them" ? "flex flex-row flex-wrap items-center justify-center" : "grid grid-cols-[2rem_minmax(0,1fr)] items-center"} border-t border-[#062048] px-1.5 py-1 text-left ${controlsParticipation(sheet) ? (side === sides[0] ? "pl-5" : "pr-5") : ""} enabled:active:brightness-95`}
                 style={{ backgroundColor: sanction.backgroundColor, color: sanction.color }}
                 aria-label={`${keeper ? "Portero de " : ""}${side === "us" ? "Morvedre" : "Rival"}, ${validCapNumber(cap) == null ? "sin gorro" : `gorro ${cap}`}${player ? `, ${player.name}` : ""}, ${keeper ? `${totals.saves} paradas, ${totals.conceded} goles encajados` : `${totals.goals} goles`}, ${totals.exclusions} de ${exclusionLimit(sheet)} expulsiones${totals.red ? ", roja" : ""}${out ? ", fuera" : ""}${keeper && cap === sheet.keeper ? ", portero en juego" : ""}`}
               >
+                {controlsParticipation(sheet) && (
+                  <span
+                    data-acta-quarter-rail
+                    className={`absolute top-1/2 -translate-y-1/2 ${side === sides[0] ? "left-0" : "right-0"}`}
+                  >
+                    <ActaQuarterMarks
+                      edge
+                      played={playedPeriods(sheet, side, participantKey(sheet, side, cap))}
+                      period={sheet.period}
+                      current={sheet.phase === "playing" && participantIsPlaying(sheet, side, cap)}
+                    />
+                  </span>
+                )}
                 <span
                   data-acta-player-team
                   aria-hidden="true"
@@ -108,7 +121,7 @@ export function ActaPlayerBoard({
                     className={`flex shrink-0 flex-col items-center gap-0.5 ${side === "us" ? "col-start-1 row-span-2 row-start-1" : ""}`}
                   >
                     <strong
-                      className={`relative grid shrink-0 place-items-center rounded-md border border-[#062048] tabular-nums ${controlsParticipation(sheet) ? "h-7 min-w-8 text-xl" : "h-10 min-w-8 text-2xl"} ${side === "us" ? "bg-[#062048] font-black text-white" : "bg-[#f4c430] font-black text-[#062048]"}`}
+                      className={`relative grid h-10 min-w-8 shrink-0 place-items-center rounded-md border border-[#062048] text-2xl tabular-nums ${side === "us" ? "bg-[#062048] font-black text-white" : "bg-[#f4c430] font-black text-[#062048]"}`}
                     >
                       {validCapNumber(cap) ?? "—"}
                       {out && (
@@ -125,19 +138,11 @@ export function ActaPlayerBoard({
                         </span>
                       )}
                     </strong>
-                    {controlsParticipation(sheet) && (
-                      <ActaQuarterMarks
-                        compact
-                        played={playedPeriods(sheet, side, participantKey(sheet, side, cap))}
-                        period={sheet.period}
-                        current={
-                          sheet.phase === "playing" && participantIsPlaying(sheet, side, cap)
-                        }
-                      />
-                    )}
                   </span>
                   {player && (
-                    <span className="relative col-start-2 row-start-1 min-w-0 overflow-hidden pr-3 pl-1 text-sm leading-tight font-semibold">
+                    <span
+                      className={`relative col-start-2 row-start-1 min-w-0 overflow-hidden pl-1 text-sm leading-tight font-semibold ${keeper && cap === sheet.keeper ? "pr-3" : ""}`}
+                    >
                       <ActaPlayerName name={player.name} />
                       {keeper && cap === sheet.keeper && (
                         <span
@@ -154,17 +159,17 @@ export function ActaPlayerBoard({
                   className={`grid items-center gap-1 ${side === "them" ? "min-w-0 flex-1 grid-cols-1" : "col-start-2 row-start-2 min-w-0 grid-cols-2"}`}
                 >
                   <span
-                    className={`flex min-w-0 flex-wrap items-center justify-center gap-1 text-center ${side === "them" ? "flex-row" : "flex-col"}`}
+                    className={`flex min-w-0 items-center justify-center gap-1 text-center ${side === "them" ? "flex-row" : "flex-col"}`}
                   >
                     <strong className="text-xl leading-none font-bold tabular-nums">
                       {keeper ? `${totals.saves} / ${totals.conceded}` : totals.goals}
                     </strong>
-                    <span className="text-sm leading-tight font-bold [overflow-wrap:anywhere]">
-                      {keeper ? "Par. / Enc." : "Goles"}
+                    <span className="text-sm leading-tight font-bold whitespace-nowrap">
+                      {keeper ? "Par/Enc" : "Goles"}
                     </span>
                   </span>
                   <span
-                    className={`flex min-w-0 flex-wrap items-center justify-center gap-1 text-center ${side === "them" ? "flex-row" : "flex-col"}`}
+                    className={`flex min-w-0 flex-col items-center justify-center text-center ${side === "them" ? "gap-0" : "gap-1"}`}
                     aria-label={`${totals.exclusions} de ${exclusionLimit(sheet)} expulsiones`}
                   >
                     <span className="flex h-5 items-center justify-center gap-1" aria-hidden="true">

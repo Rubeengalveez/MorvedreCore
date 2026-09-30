@@ -199,7 +199,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
             address={match.location}
             mapsUrl={match.maps_url}
             compact
-            className="border-ink-200 bg-paper-card border"
+            className="border-pool-deep/75 bg-paper-card rounded-2xl border-2"
           />
         ) : null}
       </div>

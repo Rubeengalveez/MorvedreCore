@@ -56,7 +56,6 @@ import {
   participantIsPlaying,
   participants,
   rotationAdvice,
-  rotationCompletion,
   lineupFor,
   lineupIssues,
 } from "@/lib/domain/live-match-participation";
@@ -278,7 +277,6 @@ export function LiveMatchClient() {
           ),
         )
       : [];
-  const completionAdvice = s.phase === "break" && s.period === 4 ? rotationCompletion(s) : [];
   const roleIssue =
     controlsParticipation(s) &&
     s.phase === "playing" &&
@@ -1239,7 +1237,9 @@ export function LiveMatchClient() {
     if (activePanel === "history") return styles.panelHistory;
     if (activePanel === "player-stats") return styles.panelStats;
     if (["players", "assist", "penalty-shooter"].includes(activePanel)) {
-      return styles.panelPlayers;
+      return controlsParticipation(s) && !editing
+        ? styles.panelReducedPlayers
+        : styles.panelPlayers;
     }
     if (activePanel === "actions") {
       return isKeeperCap ? styles.panelActionsKeeper : styles.panelActionsField;
@@ -1289,6 +1289,9 @@ export function LiveMatchClient() {
           status={status}
           onShare={() => setPanel("share")}
           onBack={requestExit}
+          onParticipation={
+            controlsParticipation(s) ? () => setParticipationReview(true) : undefined
+          }
         />
 
         <div
@@ -1305,34 +1308,7 @@ export function LiveMatchClient() {
               </button>
             </div>
           )}
-          {fourthAdvice.length > 0 && (
-            <ActaRotationNotice
-              sheet={s}
-              onStart={startQuarter}
-              onReview={() => setParticipationReview(true)}
-            />
-          )}
-          {completionAdvice.length > 0 && (
-            <div
-              role="status"
-              className="relative z-20 m-3 rounded-xl border-2 border-amber-700 bg-amber-50 p-3 text-amber-950"
-            >
-              <strong className="block text-base">Revisa los cuatro primeros cuartos</strong>
-              <p className="mt-1 text-sm font-semibold">
-                Hay {completionAdvice.length} avisos. Revísalos con el entrenador o el árbitro.
-              </p>
-              <details className="mt-2">
-                <summary className="flex min-h-12 cursor-pointer items-center font-bold">
-                  Ver avisos de rotación
-                </summary>
-                <ul className="space-y-1 text-sm">
-                  {completionAdvice.map((text) => (
-                    <li key={text}>{text}</li>
-                  ))}
-                </ul>
-              </details>
-            </div>
-          )}
+          {fourthAdvice.length > 0 && <ActaRotationNotice sheet={s} />}
           {roleIssue && (
             <div
               role="status"
@@ -1376,9 +1352,10 @@ export function LiveMatchClient() {
 
           {s.phase === "ready" && (
             <section className={styles.preparation}>
-              <h2>Todo listo antes del primer balón</h2>
-
-              <p>Revisa los gorros y elige quién empieza en portería.</p>
+              <div className={styles.preparationHeading}>
+                <h2>Antes del primer balón</h2>
+                <p>Revisa los gorros y elige quién empieza en portería.</p>
+              </div>
 
               <div className={styles.setup}>
                 <label>
@@ -1515,9 +1492,9 @@ export function LiveMatchClient() {
               {s.phase !== "ready" && !s.shootout && (
                 <ActaKeeperControl
                   sheet={s}
-                  disabled={!enabled}
+                  disabled={!playing}
                   onChange={() => {
-                    openKeeper();
+                    if (playing) openKeeper();
                   }}
                 />
               )}
@@ -3422,6 +3399,7 @@ export function LiveMatchClient() {
         />
         <ActaSelectionSheet
           open={opponentRosterOpen}
+          fitContent
           onOpenChange={(open) => !open && setOpponentRosterOpen(false)}
           context="Preparar partido"
           title="Gorros inscritos del rival"
@@ -3535,21 +3513,31 @@ export function LiveMatchClient() {
           title="¿Salir del acta?"
           summary={record.dirty || record.flight ? "Guardada en este móvil" : "Acta guardada"}
           description={
-            record.dirty || record.flight
-              ? "Puedes continuar después. Las jugadas pendientes se enviarán cuando haya conexión."
-              : "Puedes volver y continuar donde lo dejaste."
+            closed
+              ? "Puedes volver a consultar las jugadas y estadísticas."
+              : record.dirty || record.flight
+                ? "Puedes continuar después. Las jugadas pendientes se enviarán cuando haya conexión."
+                : "Puedes volver y continuar donde lo dejaste."
           }
           icon="saved"
           actions={[
-            { label: "Seguir anotando", tone: "primary", onClick: () => setExitOpen(false) },
             {
-              label: "Corregir convocatoria",
-              tone: "secondary",
-              onClick: () => {
-                setExitOpen(false);
-                leaveActa(`/acta/convocatoria?match=${record.matchId}&from=acta`);
-              },
+              label: closed || !writable ? "Seguir viendo el acta" : "Seguir anotando",
+              tone: "primary",
+              onClick: () => setExitOpen(false),
             },
+            ...(enabled
+              ? [
+                  {
+                    label: "Corregir convocatoria",
+                    tone: "secondary" as const,
+                    onClick: () => {
+                      setExitOpen(false);
+                      leaveActa(`/acta/convocatoria?match=${record.matchId}&from=acta`);
+                    },
+                  },
+                ]
+              : []),
             {
               label: "Salir",
               tone: "danger",

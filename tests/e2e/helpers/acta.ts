@@ -90,7 +90,10 @@ export async function readLocal(page: Page): Promise<StoredMatch> {
 export async function capture(page: Page, name: string) {
   await page.evaluate(async () => {
     await Promise.all(
-      document.getAnimations().map((animation) => animation.finished.catch(() => {})),
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => {})),
     );
   });
   await page.screenshot({ path: `tmp/acta-audit/youth-redesign-${name}.png` });

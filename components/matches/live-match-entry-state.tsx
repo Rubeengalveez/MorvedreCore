@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ActaLoadingIndicator } from "./acta-loading-indicator";
 import { ArrowLeft, ClipboardList, AlertCircle, Check, Loader2, Unlink2 } from "lucide-react";
 import { prepareLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
 import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
@@ -318,24 +319,7 @@ export function LiveMatchEntryState({
             </button>
           </>
         ) : (
-          <div role="status" aria-live="polite" aria-busy="true" className="text-center">
-            <div
-              aria-hidden="true"
-              className="bg-pool-deep shadow-elev-2 relative mx-auto mb-7 grid h-20 w-20 place-items-center rounded-2xl text-white"
-            >
-              <ClipboardList className="h-9 w-9" />
-              <span className="bg-ball-gold text-pool-deep ring-pool-ice absolute -right-2 -bottom-2 grid h-9 w-9 place-items-center rounded-full ring-4">
-                <Loader2 className="h-5 w-5 motion-safe:animate-spin" />
-              </span>
-            </div>
-            <p className="text-pool-blue text-sm font-extrabold tracking-widest uppercase">
-              Acta en directo
-            </p>
-            <h2 className="font-display mt-2 text-2xl font-extrabold">Preparando tu acta…</h2>
-            <p className="text-ink-700 mx-auto mt-3 max-w-xs text-base leading-relaxed">
-              Recuperando la convocatoria y las jugadas guardadas.
-            </p>
-          </div>
+          <ActaLoadingIndicator />
         )}
       </div>
       <ActaGuardSheet

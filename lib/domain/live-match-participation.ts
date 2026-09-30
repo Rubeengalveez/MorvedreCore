@@ -254,6 +254,21 @@ export function lineupIssues(sheet: LiveSheet, lineup: PeriodLineup) {
   return issues;
 }
 
+export function lineupSelectionMessage(sheet: LiveSheet, lineup: PeriodLineup) {
+  const team = lineup.side === "us" ? "Morvedre" : "Rival";
+  const keeper = participants(sheet, lineup.side).find((player) => player.key === lineup.keeper);
+  const missing = matchRules(sheet.category).fieldPlayers - lineup.field.length;
+  const needsKeeper = !keeper || ![1, 13].includes(keeper.cap);
+  if (needsKeeper && missing > 0)
+    return `${team}: elige un portero (1 o 13) y ${missing} ${missing === 1 ? "jugador de campo más" : "jugadores de campo más"}.`;
+  if (needsKeeper) return `${team}: falta el portero. Elige el gorro 1 o 13.`;
+  if (missing > 0)
+    return `${team}: ${missing === 1 ? "falta 1 jugador de campo" : `faltan ${missing} jugadores de campo`}. Toca ${missing === 1 ? "un jugador" : `${missing} jugadores`} para completar la selección.`;
+  if (missing < 0)
+    return `${team}: ${-missing === 1 ? "sobra 1 jugador de campo" : `sobran ${-missing} jugadores de campo`}. Toca ${-missing === 1 ? "uno" : -missing} para quitarlo de la selección.`;
+  return `${team}: ${lineupIssues(sheet, lineup)[0] ?? "selección completa."}`;
+}
+
 export function saveLineups(
   sheet: LiveSheet,
   lineups: PeriodLineup[],

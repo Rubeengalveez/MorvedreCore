@@ -175,8 +175,17 @@ test("avisa en el cuarto 4 de ambos equipos y permite registrar una incidencia",
   await expect(notice.getByText("Deben descansar")).toHaveCount(2);
   await expect(notice.getByText("Deben jugar")).toHaveCount(2);
   await capture(page, "fourth-notice");
-  await page.getByRole("button", { name: "Elegir jugadores del cuarto 4" }).click();
+  await expect(page.getByRole("button", { name: "Elegir jugadores del cuarto 4" })).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Toca aquí para empezar el cuarto 4", exact: true })
+    .click();
   await capture(page, "fourth-selection-own");
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  await expect(page.getByRole("button", { name: "Continuar con Rival" })).toBeInViewport();
+  await page.getByRole("button", { name: "2 Jugador 2", exact: true }).scrollIntoViewIfNeeded();
+  await capture(page, "fourth-selection-text-200");
+  await page.addStyleTag({ content: "html { font-size: 100% !important; }" });
+
   for (const n of [1, 2, 3, 4, 5, 6, 7])
     await page.getByRole("button", { name: new RegExp(`^${n} Jugador ${n}\\b`) }).click();
   await page.getByRole("button", { name: "Continuar con Rival" }).click();
@@ -259,7 +268,28 @@ test("mantiene filas uniformes, nombres en una línea y avisos visibles a 320 px
     await board
       .locator("[data-acta-board-player]")
       .evaluateAll((buttons) => [...new Set(buttons.map((b) => b.getBoundingClientRect().height))]),
-  ).toEqual([96]);
+  ).toEqual([80]);
+  expect(
+    await board.locator("[data-acta-board-player]").evaluateAll((cells) =>
+      cells.flatMap((cell) => {
+        const bounds = cell.getBoundingClientRect();
+        return Array.from(cell.querySelectorAll("strong, span"))
+          .filter(
+            (element) =>
+              element.childElementCount === 0 &&
+              element.textContent?.trim() &&
+              !element.closest(".sr-only") &&
+              getComputedStyle(element).display !== "none",
+          )
+          .flatMap((element) => {
+            const rect = element.getBoundingClientRect();
+            return rect.bottom > bounds.bottom + 1 || rect.top < bounds.top - 1
+              ? [element.textContent]
+              : [];
+          });
+      }),
+    ),
+  ).toEqual([]);
   await page.getByRole("button", { name: "Morvedre", exact: true }).click();
   let dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("button", { name: /Morvedre, gorro/ })).toHaveCount(7);
@@ -286,5 +316,171 @@ test("mantiene filas uniformes, nombres en una línea y avisos visibles a 320 px
   ).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
+  );
+});
+
+test("ajusta paneles reducidos, guía la selección y conserva las listas normales", async ({
+  page,
+}) => {
+  const record = fixture();
+  record.sheet.category = "escuela";
+  await openLocal(page, record);
+  await expect(page.getByRole("heading", { name: "Antes del primer balón" })).toBeVisible();
+  await capture(page, "preparation-card");
+  await page.getByRole("button", { name: "Empezar partido", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  expect(await dialog.evaluate((node) => node.getBoundingClientRect().height)).toBeLessThan(600);
+  await capture(page, "opponent-registration-fit");
+  await page.getByRole("button", { name: "Listo", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar con Rival" }).click();
+  await expect(page.getByRole("alert")).toHaveText(
+    "Morvedre: elige un portero (1 o 13) y 5 jugadores de campo más.",
+  );
+  for (const n of [1, 2, 3, 4, 5])
+    await page.getByRole("button", { name: `${n} Jugador ${n}`, exact: true }).click();
+  await page.getByRole("button", { name: "Continuar con Rival" }).click();
+  await expect(page.getByRole("alert")).toContainText("falta 1 jugador de campo");
+  await page.getByRole("button", { name: "6 Jugador 6", exact: true }).click();
+  await page.getByRole("button", { name: "Continuar con Rival" }).click();
+  for (const n of [1, 2, 3, 4, 5, 6])
+    await page.getByRole("button", { name: String(n), exact: true }).click();
+  await capture(page, "rival-selection-compact");
+  await page.getByRole("button", { name: "Listo, empezar cuarto" }).click();
+  await page.setViewportSize({ width: 320, height: 740 });
+  await expect(page.locator("[data-acta-meta]")).toHaveCSS("white-space", "nowrap");
+  expect(
+    await page.locator("[data-acta-meta]").evaluate((node) => node.getBoundingClientRect().height),
+  ).toBeLessThan(40);
+  await page.getByRole("button", { name: "Morvedre", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  expect(await dialog.evaluate((node) => node.getBoundingClientRect().height)).toBeLessThan(600);
+  await capture(page, "own-reduced-fit");
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await page.getByRole("button", { name: "Rival", exact: true }).click();
+  expect(
+    await page.getByRole("dialog").evaluate((node) => node.getBoundingClientRect().height),
+  ).toBeLessThan(600);
+  await capture(page, "rival-reduced-fit");
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await page.getByRole("button", { name: /Morvedre, gorro 2, Jugador 2/ }).click();
+  await page.getByRole("button", { name: "Gol", exact: true }).click();
+  await page.getByRole("button", { name: "Gol normal", exact: true }).click();
+  await capture(page, "assist-reduced-fit");
+  expect(
+    await page.getByRole("dialog").evaluate((node) => node.getBoundingClientRect().height),
+  ).toBeLessThan(681);
+  await page.getByRole("button", { name: "Gol sin asistencia", exact: true }).click();
+  await page.getByRole("button", { name: /Rival, gorro 5,/ }).click();
+  await page.getByRole("button", { name: "Penalti", exact: true }).click();
+  await capture(page, "penalty-reduced-fit");
+  expect(
+    await page.getByRole("dialog").evaluate((node) => node.getBoundingClientRect().height),
+  ).toBeLessThan(681);
+  await page.getByRole("button", { name: /Jugador 2/ }).click();
+  await page.getByRole("button", { name: "Parada por el portero", exact: true }).click();
+  await page.getByRole("button", { name: "Terminar cuarto", exact: true }).click();
+  await page.getByRole("button", { name: "Sí, terminar cuarto 1", exact: true }).click();
+  await expect(page.locator("[data-acta-keeper-control]")).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Toca aquí para empezar el cuarto 2", exact: true })
+    .click();
+  const unselected = page.getByRole("button", { name: "2 Jugador 2", exact: true });
+  const marks = unselected.locator("[data-acta-quarter-marks]");
+  await expect(marks).toHaveText("1");
+  await expect(marks.locator("svg")).toHaveCount(1);
+  await unselected.click();
+  await expect(marks).toHaveText("12");
+  await expect(marks.locator("span").last()).toHaveCSS("background-color", "rgb(22, 87, 168)");
+  await capture(page, "selection-current-past-rest");
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  const normal = fixture();
+  normal.sheet.category = "cadete";
+  normal.sheet.participation = undefined;
+  normal.sheet.phase = "playing";
+  await openLocal(page, normal);
+  await page.getByRole("button", { name: "Morvedre", exact: true }).click();
+  await expect(
+    page.getByRole("dialog").getByRole("button", { name: /Morvedre, gorro/ }),
+  ).toHaveCount(14);
+  expect(
+    await page.getByRole("dialog").evaluate((node) => node.getBoundingClientRect().height),
+  ).toBeCloseTo(740 * 0.88, 0);
+  await capture(page, "normal-list-preserved");
+});
+
+test("la convocatoria comparte la carga del acta y conserva el destino de vuelta", async ({
+  page,
+}) => {
+  const record = fixture();
+  record.sheet.phase = "playing";
+  record.callupCandidates = record.sheet.players.map((player) => ({
+    player_id: player.id,
+    full_name: player.name,
+    cap_number: player.cap,
+    is_current_team: true,
+    has_conflict: false,
+  }));
+  await openLocal(page, record);
+  await expect(page.getByRole("button", { name: "Morvedre", exact: true })).toBeVisible();
+  await page.addInitScript(() => {
+    const original = IDBFactory.prototype.open;
+    const handler = Object.getOwnPropertyDescriptor(IDBRequest.prototype, "onsuccess")!;
+    IDBFactory.prototype.open = function (...args: Parameters<IDBFactory["open"]>) {
+      const request = original.apply(this, args);
+      Object.defineProperty(request, "onsuccess", {
+        configurable: true,
+        get() {
+          return handler.get!.call(request);
+        },
+        set(listener) {
+          handler.set!.call(request, (event: Event) =>
+            setTimeout(() => listener?.call(request, event), 5000),
+          );
+        },
+      });
+      return request;
+    };
+  });
+  await page.goto(`/acta/convocatoria?match=${record.matchId}&from=match`);
+  await expect(page.getByRole("heading", { name: "Preparando la convocatoria…" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Volver al partido", exact: true })).toHaveAttribute(
+    "href",
+    `/matches/${record.matchId}`,
+  );
+  await capture(page, "callup-loading-shared");
+  await expect(page.getByRole("heading", { name: "Convocatoria", exact: true })).toBeVisible({
+    timeout: 15000,
+  });
+});
+
+test("ajusta también la lista reducida de sustitutos después de una sanción", async ({ page }) => {
+  const record = fixture();
+  record.sheet.phase = "playing";
+  record.sheet.participation!.opponentConfirmed = true;
+  record.sheet.participation!.lineups = [
+    { period: 1, side: "us", keeper: id(1), field: [2, 3, 4, 5, 6, 7].map(id) },
+    { period: 1, side: "them", keeper: "1", field: [2, 3, 4, 5, 6, 7].map(String) },
+  ];
+  record.sheet.events = [401, 402, 403].map((number) => ({
+    id: id(number),
+    side: "us",
+    cap: 2,
+    playerId: id(2),
+    kind: "exclusion",
+    period: 1,
+    keeper: null,
+    deleted: false,
+  }));
+  await openLocal(page, record);
+  await expect(page.getByRole("heading", { name: "Elige quién entra", exact: true })).toBeVisible();
+  expect(
+    await page.getByRole("dialog").evaluate((node) => node.getBoundingClientRect().height),
+  ).toBeLessThan(650);
+  await capture(page, "substitute-reduced-fit");
+  await page.getByRole("button", { name: "8 Jugador 8", exact: true }).click();
+  await page.getByRole("button", { name: "Confirmar sustitución", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect((await readLocal(page)).sheet.participation!.changes).toContainEqual(
+    expect.objectContaining({ incoming: id(8), outgoing: id(2) }),
   );
 });

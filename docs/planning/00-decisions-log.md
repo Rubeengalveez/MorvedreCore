@@ -1,5 +1,12 @@
 # Log de decisiones
 
+## 2026-09-30 - Ajustes posteriores de los paneles y la rotación
+
+- Se abordan los 15 puntos señalados por Rubén en `docs/audits/2026-09-30-acta-followup.md`. Los selectores reducidos y los gorros rivales ajustan su altura al contenido; las listas normales conservan su altura y desplazamiento.
+- Los cuartos jugados se sitúan en los extremos de la tabla, con filas compactas y uniformes. La selección usa gris para los cuartos anteriores, azul para el actual elegido y una luna para descanso o no seleccionado. Se distinguen los datos desconocidos.
+- La participación se abre desde la cabecera durante los cuatro primeros cuartos. Se elimina el botón redundante de inicio en el aviso previo al cuarto 4 y por completo el aviso de rotación al pasar al quinto. El cambio de portero se bloquea durante el descanso.
+- La carga de convocatoria comparte el indicador visual del acta; se unifica el contorno de la ubicación, los errores guían según la selección y la confirmación de rotación dispone de más altura. No se publica.
+
 ## 2026-09-30 - Auditoría de cierre del acta
 
 - Rubén pide revisar y corregir todo el acta y sus flujos relacionados: diseño móvil, accesibilidad, errores, sincronización sin conexión, salud del código y limpieza. Se conserva el flujo de juego que los delegados ya conocen y la separación entre selección de juego y confirmación de decisiones.

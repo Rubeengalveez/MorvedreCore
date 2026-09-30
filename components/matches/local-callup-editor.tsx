@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import type { Route } from "next";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, ClipboardList } from "lucide-react";
+import { ActaLoadingIndicator } from "./acta-loading-indicator";
 import { Alert } from "@/components/ui/alert";
 import { PageShell } from "@/components/ui/page-shell";
 import { CallupEditor } from "@/app/(app)/admin/matches/[id]/_components/callup-editor";
@@ -48,32 +49,41 @@ export function LocalCallupEditor() {
     : "";
   if (!record || blocked || !writable)
     return (
-      <PageShell width="md" className="min-h-dvh py-5">
-        {blocked || error ? (
-          <Alert variant="danger" title="No se puede editar la convocatoria">
-            {blocked || error}
-          </Alert>
-        ) : (
-          <div
-            role="status"
-            className="border-pool-deep text-pool-deep mx-auto flex min-h-[50dvh] w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 bg-white p-6 text-center"
-          >
-            <Loader2
-              size={32}
-              className="animate-spin motion-reduce:animate-none"
-              aria-hidden="true"
-            />
-            <h1 className="text-xl font-extrabold">Preparando la convocatoria</h1>
+      <main
+        id="main-content"
+        className="bg-pool-ice text-pool-deep flex min-h-dvh flex-col pb-[max(1rem,env(safe-area-inset-bottom))]"
+      >
+        <header className="bg-pool-deep pt-[env(safe-area-inset-top)] text-white">
+          <div className="mx-auto max-w-lg px-4 pb-6">
+            <a
+              href={loadingBack.href}
+              className="mb-4 -ml-2 inline-flex min-h-12 items-center gap-2 rounded-lg px-2 text-base font-semibold focus-visible:outline-2 focus-visible:outline-yellow-300"
+            >
+              <ArrowLeft size={20} aria-hidden="true" />
+              {loadingBack.label}
+            </a>
+            <div className="flex items-center gap-3">
+              <ClipboardList size={32} aria-hidden="true" />
+              <div>
+                <p className="text-sm text-blue-100">Espacio del delegado</p>
+                <h1 className="text-2xl font-extrabold">Editar convocatoria</h1>
+              </div>
+            </div>
           </div>
-        )}
-        <a
-          href={loadingBack.href}
-          className="border-pool-deep text-pool-deep inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 bg-white px-4 text-base font-bold"
-        >
-          <ArrowLeft size={20} aria-hidden="true" />
-          {loadingBack.label}
-        </a>
-      </PageShell>
+        </header>
+        <div className="mx-auto flex w-full max-w-lg flex-1 items-center justify-center px-5 py-8">
+          {blocked || error ? (
+            <Alert variant="danger" title="No se puede editar la convocatoria">
+              {blocked || error}
+            </Alert>
+          ) : (
+            <ActaLoadingIndicator
+              title="Preparando la convocatoria…"
+              description="Recuperando los jugadores y los cambios guardados."
+            />
+          )}
+        </div>
+      </main>
     );
 
   const active = record.sheet.players.filter((player) => !player.retired);

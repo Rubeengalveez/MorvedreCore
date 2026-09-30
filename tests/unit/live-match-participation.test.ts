@@ -4,6 +4,7 @@ import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import { editLiveRoster, playerHasRecordedHistory } from "@/lib/domain/live-match-roster-edit";
 import {
   controlsParticipation,
+  lineupSelectionMessage,
   currentParticipants,
   eligibleForAction,
   mustRestFifth,
@@ -59,6 +60,36 @@ function start(sheet: LiveSheet, period: number, field = [2, 3, 4, 5, 6, 7]) {
 }
 
 describe("participación de categorías inferiores", () => {
+  it("guía según lo que falta en cada equipo y categoría", () => {
+    const sheet = fixture("escuela");
+    const field = [2, 3, 4, 5, 6].map(id);
+    expect(
+      lineupSelectionMessage(sheet, {
+        period: 1,
+        side: "us",
+        keeper: id(1),
+        field: field.slice(0, 4),
+      }),
+    ).toContain("Morvedre: falta 1 jugador de campo");
+    expect(lineupSelectionMessage(sheet, { period: 1, side: "us", keeper: "", field })).toBe(
+      "Morvedre: falta el portero. Elige el gorro 1 o 13.",
+    );
+    expect(lineupSelectionMessage(sheet, { period: 1, side: "them", keeper: "", field: [] })).toBe(
+      "Rival: elige un portero (1 o 13) y 5 jugadores de campo más.",
+    );
+    expect(
+      lineupSelectionMessage(fixture(), { period: 1, side: "us", keeper: id(1), field }),
+    ).toContain("falta 1 jugador de campo");
+    expect(
+      lineupSelectionMessage(sheet, {
+        period: 1,
+        side: "us",
+        keeper: id(1),
+        field: [...field, id(7)],
+      }),
+    ).toContain("sobra 1 jugador de campo");
+  });
+
   it("corrige y anula sustituciones sin añadir participantes duplicados", () => {
     let sheet = start(fixture(), 1);
     sheet = replaceParticipant(sheet, {
