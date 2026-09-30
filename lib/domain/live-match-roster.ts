@@ -20,6 +20,12 @@ export function reconcileLiveRoster(sheet: LiveSheet, current: LivePlayer[]): Li
       continue;
     }
     const referenced =
+      sheet.participation?.lineups.some(
+        (l) => l.side === "us" && [l.keeper, ...l.field].includes(old.id),
+      ) ||
+      sheet.participation?.changes.some(
+        (c) => c.side === "us" && (c.incoming === old.id || c.outgoing === old.id),
+      ) ||
       sheet.events.some((e) => (e.side === "us" && e.cap === old.cap) || e.keeper === old.cap) ||
       sheet.baseline.some((b) => b.cap === old.cap && (b.goals > 0 || b.exclusions > 0)) ||
       sheet.keeperStints?.some((stint) => stint.cap === old.cap) ||

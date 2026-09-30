@@ -27,6 +27,7 @@ import {
   type TeamForCallup,
 } from "@/lib/domain/callups";
 import { safeInferCategory, type CategoryCode } from "@/lib/domain/categories";
+import { exclusionLimit } from "@/lib/domain/live-match-rules";
 
 import { requireMatchManagerOf, requireMatchStaffOf } from "./_helpers";
 
@@ -665,7 +666,7 @@ export async function recordMatchStat(input: {
   const supabase = await createClient();
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, team_id, opponent")
+    .select("id, team_id, opponent, teams(category_code)")
     .eq("id", parsed.data.match_id)
     .maybeSingle();
 
@@ -675,6 +676,10 @@ export async function recordMatchStat(input: {
   }
 
   await requireMatchStaffOf(match.team_id);
+
+  const limit = exclusionLimit({ category: match.teams?.category_code });
+  if ((parsed.data.exclusions ?? 0) > limit)
+    throw new Error(`Máximo ${limit} expulsiones en esta categoría.`);
 
   const { data: callup, error: callupError } = await supabase
     .from("match_callups")

@@ -120,19 +120,54 @@ function testRecord(sheet = testSheet()): LiveRecord {
 }
 
 describe("createActaPdf", () => {
+  it("incluye la tabla de participación de ambos equipos sin inventar cuartos sin datos", async () => {
+    const sheet = testSheet();
+    sheet.version = 4;
+    sheet.category = "infantil";
+    sheet.participation = {
+      rulesVersion: 1,
+      enabled: true,
+      opponentConfirmed: true,
+      fixedKeepers: { us: null, them: null },
+      lineups: [
+        {
+          period: 1,
+          side: "us",
+          keeper: sheet.players[0].id,
+          field: [sheet.players[1].id],
+          incident: "Faltan jugadores",
+        },
+        {
+          period: 1,
+          side: "them",
+          keeper: String(sheet.opponentCaps[0]),
+          field: sheet.opponentCaps.slice(1).map(String),
+          incident: "Faltan jugadores",
+        },
+      ],
+      changes: [],
+    };
+    const pdfFile = createActaPdf(testRecord(sheet));
+    const text = Buffer.from(await pdfFile.arrayBuffer()).toString("latin1");
+    expect(text).toContain("Participaci");
+    expect(text).toContain("Cuartos 1");
+    expect(text).toContain("(?)");
+  });
   it("continúa la tanda en la tabla de los cuartos y muestra el total sin el texto antiguo", async () => {
     const base = testSheet();
     const regular = createActaPdf(testRecord(base));
-    const withShootout = createActaPdf(testRecord({
-      ...base,
-      shootout: {
-        firstSide: "us",
-        shots: [
-          { id: "s1", side: "us", cap: 4, keeper: null, outcome: "goal" },
-          { id: "s2", side: "them", cap: 5, keeper: 1, outcome: "save" },
-        ],
-      },
-    }));
+    const withShootout = createActaPdf(
+      testRecord({
+        ...base,
+        shootout: {
+          firstSide: "us",
+          shots: [
+            { id: "s1", side: "us", cap: 4, keeper: null, outcome: "goal" },
+            { id: "s2", side: "them", cap: 5, keeper: 1, outcome: "save" },
+          ],
+        },
+      }),
+    );
     const original = Buffer.from(await regular.arrayBuffer()).toString("latin1");
     const updated = Buffer.from(await withShootout.arrayBuffer()).toString("latin1");
     expect(updated.match(/\/MediaBox/g)?.length).toBe(original.match(/\/MediaBox/g)?.length);
@@ -423,4 +458,3 @@ describe("createActaPdf", () => {
     expect(matches.length).toBe(1);
   });
 });
-

@@ -1,8 +1,10 @@
 import { sheetSchema, type LiveRecord } from "@/lib/domain/live-match";
 import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import { generateUuid } from "@/lib/utils/uuid";
+import { lineupDraftSchema, type LineupDraft } from "@/lib/domain/live-match-rules";
 
 export type StoredMatch = LiveRecord & {
+  lineupDraft?: LineupDraft;
   rosterEdit?: boolean;
   flight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number; rosterEdit?: boolean };
   takeoverFlight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number };
@@ -31,7 +33,12 @@ export async function readLocalMatch(id: string): Promise<StoredMatch | undefine
           return reject(
             new Error("El acta local no se puede leer. No borres los datos de este navegador."),
           );
-        resolve({ ...request.result, sheet: identifyLiveSheet(parsed.data) });
+        const draft = lineupDraftSchema.safeParse(request.result.lineupDraft);
+        resolve({
+          ...request.result,
+          sheet: identifyLiveSheet(parsed.data),
+          lineupDraft: draft.success ? draft.data : undefined,
+        });
       };
       request.onerror = () => reject(request.error);
     });

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LiveMatchClient } from "@/components/matches/live-match-client";
 import { ActaPlayerBoard } from "@/components/matches/acta-player-board";
 import type { LiveRecord, LiveSheet, MatchEvent } from "@/lib/domain/live-match";
+import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
+import { prepareParticipation, saveLineups } from "@/lib/domain/live-match-participation";
 
 const mock = vi.hoisted(() => ({ hook: vi.fn(), change: vi.fn() }));
 vi.mock("@/components/matches/use-live-match", () => ({ useLiveMatch: () => mock.hook() }));
@@ -59,6 +61,47 @@ function record(events: MatchEvent[] = []): LiveRecord {
   };
 }
 
+function youthRecord(period = 1): LiveRecord {
+  const current = record();
+  current.sheet = prepareParticipation(
+    {
+      ...current.sheet,
+      phase: "ready",
+      periods: 6,
+      players: Array.from({ length: 14 }, (_, i) => ({
+        id: `10000000-0000-4000-8000-${String(i + 1).padStart(12, "0")}`,
+        cap: i + 1,
+        name: `Jugador ${i + 1}`,
+      })),
+      opponentCaps: Array.from({ length: 14 }, (_, i) => i + 1),
+      baseline: [],
+    },
+    "infantil",
+  );
+  for (let quarter = 1; quarter <= Math.min(period, 4); quarter++) {
+    current.sheet = identifyLiveSheet(
+      saveLineups(
+        {
+          ...current.sheet,
+          phase: quarter === 1 ? "ready" : "break",
+          period: Math.max(1, quarter - 1),
+        },
+        ["us", "them"].map((side) => ({
+          side: side as "us" | "them",
+          period: quarter,
+          keeper: side === "us" ? current.sheet.players[0].id : "1",
+          field: [2, 3, 4, 5, 6, 7].map((n) =>
+            side === "us" ? current.sheet.players[n - 1].id : String(n),
+          ),
+        })),
+        "start",
+      ),
+    );
+  }
+  if (period > 4) current.sheet = { ...current.sheet, period, phase: "playing" };
+  return current;
+}
+
 beforeEach(() => {
   mock.change.mockReset();
   mock.change.mockResolvedValue(true);
@@ -70,6 +113,7 @@ beforeEach(() => {
     writable: true,
     online: true,
     change: mock.change,
+    saveLineupDraft: vi.fn().mockResolvedValue(true),
     retry: vi.fn(),
     takeover: vi.fn(),
   });
@@ -493,5 +537,79 @@ describe("interfaz del acta", () => {
     await waitFor(() =>
       expect(mock.change).toHaveBeenCalledWith(expect.objectContaining({ pending: null })),
     );
+  });
+});
+
+describe("alineaciones del acta infantil", () => {
+  it("retira las marcas generales de las fichas desde el quinto conservando los datos", () => {
+    const current = youthRecord(5);
+    const view = render(<ActaPlayerBoard sheet={current.sheet} playing onPlayer={vi.fn()} />);
+    expect(screen.queryAllByLabelText(/Ha jugado los cuartos/)).toHaveLength(0);
+    view.unmount();
+    render(<ActaPlayerBoard sheet={{ ...current.sheet, period: 4 }} playing onPlayer={vi.fn()} />);
+    expect(screen.queryAllByLabelText(/Ha jugado los cuartos/).length).toBeGreaterThan(0);
+  });
+  it("pregunta si juega alguien no seleccionado, también del rival", () => {
+    mock.hook.mockReturnValue({ ...mock.hook(), record: youthRecord() });
+    const view = render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Morvedre, gorro 9, Jugador 9/ }));
+    expect(screen.getByRole("heading", { name: "¿Está jugando este cuarto?" })).toBeInTheDocument();
+    expect(mock.change).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Elegir otro jugador" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+    fireEvent.click(screen.getByRole("button", { name: /Rival, gorro 9,/ }));
+    expect(screen.getByRole("heading", { name: "¿Está jugando este cuarto?" })).toBeInTheDocument();
+    view.unmount();
+  });
+  it("solo ofrece asistentes que juegan y recupera la lista normal desde el quinto", async () => {
+    let current = youthRecord();
+    const goal = event("goal", { cap: 2 });
+    current.sheet.events = [goal];
+    current.sheet.pending = { kind: "assist", goal_event_id: goal.id };
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    const view = render(<LiveMatchClient />);
+    let dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByText("Jugador 9")).toBeNull();
+    expect(within(dialog).getAllByText("Jugador 3").length).toBeGreaterThan(0);
+    view.unmount();
+    current = youthRecord(5);
+    const fifthGoal = event("goal", { cap: 2, period: 5 });
+    current.sheet.events = [fifthGoal];
+    current.sheet.pending = { kind: "assist", goal_event_id: fifthGoal.id };
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getAllByText("Jugador 9").length).toBeGreaterThan(0);
+  });
+  it("solo ofrece lanzadores rivales alineados en los primeros cuatro cuartos", async () => {
+    const current = youthRecord();
+    const penalty = event("penalty", { cap: 2 });
+    current.sheet.events = [penalty];
+    current.sheet.pending = {
+      kind: "penalty_shot",
+      penalty_event_id: penalty.id,
+      shooter_cap: null,
+    };
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: /Rival, gorro 9/ })).toBeNull();
+    expect(
+      within(dialog)
+        .getAllByRole("button")
+        .filter((b) => b.textContent === "9"),
+    ).toHaveLength(0);
+  });
+  it("avisa al terminar el tercero sobre ambos equipos", () => {
+    const current = youthRecord(3);
+    current.sheet.phase = "break";
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    expect(screen.getByText("Antes del cuarto 4")).toBeInTheDocument();
+    expect(screen.getByText(/Morvedre: 7 deben descansar/)).toBeInTheDocument();
+    expect(screen.getByText(/Rival: 7 deben descansar/)).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Elegir jugadores del cuarto 4" }),
+    ).toBeInTheDocument();
   });
 });

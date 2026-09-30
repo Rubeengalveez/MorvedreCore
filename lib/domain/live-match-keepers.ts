@@ -16,6 +16,85 @@ export function keeperQuarters(sheet: LiveSheet, cap: number): number[] {
   return [...periods].sort((a, b) => a - b);
 }
 
+export function correctStartingKeeper(sheet: LiveSheet, period: number, cap: number): LiveSheet {
+  if (![1, 13].includes(cap) || !sheet.players.some((p) => !p.retired && p.cap === cap))
+    throw new Error("Elige un portero con gorro 1 o 13.");
+  if (period > sheet.period || period < 1) throw new Error("Revisa el cuarto del portero.");
+  const stints = [...(sheet.keeperStints ?? [])];
+  const index = stints.findIndex((stint) => stint.period === period);
+  const first = stints[index];
+  const next = stints.slice(index + 1).find((stint) => stint.period === period);
+  const oldCap = first?.cap ?? (period === sheet.period ? sheet.keeper : null);
+  const end = next
+    ? next.afterEventId
+      ? sheet.events.findIndex((event) => event.id === next.afterEventId)
+      : -1
+    : sheet.events.length;
+  const events = sheet.events.map((event, position) => {
+    if (event.period !== period || position > end || oldCap === null) return event;
+    if (event.side === "them" && isGoal(event.kind) && event.keeper === oldCap)
+      return { ...event, keeper: cap };
+    if (
+      event.side === "us" &&
+      event.cap === oldCap &&
+      ["save", "penalty_save", "keeper_out"].includes(event.kind)
+    )
+      return { ...event, cap, keeper: event.keeper === oldCap ? cap : event.keeper };
+    return event;
+  });
+  if (first) stints[index] = { ...first, cap };
+  else stints.push({ period, cap, afterEventId: null });
+  return {
+    ...sheet,
+    events,
+    keeperStints: stints,
+    keeper: period === sheet.period && !next ? cap : sheet.keeper,
+  };
+}
+
+export function correctKeeperReplacement(
+  sheet: LiveSheet,
+  period: number,
+  oldCap: number,
+  cap: number,
+  anchor: string | null,
+  remove = false,
+): LiveSheet {
+  const stints = [...(sheet.keeperStints ?? [])];
+  const index = stints.findIndex(
+    (stint) => stint.period === period && stint.cap === oldCap && stint.afterEventId === anchor,
+  );
+  if (index < 0 || ![1, 13].includes(cap))
+    throw new Error("Revisa el historial del portero antes de corregir la sustitución.");
+  const next = stints.slice(index + 1).find((stint) => stint.period === period);
+  const start = anchor ? sheet.events.findIndex((e) => e.id === anchor) : -1;
+  const end = next
+    ? next.afterEventId
+      ? sheet.events.findIndex((e) => e.id === next.afterEventId)
+      : -1
+    : sheet.events.length;
+  const events = sheet.events.map((event, position) => {
+    if (event.period !== period || position <= start || position > end) return event;
+    if (event.side === "them" && isGoal(event.kind) && event.keeper === oldCap)
+      return { ...event, keeper: cap };
+    if (
+      event.side === "us" &&
+      event.cap === oldCap &&
+      ["save", "penalty_save", "keeper_out"].includes(event.kind)
+    )
+      return { ...event, cap, keeper: event.keeper === oldCap ? cap : event.keeper };
+    return event;
+  });
+  if (remove) stints.splice(index, 1);
+  else stints[index] = { ...stints[index], cap };
+  return {
+    ...sheet,
+    keeperStints: stints,
+    events,
+    keeper: period === sheet.period && !next ? cap : sheet.keeper,
+  };
+}
+
 export function selectMatchKeeper(
   sheet: LiveSheet,
   cap: number,

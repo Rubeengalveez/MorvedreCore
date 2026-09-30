@@ -22,6 +22,7 @@ import {
   type MatchEvent,
   type Side,
 } from "@/lib/domain/live-match";
+import { exclusionLimit, type Participation } from "@/lib/domain/live-match-rules";
 import { validCapNumber } from "@/lib/domain/cap-number";
 
 import { useLiveMatch } from "./use-live-match";
@@ -39,6 +40,22 @@ import { selectMatchKeeper } from "@/lib/domain/live-match-keepers";
 import { ActaMatchControls } from "./acta-match-controls";
 import { useActaBackGuard } from "./use-acta-back-guard";
 import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
+import { ActaLineupSheet, type LineupRequest } from "./acta-lineup-sheet";
+import { ActaParticipationReview } from "./acta-participation-review";
+import { ActaParticipationReplacement } from "./acta-participation-replacement";
+import {
+  controlsParticipation,
+  editOpponentCaps,
+  eligibleForAction,
+  mustRestFifth,
+  outstandingReplacement,
+  participantIsPlaying,
+  participants,
+  rotationAdvice,
+  rotationCompletion,
+  lineupFor,
+  lineupIssues,
+} from "@/lib/domain/live-match-participation";
 
 type Panel =
   | "players"
@@ -70,12 +87,46 @@ type Panel =
   | null;
 
 export function LiveMatchClient() {
-  const { record, error, preparation, busy, writable, online, change, retry, takeover } =
-    useLiveMatch();
+  const {
+    record,
+    error,
+    preparation,
+    busy,
+    writable,
+    online,
+    change,
+    saveLineupDraft,
+    retry,
+    takeover,
+  } = useLiveMatch();
 
   const [historySide, setHistorySide] = useState<Side>("us");
   const [panel, setPanel] = useState<Panel>(null);
   const [exitOpen, setExitOpen] = useState(false);
+  const [lineupRequest, setLineupRequest] = useState<LineupRequest | null>(null);
+  const [participationReview, setParticipationReview] = useState(false);
+  const [playerGate, setPlayerGate] = useState<{
+    side: Side;
+    cap: number;
+    origin: "team" | "board";
+    resting?: boolean;
+  } | null>(null);
+  const [gateResume, setGateResume] = useState<{
+    side: Side;
+    cap: number;
+    origin: "team" | "board";
+  } | null>(null);
+  const [opponentRosterOpen, setOpponentRosterOpen] = useState(false);
+  const [opponentRoster, setOpponentRoster] = useState<number[]>([]);
+  const [opponentRosterError, setOpponentRosterError] = useState("");
+  const [startAfterRoster, setStartAfterRoster] = useState(false);
+  const [injuryOpen, setInjuryOpen] = useState(false);
+  const [replacementCorrection, setReplacementCorrection] = useState<
+    Participation["changes"][number] | null
+  >(null);
+  const [dismissedReplacement, setDismissedReplacement] = useState("");
+  const [restNoticePeriod, setRestNoticePeriod] = useState(0);
+  const [keeperParticipationOpen, setKeeperParticipationOpen] = useState(false);
   const backActionRef = useRef<() => void>(() => {});
   const leaveActa = useActaBackGuard(() => backActionRef.current(), Boolean(record));
 
@@ -196,6 +247,41 @@ export function LiveMatchClient() {
   const enabled = writable && !closed && !busy;
   const playing = enabled && s.phase === "playing";
   const orderedPlayers = s.players.filter((p) => !p.retired).sort((a, b) => a.cap - b.cap);
+  const replacement = outstandingReplacement(s);
+  const replacementOpen = Boolean(
+    injuryOpen ||
+    replacementCorrection ||
+    (replacement && replacement.eventId !== dismissedReplacement),
+  );
+  const fifthRest =
+    s.period === 5
+      ? (["us", "them"] as const).flatMap((which) =>
+          participants(s, which)
+            .filter((p) => mustRestFifth(s, which).includes(p.key))
+            .map((p) => `${which === "us" ? "Morvedre" : "Rival"} · ${p.name}`),
+        )
+      : [];
+  const fourthAdvice =
+    controlsParticipation(s, 4) && s.phase === "break" && s.period === 3
+      ? (["us", "them"] as const).flatMap((which) =>
+          rotationAdvice(s, which, 4).map(
+            (a) => `${which === "us" ? "Morvedre" : "Rival"} · ${a.name}: ${a.message}`,
+          ),
+        )
+      : [];
+  const completionAdvice = s.phase === "break" && s.period === 4 ? rotationCompletion(s) : [];
+  const roleIssue =
+    controlsParticipation(s) &&
+    s.phase === "playing" &&
+    (["us", "them"] as const).some((which) => {
+      const lineup = lineupFor(s, which);
+      return (
+        lineup &&
+        lineupIssues(s, lineup).some(
+          (issue) => issue.includes("portero") || issue.includes("gorros 1"),
+        )
+      );
+    });
 
   const currentPlayer = s.players.find((p) => p.cap === cap);
 
@@ -242,12 +328,46 @@ export function LiveMatchClient() {
   );
 
   function openKeeper(start = false, mode: "change" | "correct" = "change") {
+    if (controlsParticipation(s) && mode === "correct" && !s.pending) {
+      setLineupRequest({ period: s.period, mode: "correct" });
+      setPanel(null);
+      return;
+    }
+    if (
+      controlsParticipation(s) &&
+      s.phase === "playing" &&
+      !s.pending &&
+      !start &&
+      mode === "change"
+    ) {
+      setKeeperParticipationOpen(true);
+      setPanel(null);
+      return;
+    }
     setKeeperStart(start);
     setKeeperMode(mode);
     setPanel("keeper");
   }
 
-  function openPlayer(which: Side, n: number, origin: "team" | "board" = "team") {
+  function openPlayer(
+    which: Side,
+    n: number,
+    origin: "team" | "board" = "team",
+    confirmed = false,
+  ) {
+    if (
+      !confirmed &&
+      !editing &&
+      ((controlsParticipation(s) && !participantIsPlaying(s, which, n)) ||
+        (s.period === 5 &&
+          mustRestFifth(s, which).includes(
+            which === "us" ? (s.players.find((p) => p.cap === n)?.id ?? "") : String(n),
+          )))
+    ) {
+      setPlayerGate({ side: which, cap: n, origin, resting: s.period === 5 });
+      setPanel(null);
+      return;
+    }
     setPlayerFlowOrigin(origin);
     setSide(which);
 
@@ -263,7 +383,7 @@ export function LiveMatchClient() {
 
     const totals = playerTotals(s!, which, n);
 
-    setOutWarning(totals.red || totals.exclusions >= 3);
+    setOutWarning(totals.red || totals.exclusions >= exclusionLimit(s));
   }
 
   function closePanel() {
@@ -375,6 +495,37 @@ export function LiveMatchClient() {
   }
 
   function requestExit() {
+    if (keeperParticipationOpen) {
+      setKeeperParticipationOpen(false);
+      return;
+    }
+    if (replacementOpen) {
+      setInjuryOpen(false);
+      setReplacementCorrection(null);
+      setDismissedReplacement(replacement?.eventId ?? "");
+      return;
+    }
+    if (fifthRest.length > 0 && restNoticePeriod !== s.period && !s.pending) {
+      setRestNoticePeriod(s.period);
+      return;
+    }
+    if (lineupRequest) {
+      setLineupRequest(null);
+      setGateResume(null);
+      return;
+    }
+    if (participationReview) {
+      setParticipationReview(false);
+      return;
+    }
+    if (playerGate) {
+      setPlayerGate(null);
+      return;
+    }
+    if (opponentRosterOpen) {
+      setOpponentRosterOpen(false);
+      return;
+    }
     if (s.pending) {
       void dismissPanel();
       return;
@@ -387,6 +538,18 @@ export function LiveMatchClient() {
   }
 
   backActionRef.current = () => {
+    if (
+      lineupRequest ||
+      participationReview ||
+      playerGate ||
+      opponentRosterOpen ||
+      keeperParticipationOpen ||
+      replacementOpen ||
+      (fifthRest.length > 0 && restNoticePeriod !== s.period && !s.pending)
+    ) {
+      requestExit();
+      return;
+    }
     if (exitOpen) {
       setExitOpen(false);
       return;
@@ -455,7 +618,7 @@ export function LiveMatchClient() {
 
     if (!editing && eventSide === "them" && isGoal(kind)) {
       const currentKeeper = s.keeper === null ? null : playerTotals(s, "us", s.keeper);
-      if (!currentKeeper || currentKeeper.red || currentKeeper.exclusions >= 3) {
+      if (!currentKeeper || currentKeeper.red || currentKeeper.exclusions >= exclusionLimit(s)) {
         setNotice("Elige quién está de portero antes de apuntar el gol rival");
         openKeeper();
         return;
@@ -586,11 +749,12 @@ export function LiveMatchClient() {
       cap === s.keeper &&
       (kind === "red" ||
         ((kind === "exclusion" || kind === "penalty") &&
-          playerTotals(s, "us", cap).exclusions + 1 >= 3));
+          playerTotals(s, "us", cap).exclusions + 1 >= exclusionLimit(s)));
     if (keeperMustChange) {
       if (await patch({ ...s, events }, false)) {
         setNotice(`${actionLabels[kind]} registrado · Elige nuevo portero`);
-        openKeeper();
+        if (!controlsParticipation(s) || s.category !== "infantil") openKeeper();
+        else closePanel();
       }
       return;
     }
@@ -639,9 +803,29 @@ export function LiveMatchClient() {
 
   async function choosePenaltyShooter(shooterCap: number) {
     if (s.pending?.kind !== "penalty_shot") return;
+    const penaltyId = s.pending.penalty_event_id;
+    const shootingSide = s.events.find((e) => e.id === penaltyId)?.side === "us" ? "them" : "us";
+    if (!eligibleForAction(s, shootingSide, shooterCap)) {
+      setPendingNotice("Elige un lanzador que esté jugando este cuarto.");
+      return;
+    }
     if (await patch({ ...s, pending: { ...s.pending, shooter_cap: shooterCap } }, false)) {
       setPanel("penalty-result");
     }
+  }
+
+  function startQuarter() {
+    const period = s.phase === "ready" ? 1 : s.period + 1;
+    if (controlsParticipation(s, period)) {
+      setPanel(null);
+      if (!s.participation?.opponentConfirmed) {
+        setOpponentRoster([...s.opponentCaps]);
+        setStartAfterRoster(true);
+        setOpponentRosterOpen(true);
+      } else setLineupRequest({ period, mode: "start" });
+    } else if (s.phase === "ready" && s.keeper !== null)
+      void change(selectMatchKeeper(s, s.keeper, "start"));
+    else setPanel("break-start");
   }
 
   async function finishPenaltyShot(result: "goal" | "save" | "out") {
@@ -655,7 +839,7 @@ export function LiveMatchClient() {
     }
     if (penalty.side === "us") {
       const keeper = s.keeper === null ? null : playerTotals(s, "us", s.keeper);
-      if (!keeper || keeper.red || keeper.exclusions >= 3) {
+      if (!keeper || keeper.red || keeper.exclusions >= exclusionLimit(s)) {
         setNotice("Elige un portero disponible antes de registrar el lanzamiento.");
         openKeeper();
         return;
@@ -1084,6 +1268,100 @@ export function LiveMatchClient() {
             </button>
           </div>
         )}
+        {fourthAdvice.length > 0 && (
+          <div
+            role="status"
+            className="relative z-20 m-3 rounded-xl border-2 border-amber-700 bg-amber-50 p-3 text-amber-950"
+          >
+            <strong className="block text-base">Antes del cuarto 4</strong>
+            {(["us", "them"] as const).map((which) => {
+              const advice = rotationAdvice(s, which, 4);
+              return (
+                <p key={which} className="mt-2 text-sm font-semibold">
+                  {which === "us" ? "Morvedre" : "Rival"}:{" "}
+                  {advice.filter((a) => a.kind === "rest").length} deben descansar ·{" "}
+                  {advice.filter((a) => a.kind === "play").length} aún no han jugado
+                  {advice.some((a) => a.kind === "missing") ? " · Faltan alineaciones" : ""}
+                </p>
+              );
+            })}
+            <details className="mt-2">
+              <summary className="flex min-h-12 cursor-pointer items-center font-bold">
+                Ver jugadores y avisos
+              </summary>
+              <ul className="space-y-1 text-sm">
+                {fourthAdvice.map((text) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+            </details>
+            <button
+              type="button"
+              onClick={startQuarter}
+              className="border-pool-deep bg-pool-deep mt-2 min-h-12 w-full rounded-xl border-2 px-3 text-sm font-bold text-white"
+            >
+              Elegir jugadores del cuarto 4
+            </button>
+          </div>
+        )}
+        {completionAdvice.length > 0 && (
+          <div
+            role="status"
+            className="relative z-20 m-3 rounded-xl border-2 border-amber-700 bg-amber-50 p-3 text-amber-950"
+          >
+            <strong className="block text-base">Revisa los cuatro primeros cuartos</strong>
+            <p className="mt-1 text-sm font-semibold">
+              Hay {completionAdvice.length} avisos. Revísalos con el entrenador o el árbitro.
+            </p>
+            <details className="mt-2">
+              <summary className="flex min-h-12 cursor-pointer items-center font-bold">
+                Ver avisos de rotación
+              </summary>
+              <ul className="space-y-1 text-sm">
+                {completionAdvice.map((text) => (
+                  <li key={text}>{text}</li>
+                ))}
+              </ul>
+            </details>
+          </div>
+        )}
+        {roleIssue && (
+          <div
+            role="status"
+            className="m-3 rounded-xl border-2 border-amber-700 bg-amber-50 p-3 text-sm font-semibold text-amber-950"
+          >
+            Han cambiado los gorros de portería. Revisa quién juega este cuarto.
+            <button
+              type="button"
+              onClick={() => setLineupRequest({ period: s.period, mode: "correct" })}
+              className="border-pool-deep text-pool-deep mt-2 min-h-12 w-full rounded-xl border-2 bg-white px-3 font-bold"
+            >
+              Revisar selección
+            </button>
+          </div>
+        )}
+        {(controlsParticipation(s) || replacement) && !s.pending && !closed && (
+          <div className="relative z-20 flex flex-wrap gap-2 px-3 py-2">
+            {controlsParticipation(s) && (
+              <button
+                type="button"
+                onClick={() => setParticipationReview(true)}
+                className="border-pool-deep text-pool-deep min-h-12 rounded-xl border-2 bg-white px-3 text-sm font-bold"
+              >
+                Revisar participación
+              </button>
+            )}
+            {replacement && (
+              <button
+                type="button"
+                onClick={() => setDismissedReplacement("")}
+                className="min-h-12 rounded-xl border-2 border-red-800 bg-white px-3 text-sm font-bold text-red-800"
+              >
+                Falta registrar un sustituto
+              </button>
+            )}
+          </div>
+        )}
 
         {s.phase === "break" && (
           <div
@@ -1111,7 +1389,15 @@ export function LiveMatchClient() {
 
                   disabled={!enabled}
 
-                  onChange={(e) => void change({ ...s, periods: Number(e.target.value) })}
+                  onChange={(e) =>
+                    void change({
+                      ...s,
+                      periods: Number(e.target.value),
+                      participation: s.participation
+                        ? { ...s.participation, enabled: Number(e.target.value) >= 4 }
+                        : undefined,
+                    })
+                  }
                 >
                   {[2, 4, 6].map((n) => (
                     <option key={n} value={n}>
@@ -1123,61 +1409,80 @@ export function LiveMatchClient() {
 
               <div className="grid gap-1">
                 <span className="text-sm font-bold">Jugadores rivales</span>
-                <div className="grid grid-cols-[3rem_1fr_3rem] items-center gap-2">
+                {s.participation ? (
                   <button
                     type="button"
-                    aria-label="Quitar un jugador rival"
-                    className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
-                    disabled={!enabled || s.opponentCaps.length <= 5}
-                    onClick={() => void change({ ...s, opponentCaps: s.opponentCaps.slice(0, -1) })}
-                  >
-                    −
-                  </button>
-                  <strong className="text-center text-xl tabular-nums">
-                    {s.opponentCaps.length}
-                  </strong>
-                  <button
-                    type="button"
-                    aria-label="Añadir un jugador rival"
-                    className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
-                    disabled={!enabled || s.opponentCaps.length >= 14}
+                    disabled={!enabled}
+                    className="border-pool-deep text-pool-deep min-h-12 rounded-xl border-2 bg-white px-3 font-bold"
                     onClick={() => {
-                      const nextCap = Array.from({ length: 14 }, (_, index) => index + 1).find(
-                        (candidate) => !s.opponentCaps.includes(candidate),
-                      );
-                      if (nextCap)
-                        void change({ ...s, opponentCaps: [...s.opponentCaps, nextCap] });
+                      setOpponentRoster([...s.opponentCaps]);
+                      setStartAfterRoster(false);
+                      setOpponentRosterOpen(true);
                     }}
                   >
-                    +
+                    {s.opponentCaps.length} inscritos · Revisar
                   </button>
-                </div>
+                ) : (
+                  <div className="grid grid-cols-[3rem_1fr_3rem] items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Quitar un jugador rival"
+                      className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
+                      disabled={!enabled || s.opponentCaps.length <= 5}
+                      onClick={() =>
+                        void change({ ...s, opponentCaps: s.opponentCaps.slice(0, -1) })
+                      }
+                    >
+                      −
+                    </button>
+                    <strong className="text-center text-xl tabular-nums">
+                      {s.opponentCaps.length}
+                    </strong>
+                    <button
+                      type="button"
+                      aria-label="Añadir un jugador rival"
+                      className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
+                      disabled={!enabled || s.opponentCaps.length >= 14}
+                      onClick={() => {
+                        const nextCap = Array.from({ length: 14 }, (_, index) => index + 1).find(
+                          (candidate) => !s.opponentCaps.includes(candidate),
+                        );
+                        if (nextCap)
+                          void change({ ...s, opponentCaps: [...s.opponentCaps, nextCap] });
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
-            <button
-              type="button"
-              className={styles.setupKeeper}
+            {!s.participation && (
+              <button
+                type="button"
+                className={styles.setupKeeper}
 
-              onClick={() => openKeeper()}
+                onClick={() => openKeeper()}
 
-              disabled={!enabled}
-            >
-              <span className={styles.setupKeeperLabel}>Portero inicial</span>
-              <span className={styles.setupKeeperValue}>
-                <span className={styles.setupKeeperCap}>{s.keeper ?? "—"}</span>
-                <span className={styles.setupKeeperName}>
-                  {s.keeper ? (
-                    <ActaPlayerName
-                      name={s.players.find((p) => p.cap === s.keeper)?.name ?? "Sin nombre"}
-                    />
-                  ) : (
-                    "Elegir portero"
-                  )}
+                disabled={!enabled}
+              >
+                <span className={styles.setupKeeperLabel}>Portero inicial</span>
+                <span className={styles.setupKeeperValue}>
+                  <span className={styles.setupKeeperCap}>{s.keeper ?? "—"}</span>
+                  <span className={styles.setupKeeperName}>
+                    {s.keeper ? (
+                      <ActaPlayerName
+                        name={s.players.find((p) => p.cap === s.keeper)?.name ?? "Sin nombre"}
+                      />
+                    ) : (
+                      "Elegir portero"
+                    )}
+                  </span>
                 </span>
-              </span>
-              <span className={styles.setupKeeperAction}>{s.keeper ? "Cambiar" : "Elegir"}</span>
-            </button>
+                <span className={styles.setupKeeperAction}>{s.keeper ? "Cambiar" : "Elegir"}</span>
+              </button>
+            )}
 
             {(s.baseline.some((p) => p.goals || p.exclusions) || s.baselineThem > 0) && (
               <p>
@@ -1222,7 +1527,7 @@ export function LiveMatchClient() {
             type="button"
             aria-label={`Abrir inicio del cuarto ${s.period + 1}`}
             className="absolute inset-0 z-10 h-full w-full bg-transparent focus-visible:-outline-offset-4 focus-visible:outline-[#1657a8]"
-            onClick={() => setPanel("break-start")}
+            onClick={startQuarter}
           />
         )}
       </div>
@@ -1233,11 +1538,9 @@ export function LiveMatchClient() {
             <button
               className={styles.start}
 
-              disabled={!enabled || !s.keeper}
+              disabled={!enabled || (!s.participation && !s.keeper)}
 
-              onClick={() =>
-                s.keeper !== null && void change(selectMatchKeeper(s, s.keeper, "start"))
-              }
+              onClick={startQuarter}
             >
               Empezar partido
             </button>
@@ -1247,7 +1550,7 @@ export function LiveMatchClient() {
 
               disabled={!enabled}
 
-              onClick={() => setPanel("break-start")}
+              onClick={startQuarter}
             >
               Toca aquí para empezar el cuarto {s.period + 1}
             </button>
@@ -1295,7 +1598,13 @@ export function LiveMatchClient() {
       )}
 
       <Dialog.Root
-        open={panel !== null && panel !== "takeover"}
+        open={
+          panel !== null &&
+          panel !== "takeover" &&
+          !replacementOpen &&
+          !lineupRequest &&
+          !playerGate
+        }
 
         onOpenChange={(open) => {
           if (!open) void dismissPanel();
@@ -1461,14 +1770,14 @@ export function LiveMatchClient() {
                       )
                       .map((p) => {
                         const totals = playerTotals(s, "us", p.cap);
-                        const isOut = totals.red || totals.exclusions >= 3;
+                        const isOut = totals.red || totals.exclusions >= exclusionLimit(s);
                         return (
                           <button
                             key={p.cap}
                             type="button"
                             className={`${styles.rivalCard} ${styles.ownSelectionCard} ${isOut ? styles.playerCardOut : ""}`}
                             onClick={() => openPlayer("us", p.cap)}
-                            aria-label={`Morvedre, ${validCapNumber(p.cap) == null ? "sin gorro" : `gorro ${p.cap}`}, ${p.name}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
+                            aria-label={`Morvedre, ${validCapNumber(p.cap) == null ? "sin gorro" : `gorro ${p.cap}`}, ${p.name}, ${totals.goals} goles, ${totals.exclusions} de ${exclusionLimit(s)} expulsiones${isOut ? ", fuera" : ""}`}
                           >
                             <span className={styles.rivalCapBadge}>
                               {validCapNumber(p.cap) ?? "—"}
@@ -1486,7 +1795,7 @@ export function LiveMatchClient() {
                               <span
                                 className={`${styles.rivalFoulsBar} ${isOut ? styles.foulsOut : totals.exclusions === 2 ? styles.foulsWarning2 : totals.exclusions === 1 ? styles.foulsWarning1 : styles.foulsClean}`}
                               >
-                                {isOut ? "FUERA" : `${totals.exclusions}/3 exp.`}
+                                {isOut ? "FUERA" : `${totals.exclusions}/{exclusionLimit(s)} exp.`}
                               </span>
                             </div>
                             <span className={styles.ownSelectionName}>
@@ -1500,14 +1809,14 @@ export function LiveMatchClient() {
                   <div className={styles.rivalGrid}>
                     {s.opponentCaps.map((capNumber) => {
                       const totals = playerTotals(s, "them", capNumber);
-                      const isOut = totals.red || totals.exclusions >= 3;
+                      const isOut = totals.red || totals.exclusions >= exclusionLimit(s);
                       return (
                         <button
                           key={capNumber}
                           type="button"
                           className={`${styles.rivalCard} ${isOut ? styles.playerCardOut : ""}`}
                           onClick={() => openPlayer("them", capNumber)}
-                          aria-label={`Rival, ${validCapNumber(capNumber) == null ? "sin gorro" : `gorro ${capNumber}`}, ${totals.goals} goles, ${totals.exclusions} de 3 expulsiones${isOut ? ", fuera" : ""}`}
+                          aria-label={`Rival, ${validCapNumber(capNumber) == null ? "sin gorro" : `gorro ${capNumber}`}, ${totals.goals} goles, ${totals.exclusions} de ${exclusionLimit(s)} expulsiones${isOut ? ", fuera" : ""}`}
                         >
                           <span className={styles.rivalCapBadge}>
                             {validCapNumber(capNumber) ?? "—"}
@@ -1536,12 +1845,12 @@ export function LiveMatchClient() {
                               {isOut
                                 ? totals.red
                                   ? "Roja · FUERA"
-                                  : "3/3 · FUERA"
+                                  : `${exclusionLimit(s)}/${exclusionLimit(s)} · FUERA`
                                 : totals.exclusions === 2
-                                  ? "2/3 exp."
+                                  ? `${totals.exclusions}/${exclusionLimit(s)} exp.`
                                   : totals.exclusions === 1
-                                    ? "1/3 exp."
-                                    : "0/3 exp."}
+                                    ? `${totals.exclusions}/${exclusionLimit(s)} exp.`
+                                    : `0/${exclusionLimit(s)} exp.`}
                             </span>
                           </div>
                         </button>
@@ -1828,6 +2137,15 @@ export function LiveMatchClient() {
 
               {activePanel === "assist" && pending?.kind === "assist" && (
                 <div className="space-y-3">
+                  {controlsParticipation(s) && (
+                    <button
+                      type="button"
+                      onClick={() => setLineupRequest({ period: s.period, mode: "correct" })}
+                      className="border-pool-deep text-pool-deep min-h-12 w-full rounded-xl border-2 bg-white px-3 font-bold"
+                    >
+                      Revisar quién juega este cuarto
+                    </button>
+                  )}
                   <div className="rounded-xl border-l-4 border-emerald-400 bg-[#062048] px-4 py-3 text-white shadow-sm">
                     <p className="text-sm font-black tracking-wide text-emerald-300 uppercase">
                       Gol guardado
@@ -1849,8 +2167,9 @@ export function LiveMatchClient() {
                     {orderedPlayers
                       .filter(
                         (player) =>
+                          eligibleForAction(s, "us", player.cap) &&
                           player.cap !==
-                          s.events.find((event) => event.id === pending.goal_event_id)?.cap,
+                            s.events.find((event) => event.id === pending.goal_event_id)?.cap,
                       )
                       .map((player) => (
                         <button
@@ -1909,73 +2228,86 @@ export function LiveMatchClient() {
 
               {activePanel === "penalty-shooter" && pending?.kind === "penalty_shot" && (
                 <div className="space-y-3">
+                  {controlsParticipation(s) && (
+                    <button
+                      type="button"
+                      onClick={() => setLineupRequest({ period: s.period, mode: "correct" })}
+                      className="border-pool-deep text-pool-deep min-h-12 w-full rounded-xl border-2 bg-white px-3 font-bold"
+                    >
+                      Revisar quién juega este cuarto
+                    </button>
+                  )}
                   <p className={styles.penaltyNotice}>
                     La sanción ya está guardada. Elige quién lanza.
                   </p>
                   {s.events.find((event) => event.id === pending.penalty_event_id)?.side ===
                   "us" ? (
                     <div className={styles.rivalGrid}>
-                      {s.opponentCaps.map((number) => (
-                        <button
-                          key={number}
-                          type="button"
-                          className={styles.action}
-                          disabled={
-                            !enabled ||
-                            playerTotals(s, "them", number).red ||
-                            playerTotals(s, "them", number).exclusions >= 3
-                          }
-                          onClick={() => void choosePenaltyShooter(number)}
-                        >
-                          #{number}
-                        </button>
-                      ))}
+                      {s.opponentCaps
+                        .filter((number) => eligibleForAction(s, "them", number))
+                        .map((number) => (
+                          <button
+                            key={number}
+                            type="button"
+                            className={styles.action}
+                            disabled={
+                              !enabled ||
+                              playerTotals(s, "them", number).red ||
+                              playerTotals(s, "them", number).exclusions >= exclusionLimit(s)
+                            }
+                            onClick={() => void choosePenaltyShooter(number)}
+                          >
+                            #{number}
+                          </button>
+                        ))}
                     </div>
                   ) : (
                     <div className={styles.playerList}>
-                      {orderedPlayers.map((player) => {
-                        const totals = playerTotals(s, "us", player.cap);
-                        const out = totals.red || totals.exclusions >= 3;
-                        return (
-                          <button
-                            key={player.cap}
-                            type="button"
-                            disabled={!enabled || out}
-                            className={`${styles.playerCard} ${out ? styles.playerCardOut : ""}`}
-                            onClick={() => void choosePenaltyShooter(player.cap)}
-                          >
-                            <div className={styles.cardTopRow}>
-                              <div className={styles.cardCapGroup}>
-                                <span className={styles.capBadge}>
-                                  {validCapNumber(player.cap) ?? "—"}
-                                </span>
-                                {player.cap === s.keeper && (
-                                  <span className={styles.keeperTag}>POR</span>
-                                )}
-                              </div>
-                              <span
-                                className={
-                                  totals.goals > 0 ? styles.cardGoals : styles.cardGoalsZero
-                                }
-                              >
-                                {totals.goals} {totals.goals === 1 ? "gol" : "goles"}
-                              </span>
-                            </div>
-                            <div className={styles.cardNameRow}>
-                              <span className={styles.cardPlayerName}>
-                                <ActaPlayerName name={player.name} />
-                              </span>
-                            </div>
-                            <div
-                              className={`${styles.cardFoulsBar} ${
-                                out ? styles.foulsOut : styles.foulsClean
-                              }`}
+                      {orderedPlayers
+                        .filter((player) => eligibleForAction(s, "us", player.cap))
+                        .map((player) => {
+                          const totals = playerTotals(s, "us", player.cap);
+                          const out = totals.red || totals.exclusions >= exclusionLimit(s);
+                          return (
+                            <button
+                              key={player.cap}
+                              type="button"
+                              disabled={!enabled || out}
+                              className={`${styles.playerCard} ${out ? styles.playerCardOut : ""}`}
+                              onClick={() => void choosePenaltyShooter(player.cap)}
                             >
-                              {out ? "FUERA" : "Elegir lanzador"}
-                            </div>
-                          </button>
-                        );
-                      })}
+                              <div className={styles.cardTopRow}>
+                                <div className={styles.cardCapGroup}>
+                                  <span className={styles.capBadge}>
+                                    {validCapNumber(player.cap) ?? "—"}
+                                  </span>
+                                  {player.cap === s.keeper && (
+                                    <span className={styles.keeperTag}>POR</span>
+                                  )}
+                                </div>
+                                <span
+                                  className={
+                                    totals.goals > 0 ? styles.cardGoals : styles.cardGoalsZero
+                                  }
+                                >
+                                  {totals.goals} {totals.goals === 1 ? "gol" : "goles"}
+                                </span>
+                              </div>
+                              <div className={styles.cardNameRow}>
+                                <span className={styles.cardPlayerName}>
+                                  <ActaPlayerName name={player.name} />
+                                </span>
+                              </div>
+                              <div
+                                className={`${styles.cardFoulsBar} ${
+                                  out ? styles.foulsOut : styles.foulsClean
+                                }`}
+                              >
+                                {out ? "FUERA" : "Elegir lanzador"}
+                              </div>
+                            </button>
+                          );
+                        })}
                     </div>
                   )}
                 </div>
@@ -2274,7 +2606,7 @@ export function LiveMatchClient() {
                       .filter((player) => player.cap === 1 || player.cap === 13)
                       .map((player) => {
                         const totals = playerTotals(s, "us", player.cap);
-                        const out = totals.red || totals.exclusions >= 3;
+                        const out = totals.red || totals.exclusions >= exclusionLimit(s);
                         const isCurrentKeeper = s.keeper === player.cap;
                         return (
                           <button
@@ -2523,6 +2855,18 @@ export function LiveMatchClient() {
 
               {activePanel === "history" && (
                 <>
+                  {s.participation?.lineups.length ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPanel(null);
+                        setParticipationReview(true);
+                      }}
+                      className="border-pool-deep text-pool-deep mb-3 min-h-12 w-full rounded-xl border-2 bg-white px-3 font-bold"
+                    >
+                      Revisar participación
+                    </button>
+                  ) : null}
                   <div
                     className={styles.historyTeams}
                     role="group"
@@ -2878,6 +3222,240 @@ export function LiveMatchClient() {
           </Dialog.Content>
         </>
       </Dialog.Root>
+      <ActaGuardSheet
+        open={keeperParticipationOpen}
+        onOpenChange={(open) => !open && setKeeperParticipationOpen(false)}
+        context={`Cuarto ${s.period}`}
+        title="Revisar portero"
+        icon="warning"
+        summary="Primeros cuatro cuartos"
+        description="No se permiten cambios ordinarios. Puedes corregir una selección equivocada o registrar una lesión."
+        actions={[
+          {
+            label: "Corregir quién juega",
+            tone: "primary",
+            onClick: () => {
+              setKeeperParticipationOpen(false);
+              setLineupRequest({ period: s.period, mode: "correct" });
+            },
+          },
+          {
+            label: "Registrar lesión",
+            tone: "secondary",
+            onClick: () => {
+              setKeeperParticipationOpen(false);
+              setInjuryOpen(true);
+            },
+          },
+          {
+            label: "Volver al acta",
+            tone: "secondary",
+            onClick: () => setKeeperParticipationOpen(false),
+          },
+        ]}
+      />
+      {lineupRequest && (
+        <ActaLineupSheet
+          key={`${record.matchId}:${lineupRequest.period}:${lineupRequest.mode}:${lineupRequest.side ?? "us"}`}
+          record={record}
+          request={lineupRequest}
+          change={change}
+          saveDraft={saveLineupDraft}
+          busy={busy}
+          onClose={() => {
+            setLineupRequest(null);
+            setGateResume(null);
+          }}
+          onSaved={(next) => {
+            setLineupRequest(null);
+            if (gateResume) {
+              if (participantIsPlaying(next, gateResume.side, gateResume.cap))
+                openPlayer(gateResume.side, gateResume.cap, gateResume.origin, true);
+              else setPlayerGate(gateResume);
+              setGateResume(null);
+            }
+          }}
+        />
+      )}
+      {participationReview && (
+        <ActaParticipationReview
+          sheet={s}
+          onClose={() => setParticipationReview(false)}
+          onCorrect={(period) => {
+            setParticipationReview(false);
+            setLineupRequest({ period, mode: "correct" });
+          }}
+          onInjury={() => {
+            setParticipationReview(false);
+            setInjuryOpen(true);
+          }}
+          onReplacement={(correction) => {
+            setParticipationReview(false);
+            setReplacementCorrection(correction);
+          }}
+          onRoster={() => {
+            setParticipationReview(false);
+            setOpponentRoster([...s.opponentCaps]);
+            setOpponentRosterError("");
+            setStartAfterRoster(false);
+            setOpponentRosterOpen(true);
+          }}
+        />
+      )}
+      {replacementOpen && (
+        <ActaParticipationReplacement
+          key={replacementCorrection?.id ?? (injuryOpen ? "injury" : replacement?.eventId)}
+          sheet={s}
+          required={injuryOpen || replacementCorrection ? null : replacement}
+          correction={replacementCorrection ?? undefined}
+          change={change}
+          busy={busy}
+          onClose={() => {
+            setInjuryOpen(false);
+            setReplacementCorrection(null);
+            setDismissedReplacement(replacement?.eventId ?? "");
+            if (panel === "keeper") setPanel(null);
+          }}
+        />
+      )}
+      <ActaGuardSheet
+        open={Boolean(playerGate)}
+        onOpenChange={(open) => !open && setPlayerGate(null)}
+        context="Comprobar quién juega"
+        title={playerGate?.resting ? "Debe descansar este cuarto" : "¿Está jugando este cuarto?"}
+        icon="warning"
+        summary={
+          playerGate
+            ? `${playerGate.side === "us" ? "Morvedre" : "Rival"} · ${playerGate.cap}${playerGate.side === "us" ? ` · ${s.players.find((p) => p.cap === playerGate.cap)?.name ?? ""}` : ""}`
+            : ""
+        }
+        description={
+          playerGate?.resting
+            ? "Tiene un descanso obligatorio en el quinto. Avísalo al entrenador o al árbitro antes de anotar."
+            : "No figura entre los que juegan. Si está en el agua, revisa la selección del cuarto."
+        }
+        actions={[
+          {
+            label: playerGate?.resting
+              ? "Está jugando · continuar con aviso"
+              : "Sí, revisar jugadores",
+            tone: "primary",
+            onClick: () => {
+              if (!playerGate) return;
+              const gate = playerGate;
+              setPlayerGate(null);
+              if (gate.resting) openPlayer(gate.side, gate.cap, gate.origin, true);
+              else {
+                setGateResume(gate);
+                setLineupRequest({
+                  period: s.period,
+                  mode: "correct",
+                  side: gate.side,
+                  suggested: gate.cap,
+                });
+              }
+            },
+          },
+          {
+            label: "Elegir otro jugador",
+            tone: "secondary",
+            onClick: () => {
+              setPlayerGate(null);
+              setPanel("players");
+              if (playerGate) setSide(playerGate.side);
+            },
+          },
+        ]}
+      />
+      <ActaGuardSheet
+        open={opponentRosterOpen}
+        onOpenChange={(open) => !open && setOpponentRosterOpen(false)}
+        context="Preparar partido"
+        title="Gorros inscritos del rival"
+        icon="saved"
+        pending={busy}
+        body={
+          <div className="space-y-3">
+            <p className="text-pool-deep font-semibold">
+              Deja marcados solo los que están convocados.
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => (
+                <button
+                  type="button"
+                  key={n}
+                  aria-pressed={opponentRoster.includes(n)}
+                  onClick={() => {
+                    setOpponentRosterError("");
+                    setOpponentRoster((numbers) =>
+                      numbers.includes(n) ? numbers.filter((cap) => cap !== n) : [...numbers, n],
+                    );
+                  }}
+                  className={`border-pool-deep min-h-14 rounded-xl border-2 text-lg font-extrabold ${opponentRoster.includes(n) ? "bg-pool-deep text-white" : "text-pool-deep bg-white"}`}
+                >
+                  {n}
+                  {opponentRoster.includes(n) && (
+                    <Check size={16} className="mx-auto" aria-hidden="true" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <p role="status" className="text-pool-deep font-bold">
+              {opponentRoster.length} jugadores inscritos
+            </p>
+          </div>
+        }
+        error={
+          opponentRoster.length === 0
+            ? "Elige los gorros del rival."
+            : !opponentRoster.some((n) => n === 1 || n === 13)
+              ? "Marca el gorro 1 o 13 del portero rival."
+              : opponentRosterError || undefined
+        }
+        actions={[
+          {
+            label: "Listo",
+            tone: "primary",
+            onClick: async () => {
+              if (
+                !s.participation ||
+                !opponentRoster.length ||
+                !opponentRoster.some((n) => n === 1 || n === 13)
+              )
+                return;
+              let next: LiveSheet;
+              try {
+                next = editOpponentCaps(s, opponentRoster);
+              } catch (e) {
+                setOpponentRosterError(
+                  e instanceof Error ? e.message : "Revisa los gorros del rival.",
+                );
+                return;
+              }
+              if (await change(next)) {
+                setOpponentRosterOpen(false);
+                if (startAfterRoster)
+                  setLineupRequest({
+                    period: s.phase === "ready" ? 1 : s.period + 1,
+                    mode: "start",
+                  });
+              }
+            },
+          },
+        ]}
+      />
+      <ActaGuardSheet
+        open={fifthRest.length > 0 && restNoticePeriod !== s.period && !s.pending}
+        onOpenChange={(open) => !open && setRestNoticePeriod(s.period)}
+        context="Cuarto 5"
+        title="Descanso obligatorio"
+        icon="warning"
+        summary={fifthRest.join(" · ")}
+        description="Han participado en los cuatro primeros cuartos por una sustitución obligatoria. Deben descansar todo el quinto. Avísalo al entrenador."
+        actions={[
+          { label: "Entendido", tone: "primary", onClick: () => setRestNoticePeriod(s.period) },
+        ]}
+      />
       <ActaGuardSheet
         open={panel === "takeover"}
         onOpenChange={(open) => {

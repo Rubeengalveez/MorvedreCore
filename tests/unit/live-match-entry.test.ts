@@ -46,7 +46,7 @@ beforeEach(() => {
     const query: Record<string, unknown> = {
       then: (resolve: (value: unknown) => unknown) => Promise.resolve(result).then(resolve),
     };
-    for (const method of ["select", "eq", "in", "single", "maybeSingle"])
+    for (const method of ["select", "eq", "in", "not", "single", "maybeSingle"])
       query[method] = () => query;
     return query;
   });
@@ -65,4 +65,13 @@ it("un administrador sin asignación de delegado no puede abrir el acta", async 
     ok: false,
     error: "El acta en directo está reservada al delegado de este equipo.",
   });
+});
+
+it("no muestra código de validación al recibir un identificador inválido", async () => {
+  const result = await loadLiveMatch("partido-inválido");
+  expect(result).toMatchObject({
+    ok: false,
+    error: "Hay datos del acta que necesitan revisión. Conservamos el documento guardado.",
+  });
+  expect(result.error).not.toContain("[");
 });

@@ -6,7 +6,7 @@ export function identifyLiveSheet(sheet: LiveSheet, previous?: LiveSheet): LiveS
   const oldShots = new Map(previous?.shootout?.shots.map((shot) => [shot.id, shot]) ?? []);
   return sheetSchema.parse({
     ...sheet,
-    version: 3,
+    version: sheet.version === 4 ? 4 : 3,
     keeper:
       sheet.keeper === 1 || sheet.keeper === 13
         ? sheet.keeper

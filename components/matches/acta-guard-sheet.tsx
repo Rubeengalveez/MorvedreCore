@@ -26,6 +26,7 @@ interface ActaGuardSheetProps {
   actions: ActaGuardAction[];
   pending?: boolean;
   error?: string | null;
+  stickyActions?: boolean;
 }
 
 const actionClasses = {
@@ -47,6 +48,7 @@ export function ActaGuardSheet({
   actions,
   pending = false,
   error,
+  stickyActions = false,
 }: ActaGuardSheetProps) {
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
@@ -78,41 +80,53 @@ export function ActaGuardSheet({
             </Dialog.Close>
           </div>
 
-          <div className="min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-            {body ?? (
-              <div className="border-pool-blue/70 bg-paper-card flex items-start gap-3 rounded-xl border-2 p-3.5">
-                <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
-                  {icon === "saved" ? (
-                    <ShieldCheck className="h-5 w-5" aria-hidden="true" />
-                  ) : (
-                    <CircleAlert className="h-5 w-5" aria-hidden="true" />
-                  )}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-pool-deep text-base leading-tight font-extrabold">{summary}</p>
-                  <Dialog.Description className="text-ink-700 mt-1 text-base leading-snug">
-                    {description}
-                  </Dialog.Description>
+          <div
+            className={`min-h-0 ${stickyActions ? "flex flex-col overflow-hidden" : "overflow-y-auto overscroll-contain"} px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]`}
+          >
+            <div
+              className={stickyActions ? "min-h-0 overflow-y-auto overscroll-contain" : undefined}
+            >
+              {body && (
+                <Dialog.Description className="sr-only">
+                  {title}. Revisa la información y elige una opción.
+                </Dialog.Description>
+              )}
+              {body ?? (
+                <div className="border-pool-blue/70 bg-paper-card flex items-start gap-3 rounded-xl border-2 p-3.5">
+                  <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+                    {icon === "saved" ? (
+                      <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+                    ) : (
+                      <CircleAlert className="h-5 w-5" aria-hidden="true" />
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-pool-deep text-base leading-tight font-extrabold">
+                      {summary}
+                    </p>
+                    <Dialog.Description className="text-ink-700 mt-1 text-base leading-snug">
+                      {description}
+                    </Dialog.Description>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {notice ? (
-              <Dialog.Description className="border-ball-gold bg-ball-gold/20 text-pool-deep mt-3 rounded-xl border-2 px-4 py-3 text-sm leading-snug font-semibold">
-                {notice}
-              </Dialog.Description>
-            ) : null}
+              {notice ? (
+                <Dialog.Description className="border-ball-gold bg-ball-gold/20 text-pool-deep mt-3 rounded-xl border-2 px-4 py-3 text-sm leading-snug font-semibold">
+                  {notice}
+                </Dialog.Description>
+              ) : null}
 
-            {error ? (
-              <p
-                role="alert"
-                className="bg-paper-card mt-3 rounded-xl border-2 border-red-800 p-3 text-sm font-bold text-red-800"
-              >
-                {error}
-              </p>
-            ) : null}
-
-            <div className="mt-4 grid gap-2.5">
+              {error ? (
+                <p
+                  role="alert"
+                  className="bg-paper-card mt-3 rounded-xl border-2 border-red-800 p-3 text-sm font-bold text-red-800"
+                >
+                  {error}
+                </p>
+              ) : null}
+            </div>
+            <div className={`mt-4 grid shrink-0 gap-2.5 ${stickyActions ? "bg-paper-card" : ""}`}>
               {actions.map((action) => (
                 <button
                   key={action.label}

@@ -32,6 +32,16 @@ export function playerHasRecordedHistory(sheet: LiveSheet, playerId: string): bo
   const player = sheet.players.find((entry) => entry.id === playerId);
   if (!player) return false;
   return (
+    Boolean(
+      sheet.participation?.lineups.some(
+        (l) => l.side === "us" && [l.keeper, ...l.field].includes(playerId),
+      ),
+    ) ||
+    Boolean(
+      sheet.participation?.changes.some(
+        (c) => c.side === "us" && (c.incoming === playerId || c.outgoing === playerId),
+      ),
+    ) ||
     sheet.events.some(
       (event) =>
         event.playerId === playerId ||
@@ -98,6 +108,33 @@ export function editLiveRoster(
   const transferId = (id: string | null | undefined) => (id ? (recipient.get(id) ?? id) : id);
   const prepared: LiveSheet = {
     ...sheet,
+    participation: sheet.participation
+      ? {
+          ...sheet.participation,
+          fixedKeepers: {
+            ...sheet.participation.fixedKeepers,
+            us: transferId(sheet.participation.fixedKeepers.us) ?? null,
+          },
+          lineups: sheet.participation.lineups.map((l) =>
+            l.side === "us"
+              ? {
+                  ...l,
+                  keeper: transferId(l.keeper)!,
+                  field: l.field.map((key) => transferId(key)!),
+                }
+              : l,
+          ),
+          changes: sheet.participation.changes.map((c) =>
+            c.side === "us"
+              ? {
+                  ...c,
+                  incoming: transferId(c.incoming)!,
+                  outgoing: transferId(c.outgoing)!,
+                }
+              : c,
+          ),
+        }
+      : undefined,
     players: sheet.players.map((old) => {
       const nextId = recipient.get(old.id);
       const next = nextId ? current.find((player) => player.id === nextId) : null;

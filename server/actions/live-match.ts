@@ -10,6 +10,7 @@ import { canUseLiveMatch } from "@/lib/domain/permissions";
 import { defaultPeriods, sheetSchema, type LiveRecord } from "@/lib/domain/live-match";
 import type { Json } from "@/types/database";
 import { revalidatePath } from "next/cache";
+import { prepareParticipation } from "@/lib/domain/live-match-participation";
 import { suggestCallupForMatch } from "@/server/actions/admin/matches";
 
 export type ActaPreparation = {
@@ -86,7 +87,7 @@ async function loadLiveMatchImpl(matchId: string): Promise<LiveRecord> {
       revision: existing.revision,
       device: existing.device_id,
       mutation: existing.mutation_id,
-      sheet: sheetSchema.parse(existing.document),
+      sheet: prepareParticipation(sheetSchema.parse(existing.document), match.teams?.category_code),
     };
   const [callups, stats] = await Promise.all([
     db
@@ -144,6 +145,7 @@ async function loadLiveMatchImpl(matchId: string): Promise<LiveRecord> {
   }
   const sheet = sheetSchema.safeParse({
     version: 2,
+    category: match.teams?.category_code,
     players,
     opponentCaps: Array.from({ length: 14 }, (_, i) => i + 1),
     periods: defaultPeriods(match.teams?.category_code ?? ""),
@@ -163,7 +165,13 @@ async function loadLiveMatchImpl(matchId: string): Promise<LiveRecord> {
     throw new Error(
       "Hay datos del partido que necesitan revisión: " + sheet.error.issues[0]?.message,
     );
-  return { ...base, revision: 0, device: "", mutation: "", sheet: identifyLiveSheet(sheet.data) };
+  return {
+    ...base,
+    revision: 0,
+    device: "",
+    mutation: "",
+    sheet: identifyLiveSheet(prepareParticipation(sheet.data, match.teams?.category_code)),
+  };
 }
 
 const saveSchema = z.object({
@@ -180,7 +188,7 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
   const db = await createClient();
   const { data: match, error } = await db
     .from("matches")
-    .select("team_id")
+    .select("team_id,teams(category_code)")
     .eq("id", data.matchId)
     .single();
   if (error || !match)
@@ -200,6 +208,12 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
     previous.data?.device_id === data.device &&
     previous.data?.owner_id === me.id;
   let canonical = data.sheet;
+  if (
+    data.sheet.phase !== "finished" &&
+    data.sheet.category &&
+    data.sheet.category !== match.teams?.category_code
+  )
+    throw new Error("La categoría del acta no coincide con el equipo del partido.");
   if (alreadySaved) canonical = identifyLiveSheet(sheetSchema.parse(previous.data!.document));
   else if (
     !data.rosterEdit &&
@@ -265,7 +279,8 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
       p_device: data.device,
       p_revision: data.revision,
       p_mutation: data.mutation,
-      p_document: canonical as unknown as Json,
+      p_document:
+        data.takeover && previous.data ? previous.data.document : (canonical as unknown as Json),
       p_takeover: data.takeover,
       ...(data.rosterEdit ? { p_roster_edit: true } : {}),
     },
@@ -306,7 +321,12 @@ export async function loadLiveMatch(matchId: string) {
   } catch (error) {
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : "No pudimos abrir el acta.",
+      error:
+        error instanceof z.ZodError
+          ? "Hay datos del acta que necesitan revisión. Conservamos el documento guardado."
+          : error instanceof Error
+            ? error.message
+            : "No pudimos abrir el acta.",
       preparation: error instanceof PreparationRequired ? error.preparation : undefined,
     };
   }
@@ -368,7 +388,13 @@ export async function syncLiveMatch(input: z.input<typeof saveSchema>) {
   } catch (error) {
     return {
       ok: false as const,
-      error: error instanceof Error ? error.message : "No pudimos sincronizar el acta.",
+      error:
+        error instanceof z.ZodError
+          ? (error.issues.find((issue) => issue.code === "custom")?.message ??
+            "Revisa los datos del acta. Tus cambios siguen guardados en este móvil.")
+          : error instanceof Error
+            ? error.message
+            : "No pudimos sincronizar el acta.",
     };
   }
 }

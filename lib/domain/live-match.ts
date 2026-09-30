@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  exclusionLimit,
+  matchCategorySchema,
+  participationSchema,
+  matchRules,
+} from "./live-match-rules";
 
 export const actionLabels = {
   goal: "Gol normal",
@@ -112,7 +118,9 @@ export const shootoutOutcomeLabels = {
 
 export const sheetSchema = z
   .object({
-    version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    version: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
+    category: matchCategorySchema.optional(),
+    participation: participationSchema.optional(),
     players: z.array(playerSchema).min(1).max(30),
     opponentCaps: z.array(z.number().int().min(1).max(99)).min(1).max(30),
     periods: z.number().int().min(1).max(8),
@@ -140,7 +148,7 @@ export const sheetSchema = z
           cap: z.number().int().min(1).max(99),
           playerId: z.string().uuid().optional(),
           goals: z.number().int().min(0).max(99),
-          exclusions: z.number().int().min(0).max(3),
+          exclusions: z.number().int().min(0).max(4),
         }),
       )
       .max(30),
@@ -148,9 +156,48 @@ export const sheetSchema = z
   })
   .superRefine((s, ctx) => {
     const fail = (message: string) => ctx.addIssue({ code: "custom", message });
+    if (s.participation) {
+      const p = s.participation;
+      if (s.version !== 4 || !matchRules(s.category).youth || (p.enabled && s.periods < 4))
+        fail("La participación no corresponde a este formato de partido.");
+      const exists = (side: Side, key: string) =>
+        side === "us"
+          ? s.players.some((player) => player.id === key)
+          : s.opponentCaps.some((cap) => String(cap) === key);
+      if (
+        new Set(p.lineups.map((l) => `${l.side}:${l.period}`)).size !== p.lineups.length ||
+        p.lineups.some(
+          (l) =>
+            l.period > s.period ||
+            new Set([l.keeper, ...l.field]).size !== l.field.length + 1 ||
+            [l.keeper, ...l.field].some((key) => !exists(l.side, key)),
+        )
+      )
+        fail("Revisa las alineaciones registradas.");
+      if (
+        new Set(p.changes.map((c) => c.id)).size !== p.changes.length ||
+        p.changes.some(
+          (c) =>
+            c.period > s.period ||
+            c.incoming === c.outgoing ||
+            !exists(c.side, c.incoming) ||
+            !exists(c.side, c.outgoing) ||
+            !p.lineups.some((l) => l.side === c.side && l.period === c.period) ||
+            (c.eventId && !s.events.some((e) => e.id === c.eventId)),
+        )
+      )
+        fail("Revisa las sustituciones registradas.");
+      for (const side of ["us", "them"] as const) {
+        if (
+          p.fixedKeepers[side] &&
+          (!matchRules(s.category).singleKeeper || !exists(side, p.fixedKeepers[side]!))
+        )
+          fail("Revisa la elección de portero único.");
+      }
+    }
     if (s.pending && s.phase !== "playing")
       fail("Completa la jugada pendiente antes de cambiar de fase.");
-    if (s.version === 3 && s.keeper !== null && s.keeper !== 1 && s.keeper !== 13)
+    if (s.version >= 3 && s.keeper !== null && s.keeper !== 1 && s.keeper !== 13)
       fail("El portero en juego debe llevar el gorro 1 o 13.");
     if (s.phase === "shootout" && !s.shootout) fail("Falta preparar la tanda.");
     if (s.shootout) {
@@ -179,13 +226,13 @@ export const sheetSchema = z
         if (shot.side === "them" && !s.players.some((p) => p.cap === shot.keeper))
           fail("Selecciona el portero de la tanda.");
         if (
-          s.version === 3 &&
+          s.version >= 3 &&
           shot.side === "us" &&
           shot.playerId !== s.players.find((player) => player.cap === shot.cap)?.id
         )
           fail("El lanzador de la tanda no corresponde a su gorro.");
         if (
-          s.version === 3 &&
+          s.version >= 3 &&
           shot.keeper !== null &&
           shot.keeperId !== s.players.find((player) => player.cap === shot.keeper)?.id
         )
@@ -215,7 +262,7 @@ export const sheetSchema = z
       fail("Los totales previos no son válidos.");
     }
     if (
-      s.version === 3 &&
+      s.version >= 3 &&
       s.baseline.some(
         (entry) => entry.playerId !== s.players.find((player) => player.cap === entry.cap)?.id,
       )
@@ -236,7 +283,7 @@ export const sheetSchema = z
       fail("Revisa los cuartos registrados de portería.");
     }
     if (
-      s.version === 3 &&
+      s.version >= 3 &&
       s.keeperStints?.some(
         (stint) => stint.playerId !== s.players.find((player) => player.cap === stint.cap)?.id,
       )
@@ -257,7 +304,7 @@ export const sheetSchema = z
         fail("El gorro no está en el acta.");
       }
       if (
-        s.version === 3 &&
+        s.version >= 3 &&
         event.side === "us" &&
         !bench &&
         event.playerId !== s.players.find((player) => player.cap === event.cap)?.id
@@ -265,7 +312,7 @@ export const sheetSchema = z
         fail("La jugada no corresponde al jugador de ese gorro.");
       }
       if (
-        s.version === 3 &&
+        s.version >= 3 &&
         event.keeper !== null &&
         event.keeperId !== s.players.find((player) => player.cap === event.keeper)?.id
       ) {
@@ -361,8 +408,8 @@ export const sheetSchema = z
     for (const side of ["us", "them"] as const) {
       const caps = side === "us" ? s.players.map((player) => player.cap) : s.opponentCaps;
       for (const cap of caps) {
-        if (playerTotals(s as LiveSheet, side, cap).exclusions > 3) {
-          fail("Un jugador no puede tener más de tres expulsiones.");
+        if (playerTotals(s as LiveSheet, side, cap).exclusions > exclusionLimit(s)) {
+          fail(`Un jugador no puede tener más de ${exclusionLimit(s)} expulsiones.`);
         }
       }
     }
@@ -495,7 +542,7 @@ export function score(sheet: LiveSheet, side: Side, period?: number) {
 }
 
 export function defaultPeriods(category: string) {
-  return ["benjamin", "alevin", "infantil"].includes(category) ? 6 : 4;
+  return matchRules(category).periods;
 }
 
 export function finalScore(sheet: LiveSheet, side: Side) {

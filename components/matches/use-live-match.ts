@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { z } from "zod";
 import { loadLiveMatch, syncLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
 import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
 import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import type { LiveSheet } from "@/lib/domain/live-match";
+import { prepareParticipation } from "@/lib/domain/live-match-participation";
+import type { LineupDraft } from "@/lib/domain/live-match-rules";
 import {
   liveDevice,
   readLocalMatch,
@@ -133,6 +136,7 @@ export function useLiveMatch() {
               if (cached && (cached.dirty || cached.flight) && cached.viewer === remote.viewer)
                 next = {
                   ...cached,
+                  sheet: prepareParticipation(cached.sheet, remote.sheet.category),
                   canEdit: remote.canEdit,
                   callupCandidates: remote.callupCandidates ?? cached.callupCandidates,
                   callupTemplate: remote.callupTemplate ?? cached.callupTemplate,
@@ -146,6 +150,13 @@ export function useLiveMatch() {
               else
                 next = {
                   ...remote,
+                  lineupDraft:
+                    cached?.viewer === remote.viewer &&
+                    cached.device === remote.device &&
+                    cached.mutation === remote.mutation &&
+                    cached.revision === remote.revision
+                      ? cached.lineupDraft
+                      : undefined,
                   device: remote.device || liveDevice(),
                   dirty: remote.revision === 0,
                   mutation: remote.mutation || generateUuid(),
@@ -224,6 +235,7 @@ export function useLiveMatch() {
       await persist((latest) => ({
         ...latest,
         sheet: parsed,
+        lineupDraft: undefined,
         mutation: generateUuid(),
         dirty: true,
       }));
@@ -231,7 +243,14 @@ export function useLiveMatch() {
       void syncRef.current();
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "No pudimos guardar la jugada.");
+      setError(
+        e instanceof z.ZodError
+          ? (e.issues.find((issue) => issue.code === "custom")?.message ??
+              "Revisa los datos de la jugada. No se ha guardado este cambio.")
+          : e instanceof Error
+            ? e.message
+            : "No pudimos guardar la jugada.",
+      );
       return false;
     } finally {
       localWriting.current = false;
@@ -287,5 +306,26 @@ export function useLiveMatch() {
       setBusy(false);
     }
   }
-  return { record, error, preparation, busy, writable, online, change, retry: sync, takeover };
+  async function saveLineupDraft(draft: LineupDraft) {
+    if (!canWrite.current) return false;
+    try {
+      await persist((latest) => ({ ...latest, lineupDraft: draft }));
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No pudimos guardar la selección en este móvil.");
+      return false;
+    }
+  }
+  return {
+    record,
+    error,
+    preparation,
+    busy,
+    writable,
+    online,
+    change,
+    saveLineupDraft,
+    retry: sync,
+    takeover,
+  };
 }

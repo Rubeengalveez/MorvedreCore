@@ -12,6 +12,7 @@ import {
   type Shootout,
 } from "@/lib/domain/live-match";
 import { generateUuid } from "@/lib/utils/uuid";
+import { exclusionLimit } from "@/lib/domain/live-match-rules";
 import { validCapNumber } from "@/lib/domain/cap-number";
 import styles from "./live-match.module.css";
 import { ActaPlayerName } from "./acta-player-name";
@@ -38,7 +39,7 @@ export function ActaShootout({
   const availablePlayers = s.players
     .filter((player) => {
       const totals = playerTotals(s, "us", player.cap);
-      return !player.retired && !totals.red && totals.exclusions < 3;
+      return !player.retired && !totals.red && totals.exclusions < exclusionLimit(s);
     })
     .sort((a, b) => a.cap - b.cap);
   const availableKeepers = availablePlayers.filter(
@@ -51,7 +52,7 @@ export function ActaShootout({
           .sort((a, b) => a - b)
           .filter((number) => {
             const totals = playerTotals(s, "them", number);
-            return !totals.red && totals.exclusions < 3;
+            return !totals.red && totals.exclusions < exclusionLimit(s);
           })
           .map((number) => ({
             cap: number,

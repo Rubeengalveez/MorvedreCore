@@ -2,11 +2,17 @@
 
 import { ActaPlayerName } from "./acta-player-name";
 import { playerTotals, type LiveSheet, type Side } from "@/lib/domain/live-match";
+import { exclusionLimit } from "@/lib/domain/live-match-rules";
+import {
+  controlsParticipation,
+  participantKey,
+  playedPeriods,
+} from "@/lib/domain/live-match-participation";
 import { validCapNumber } from "@/lib/domain/cap-number";
 
-function sanctionStyle(count: number, red: boolean) {
-  if (red || count >= 3) return "bg-red-100 text-red-950";
-  if (count === 2) return "bg-orange-100 text-orange-950";
+function sanctionStyle(count: number, red: boolean, limit: number) {
+  if (red || count >= limit) return "bg-red-100 text-red-950";
+  if (count === limit - 1) return "bg-orange-100 text-orange-950";
   if (count === 1) return "border border-[#a77600] bg-[#fff0bd] text-[#4e3600]";
   return "bg-white text-[#062048]";
 }
@@ -73,15 +79,15 @@ export function ActaPlayerBoard({
             const player = side === "us" ? own[index] : undefined;
             const totals = playerTotals(sheet, side, cap);
             const keeper = side === "us" && (cap === 1 || cap === 13 || cap === sheet.keeper);
-            const out = totals.red || totals.exclusions >= 3;
+            const out = totals.red || totals.exclusions >= exclusionLimit(sheet);
             return (
               <button
                 key={`${side}-${cap}`}
                 type="button"
                 disabled={!playing}
                 onClick={() => onPlayer(side, cap)}
-                className={`min-h-[76px] min-w-0 gap-1 ${side === "them" ? "flex flex-row items-center justify-center" : "grid grid-cols-[32px_minmax(0,1fr)] items-center"} border-t border-[#062048] px-2 py-1 text-left enabled:active:brightness-95 ${sanctionStyle(totals.exclusions, totals.red)}`}
-                aria-label={`${keeper ? "Portero de " : ""}${side === "us" ? "Morvedre" : "Rival"}, ${validCapNumber(cap) == null ? "sin gorro" : `gorro ${cap}`}${player ? `, ${player.name}` : ""}, ${keeper ? `${totals.saves} paradas, ${totals.conceded} goles encajados` : `${totals.goals} goles`}, ${totals.exclusions} de 3 expulsiones${totals.red ? ", roja" : ""}${out ? ", fuera" : ""}${keeper && cap === sheet.keeper ? ", portero en juego" : ""}`}
+                className={`min-h-[76px] min-w-0 gap-1 ${side === "them" ? "flex flex-row items-center justify-center" : "grid grid-cols-[32px_minmax(0,1fr)] items-center"} border-t border-[#062048] px-2 py-1 text-left enabled:active:brightness-95 ${sanctionStyle(totals.exclusions, totals.red, exclusionLimit(sheet))}`}
+                aria-label={`${keeper ? "Portero de " : ""}${side === "us" ? "Morvedre" : "Rival"}, ${validCapNumber(cap) == null ? "sin gorro" : `gorro ${cap}`}${player ? `, ${player.name}` : ""}, ${keeper ? `${totals.saves} paradas, ${totals.conceded} goles encajados` : `${totals.goals} goles`}, ${totals.exclusions} de ${exclusionLimit(sheet)} expulsiones${totals.red ? ", roja" : ""}${out ? ", fuera" : ""}${keeper && cap === sheet.keeper ? ", portero en juego" : ""}`}
               >
                 <span
                   className={`${side === "them" ? "flex items-center justify-center" : "contents"}`}
@@ -94,7 +100,9 @@ export function ActaPlayerBoard({
                       <span
                         className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs"
                         title={
-                          totals.red ? "Expulsado por tarjeta roja" : "Fuera por 3 expulsiones"
+                          totals.red
+                            ? "Expulsado por tarjeta roja"
+                            : `Fuera por ${exclusionLimit(sheet)} expulsiones`
                         }
                       >
                         <span aria-hidden="true">✕</span>
@@ -131,10 +139,10 @@ export function ActaPlayerBoard({
                   </span>
                   <span
                     className={`flex min-w-0 flex-wrap items-center justify-center gap-1 text-center ${side === "them" ? "flex-row" : "flex-col"}`}
-                    aria-label={`${totals.exclusions} de 3 expulsiones`}
+                    aria-label={`${totals.exclusions} de ${exclusionLimit(sheet)} expulsiones`}
                   >
                     <span className="flex h-5 items-center justify-center gap-1" aria-hidden="true">
-                      {[1, 2, 3].map((n) => (
+                      {Array.from({ length: exclusionLimit(sheet) }, (_, i) => i + 1).map((n) => (
                         <span
                           key={n}
                           className={`h-2.5 w-2.5 rounded-full border ${n <= totals.exclusions ? "border-current bg-current" : "border-slate-400 bg-white"}`}
@@ -143,11 +151,31 @@ export function ActaPlayerBoard({
                     </span>
                     <span className="min-w-0 text-center text-xs leading-tight font-semibold">
                       <span className="whitespace-nowrap">
-                        {totals.exclusions}/3{side === "us" ? " exp." : ""}
+                        {totals.exclusions}/{exclusionLimit(sheet)}
+                        {side === "us" ? " exp." : ""}
                       </span>
                     </span>
                   </span>
                 </span>
+                {controlsParticipation(sheet) &&
+                  playedPeriods(sheet, side, participantKey(sheet, side, cap)).length > 0 && (
+                    <span
+                      className={`flex flex-wrap gap-1 ${side === "us" ? "col-span-2 justify-end" : "flex-col"}`}
+                      aria-label={`Ha jugado los cuartos ${playedPeriods(sheet, side, participantKey(sheet, side, cap)).join(" y ")}`}
+                    >
+                      {playedPeriods(sheet, side, participantKey(sheet, side, cap)).map(
+                        (period) => (
+                          <span
+                            key={period}
+                            aria-hidden="true"
+                            className="border-pool-deep text-pool-deep inline-flex h-5 min-w-5 items-center justify-center rounded border bg-white px-1 text-xs font-bold"
+                          >
+                            {period}
+                          </span>
+                        ),
+                      )}
+                    </span>
+                  )}
               </button>
             );
           }),

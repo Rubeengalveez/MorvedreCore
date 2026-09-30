@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { keeperQuarters, selectMatchKeeper } from "@/lib/domain/live-match-keepers";
+import {
+  correctStartingKeeper,
+  keeperQuarters,
+  selectMatchKeeper,
+} from "@/lib/domain/live-match-keepers";
 import { sheetSchema, type LiveSheet, type MatchEvent } from "@/lib/domain/live-match";
 import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
 
@@ -32,6 +36,20 @@ const event = (
 });
 
 describe("cuartos de portería", () => {
+  it("corrige el portero inicial de un cuarto anterior conservando las sustituciones y el portero actual", () => {
+    let s = selectMatchKeeper(sheet(), 1, "start");
+    const early = event("save", 1);
+    const goal = event("goal", 3, { side: "them", keeper: 1 });
+    s = selectMatchKeeper({ ...s, events: [early, goal] }, 13, "change");
+    const later = event("penalty_save", 13);
+    s = selectMatchKeeper({ ...s, events: [...s.events, later], phase: "break" }, 1, "start");
+    const corrected = correctStartingKeeper(s, 1, 13);
+    expect(corrected).toMatchObject({ period: 2, keeper: 1, phase: "playing" });
+    expect(corrected.events[0].cap).toBe(13);
+    expect(corrected.events[1].keeper).toBe(13);
+    expect(corrected.events[2]).toEqual(later);
+    expect(corrected.keeperStints?.map((stint) => stint.cap)).toEqual([13, 13, 1]);
+  });
   it("cuenta un cuarto sin intervenciones y pregunta una nueva elección al empezar el siguiente", () => {
     const first = selectMatchKeeper(sheet(), 1, "start");
     const next = selectMatchKeeper({ ...first, phase: "break" }, 13, "start");

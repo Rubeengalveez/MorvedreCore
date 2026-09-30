@@ -2,6 +2,8 @@ import { act, renderHook, waitFor, cleanup } from "@testing-library/react";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import type { StoredMatch } from "@/lib/pwa/live-match-store";
 import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
+import { prepareParticipation } from "@/lib/domain/live-match-participation";
+import type { LineupDraft } from "@/lib/domain/live-match-rules";
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), write: vi.fn(), load: vi.fn(), sync: vi.fn() }));
 vi.mock("@/lib/pwa/live-match-store", () => ({
@@ -71,6 +73,109 @@ const goal = (id: string) => ({
   period: 1,
   keeper: null,
   deleted: false,
+});
+
+const lineupDraft = (): LineupDraft => ({
+  period: 1,
+  mode: "correct",
+  step: "us",
+  baseMutation: record.mutation,
+  us: { keeper: record.sheet.players[0].id, field: [] },
+  them: { keeper: "1", field: [] },
+});
+
+it("recupera un borrador local también al abrir con conexión sin enviar una alineación incompleta", async () => {
+  const first = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(first.result.current.writable).toBe(true));
+  await act(async () => {
+    expect(await first.result.current.saveLineupDraft(lineupDraft())).toBe(true);
+  });
+  expect(stored.dirty).toBe(false);
+  expect(mocks.sync).not.toHaveBeenCalled();
+  first.unmount();
+  const second = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(second.result.current.writable).toBe(true));
+  expect(second.result.current.record?.lineupDraft).toEqual(lineupDraft());
+  second.unmount();
+  mocks.load.mockResolvedValue({
+    ok: true,
+    data: { ...record, revision: 2, mutation: crypto.randomUUID() },
+  });
+  const third = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(third.result.current.writable).toBe(true));
+  expect(third.result.current.record?.lineupDraft).toBeUndefined();
+});
+
+it("no anuncia un borrador guardado cuando falla IndexedDB", async () => {
+  const { result } = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(result.current.writable).toBe(true));
+  mocks.write.mockRejectedValueOnce(new Error("Sin espacio local"));
+  await act(async () => {
+    expect(await result.current.saveLineupDraft(lineupDraft())).toBe(false);
+  });
+  expect(result.current.record?.lineupDraft).toBeUndefined();
+  expect(result.current.error).toBe("Sin espacio local");
+  expect(mocks.sync).not.toHaveBeenCalled();
+});
+
+it("una jugada inválida no muestra JSON de Zod ni modifica el documento guardado", async () => {
+  const { result } = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(result.current.writable).toBe(true));
+  await act(async () => {
+    expect(await result.current.change({ ...record.sheet, periods: 0 })).toBe(false);
+  });
+  expect(stored.sheet.periods).toBe(6);
+  expect(result.current.error).toBe("El periodo no es válido.");
+  expect(mocks.sync).not.toHaveBeenCalled();
+});
+
+it("una respuesta atrasada conserva la corrección de participantes y descarta el borrador confirmado", async () => {
+  const prepared = prepareParticipation(record.sheet, "infantil");
+  stored = { ...record, sheet: prepared };
+  mocks.load.mockResolvedValue({ ok: true, data: structuredClone(stored) });
+  let acknowledge: (v: unknown) => void = () => {};
+  mocks.sync.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        acknowledge = resolve;
+      }),
+  );
+  const { result } = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(result.current.writable).toBe(true));
+  await act(async () => {
+    await result.current.saveLineupDraft(lineupDraft());
+    await result.current.change(prepared);
+  });
+  await waitFor(() => expect(mocks.sync).toHaveBeenCalledTimes(1));
+  const updated = {
+    ...result.current.record!.sheet,
+    participation: {
+      ...prepared.participation!,
+      lineups: [
+        {
+          period: 1,
+          side: "us" as const,
+          keeper: record.sheet.players[0].id,
+          field: [],
+          incident: "Faltan jugadores",
+        },
+        { period: 1, side: "them" as const, keeper: "1", field: [], incident: "Faltan jugadores" },
+      ],
+    },
+  };
+  await act(async () => {
+    await result.current.change(updated);
+  });
+  await act(async () => {
+    acknowledge({
+      ok: true,
+      data: { revision: 2, owner: record.owner, sheet: identifyLiveSheet(prepared) },
+    });
+  });
+  await waitFor(() => expect(result.current.record?.dirty).toBe(false));
+  expect(stored.sheet.participation?.lineups).toEqual(updated.participation.lineups);
+  expect(stored.lineupDraft).toBeUndefined();
+  expect(mocks.sync.mock.calls[1][0].sheet.participation.lineups).toHaveLength(2);
 });
 
 it("preserves a second jugada while acknowledging the first network request", async () => {

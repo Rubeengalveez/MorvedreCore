@@ -561,7 +561,7 @@ export const recordMatchStatSchema = z.object({
     .number()
     .int("Expulsiones enteras.")
     .min(0, "Mínimo 0.")
-    .max(3, "Máximo 3 expulsiones por partido (normativa).")
+    .max(4, "Máximo 4 expulsiones por partido.")
     .optional(),
   mvp: z.boolean().optional(),
 });
