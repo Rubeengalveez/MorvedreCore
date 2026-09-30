@@ -70,6 +70,7 @@ export function ActaLineupSheet({
   const saving = useRef(false);
   const draftQueue = useRef(Promise.resolve(true));
   const [confirming, setConfirming] = useState(false);
+  const [warningTeam, setWarningTeam] = useState<Side>("us");
   const [error, setError] = useState("");
   const [fixed, setFixed] = useState(draft.fixedKeepers ?? sheet.participation!.fixedKeepers);
   const side = draft.step;
@@ -93,10 +94,12 @@ export function ActaLineupSheet({
           (playerTotals(sheet, lineup.side, p.cap).red ||
             playerTotals(sheet, lineup.side, p.cap).exclusions >= rules.exclusionLimit),
       )
-      .map(
-        (p) =>
-          `${lineup.side === "us" ? "Morvedre" : "Rival"} · ${p.name}: ha quedado expulsado. Avísalo al árbitro.`,
-      );
+      .map((p) => ({
+        ...p,
+        side: lineup.side,
+        kind: "out" as const,
+        message: "Ha quedado expulsado.",
+      }));
     return [
       ...unavailable,
       ...rotationAdvice(
@@ -110,7 +113,7 @@ export function ActaLineupSheet({
             a.kind === "missing" ||
             (a.kind === "rest" ? selected.has(a.key) : !selected.has(a.key)),
         )
-        .map((a) => `${lineup.side === "us" ? "Morvedre" : "Rival"} · ${a.name}: ${a.message}`),
+        .map((a) => ({ ...a, side: lineup.side })),
     ];
   });
   const structures = lineups.flatMap((l) => lineupIssues(sheet, l));
@@ -200,45 +203,118 @@ export function ActaLineupSheet({
         icon="warning"
         pending={busy}
         stickyActions
+        scrollKey={warningTeam}
         error={error}
         body={
           <div className="space-y-3">
-            <p className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950">
-              Avísalo al entrenador o al árbitro antes de continuar.
+            <p className="border-pool-deep text-pool-deep rounded-xl border bg-amber-100 px-3 py-2 text-base font-semibold">
+              Revisa estos cambios con el entrenador o el árbitro.
             </p>
+            {warnings.some((warning) => warning.side === "us") &&
+              warnings.some((warning) => warning.side === "them") && (
+                <div
+                  role="group"
+                  aria-label="Avisos de cada equipo"
+                  className="sticky top-0 z-10 grid grid-cols-2 gap-2 bg-white py-1"
+                >
+                  {(["us", "them"] as const).map((team) => (
+                    <button
+                      key={team}
+                      type="button"
+                      aria-pressed={warningTeam === team}
+                      onClick={() => setWarningTeam(team)}
+                      className={`border-pool-deep flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 text-base font-extrabold ${team === "them" ? (warningTeam === team ? "bg-ball-gold text-pool-deep" : "text-pool-deep bg-amber-50") : warningTeam === team ? "bg-pool-deep text-white" : "text-pool-deep bg-white"}`}
+                    >
+                      {team === "us" ? "Morvedre" : "Rival"} ·{" "}
+                      {warnings.filter((warning) => warning.side === team).length}
+                      {warningTeam === team && <Check size={20} aria-hidden="true" />}
+                    </button>
+                  ))}
+                </div>
+              )}
             {(["Morvedre", "Rival"] as const).map((team) => {
-              const messages = warnings.filter((text) => text.startsWith(`${team} · `));
+              const messages = warnings.filter(
+                (warning) => warning.side === (team === "Morvedre" ? "us" : "them"),
+              );
+              const bothTeams =
+                warnings.some((warning) => warning.side === "us") &&
+                warnings.some((warning) => warning.side === "them");
               return messages.length ? (
-                <section key={team} aria-label={`Avisos de ${team}`} className="space-y-2">
+                <section
+                  key={team}
+                  aria-label={`Avisos de ${team}`}
+                  hidden={bothTeams && warningTeam !== (team === "Morvedre" ? "us" : "them")}
+                  className="border-pool-deep overflow-hidden rounded-xl border-2 bg-white"
+                >
                   <h3
-                    className={`rounded-lg px-3 py-2 text-sm font-extrabold ${team === "Morvedre" ? "bg-pool-deep text-white" : "bg-ball-gold text-pool-deep"}`}
+                    className={`px-3 py-2 text-base font-extrabold ${team === "Morvedre" ? "bg-pool-deep text-white" : "bg-ball-gold text-pool-deep"}`}
                   >
                     {team}
                   </h3>
-                  {messages.map((text) => {
-                    const content = text.slice(team.length + 3);
-                    const split = content.indexOf(": ");
-                    return (
-                      <div
-                        key={text}
-                        className="flex items-start gap-2 rounded-lg bg-white px-2 py-1.5 text-sm"
-                      >
-                        <CircleAlert
-                          size={18}
-                          className="mt-0.5 shrink-0 text-red-800"
-                          aria-hidden="true"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <strong className="block">
-                            <ActaPlayerName name={content.slice(0, split)} />
-                          </strong>
-                          <p className="mt-0.5 leading-snug text-slate-700">
-                            {content.slice(split + 2)}
-                          </p>
+                  <div className="space-y-3 p-3">
+                    {(["rest", "play", "out", "missing"] as const).map((kind) => {
+                      const list = messages.filter((warning) => warning.kind === kind);
+                      if (!list.length) return null;
+                      return (
+                        <div
+                          key={kind}
+                          className="border-pool-deep rounded-lg border bg-amber-50 p-2.5"
+                        >
+                          <h4 className="text-pool-deep mb-2 flex items-center gap-2 text-base font-extrabold">
+                            {kind === "rest" ? (
+                              <Moon size={20} aria-hidden="true" />
+                            ) : kind === "play" ? (
+                              <Play size={20} aria-hidden="true" />
+                            ) : (
+                              <CircleAlert size={20} aria-hidden="true" />
+                            )}
+                            {kind === "rest"
+                              ? "Deben descansar"
+                              : kind === "play"
+                                ? "Faltan por jugar"
+                                : kind === "out"
+                                  ? "Expulsados"
+                                  : "Faltan datos"}
+                          </h4>
+                          <div
+                            className={team === "Rival" ? "flex flex-wrap gap-2" : "space-y-1.5"}
+                          >
+                            {list.map((warning) => {
+                              const player = participants(sheet, warning.side).find(
+                                (p) => p.key === warning.key,
+                              );
+                              return player ? (
+                                <div
+                                  key={warning.key}
+                                  className="text-pool-deep flex min-h-9 items-center gap-2 rounded-md bg-white px-2 py-1 text-base font-bold"
+                                >
+                                  <span
+                                    className={`grid h-7 min-w-7 shrink-0 place-items-center rounded-md ${team === "Morvedre" ? "bg-pool-deep text-white" : "border-pool-deep bg-ball-gold text-pool-deep border"}`}
+                                  >
+                                    {player.cap}
+                                  </span>
+                                  {team === "Morvedre" ? (
+                                    <span className="min-w-0 flex-1">
+                                      <ActaPlayerName name={player.name} />
+                                    </span>
+                                  ) : (
+                                    <span className="sr-only">Gorro {player.cap}</span>
+                                  )}
+                                </div>
+                              ) : (
+                                <p
+                                  key={warning.key}
+                                  className="text-pool-deep text-base leading-snug"
+                                >
+                                  {warning.message}
+                                </p>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                 </section>
               ) : null;
             })}
@@ -276,13 +352,13 @@ export function ActaLineupSheet({
         aria-label={side === "us" ? `${p.cap} ${p.name}` : String(p.cap)}
         aria-pressed={selected}
         onClick={() => select(p.key, keeper)}
-        className={`flex h-14 min-w-0 items-center gap-2 rounded-xl border-2 px-2 text-left transition-colors motion-reduce:transition-none ${selected ? "border-pool-blue text-pool-deep bg-blue-50" : "border-pool-blue/70 text-pool-deep bg-white"} ${side === "them" ? "h-20 flex-col justify-center gap-1" : ""}`}
+        className={`flex h-16 min-w-0 items-center gap-2 rounded-xl border-2 px-2 text-left transition-colors motion-reduce:transition-none ${selected ? "border-pool-blue text-pool-deep bg-blue-50" : "border-pool-deep/70 text-pool-deep bg-white"} ${side === "them" ? "h-24 flex-col justify-center gap-2" : ""}`}
       >
         <span
-          className={`flex shrink-0 items-center gap-1 ${side === "them" ? "w-full justify-between" : ""}`}
+          className={`flex shrink-0 items-center gap-0.5 ${side === "them" ? "w-full justify-between" : "flex-col"}`}
         >
           <strong
-            className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-lg font-extrabold ${selected ? "bg-pool-deep text-white" : "text-pool-deep bg-slate-100"}`}
+            className={`grid shrink-0 place-items-center rounded-lg text-xl font-extrabold ${side === "us" ? "h-8 w-8" : "h-9 w-9"} ${selected ? "bg-pool-deep text-white" : "text-pool-deep bg-slate-100"}`}
           >
             {p.cap}
           </strong>
@@ -292,14 +368,14 @@ export function ActaLineupSheet({
           {(hint || out) && (
             <span
               title={out ? "Expulsado" : hint?.kind === "rest" ? "Debe descansar" : "Debe jugar"}
-              className={hint?.kind === "rest" || out ? "text-red-800" : "text-amber-900"}
+              className={`grid place-items-center rounded-md ${side === "us" ? "h-5 w-5" : "h-7 w-7"} ${out ? "border border-red-800 bg-red-50 text-red-800" : "border-pool-deep text-pool-deep border bg-amber-100"}`}
             >
               {out ? (
-                <CircleAlert size={16} aria-hidden="true" />
+                <CircleAlert size={side === "us" ? 16 : 20} aria-hidden="true" />
               ) : hint?.kind === "rest" ? (
-                <Moon size={16} aria-hidden="true" />
+                <Moon size={side === "us" ? 16 : 20} aria-hidden="true" />
               ) : (
-                <Play size={16} aria-hidden="true" />
+                <Play size={side === "us" ? 16 : 20} aria-hidden="true" />
               )}
               <span className="sr-only">
                 {out ? "Expulsado" : hint?.kind === "rest" ? "Debe descansar" : "Debe jugar"}
@@ -308,7 +384,7 @@ export function ActaLineupSheet({
           )}
         </span>
         {side === "us" && (
-          <span className="min-w-0 flex-1 text-sm font-bold">
+          <span className="min-w-0 flex-1 text-base font-bold">
             <ActaPlayerName name={p.name} />
           </span>
         )}
@@ -317,14 +393,15 @@ export function ActaLineupSheet({
             played={history}
             period={request.period}
             current={selected}
+            compact={side === "us"}
             small={side === "them"}
           />
         )}
         <span
           aria-hidden="true"
-          className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${selected ? "bg-pool-blue text-white" : "border-2 border-slate-400"} ${side === "them" ? "sr-only absolute" : ""}`}
+          className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${selected ? "bg-pool-blue text-white" : "border-2 border-slate-500"} ${side === "them" ? "sr-only absolute" : ""}`}
         >
-          {selected && <Check size={14} />}
+          {selected && <Check size={18} />}
         </span>
       </button>
     );
@@ -341,12 +418,15 @@ export function ActaLineupSheet({
         setError(structures[0] ?? "Elige los porteros de ambos equipos.");
         return;
       }
-      if (warnings.length || keeperWarning) setConfirming(true);
-      else void commit();
+      if (warnings.length || keeperWarning) {
+        setWarningTeam(warnings[0]?.side ?? "us");
+        setConfirming(true);
+      } else void commit();
     }
   }
   return (
     <ActaFlowSheet
+      scrollKey={side}
       onClose={onClose}
       onBack={side === "them" ? () => void update({ ...draftRef.current, step: "us" }) : undefined}
       context={`Cuarto ${request.period} · ${request.mode === "start" ? "Quién juega" : "Corregir selección"}`}
@@ -356,13 +436,16 @@ export function ActaLineupSheet({
       controls={
         <div className="space-y-2">
           {request.mode === "start" && (
-            <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+            <div className="grid grid-cols-2 gap-2 text-base font-bold">
               {(["us", "them"] as const).map((team) => (
                 <span
                   key={team}
-                  className={`rounded-md px-3 py-1.5 ${side === team ? "bg-pool-deep text-white" : "bg-slate-100 text-slate-600"}`}
+                  className={`flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 ${side === team ? "border-pool-deep bg-pool-deep text-white" : "border-slate-500 bg-slate-100 text-slate-700"}`}
                 >
                   {team === "us" ? "1. Morvedre" : "2. Rival"}
+                  {side === team && (
+                    <Check size={18} aria-hidden="true" className="ml-auto shrink-0" />
+                  )}
                 </span>
               ))}
             </div>
@@ -375,7 +458,7 @@ export function ActaLineupSheet({
           {activeAdvice.length > 0 && (
             <div
               role="status"
-              className="rounded-lg bg-amber-50 px-3 py-2 text-sm leading-snug font-semibold text-amber-950"
+              className="border-pool-deep text-pool-deep space-y-1 rounded-lg border bg-amber-100 px-3 py-2 text-base leading-snug font-semibold"
             >
               {(["rest", "play"] as const).map((kind) => {
                 const list = options.filter((p) =>
@@ -416,7 +499,7 @@ export function ActaLineupSheet({
     >
       <div className="space-y-4">
         <section aria-label="Portero del cuarto" className="space-y-2">
-          <div className="flex items-center justify-between text-sm font-extrabold">
+          <div className="flex items-center justify-between text-base font-extrabold">
             <h3>Portero</h3>
             <span className={selection.keeper ? "text-pool-blue" : "text-slate-600"}>
               {selection.keeper ? "1 de 1" : "Elige uno"}
@@ -442,13 +525,17 @@ export function ActaLineupSheet({
           )}
         </section>
         <section aria-label="Jugadores de campo" className="space-y-2">
-          <div className="flex items-center justify-between gap-2 text-sm font-extrabold">
+          <div className="flex items-center justify-between gap-2 text-base font-extrabold">
             <h3>Jugadores de campo</h3>
             <span role="status" className="bg-pool-deep rounded-lg px-2 py-1 text-white">
               {selection.field.length} de {rules.fieldPlayers}
             </span>
           </div>
-          <div className={side === "us" ? "grid gap-1.5" : "grid grid-cols-3 gap-2"}>
+          <div
+            className={
+              side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2 min-[390px]:grid-cols-3"
+            }
+          >
             {options.filter((p) => ![1, 13].includes(p.cap)).map((p) => playerButton(p, false))}
           </div>
         </section>

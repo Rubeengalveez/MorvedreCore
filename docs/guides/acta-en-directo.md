@@ -1,6 +1,6 @@
 # Acta durante el partido
 
-Abre el partido desde el calendario. Si eres el delegado asignado a ese equipo, pulsa **Abrir acta en directo** para anotar jugada a jugada. Puedes volver al mismo partido sin pasar por administración.
+Abre el partido desde el calendario. Si eres el delegado asignado a ese equipo, pulsa **Abrir acta** para anotar jugada a jugada. Puedes volver al mismo partido sin pasar por administración.
 
 Si la convocatoria tiene gorros repetidos o sin asignar, verás **Revisa los gorros**, con los jugadores ya cargados. Los números ocupados no se pueden seleccionar. Corrige los números señalados y pulsa **Guardar gorros y abrir acta**. Si hay más de 14 convocados, elige en esa misma pantalla los 14 que disputan el partido. Si no hay ninguno, la pantalla te indica que pidas al entrenador que prepare la convocatoria.
 
@@ -18,7 +18,7 @@ En Infantil, Alevín, Benjamín y Escuela, al empezar cada cuarto del 1 al 4:
 2. Pulsa **Continuar con Rival** y haz lo mismo con sus gorros.
 3. Pulsa **Listo, empezar cuarto**. Ambas selecciones y el comienzo se guardan juntos en el móvil.
 
-Cada ficha muestra los cuartos jugados. Al terminar el tercero aparece un resumen de quién debe jugar o descansar; en la selección del cuarto las fichas lo indican. Si una selección incumple la rotación, revisa con el entrenador o el árbitro. Puedes registrar lo ocurrido confirmando la incidencia.
+Cada ficha muestra en gris los cuartos que ya jugó y en azul el cuarto actual si está jugando. Al terminar el tercero aparece un resumen de quién debe jugar o descansar, separado entre Morvedre y Rival; en la selección del cuarto las fichas lo indican. Si una selección incumple la rotación, revisa con el entrenador o el árbitro. Puedes registrar lo ocurrido confirmando el aviso.
 
 Si atribuyes una acción a alguien que no seleccionaste, la app pregunta si está jugando y te lleva a revisar la alineación. Los asistentes y lanzadores de penalti se eligen entre quienes están en el agua. Los gorros 1 y 13 siempre son porteros. La excepción de portero único debe marcarse expresamente en Alevín/Infantil.
 
@@ -35,7 +35,7 @@ Desde el quinto desaparecen las marcas y la selección de campo, conservando el 
 - Para el rival, elige el gorro y después **Gol**, **Expulsión**, **Penalti** o **Tarjeta roja**. Al apuntar un penalti rival, la sanción queda guardada y debes completar lanzador y resultado antes de seguir. Si parece el mismo gol de penalti que acabas de registrar, la aplicación pregunta antes de sumar otro.
 - El bloque **Portero en juego** está encima de la tabla y muestra quién juega. Las filas de portería priorizan paradas, goles encajados y sanciones. Los porteros conservan las acciones de jugador de campo. Antes de guardar un gol rival debe haber un portero válido seleccionado.
 - **Entrenador** permite elegir **Tiempo muerto** o **Tarjeta al entrenador**, después el equipo. Los tiempos pedidos de cada equipo se muestran en el panel. No se imponen cupos reglamentarios.
-- **Corregir** está siempre visible. Cada jugada ofrece botones grandes para corregirla o anularla; anular requiere confirmación y elimina también su asistencia o lanzamiento vinculado.
+- **Corregir** permite ver todas las jugadas o elegir un cuarto anterior. Cada jugada ofrece botones grandes para corregirla o anularla; anular requiere confirmación y elimina también su asistencia o lanzamiento vinculado. Corregir un cambio de portero anterior ajusta las jugadas de ese tramo y conserva el portero del cuarto actual.
 
 Si una sanción de penalti de una versión anterior quedó sin lanzamiento, entra en **Corregir** y pulsa **Completar lanzamiento pendiente** en esa jugada. Los penaltis fallados antiguos sin destino también se pueden clasificar desde ahí.
 
@@ -43,9 +43,9 @@ Pulsa **Terminar cuarto**, revisa el marcador y confirma. Durante el descanso, t
 
 ## Si se pierde la conexión
 
-Cada cambio se guarda primero en este móvil. El estado indica si está pendiente de envío; la sincronización se reintenta al recuperar conexión. También se conservan las preguntas pendientes de asistencia o lanzamiento. Puedes recargar el acta ya preparada sin conexión. Desde la pantalla sin conexión aparece **Retomar acta del partido**.
+Cada cambio se guarda primero en este móvil. El estado indica si está pendiente de envío; la sincronización se reintenta al recuperar conexión, también mientras editas la convocatoria o vuelves a otra pantalla de la app. También se conservan las preguntas pendientes de asistencia o lanzamiento. Puedes recargar el acta y su convocatoria ya preparadas sin conexión. Desde la pantalla sin conexión aparece **Retomar acta del partido**.
 
-La selección incompleta del cuarto también se conserva en este móvil. Si recargas antes de pulsar **Listo**, recuperas lo elegido sin empezar el cuarto a medias. Puedes seleccionar ambos equipos, corregir alineaciones y registrar incidencias sin conexión. Una selección aún incompleta no se envía como alineación confirmada.
+La selección incompleta del cuarto también se conserva en este móvil. Si recargas antes de pulsar **Listo**, recuperas lo elegido sin empezar el cuarto a medias. Puedes seleccionar ambos equipos, corregir alineaciones y confirmar avisos de rotación sin conexión. Una selección aún incompleta no se envía como alineación confirmada.
 
 Si detectas un gorro o jugador equivocado, sal del acta y elige **Corregir convocatoria**. La pantalla funciona con los jugadores preparados en este móvil. Cambiar un gorro conserva las jugadas de esa persona. Si el jugador era erróneo y ya tiene acciones, elige quién ocupa su lugar: verás el resumen antes de guardar y todas sus acciones pasarán al jugador correcto. Los cambios quedan guardados en el móvil y se envían en una sola operación con el acta cuando vuelva la conexión. Los gorros 1 y 13 siguen siendo los porteros. Esta corrección no modifica la convocatoria por defecto de otros partidos.
 

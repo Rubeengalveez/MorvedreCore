@@ -5,7 +5,7 @@ import { ArrowLeft, CalendarDays, ClipboardPenLine, Loader2, MapPin } from "luci
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
@@ -123,8 +123,8 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
     },
   });
 
-  const isHome = form.watch("is_home");
-  const competition = form.watch("competition_type");
+  const isHome = useWatch({ control: form.control, name: "is_home" });
+  const competition = useWatch({ control: form.control, name: "competition_type" });
 
   useEffect(() => {
     const venue = `${isHome}:${competition}`;

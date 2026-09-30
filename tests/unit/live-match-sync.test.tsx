@@ -84,6 +84,88 @@ const lineupDraft = (): LineupDraft => ({
   them: { keeper: "1", field: [] },
 });
 
+it("abre el acta preparada cuando la red aparenta conexión pero la carga no responde", async () => {
+  vi.useFakeTimers();
+  mocks.load.mockReturnValue(new Promise(() => {}));
+  const hook = renderHook(() => useLiveMatch());
+  try {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8001);
+    });
+    expect(hook.result.current.writable).toBe(true);
+    expect(hook.result.current.record?.matchId).toBe(record.matchId);
+    await act(async () => {
+      expect(
+        await hook.result.current.change({ ...record.sheet, events: [goal(crypto.randomUUID())] }),
+      ).toBe(true);
+    });
+    expect(stored.sheet.events).toHaveLength(1);
+  } finally {
+    hook.unmount();
+    vi.useRealTimers();
+  }
+});
+
+it("recupera una sincronización bloqueada sin perder ni duplicar la mutación pendiente", async () => {
+  vi.useFakeTimers();
+  mocks.sync.mockReturnValueOnce(new Promise(() => {}));
+  const hook = renderHook(() => useLiveMatch());
+  try {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1);
+    });
+    await act(async () => {
+      await hook.result.current.change({ ...record.sheet, events: [goal(crypto.randomUUID())] });
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8001);
+    });
+    expect(hook.result.current.error).toMatch(/conectar/);
+    const mutation = stored.flight?.mutation;
+    expect(stored.sheet.events).toHaveLength(1);
+    await act(async () => {
+      await hook.result.current.retry();
+    });
+    expect(stored.dirty).toBe(false);
+    expect(stored.flight).toBeUndefined();
+    expect(mocks.sync.mock.calls[1][0].mutation).toBe(mutation);
+    expect(stored.sheet.events).toHaveLength(1);
+  } finally {
+    hook.unmount();
+    vi.useRealTimers();
+  }
+});
+
+it("una respuesta recibida al salir del acta no sobrescribe la convocatoria editada después", async () => {
+  let respond!: (value: unknown) => void;
+  mocks.sync.mockReturnValueOnce(
+    new Promise((resolve) => {
+      respond = resolve;
+    }),
+  );
+  const hook = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(hook.result.current.writable).toBe(true));
+  await act(async () => {
+    await hook.result.current.change({ ...record.sheet, events: [goal(crypto.randomUUID())] });
+  });
+  await waitFor(() => expect(mocks.sync).toHaveBeenCalledOnce());
+  hook.unmount();
+  const afterLeaving = {
+    ...stored,
+    mutation: crypto.randomUUID(),
+    rosterEdit: true,
+    sheet: {
+      ...stored.sheet,
+      players: [{ ...stored.sheet.players[0], name: "Jugador corregido" }],
+    },
+  };
+  stored = structuredClone(afterLeaving);
+  await act(async () => {
+    respond({ ok: true, data: { revision: 2, owner: record.owner, sheet: record.sheet } });
+  });
+  expect(stored).toEqual(afterLeaving);
+});
+
 it("recupera un borrador local también al abrir con conexión sin enviar una alineación incompleta", async () => {
   const first = renderHook(() => useLiveMatch());
   await waitFor(() => expect(first.result.current.writable).toBe(true));
@@ -355,4 +437,37 @@ it("envía una corrección de convocatoria guardada sin conexión como una sola 
   );
   await waitFor(() => expect(result.current.record?.dirty).toBe(false));
   expect(stored.rosterEdit).toBe(false);
+});
+
+it("guarda la convocatoria sin red y la sincroniza al recuperarla sin salir del editor", async () => {
+  const originallyOnline = navigator.onLine;
+  Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+  const hook = renderHook(() => useLiveMatch());
+  try {
+    await waitFor(() => expect(hook.result.current.writable).toBe(true));
+    const sheet = {
+      ...record.sheet,
+      players: [{ ...record.sheet.players[0], name: "Álex corregido" }],
+    };
+    await act(async () => {
+      expect(await hook.result.current.change(sheet, { rosterEdit: true })).toBe(true);
+    });
+    expect(stored).toMatchObject({ dirty: true, rosterEdit: true });
+    expect(mocks.sync).not.toHaveBeenCalled();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: true });
+    await act(async () => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(hook.result.current.record?.dirty).toBe(false));
+    expect(mocks.sync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rosterEdit: true,
+        sheet: expect.objectContaining({
+          players: [expect.objectContaining({ name: "Álex corregido" })],
+        }),
+      }),
+    );
+    expect(stored.rosterEdit).toBe(false);
+  } finally {
+    hook.unmount();
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: originallyOnline });
+  }
 });

@@ -60,12 +60,31 @@ export function correctKeeperReplacement(
   anchor: string | null,
   remove = false,
 ): LiveSheet {
-  const stints = [...(sheet.keeperStints ?? [])];
-  const index = stints.findIndex(
+  const index = (sheet.keeperStints ?? []).findIndex(
     (stint) => stint.period === period && stint.cap === oldCap && stint.afterEventId === anchor,
   );
-  if (index < 0 || ![1, 13].includes(cap))
+  return reviseKeeperStint(sheet, index, cap, remove);
+}
+
+export function correctKeeperStint(sheet: LiveSheet, index: number, cap: number): LiveSheet {
+  return reviseKeeperStint(sheet, index, cap, false);
+}
+
+function reviseKeeperStint(
+  sheet: LiveSheet,
+  index: number,
+  cap: number,
+  remove: boolean,
+): LiveSheet {
+  const stints = [...(sheet.keeperStints ?? [])];
+  const stint = stints[index];
+  if (
+    !stint ||
+    ![1, 13].includes(cap) ||
+    !sheet.players.some((player) => !player.retired && player.cap === cap)
+  )
     throw new Error("Revisa el historial del portero antes de corregir la sustitución.");
+  const { period, cap: oldCap, afterEventId: anchor } = stint;
   const next = stints.slice(index + 1).find((stint) => stint.period === period);
   const start = anchor ? sheet.events.findIndex((e) => e.id === anchor) : -1;
   const end = next

@@ -1,94 +1,77 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import type { Route } from "next";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { PageShell } from "@/components/ui/page-shell";
 import { CallupEditor } from "@/app/(app)/admin/matches/[id]/_components/callup-editor";
 import { editLiveRoster, type RosterTransfer } from "@/lib/domain/live-match-roster-edit";
 import { liveCallupReturn } from "@/lib/domain/live-match-navigation";
 import type { CallupPick } from "@/lib/domain/callup-selection";
-import {
-  liveDevice,
-  readLocalMatch,
-  writeLocalMatch,
-  type StoredMatch,
-} from "@/lib/pwa/live-match-store";
-import { generateUuid } from "@/lib/utils/uuid";
+import { liveDevice } from "@/lib/pwa/live-match-store";
+import { useLiveMatch } from "@/components/matches/use-live-match";
+
+const subscribeToLocation = (notify: () => void) => {
+  window.addEventListener("popstate", notify);
+  return () => window.removeEventListener("popstate", notify);
+};
 
 export function LocalCallupEditor() {
-  const [record, setRecord] = useState<StoredMatch>();
-  const [error, setError] = useState("");
-  const [online, setOnline] = useState(true);
-  const [origin, setOrigin] = useState<string | null>(null);
+  const { record, error, online, writable, busy, change, retry } = useLiveMatch();
+  const search = useSyncExternalStore(
+    subscribeToLocation,
+    () => location.search,
+    () => "",
+  );
+  const params = new URLSearchParams(search);
+  const origin = params.get("from");
+  const matchParam = params.get("match");
+  const sourceMatchId =
+    matchParam && /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i.test(matchParam)
+      ? matchParam
+      : null;
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const matchId = params.get("match");
-    const from = params.get("from");
-    setOrigin(from);
-    if (!matchId) {
-      queueMicrotask(() => setError("Abre la convocatoria desde el partido."));
-      return;
-    }
-    let stopped = false;
-    let release: () => void = () => {};
-    const connection = () => setOnline(navigator.onLine);
-    connection();
-    window.addEventListener("online", connection);
-    window.addEventListener("offline", connection);
-    const run = async (lock: unknown) => {
-      if (!lock) {
-        setError("El acta está abierta en otra pestaña. Ciérrala antes de editar la convocatoria.");
-        return;
-      }
-      try {
-        const local = await readLocalMatch(matchId);
-        if (!local)
-          throw new Error(
-            "Abre el acta de este partido una vez para preparar la edición en este móvil.",
-          );
-        if (!local.canEdit || (local.revision > 0 && local.device !== liveDevice()))
-          throw new Error(
-            "Este móvil no tiene el control del acta. Abre el acta para tomar el relevo.",
-          );
-        if (local.sheet.phase === "finished") throw new Error("El acta ya está cerrada.");
-        if (local.sheet.pending)
-          throw new Error("Termina la jugada pendiente antes de editar la convocatoria.");
-        if (!stopped) setRecord(local);
-        await new Promise<void>((resolve) => {
-          release = resolve;
-        });
-      } catch (caught) {
-        if (!stopped)
-          setError(caught instanceof Error ? caught.message : "No pudimos abrir la convocatoria.");
-      }
-    };
-    if (navigator.locks)
-      void navigator.locks.request(`acta:${matchId}`, { ifAvailable: true }, run);
-    else void run({});
-    return () => {
-      stopped = true;
-      release();
-      window.removeEventListener("online", connection);
-      window.removeEventListener("offline", connection);
-    };
-  }, []);
-
-  if (!record)
+  const loadingBack = sourceMatchId
+    ? liveCallupReturn(sourceMatchId, origin)
+    : { href: "/calendar", label: "Volver al calendario" };
+  const blocked = record
+    ? !record.canEdit || (record.revision > 0 && record.device !== liveDevice())
+      ? "Este móvil no tiene el control del acta. Abre el acta para tomar el relevo."
+      : record.sheet.phase === "finished"
+        ? "El acta ya está cerrada."
+        : record.sheet.pending
+          ? "Termina la jugada pendiente antes de editar la convocatoria."
+          : !writable && error
+            ? error
+            : ""
+    : "";
+  if (!record || blocked || !writable)
     return (
       <PageShell width="md" className="min-h-dvh py-5">
-        {error ? (
+        {blocked || error ? (
           <Alert variant="danger" title="No se puede editar la convocatoria">
-            {error}
+            {blocked || error}
           </Alert>
         ) : (
-          <p className="text-pool-deep font-bold" role="status">
-            Preparando la convocatoria…
-          </p>
+          <div
+            role="status"
+            className="border-pool-deep text-pool-deep mx-auto flex min-h-[50dvh] w-full flex-col items-center justify-center gap-4 rounded-2xl border-2 bg-white p-6 text-center"
+          >
+            <Loader2
+              size={32}
+              className="animate-spin motion-reduce:animate-none"
+              aria-hidden="true"
+            />
+            <h1 className="text-xl font-extrabold">Preparando la convocatoria</h1>
+          </div>
         )}
-        <a href="/calendar" className="text-pool-blue inline-flex min-h-12 items-center font-bold">
-          Volver al calendario
+        <a
+          href={loadingBack.href}
+          className="border-pool-deep text-pool-deep inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 bg-white px-4 text-base font-bold"
+        >
+          <ArrowLeft size={20} aria-hidden="true" />
+          {loadingBack.label}
         </a>
       </PageShell>
     );
@@ -116,23 +99,28 @@ export function LocalCallupEditor() {
       name: candidates.get(pick.player_id)?.full_name ?? "Jugador",
     }));
     const sheet = editLiveRoster(record!.sheet, selected, transfers);
-    const next: StoredMatch = {
-      ...record!,
-      sheet,
-      mutation: generateUuid(),
-      dirty: true,
-      rosterEdit: true,
-    };
-    await writeLocalMatch(next);
-    setRecord(next);
+    if (!(await change(sheet, { rosterEdit: true })))
+      throw new Error("No se ha guardado la convocatoria. Inténtalo de nuevo.");
   }
 
   return (
     <PageShell width="md" className="min-h-dvh gap-3 pb-8">
-      {!online ? (
-        <p className="text-pool-deep px-1 text-sm font-bold" role="status">
-          Sin conexión · puedes corregir la convocatoria. Se enviará cuando vuelva la conexión.
-        </p>
+      {error ? (
+        <div
+          role="status"
+          className="border-pool-deep text-pool-deep rounded-xl border-2 bg-amber-100 p-4"
+        >
+          <p className="text-base font-bold">Cambios pendientes de sincronizar</p>
+          <p className="mt-1 text-base">{error}</p>
+          <button
+            type="button"
+            disabled={!online || busy}
+            onClick={() => void retry()}
+            className="border-pool-deep mt-3 min-h-12 rounded-xl border-2 bg-white px-4 text-base font-bold disabled:opacity-50"
+          >
+            Reintentar envío
+          </button>
+        </div>
       ) : null}
       {!record.callupCandidates ? (
         <Alert variant="warning" title="Lista de jugadores no preparada">
@@ -148,7 +136,7 @@ export function LocalCallupEditor() {
         initial={active.map((player) => ({ player_id: player.id, cap_number: player.cap }))}
         candidates={[...candidates.values()]}
         template={record.callupTemplate ?? []}
-        editable
+        editable={writable}
         backHref={back.href as Route}
         backLabel={back.label}
         liveSheet={record.sheet}

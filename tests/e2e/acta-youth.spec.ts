@@ -1,99 +1,5 @@
-import { test, expect, type Page } from "@playwright/test";
-import type { StoredMatch } from "../../lib/pwa/live-match-store";
-
-const id = (n: number) => `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
-const fixture = (): StoredMatch => ({
-  matchId: id(800),
-  owner: id(900),
-  viewer: id(900),
-  canEdit: true,
-  team: "Infantil · Prueba local",
-  opponent: "Rival de prueba",
-  date: "2026-09-30T18:00:00Z",
-  revision: 0,
-  mutation: id(700),
-  device: id(600),
-  dirty: false,
-  sheet: {
-    version: 4,
-    category: "infantil",
-    players: Array.from({ length: 14 }, (_, i) => ({
-      id: id(i + 1),
-      cap: i + 1,
-      name: `Jugador ${i + 1}`,
-    })),
-    opponentCaps: Array.from({ length: 14 }, (_, i) => i + 1),
-    periods: 6,
-    period: 1,
-    phase: "ready",
-    keeper: 1,
-    events: [],
-    baseline: [],
-    baselineThem: 0,
-    pending: null,
-    participation: {
-      rulesVersion: 1,
-      enabled: true,
-      opponentConfirmed: false,
-      fixedKeepers: { us: null, them: null },
-      lineups: [],
-      changes: [],
-    },
-  },
-});
-
-async function openLocal(page: Page, record: StoredMatch) {
-  await page.addInitScript(() => Object.defineProperty(navigator, "onLine", { get: () => false }));
-  await page.goto("/offline");
-  await page.evaluate(async (r) => {
-    localStorage.setItem("morvedre-acta-device", r.device);
-    await new Promise<void>((resolve, reject) => {
-      const q = indexedDB.open("morvedre-live-acta-v1", 1);
-      q.onupgradeneeded = () => q.result.createObjectStore("matches", { keyPath: "matchId" });
-      q.onsuccess = () => {
-        const db = q.result;
-        const tx = db.transaction("matches", "readwrite");
-        tx.objectStore("matches").put(r);
-        tx.oncomplete = () => {
-          db.close();
-          resolve();
-        };
-        tx.onerror = () => reject(tx.error);
-      };
-      q.onerror = () => reject(q.error);
-    });
-  }, record);
-  await page.goto(`/acta?match=${record.matchId}`);
-}
-
-async function readLocal(page: Page): Promise<StoredMatch> {
-  return page.evaluate(
-    async (key) =>
-      new Promise<StoredMatch>((resolve, reject) => {
-        const q = indexedDB.open("morvedre-live-acta-v1", 1);
-        q.onsuccess = () => {
-          const db = q.result;
-          const r = db.transaction("matches").objectStore("matches").get(key);
-          r.onsuccess = () => {
-            db.close();
-            resolve(r.result);
-          };
-          r.onerror = () => reject(r.error);
-        };
-        q.onerror = () => reject(q.error);
-      }),
-    id(800),
-  );
-}
-
-async function capture(page: Page, name: string) {
-  await page.evaluate(async () => {
-    await Promise.all(
-      document.getAnimations().map((animation) => animation.finished.catch(() => {})),
-    );
-  });
-  await page.screenshot({ path: `tmp/acta-audit/youth-redesign-${name}.png` });
-}
+import { test, expect } from "@playwright/test";
+import { fixture, id, openLocal, readLocal, capture } from "./helpers/acta";
 
 test("recupera el borrador y anota tras recargar sin red", async ({ page, context }) => {
   const errors: string[] = [];
@@ -113,6 +19,7 @@ test("recupera el borrador y anota tras recargar sin red", async ({ page, contex
   for (const n of [5, 6, 7])
     await page.getByRole("button", { name: `${n} Jugador ${n}`, exact: true }).click();
   await page.getByRole("button", { name: "Continuar con Rival" }).click();
+  await expect(page.getByRole("heading", { name: "Portero", exact: true })).toBeInViewport();
   for (const n of [1, 2, 3, 4, 5, 6, 7])
     await page.getByRole("button", { name: String(n), exact: true }).click();
   await page.getByRole("button", { name: "Listo, empezar cuarto" }).click();
@@ -170,6 +77,86 @@ test("recupera el borrador y anota tras recargar sin red", async ({ page, contex
   expect(errors).toEqual([]);
 });
 
+test("móvil corto: selección, foco de teclado y movimiento reducido", async ({ page }) => {
+  const record = fixture();
+  record.sheet.participation!.opponentConfirmed = true;
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await openLocal(page, record);
+  await page.getByRole("button", { name: "Empezar partido", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Continuar con Rival" })).toBeInViewport();
+  await expect(page.getByRole("heading", { name: "Portero", exact: true })).toBeInViewport();
+  await page.keyboard.press("Tab");
+  expect(
+    await page.getByRole("dialog").evaluate((dialog) => dialog.contains(document.activeElement)),
+  ).toBe(true);
+  await capture(page, "selection-short-phone-320");
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Empezar partido", exact: true })).toBeFocused();
+});
+
+test("del cuarto 4 al 5 recupera el acta normal, también tras recargar sin red", async ({
+  page,
+  context,
+}) => {
+  const record = fixture();
+  record.sheet.phase = "break";
+  record.sheet.period = 4;
+  record.sheet.keeper = 13;
+  record.sheet.participation!.opponentConfirmed = true;
+  for (const period of [1, 2, 3, 4]) {
+    const keeper = period % 2 ? 1 : 13;
+    const field = period % 2 ? [2, 3, 4, 5, 6, 7] : [8, 9, 10, 11, 12, 14];
+    record.sheet.participation!.lineups.push(
+      { period, side: "us", keeper: id(keeper), field: field.map(id) },
+      { period, side: "them", keeper: String(keeper), field: field.map(String) },
+    );
+  }
+  record.sheet.events = [
+    {
+      id: id(401),
+      side: "us",
+      cap: 2,
+      playerId: id(2),
+      kind: "goal",
+      period: 1,
+      keeper: null,
+      deleted: false,
+    },
+  ];
+  await openLocal(page, record);
+  await page
+    .getByRole("button", { name: "Toca aquí para empezar el cuarto 5", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Elegir portero y empezar el cuarto 5" }).click();
+  await page.getByRole("button", { name: /Jugador 1\b/ }).click();
+  await expect(page.getByRole("button", { name: "Terminar cuarto", exact: true })).toBeEnabled();
+  expect((await readLocal(page)).sheet.period).toBe(5);
+  await expect(page.getByLabel(/Cuartos jugados:/)).toHaveCount(0);
+  for (const team of ["Morvedre", "Rival"]) {
+    await page.getByRole("button", { name: team, exact: true }).click();
+    await expect(
+      page.getByRole("dialog").getByRole("button", { name: new RegExp(`${team}, gorro`) }),
+    ).toHaveCount(14);
+    await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  }
+  await page.getByRole("button", { name: "Corregir jugadas" }).click();
+  await page.getByRole("combobox", { name: "Cuarto de las jugadas" }).selectOption("1");
+  await expect(
+    page.getByRole("dialog").getByText("Jugador 2", { exact: true }).first(),
+  ).toBeVisible();
+  await capture(page, "history-previous-quarter");
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
+  await context.setOffline(true);
+  await page.reload();
+  await expect(page.getByLabel(/Cuartos jugados:/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Terminar cuarto", exact: true })).toBeEnabled();
+  expect((await readLocal(page)).sheet.events).toHaveLength(1);
+  await capture(page, "fifth-quarter");
+});
+
 test("avisa en el cuarto 4 de ambos equipos y permite registrar una incidencia", async ({
   page,
 }) => {
@@ -204,12 +191,13 @@ test("avisa en el cuarto 4 de ambos equipos y permite registrar una incidencia",
       .getByText("Jugador 2", { exact: true })
       .first(),
   ).toBeVisible();
+  await page.getByRole("button", { name: /Rival · \d+/ }).click();
+  await expect(page.getByRole("region", { name: "Avisos de Rival" })).toBeVisible();
   await expect(
-    page
-      .getByRole("region", { name: "Avisos de Rival" })
-      .getByText("Gorro 9", { exact: true })
-      .first(),
+    page.getByRole("region", { name: "Avisos de Rival" }).getByText("Gorro 9", { exact: true }),
   ).toBeAttached();
+  await expect(page.getByRole("button", { name: "Volver a revisar" })).toBeInViewport();
+  await capture(page, "rotation-confirmation");
   await page.getByRole("button", { name: "Registrar así y empezar" }).click();
   await expect(page.getByRole("button", { name: "Terminar cuarto", exact: true })).toBeEnabled();
   const saved = await readLocal(page);
@@ -219,6 +207,31 @@ test("avisa en el cuarto 4 de ambos equipos y permite registrar una incidencia",
       .participation!.lineups.filter((l) => l.period === 4)
       .every((l) => Boolean(l.incident)),
   ).toBe(true);
+});
+
+test("lectura con texto ampliado: acta y selección siguen utilizables", async ({ page }) => {
+  const record = fixture();
+  record.sheet.phase = "playing";
+  record.sheet.participation!.opponentConfirmed = true;
+  record.sheet.participation!.lineups = [
+    { period: 1, side: "us", keeper: id(1), field: [2, 3, 4, 5, 6, 7].map(id) },
+    { period: 1, side: "them", keeper: "1", field: [2, 3, 4, 5, 6, 7].map(String) },
+  ];
+  await page.setViewportSize({ width: 393, height: 852 });
+  await openLocal(page, record);
+  await page.addStyleTag({ content: "html { font-size: 200% !important; }" });
+  await expect(page.locator("[data-acta-board-player]").first()).toBeVisible();
+  await page.evaluate(() => {
+    const first = document.querySelector("[data-acta-board-player]")!;
+    window.scrollTo(0, first.getBoundingClientRect().top + scrollY - 16);
+  });
+  await capture(page, "board-text-200");
+  await page.getByRole("button", { name: "Corregir jugadas" }).click();
+  await page.getByRole("button", { name: "Revisar participación", exact: true }).click();
+  await capture(page, "participation-text-200");
+  await page.getByRole("button", { name: "Corregir cuarto 1", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Guardar selección" })).toBeInViewport();
+  await capture(page, "selection-text-200");
 });
 
 test("mantiene filas uniformes, nombres en una línea y avisos visibles a 320 px", async ({
@@ -246,7 +259,7 @@ test("mantiene filas uniformes, nombres en una línea y avisos visibles a 320 px
     await board
       .locator("[data-acta-board-player]")
       .evaluateAll((buttons) => [...new Set(buttons.map((b) => b.getBoundingClientRect().height))]),
-  ).toEqual([76]);
+  ).toEqual([96]);
   await page.getByRole("button", { name: "Morvedre", exact: true }).click();
   let dialog = page.getByRole("dialog");
   await expect(dialog.getByRole("button", { name: /Morvedre, gorro/ })).toHaveCount(7);

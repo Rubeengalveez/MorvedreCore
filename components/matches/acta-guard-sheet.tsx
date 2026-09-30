@@ -5,6 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { CircleAlert, Loader2, ShieldCheck, X } from "lucide-react";
 
 import styles from "@/components/matches/live-match.module.css";
+import { useActaDialogFocus } from "./use-acta-dialog-focus";
 
 interface ActaGuardAction {
   label: string;
@@ -27,6 +28,7 @@ export interface ActaGuardSheetProps {
   pending?: boolean;
   error?: string | null;
   stickyActions?: boolean;
+  scrollKey?: string | number;
 }
 
 const actionClasses = {
@@ -49,19 +51,22 @@ export function ActaGuardSheet({
   pending = false,
   error,
   stickyActions = false,
+  scrollKey,
 }: ActaGuardSheetProps) {
+  const focus = useActaDialogFocus();
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
       <Dialog.Portal>
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content
+          {...focus}
           className={`${styles.panel} ${styles.panelGuard} max-h-[min(92dvh,38rem)]`}
           onEscapeKeyDown={(event) => pending && event.preventDefault()}
           onPointerDownOutside={(event) => pending && event.preventDefault()}
         >
           <div className="bg-pool-deep text-paper flex shrink-0 items-start justify-between gap-3 px-5 pt-5 pb-4">
             <div className="min-w-0">
-              <p className="text-ball-gold text-xs font-extrabold tracking-wider uppercase">
+              <p className="text-ball-gold text-sm font-extrabold tracking-wider uppercase">
                 {context}
               </p>
               <Dialog.Title className="font-display mt-1 text-xl leading-tight font-extrabold text-pretty">
@@ -81,9 +86,16 @@ export function ActaGuardSheet({
           </div>
 
           <div
+            role={!stickyActions ? "region" : undefined}
+            aria-label={!stickyActions ? `Contenido de ${title}` : undefined}
+            tabIndex={!stickyActions ? 0 : undefined}
             className={`min-h-0 ${stickyActions ? "flex flex-col overflow-hidden" : "overflow-y-auto overscroll-contain"} px-4 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))]`}
           >
             <div
+              key={scrollKey}
+              role={stickyActions ? "region" : undefined}
+              aria-label={stickyActions ? `Contenido de ${title}` : undefined}
+              tabIndex={stickyActions ? 0 : undefined}
               className={stickyActions ? "min-h-0 overflow-y-auto overscroll-contain" : undefined}
             >
               {body && (
@@ -112,7 +124,7 @@ export function ActaGuardSheet({
               )}
 
               {notice ? (
-                <Dialog.Description className="border-ball-gold bg-ball-gold/20 text-pool-deep mt-3 rounded-xl border-2 px-4 py-3 text-sm leading-snug font-semibold">
+                <Dialog.Description className="border-pool-deep text-pool-deep mt-3 rounded-xl border-2 bg-amber-100 px-4 py-3 text-base leading-snug font-semibold">
                   {notice}
                 </Dialog.Description>
               ) : null}

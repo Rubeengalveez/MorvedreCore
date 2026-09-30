@@ -94,8 +94,7 @@ async function loadLiveMatchImpl(matchId: string): Promise<LiveRecord> {
       .from("match_callups")
       .select("player_id,cap_number,profiles!match_callups_player_id_fkey(full_name)")
       .eq("match_id", matchId)
-      .in("status", ["called", "confirmed"])
-      .not("cap_number", "is", null),
+      .in("status", ["called", "confirmed"]),
     db
       .from("match_stats")
       .select("player_id,goals,exclusions,validated_at")
@@ -105,10 +104,9 @@ async function loadLiveMatchImpl(matchId: string): Promise<LiveRecord> {
   if (stats.data.some((s) => s.validated_at))
     throw new Error("Este partido ya tiene un acta validada. Puedes verla desde el partido.");
   const players = callups.data
-    .filter((p): p is typeof p & { cap_number: number } => p.cap_number !== null)
     .map((p) => ({
       id: p.player_id,
-      cap: p.cap_number,
+      cap: p.cap_number ?? 0,
       name: p.profiles?.full_name ?? "Jugador",
     }))
     .sort((a, b) => a.cap - b.cap);

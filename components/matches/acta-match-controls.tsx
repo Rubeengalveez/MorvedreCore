@@ -27,7 +27,7 @@ export function ActaMatchControls({
           type="button"
           disabled={!playing}
           onClick={() => onTeam("us")}
-          className="min-h-14 rounded-xl border border-white/30 bg-[#1657a8] px-3 text-lg font-black text-white shadow-sm active:bg-[#083c69] disabled:opacity-45"
+          className="min-h-14 min-w-0 rounded-xl border border-white/30 bg-[#1657a8] px-3 text-lg leading-tight font-black [overflow-wrap:anywhere] text-white shadow-sm active:bg-[#083c69] disabled:opacity-45"
         >
           Morvedre
         </button>
@@ -35,7 +35,7 @@ export function ActaMatchControls({
           type="button"
           disabled={!playing}
           onClick={() => onTeam("them")}
-          className="min-h-14 rounded-xl bg-[#f4c430] px-3 text-lg font-black text-[#062048] shadow-sm active:bg-slate-200 disabled:opacity-45"
+          className="min-h-14 min-w-0 rounded-xl bg-[#f4c430] px-3 text-lg leading-tight font-black [overflow-wrap:anywhere] text-[#062048] shadow-sm active:bg-slate-200 disabled:opacity-45"
         >
           Rival
         </button>
@@ -46,7 +46,7 @@ export function ActaMatchControls({
           disabled={!playing}
           onClick={onBench}
           aria-label={`Entrenador: tiempos muertos Morvedre ${timeoutCount(sheet, "us")}, rival ${timeoutCount(sheet, "them")}; tarjetas`}
-          className="flex min-h-14 flex-col items-center justify-center rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold active:bg-slate-200 disabled:opacity-45"
+          className="flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold [overflow-wrap:anywhere] active:bg-slate-200 disabled:opacity-45"
         >
           <span>Entrenador</span>
           <span className="mt-0.5 text-sm font-bold text-slate-700 tabular-nums">
@@ -58,7 +58,7 @@ export function ActaMatchControls({
           disabled={!playing}
           onClick={onHistory}
           aria-label="Corregir jugadas"
-          className="min-h-12 rounded-xl bg-slate-100 px-1 text-sm font-extrabold active:bg-slate-200 disabled:opacity-45"
+          className="min-h-12 min-w-0 rounded-xl bg-slate-100 px-1 text-sm font-extrabold [overflow-wrap:anywhere] active:bg-slate-200 disabled:opacity-45"
         >
           Corregir
         </button>
@@ -66,7 +66,7 @@ export function ActaMatchControls({
           type="button"
           disabled={!playing}
           onClick={onPeriods}
-          className="min-h-12 rounded-xl border-2 border-[#062048] bg-white px-1 text-sm leading-tight font-extrabold active:bg-blue-50 disabled:opacity-45"
+          className="min-h-12 min-w-0 rounded-xl border-2 border-[#062048] bg-white px-1 text-sm leading-tight font-extrabold [overflow-wrap:anywhere] active:bg-blue-50 disabled:opacity-45"
         >
           {sheet.period === sheet.periods ? "Terminar partido" : "Terminar cuarto"}
         </button>

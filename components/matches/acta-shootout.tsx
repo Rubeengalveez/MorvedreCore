@@ -116,10 +116,10 @@ export function ActaShootout({
       if (saved) {
         setCap(null);
         setMissed(false);
-      } else {
-        recording.current = false;
       }
     } catch {
+      return;
+    } finally {
       recording.current = false;
     }
   }
@@ -155,12 +155,12 @@ export function ActaShootout({
           <p
             role="status"
             aria-live="polite"
-            className="border-t border-[#c7d6e4] bg-[#e8f1fc] px-3 py-2 text-center text-base font-extrabold text-[#062048]"
+            className="bg-[#e8f1fc] px-3 py-2 text-center text-base font-extrabold text-[#062048]"
           >
             {statusMessage}
           </p>
           {tanda.shots.length > 0 && (
-            <div className="grid grid-cols-2 divide-x divide-[#c7d6e4] border-t border-slate-100 bg-[#f6f9fc] px-2 py-2.5">
+            <div className="grid grid-cols-2 gap-2 bg-[#f6f9fc] px-2 py-2.5">
               {sides.map((side) => (
                 <div
                   key={side}
@@ -201,7 +201,7 @@ export function ActaShootout({
       {(s.phase === "shootout" || s.phase === "finished") && (
         <div className="space-y-3 p-3">
           {s.phase === "shootout" && (
-            <section className="overflow-hidden rounded-2xl border border-[#b8cada] bg-white shadow-sm">
+            <section className="overflow-hidden rounded-2xl border border-[#062048] bg-white shadow-sm">
               <button
                 type="button"
                 disabled={!enabled}
@@ -213,7 +213,7 @@ export function ActaShootout({
                   <Shield size={24} strokeWidth={2.4} aria-hidden="true" />
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-bold tracking-wide text-slate-500 uppercase">
+                  <span className="block text-sm font-bold tracking-wide text-slate-500 uppercase">
                     Portero de Morvedre
                   </span>
                   <span className="flex min-w-0 gap-1 text-base font-extrabold">
@@ -239,7 +239,7 @@ export function ActaShootout({
                 </span>
               </button>
               {choosingKeeper && (
-                <div className="grid grid-cols-2 gap-2 border-t border-slate-200 bg-[#f4f8fb] p-3">
+                <div className="grid grid-cols-2 gap-2 bg-[#f4f8fb] p-3">
                   {availableKeepers.map((player) => (
                     <button
                       key={player.id}
@@ -248,7 +248,7 @@ export function ActaShootout({
                       onClick={async () => {
                         if (await change({ ...s, keeper: player.cap })) setChoosingKeeper(false);
                       }}
-                      className={`flex min-h-14 items-center gap-2 rounded-xl border-2 px-2 text-left font-bold ${player.cap === s.keeper ? "border-[#1657a8] bg-[#1657a8] text-white" : "border-[#b8cada] bg-white"}`}
+                      className={`flex min-h-14 items-center gap-2 rounded-xl border-2 px-2 text-left font-bold ${player.cap === s.keeper ? "border-[#1657a8] bg-[#1657a8] text-white" : "border-[#062048] bg-white"}`}
                     >
                       <span
                         className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg font-mono text-lg font-black ${player.cap === s.keeper ? "bg-white/15" : "bg-[#062048] text-white"}`}
@@ -296,7 +296,7 @@ export function ActaShootout({
               >
                 <Target size={25} strokeWidth={2.5} aria-hidden="true" />
                 <div>
-                  <p className="text-xs font-bold tracking-wide uppercase">Ahora lanza</p>
+                  <p className="text-sm font-bold tracking-wide uppercase">Ahora lanza</p>
                   <p className="text-lg font-black">{label(state.nextSide)}</p>
                 </div>
                 <span className="ml-auto text-sm font-bold">
@@ -318,7 +318,7 @@ export function ActaShootout({
                             setCap(player.cap);
                             setMissed(false);
                           }}
-                          className="flex min-h-16 items-center gap-2 rounded-xl border-2 border-[#b8cada] bg-white px-2 text-left active:border-[#1657a8] active:bg-blue-50 disabled:opacity-40"
+                          className="flex min-h-16 items-center gap-2 rounded-xl border-2 border-[#062048] bg-white px-2 text-left active:border-[#1657a8] active:bg-blue-50 disabled:opacity-40"
                         >
                           <span
                             className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl font-mono text-xl font-black ${turnIsUs ? "bg-[#062048] text-white" : "bg-[#f4c430] text-[#062048]"}`}
@@ -328,7 +328,7 @@ export function ActaShootout({
                           <span className="min-w-0 flex-1 text-base leading-tight font-extrabold">
                             <ActaPlayerName name={player.name} />
                             {alreadyShot.has(player.cap) && (
-                              <span className="block text-xs font-semibold text-slate-600">
+                              <span className="block text-sm font-semibold text-slate-600">
                                 Ya lanzó
                               </span>
                             )}
@@ -406,7 +406,7 @@ export function ActaShootout({
                           </button>
                           <button
                             type="button"
-                            className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-[#b8cada] bg-white px-3 text-sm font-bold text-[#062048] active:bg-[#e8f1fc]"
+                            className="col-span-2 flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-[#062048] bg-white px-3 text-sm font-bold text-[#062048] active:bg-[#e8f1fc]"
                             onClick={() => setMissed(false)}
                           >
                             <ArrowLeft size={18} aria-hidden="true" />

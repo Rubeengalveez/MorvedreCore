@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { z } from "zod";
 import { loadLiveMatch, syncLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
-import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
+import {
+  acknowledgeLiveFlight,
+  prepareLiveFlight,
+  requestWithActaDeadline,
+} from "@/lib/pwa/live-match-sync";
 import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import type { LiveSheet } from "@/lib/domain/live-match";
 import { prepareParticipation } from "@/lib/domain/live-match-participation";
@@ -46,47 +50,26 @@ export function useLiveMatch() {
     try {
       await writeQueue.current;
       let r = current.current;
-      while (r?.dirty || r?.flight) {
+      while ((r?.dirty || r?.flight) && navigator.onLine && canWrite.current) {
         if (!r.flight) {
-          await persist((latest) => ({
-            ...latest,
-            flight: latest.flight ?? {
-              sheet: latest.sheet,
-              mutation: latest.mutation,
-              revision: latest.revision,
-              rosterEdit: latest.rosterEdit,
-            },
-          }));
+          await persist(prepareLiveFlight);
           r = current.current!;
         }
         const flight = r.flight!;
-        const result = await syncLiveMatch({ matchId: r.matchId, device: liveDevice(), ...flight });
+        const result = await requestWithActaDeadline(
+          syncLiveMatch({ matchId: r.matchId, device: liveDevice(), ...flight }),
+        );
+        if (!canWrite.current) return;
         if (!result.ok) throw new Error(result.error);
         const saved = result.data;
         await writeQueue.current;
-        await persist((latest) => ({
-          ...latest,
-          sheet: saved.sheet
-            ? latest.mutation === flight.mutation
-              ? saved.sheet
-              : latest.rosterEdit
-                ? latest.sheet
-                : reconcileLiveRoster(
-                    latest.sheet,
-                    saved.sheet.players.filter((p) => !p.retired),
-                  )
-            : latest.sheet,
-          revision: saved.revision,
-          owner: saved.owner,
-          device: liveDevice(),
-          dirty: latest.mutation !== flight.mutation,
-          rosterEdit: latest.mutation === flight.mutation ? false : latest.rosterEdit,
-          flight: undefined,
-        }));
+        if (!canWrite.current) return;
+        await persist((latest) => acknowledgeLiveFlight(latest, flight, saved, liveDevice()));
         setError("");
         r = current.current;
       }
     } catch (e) {
+      if (!canWrite.current) return;
       setError(
         e instanceof Error
           ? e.message
@@ -116,9 +99,10 @@ export function useLiveMatch() {
           clearTimeout(lockTimeout);
           if (stopped) return;
           const cached = await readLocalMatch(id!);
+          if (stopped) return;
           let next = cached;
           if (navigator.onLine) {
-            const result = await loadLiveMatch(id!).catch(() => null);
+            const result = await requestWithActaDeadline(loadLiveMatch(id!)).catch(() => null);
             if (result && !result.ok) {
               if (result.preparation) setPreparation(result.preparation);
               throw new Error(result.error);
@@ -186,7 +170,7 @@ export function useLiveMatch() {
           });
           canWrite.current = false;
         } catch (e) {
-          setError(e instanceof Error ? e.message : "No pudimos abrir el acta.");
+          if (!stopped) setError(e instanceof Error ? e.message : "No pudimos abrir el acta.");
         }
       };
 
@@ -203,7 +187,9 @@ export function useLiveMatch() {
         void runner({ name: `acta:${id}` });
       }
     }
-    void init().catch((e) => setError(e.message));
+    void init().catch((e) => {
+      if (!stopped) setError(e.message);
+    });
     function connection() {
       setOnline(navigator.onLine);
       void syncRef.current();
@@ -215,9 +201,10 @@ export function useLiveMatch() {
     document.addEventListener("visibilitychange", connection);
     return () => {
       stopped = true;
+      canWrite.current = false;
       controller.abort();
       clearTimeout(lockTimeout);
-      release();
+      void writeQueue.current.then(() => release());
       clearInterval(timer);
       window.removeEventListener("online", connection);
       window.removeEventListener("offline", connection);
@@ -225,7 +212,7 @@ export function useLiveMatch() {
     };
   }, []);
 
-  async function change(sheet: LiveSheet) {
+  async function change(sheet: LiveSheet, options?: { rosterEdit?: true }) {
     if (!canWrite.current || localWriting.current) return false;
     localWriting.current = true;
     setBusy(true);
@@ -238,6 +225,7 @@ export function useLiveMatch() {
         lineupDraft: undefined,
         mutation: generateUuid(),
         dirty: true,
+        rosterEdit: options?.rosterEdit || latest.rosterEdit,
       }));
       setError("");
       void syncRef.current();
@@ -260,7 +248,7 @@ export function useLiveMatch() {
   async function takeover() {
     setBusy(true);
     try {
-      const loaded = await loadLiveMatch(current.current!.matchId);
+      const loaded = await requestWithActaDeadline(loadLiveMatch(current.current!.matchId));
       if (!loaded.ok) throw new Error(loaded.error);
       const remote = loaded.data;
       const previousAttempt = current.current?.takeoverFlight;
@@ -281,14 +269,16 @@ export function useLiveMatch() {
       if (!previousAttempt) {
         await persist((latest) => ({ ...latest, takeoverFlight: attempt }));
       }
-      const saved = await syncLiveMatch({
-        matchId: remote.matchId,
-        device: liveDevice(),
-        revision: attempt.revision,
-        mutation: attempt.mutation,
-        sheet: attempt.sheet,
-        takeover: true,
-      });
+      const saved = await requestWithActaDeadline(
+        syncLiveMatch({
+          matchId: remote.matchId,
+          device: liveDevice(),
+          revision: attempt.revision,
+          mutation: attempt.mutation,
+          sheet: attempt.sheet,
+          takeover: true,
+        }),
+      );
       if (!saved.ok) throw new Error(saved.error);
       const result = saved.data;
       await persist({

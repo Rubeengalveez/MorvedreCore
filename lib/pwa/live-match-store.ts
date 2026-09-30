@@ -64,6 +64,37 @@ export async function writeLocalMatch(record: StoredMatch) {
     db.close();
   }
 }
+
+export async function readPendingLocalMatches(
+  viewer: string,
+  device: string,
+): Promise<StoredMatch[]> {
+  const db = await open();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction("matches", "readonly").objectStore("matches").getAll();
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => {
+        const records = (request.result as StoredMatch[]).filter(
+          (record) =>
+            record.viewer === viewer &&
+            record.device === device &&
+            record.canEdit &&
+            (record.dirty || record.flight) &&
+            !record.takeoverFlight,
+        );
+        resolve(
+          records.flatMap((record) => {
+            const parsed = sheetSchema.safeParse(record.sheet);
+            return parsed.success ? [{ ...record, sheet: identifyLiveSheet(parsed.data) }] : [];
+          }),
+        );
+      };
+    });
+  } finally {
+    db.close();
+  }
+}
 export async function clearLocalMatches() {
   if (typeof indexedDB === "undefined") return;
   const db = await open();

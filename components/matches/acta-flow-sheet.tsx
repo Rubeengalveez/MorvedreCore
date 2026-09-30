@@ -5,6 +5,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, Loader2, X } from "lucide-react";
 import styles from "./live-match.module.css";
 import type { ActaGuardSheetProps } from "./acta-guard-sheet";
+import { useActaDialogFocus } from "./use-acta-dialog-focus";
 
 export function ActaFlowSheet({
   open = true,
@@ -17,6 +18,8 @@ export function ActaFlowSheet({
   footer,
   error,
   pending = false,
+  closeLabel = "Cerrar",
+  scrollKey,
 }: {
   open?: boolean;
   onClose: () => void;
@@ -28,12 +31,16 @@ export function ActaFlowSheet({
   footer?: ReactNode;
   error?: string;
   pending?: boolean;
+  closeLabel?: string;
+  scrollKey?: string | number;
 }) {
+  const focus = useActaDialogFocus();
   return (
     <Dialog.Root open={open} onOpenChange={(next) => !next && !pending && onClose()}>
       <Dialog.Portal>
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content
+          {...focus}
           className={`${styles.panel} ${styles.panelGuard} h-[min(94dvh,52rem)]`}
           onEscapeKeyDown={(e) => pending && e.preventDefault()}
           onPointerDownOutside={(e) => pending && e.preventDefault()}
@@ -51,15 +58,15 @@ export function ActaFlowSheet({
               </button>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-pool-blue text-xs font-bold">{context}</p>
-              <Dialog.Title className="text-pool-deep text-lg leading-tight font-extrabold">
+              <p className="text-pool-blue text-sm font-bold">{context}</p>
+              <Dialog.Title className="text-pool-deep text-xl leading-tight font-extrabold">
                 {title}
               </Dialog.Title>
             </div>
             <Dialog.Close asChild>
               <button
                 type="button"
-                aria-label="Cerrar"
+                aria-label={closeLabel}
                 disabled={pending}
                 className={styles.panelNavigation}
               >
@@ -69,7 +76,13 @@ export function ActaFlowSheet({
             <Dialog.Description className="sr-only">{title}. Elige una opción.</Dialog.Description>
           </header>
           {controls && <div className="shrink-0 bg-white px-4 pt-1 pb-3">{controls}</div>}
-          <div className="min-h-0 flex-1 [scroll-padding-block:12px] overflow-y-auto overscroll-contain px-4 py-3">
+          <div
+            key={scrollKey}
+            role="region"
+            aria-label={`Contenido de ${title}`}
+            tabIndex={0}
+            className="focus-visible:outline-pool-blue min-h-0 flex-1 [scroll-padding-block:12px] overflow-y-auto overscroll-contain px-4 py-3 focus-visible:outline-2 focus-visible:-outline-offset-2"
+          >
             {children}
           </div>
           {(footer || error) && (
@@ -77,7 +90,7 @@ export function ActaFlowSheet({
               {error && (
                 <p
                   role="alert"
-                  className="rounded-lg bg-red-50 px-3 py-2 text-sm font-bold text-red-900"
+                  className="rounded-lg border border-red-800 bg-red-50 px-3 py-2 text-base font-bold text-red-900"
                 >
                   {error}
                 </p>
@@ -123,7 +136,7 @@ export function ActaSelectionSheet({
               type="button"
               disabled={pending}
               onClick={() => void action.onClick()}
-              className={`min-h-12 rounded-xl border-2 px-3 py-2 text-sm font-bold disabled:opacity-50 ${action.tone === "primary" ? "border-pool-deep bg-pool-deep text-white" : action.tone === "danger" ? "border-red-800 bg-red-800 text-white" : "border-pool-deep text-pool-deep bg-white"}`}
+              className={`min-h-14 rounded-xl border-2 px-3 py-2 text-base font-bold disabled:opacity-50 ${action.tone === "primary" ? "border-pool-deep bg-pool-deep text-white" : action.tone === "danger" ? "border-red-800 bg-red-800 text-white" : "border-pool-deep text-pool-deep bg-white"}`}
             >
               {action.label}
             </button>

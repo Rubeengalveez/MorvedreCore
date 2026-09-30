@@ -429,7 +429,7 @@ export function CallupEditor({
 
       {editable && invalidCaps.length > 0 ? (
         <p
-          className="border-danger bg-paper-card text-danger mt-3 rounded-xl border-2 px-3 py-2 text-sm font-bold"
+          className="border-danger bg-paper-card mt-3 rounded-xl border-2 px-3 py-2 text-sm font-bold text-red-800"
           role="alert"
         >
           Reasigna los gorros {invalidCaps.join(", ")}. Solo existen del 1 al 14.
@@ -576,14 +576,14 @@ export function CallupEditor({
                           ? `Reemplazar a ${name} y conservar sus jugadas`
                           : `Quitar a ${name}`
                       }
-                      className="border-danger/30 bg-danger/5 text-danger focus-visible:outline-danger flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 focus-visible:outline-2"
+                      className="flex min-h-12 min-w-12 items-center justify-center rounded-xl border-2 border-red-800 bg-red-50 text-red-800 focus-visible:outline-2 focus-visible:outline-red-800"
                     >
                       <UserMinus className="h-5 w-5" aria-hidden="true" />
                     </button>
                   ) : null}
                 </div>
                 {player?.has_conflict ? (
-                  <p className="text-danger pl-14 text-sm font-bold">No disponible ese día</p>
+                  <p className="pl-14 text-sm font-bold text-red-800">No disponible ese día</p>
                 ) : null}
                 {player && !player.is_current_team ? (
                   <p className="text-ink-600 pl-14 text-sm">Jugador de otro equipo</p>
@@ -620,24 +620,25 @@ export function CallupEditor({
           )}
         >
           {error ? (
-            <p className="text-danger px-1 pb-1 text-sm font-bold" role="alert">
+            <p className="px-1 pb-1 text-sm font-bold text-red-800" role="alert">
               {error}
             </p>
           ) : unassignedWithHistory ? (
-            <p className="text-danger px-1 pb-1 text-sm font-bold">
+            <p className="px-1 pb-1 text-sm font-bold text-red-800">
               {byId.get(unassignedWithHistory.player_id)?.full_name ?? "Este jugador"} tiene
               jugadas. Asígnale un gorro para guardar.
             </p>
           ) : missingCaps > 0 ? (
-            <p className="text-danger px-1 pb-1 text-sm font-bold">
-              Faltan {missingCaps} {missingCaps === 1 ? "gorro" : "gorros"} por asignar
+            <p className="px-1 pb-1 text-sm font-bold text-red-800">
+              {missingCaps === 1 ? "Falta" : "Faltan"} {missingCaps}{" "}
+              {missingCaps === 1 ? "gorro" : "gorros"} por asignar
             </p>
           ) : invalidCaps.length > 0 ? (
-            <p className="text-danger px-1 pb-1 text-sm font-bold">
+            <p className="px-1 pb-1 text-sm font-bold text-red-800">
               Reasigna los gorros {invalidCaps.join(", ")}: solo existen del 1 al 14
             </p>
           ) : missingKeeper ? (
-            <p className="text-danger px-1 pb-1 text-sm font-bold">
+            <p className="px-1 pb-1 text-sm font-bold text-red-800">
               Asigna el gorro 1 o 13 a un portero
             </p>
           ) : null}
@@ -811,8 +812,8 @@ export function CallupEditor({
         description={
           onSaveLive
             ? online
-              ? "Al volver al acta, se sincronizarán para los demás."
-              : "Los cambios quedarán en este móvil y se enviarán al volver al acta con conexión."
+              ? "Los jugadores y gorros se actualizarán para los demás."
+              : "Los cambios quedan en este móvil y se envían cuando vuelve la conexión."
             : `Puedes usarla solo aquí o también como predeterminada de ${teamLabel}.`
         }
         icon="warning"

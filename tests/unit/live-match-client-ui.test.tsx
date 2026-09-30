@@ -264,6 +264,35 @@ describe("interfaz del acta", () => {
       { cap: 13, period: 1, afterEventId: null },
     ]);
   });
+  it("corrige el portero de un cuarto anterior sin cambiar el que está jugando ahora", async () => {
+    const received = event("goal", { side: "them", cap: 3, keeper: 1, period: 1 });
+    const current = record([received]);
+    current.sheet.period = 2;
+    current.sheet.keeper = 1;
+    current.sheet.keeperStints = [
+      { cap: 1, period: 1, afterEventId: null },
+      { cap: 1, period: 2, afterEventId: received.id },
+    ];
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Cuarto de las jugadas" }), {
+      target: { value: "1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Jugadas de Morvedre/ }));
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Corregir portero" }),
+    );
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: /Iván Ortiz/ }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledOnce());
+    const saved = mock.change.mock.calls[0][0] as LiveSheet;
+    expect(saved.keeper).toBe(1);
+    expect(saved.events[0].keeper).toBe(13);
+    expect(saved.keeperStints).toEqual([
+      { cap: 13, period: 1, afterEventId: null },
+      { cap: 1, period: 2, afterEventId: received.id },
+    ]);
+  });
   it("guarda el gol antes de preguntar por la asistencia", async () => {
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: /Morvedre, gorro 2,/ }));
@@ -492,11 +521,15 @@ describe("interfaz del acta", () => {
     const keeper = screen.getByRole("button", { name: /Portero de Morvedre, gorro 1,/ });
     expect(keeper).toHaveAccessibleName(/1 paradas, 1 goles encajados/);
     expect(screen.getByText(/En juego/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Morvedre, gorro 2,/ })).toHaveClass("bg-[#fff0bd]");
-    expect(screen.getByRole("button", { name: /Morvedre, gorro 3,/ })).toHaveClass("bg-orange-100");
-    expect(screen.getByRole("button", { name: /Portero de Morvedre, gorro 13,/ })).toHaveClass(
-      "bg-red-100",
-    );
+    expect(screen.getByRole("button", { name: /Morvedre, gorro 2,/ })).toHaveStyle({
+      backgroundColor: "#fff0bd",
+    });
+    expect(screen.getByRole("button", { name: /Morvedre, gorro 3,/ })).toHaveStyle({
+      backgroundColor: "#ffedd5",
+    });
+    expect(screen.getByRole("button", { name: /Portero de Morvedre, gorro 13,/ })).toHaveStyle({
+      backgroundColor: "#fee2e2",
+    });
     expect(screen.getAllByText(/Fuera/i).length).toBeGreaterThan(0);
   });
 
@@ -541,6 +574,74 @@ describe("interfaz del acta", () => {
 });
 
 describe("alineaciones del acta infantil", () => {
+  it("distingue las cuatro expulsiones de Benjamín en filas y selectores de ambos equipos", () => {
+    const current = youthRecord();
+    current.sheet.category = "benjamin";
+    current.sheet.events = (["us", "them"] as const).flatMap((side) =>
+      [1, 2, 3, 4].flatMap((count) =>
+        Array.from({ length: count }, () => event("exclusion", { side, cap: count + 1 })),
+      ),
+    );
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    const colors = ["#fff0bd", "#fde68a", "#ffedd5", "#fee2e2"];
+    for (const side of ["Morvedre", "Rival"])
+      for (const count of [1, 2, 3, 4])
+        expect(
+          screen.getByRole("button", { name: new RegExp(`${side}, gorro ${count + 1},`) }),
+        ).toHaveStyle({ backgroundColor: colors[count - 1] });
+    fireEvent.click(screen.getByRole("button", { name: "Morvedre" }));
+    expect(within(screen.getByRole("dialog")).getByText("2/4 exp.")).toHaveStyle({
+      backgroundColor: colors[1],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Rival" }));
+    expect(within(screen.getByRole("dialog")).getByText("3/4 exp.")).toHaveStyle({
+      backgroundColor: colors[2],
+    });
+  });
+  it("recupera todos los jugadores en ambos selectores desde el quinto", () => {
+    mock.hook.mockReturnValue({ ...mock.hook(), record: youthRecord(5) });
+    render(<LiveMatchClient />);
+    for (const team of ["Morvedre", "Rival"]) {
+      fireEvent.click(screen.getByRole("button", { name: team }));
+      expect(
+        within(screen.getByRole("dialog")).getAllByRole("button", {
+          name: new RegExp(`${team}, gorro`),
+        }),
+      ).toHaveLength(14);
+      fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+    }
+  });
+  it("permite elegir y corregir un penalti fallado de un cuarto anterior", async () => {
+    const current = youthRecord(3);
+    const missed = event("penalty_missed", { cap: 2, period: 1 });
+    current.sheet.events = [missed, event("goal", { cap: 3, period: 3 })];
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "Cuarto de las jugadas" }), {
+      target: { value: "1" },
+    });
+    expect(
+      within(screen.getByRole("dialog")).getAllByRole("button", { name: "Corregir" }),
+    ).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Corregir" }));
+    fireEvent.click(screen.getByRole("button", { name: "Fuera / palo" }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledOnce());
+    expect(mock.change.mock.calls[0][0]).toMatchObject({
+      period: 3,
+      events: [
+        expect.objectContaining({
+          id: missed.id,
+          period: 1,
+          kind: "penalty_missed",
+          missOutcome: "out",
+        }),
+        expect.objectContaining({ period: 3, kind: "goal" }),
+      ],
+    });
+  });
   it("retira las marcas generales de las fichas desde el quinto conservando los datos", () => {
     const current = youthRecord(5);
     const view = render(<ActaPlayerBoard sheet={current.sheet} playing onPlayer={vi.fn()} />);

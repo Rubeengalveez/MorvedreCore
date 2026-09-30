@@ -1,5 +1,11 @@
 # Log de decisiones
 
+## 2026-09-30 - Auditoría de cierre del acta
+
+- Rubén pide revisar y corregir todo el acta y sus flujos relacionados: diseño móvil, accesibilidad, errores, sincronización sin conexión, salud del código y limpieza. Se conserva el flujo de juego que los delegados ya conocen y la separación entre selección de juego y confirmación de decisiones.
+- Se verifican tamaños de 320 y 393 px, desplazamiento y foco, nombres en una línea, colores y estado del cuarto activo. Corregir incluye un selector para revisar cuartos anteriores; desde el quinto se retiran las marcas y el filtro de alineación, conservando el historial y las excepciones reglamentarias.
+- La evidencia de cierre y los hallazgos se registran en `docs/audits/2026-09-30-acta-final-audit.md`. No se publica la demo.
+
 ## 2026-09-25 - Correo editable en dispositivos compartidos
 
 - Los formularios de acceso de jugador y familiar empiezan con el correo vacío y editable, incluso si el navegador conserva una sesión anterior de Google. Así se puede solicitar otra cuenta desde el mismo móvil.

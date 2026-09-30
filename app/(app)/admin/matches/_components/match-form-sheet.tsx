@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarPlus, ChevronDown, Loader2 } from "lucide-react";
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
 import { Alert } from "@/components/ui/alert";
@@ -130,8 +130,8 @@ export function MatchFormSheet({
     },
   });
 
-  const isHome = form.watch("is_home");
-  const competition = form.watch("competition_type");
+  const isHome = useWatch({ control: form.control, name: "is_home" });
+  const competition = useWatch({ control: form.control, name: "competition_type" });
 
   useEffect(() => {
     const venue = `${isHome}:${competition}`;

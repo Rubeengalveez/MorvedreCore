@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  testMatch: "acta-youth.spec.ts",
+  testMatch: ["acta-youth.spec.ts", "acta-complete.spec.ts"],
   timeout: 45_000,
   workers: 1,
   reporter: "list",
@@ -15,7 +15,7 @@ export default defineConfig({
   webServer: {
     command: "npm start -- -p 4185",
     url: "http://localhost:4185/acta",
-    reuseExistingServer: true,
+    reuseExistingServer: false,
     timeout: 30_000,
   },
 });

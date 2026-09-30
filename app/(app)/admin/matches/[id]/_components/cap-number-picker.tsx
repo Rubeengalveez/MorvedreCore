@@ -39,7 +39,7 @@ export function CapNumberButton({
           <span className="text-lg leading-none">{value}</span>
         </>
       ) : (
-        <span className="text-[10px] font-extrabold tracking-tight uppercase">Sin nº</span>
+        <span className="font-sans text-sm font-extrabold">Sin nº</span>
       )}
     </button>
   );

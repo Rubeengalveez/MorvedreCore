@@ -5,6 +5,8 @@ import { ArrowLeft, ClipboardList, AlertCircle, Check, Loader2, Unlink2 } from "
 import { prepareLiveMatch, type ActaPreparation } from "@/server/actions/live-match";
 import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import { useActaBackGuard } from "./use-acta-back-guard";
+import { ActaPlayerName } from "./acta-player-name";
+import { requestWithActaDeadline } from "@/lib/pwa/live-match-sync";
 
 const subscribeToLocation = (notify: () => void) => {
   window.addEventListener("popstate", notify);
@@ -92,12 +94,14 @@ export function LiveMatchEntryState({
     setSaving(true);
     setSaveError("");
     try {
-      const result = await prepareLiveMatch({
-        matchId,
-        players: preparation.players
-          .map((player, index) => ({ id: player.id, cap: caps[index] }))
-          .filter((player) => selectedIds.has(player.id)),
-      });
+      const result = await requestWithActaDeadline(
+        prepareLiveMatch({
+          matchId,
+          players: preparation.players
+            .map((player, index) => ({ id: player.id, cap: caps[index] }))
+            .filter((player) => selectedIds.has(player.id)),
+        }),
+      );
       if (!result.ok) {
         setSaveError(result.error);
         return;
@@ -217,7 +221,7 @@ export function LiveMatchEntryState({
                       htmlFor={`cap-${p.id}`}
                       className="min-w-0 flex-1 text-base font-semibold"
                     >
-                      {p.name}
+                      <ActaPlayerName name={p.name} />
                       <span
                         className={`mt-1 block text-sm font-normal ${invalid ? "text-amber-900" : "text-slate-600"}`}
                       >
@@ -264,13 +268,16 @@ export function LiveMatchEntryState({
                 );
               })}
             </div>
-            {saveError && (
-              <p role="alert" className="rounded-xl bg-red-50 p-4 text-red-800">
-                {saveError}
-              </p>
-            )}
             <div className="fixed inset-x-0 bottom-0 z-20 bg-white px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-8px_25px_rgba(6,32,72,0.12)]">
               <div className="mx-auto max-w-lg">
+                {saveError && (
+                  <p
+                    role="alert"
+                    className="mb-2 rounded-xl border-2 border-red-800 bg-red-50 p-3 text-base font-bold text-red-800"
+                  >
+                    {saveError}
+                  </p>
+                )}
                 <p className="mb-2 text-sm text-slate-600" role="status">
                   {validCaps
                     ? `${selectedCaps.length} jugadores listos para abrir el acta.`
@@ -321,7 +328,7 @@ export function LiveMatchEntryState({
                 <Loader2 className="h-5 w-5 motion-safe:animate-spin" />
               </span>
             </div>
-            <p className="text-pool-blue text-xs font-extrabold tracking-widest uppercase">
+            <p className="text-pool-blue text-sm font-extrabold tracking-widest uppercase">
               Acta en directo
             </p>
             <h2 className="font-display mt-2 text-2xl font-extrabold">Preparando tu acta…</h2>

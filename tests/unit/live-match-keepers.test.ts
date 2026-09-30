@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   correctStartingKeeper,
+  correctKeeperStint,
   keeperQuarters,
   selectMatchKeeper,
 } from "@/lib/domain/live-match-keepers";
@@ -96,6 +97,18 @@ describe("cuartos de portería", () => {
     );
     expect(keeperQuarters(remapped, 8)).toEqual([1]);
     expect(remapped.keeper).toBe(13);
+  });
+  it("distingue cambios de portero sucesivos aunque no haya una jugada entre ellos", () => {
+    let current = selectMatchKeeper(sheet(), 1, "start");
+    current = selectMatchKeeper(current, 13, "change");
+    current = selectMatchKeeper(current, 1, "change");
+    const received = event("goal", 3, { side: "them", keeper: 1 });
+    current = { ...current, events: [received] };
+    const corrected = correctKeeperStint(current, 2, 13);
+    expect(corrected.keeperStints?.map((stint) => stint.cap)).toEqual([1, 13, 13]);
+    expect(corrected.events[0].keeper).toBe(13);
+    expect(corrected.keeper).toBe(13);
+    expect(current.keeperStints?.map((stint) => stint.cap)).toEqual([1, 13, 1]);
   });
   it("rechaza cuartos futuros y porteros ajenos a la convocatoria", () => {
     expect(

@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 
-const mock = vi.hoisted(() => ({ from: vi.fn(), access: vi.fn() }));
+const mock = vi.hoisted(() => ({ from: vi.fn(), access: vi.fn(), callups: [] as unknown[] }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/supabase/server", () => ({ createClient: async () => ({ from: mock.from }) }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
@@ -18,6 +18,7 @@ const player = (n: number) => ({
   profiles: { full_name: `Jugador ${n}` },
 });
 beforeEach(() => {
+  mock.callups = [player(2), player(3)];
   mock.access.mockResolvedValue({
     profile: { id },
     isAdmin: false,
@@ -39,7 +40,7 @@ beforeEach(() => {
           : table === "live_match_sheets"
             ? null
             : table === "match_callups"
-              ? [player(2), player(3)]
+              ? mock.callups
               : [],
       error: null,
     };
@@ -56,6 +57,23 @@ it("ofrece corregir los gorros de una convocatoria existente sin enviarte al adm
   const result = await loadLiveMatch(id);
   expect(result).toMatchObject({ ok: false, preparation: { players: [{ cap: 2 }, { cap: 2 }] } });
   expect(JSON.stringify(result)).not.toContain("Prepara la convocatoria");
+});
+it("incluye los convocados sin gorro en la preparación y no los elimina silenciosamente", async () => {
+  mock.callups = [
+    { ...player(2), cap_number: 1 },
+    { ...player(3), cap_number: null },
+  ];
+  const result = await loadLiveMatch(id);
+  expect(result).toMatchObject({
+    ok: false,
+    preparation: {
+      reason: "caps",
+      players: [
+        { cap: 0, name: "Jugador 3" },
+        { cap: 1, name: "Jugador 2" },
+      ],
+    },
+  });
 });
 
 it("un administrador sin asignación de delegado no puede abrir el acta", async () => {

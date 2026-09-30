@@ -2,6 +2,7 @@
 
 import { ActaPlayerName } from "./acta-player-name";
 import { ActaQuarterMarks } from "./acta-quarter-marks";
+import { actaSanctionStyle } from "./acta-sanction-style";
 import { playerTotals, type LiveSheet, type Side } from "@/lib/domain/live-match";
 import { exclusionLimit } from "@/lib/domain/live-match-rules";
 import {
@@ -11,13 +12,6 @@ import {
   participantIsPlaying,
 } from "@/lib/domain/live-match-participation";
 import { validCapNumber } from "@/lib/domain/cap-number";
-
-function sanctionStyle(count: number, red: boolean, limit: number) {
-  if (red || count >= limit) return "bg-red-100 text-red-950";
-  if (count === limit - 1) return "bg-orange-100 text-orange-950";
-  if (count === 1) return "border border-[#a77600] bg-[#fff0bd] text-[#4e3600]";
-  return "bg-white text-[#062048]";
-}
 
 function CoachCard({ sheet, side }: { sheet: LiveSheet; side: Side }) {
   const cards = sheet.events.filter(
@@ -30,7 +24,7 @@ function CoachCard({ sheet, side }: { sheet: LiveSheet; side: Side }) {
     <span
       title={label}
       aria-label={label}
-      className="inline-flex items-center gap-1 text-xs font-medium"
+      className="inline-flex items-center gap-1 text-sm font-medium"
     >
       <span
         aria-hidden="true"
@@ -63,11 +57,13 @@ export function ActaPlayerBoard({
       className="bg-white px-2 py-3 sm:px-3"
     >
       <div
+        data-acta-board-grid
         className={`grid ${isAway ? "grid-cols-[minmax(0,1fr)_minmax(0,1.5fr)]" : "grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]"} gap-x-px overflow-hidden rounded-xl border border-[#062048] bg-[#062048]`}
       >
         {sides.map((side) => (
           <div
             key={side}
+            data-acta-board-heading
             className={`flex min-h-11 flex-wrap items-center justify-center gap-x-2 px-1 py-2 ${side === "us" ? "bg-[#062048] text-white" : "bg-[#f4c430] text-[#062048]"}`}
           >
             <h2 className="text-base font-bold">{side === "us" ? "Morvedre" : "Rival"}</h2>
@@ -82,6 +78,11 @@ export function ActaPlayerBoard({
             const totals = playerTotals(sheet, side, cap);
             const keeper = side === "us" && (cap === 1 || cap === 13 || cap === sheet.keeper);
             const out = totals.red || totals.exclusions >= exclusionLimit(sheet);
+            const sanction = actaSanctionStyle(
+              totals.exclusions,
+              totals.red,
+              exclusionLimit(sheet),
+            );
             return (
               <button
                 data-acta-board-player
@@ -89,17 +90,25 @@ export function ActaPlayerBoard({
                 type="button"
                 disabled={!playing}
                 onClick={() => onPlayer(side, cap)}
-                className={`h-[76px] min-w-0 gap-1 ${side === "them" ? "flex flex-row items-center justify-center" : "grid grid-cols-[32px_minmax(0,1fr)] items-center"} border-t border-[#062048] px-2 py-1 text-left enabled:active:brightness-95 ${sanctionStyle(totals.exclusions, totals.red, exclusionLimit(sheet))}`}
+                className={`h-24 min-w-0 gap-1 ${side === "them" ? "flex flex-row flex-wrap items-center justify-center" : "grid grid-cols-[2.625rem_minmax(0,1fr)] items-center"} border-t border-[#062048] px-1.5 py-1 text-left enabled:active:brightness-95`}
+                style={{ backgroundColor: sanction.backgroundColor, color: sanction.color }}
                 aria-label={`${keeper ? "Portero de " : ""}${side === "us" ? "Morvedre" : "Rival"}, ${validCapNumber(cap) == null ? "sin gorro" : `gorro ${cap}`}${player ? `, ${player.name}` : ""}, ${keeper ? `${totals.saves} paradas, ${totals.conceded} goles encajados` : `${totals.goals} goles`}, ${totals.exclusions} de ${exclusionLimit(sheet)} expulsiones${totals.red ? ", roja" : ""}${out ? ", fuera" : ""}${keeper && cap === sheet.keeper ? ", portero en juego" : ""}`}
               >
+                <span
+                  data-acta-player-team
+                  aria-hidden="true"
+                  className={`hidden ${side === "us" ? "bg-pool-deep text-white" : "bg-ball-gold text-pool-deep"}`}
+                >
+                  {side === "us" ? "Morvedre" : "Rival"}
+                </span>
                 <span
                   className={`${side === "them" ? "flex items-center justify-center" : "contents"}`}
                 >
                   <span
-                    className={`flex shrink-0 flex-col items-center gap-1 ${side === "us" ? "col-start-1 row-span-2 row-start-1" : ""}`}
+                    className={`flex shrink-0 flex-col items-center gap-0.5 ${side === "us" ? "col-start-1 row-span-2 row-start-1" : ""}`}
                   >
                     <strong
-                      className={`relative grid shrink-0 place-items-center rounded-md border border-[#062048] tabular-nums ${controlsParticipation(sheet) ? "h-8 min-w-8 text-xl" : "h-10 min-w-8 text-2xl"} ${side === "us" ? "bg-[#062048] font-black text-white" : "bg-[#f4c430] font-black text-[#062048]"}`}
+                      className={`relative grid shrink-0 place-items-center rounded-md border border-[#062048] tabular-nums ${controlsParticipation(sheet) ? "h-7 min-w-8 text-xl" : "h-10 min-w-8 text-2xl"} ${side === "us" ? "bg-[#062048] font-black text-white" : "bg-[#f4c430] font-black text-[#062048]"}`}
                     >
                       {validCapNumber(cap) ?? "—"}
                       {out && (
@@ -150,7 +159,7 @@ export function ActaPlayerBoard({
                     <strong className="text-xl leading-none font-bold tabular-nums">
                       {keeper ? `${totals.saves} / ${totals.conceded}` : totals.goals}
                     </strong>
-                    <span className="text-xs leading-tight font-bold">
+                    <span className="text-sm leading-tight font-bold [overflow-wrap:anywhere]">
                       {keeper ? "Par. / Enc." : "Goles"}
                     </span>
                   </span>
@@ -166,7 +175,7 @@ export function ActaPlayerBoard({
                         />
                       ))}
                     </span>
-                    <span className="min-w-0 text-center text-xs leading-tight font-semibold">
+                    <span className="min-w-0 text-center text-sm leading-tight font-semibold">
                       <span className="whitespace-nowrap">
                         {totals.exclusions}/{exclusionLimit(sheet)}
                         {side === "us" ? " exp." : ""}

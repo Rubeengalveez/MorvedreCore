@@ -1,11 +1,39 @@
-import { fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, cleanup } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 vi.mock("@/server/actions/live-match", () => ({ prepareLiveMatch: vi.fn() }));
 import { LiveMatchEntryState } from "@/components/matches/live-match-entry-state";
 import { DelegateMatchEntry } from "@/components/matches/delegate-match-entry";
 import { canUseLiveMatch, deriveAdminCapabilities } from "@/lib/domain/permissions";
+import { prepareLiveMatch } from "@/server/actions/live-match";
 afterEach(cleanup);
 const id = "10000000-0000-4000-8000-000000000001";
+it("permite reintentar la preparación si la conexión no responde", async () => {
+  vi.useFakeTimers();
+  vi.mocked(prepareLiveMatch).mockReturnValueOnce(new Promise(() => {}));
+  try {
+    render(
+      <LiveMatchEntryState
+        error=""
+        preparation={{
+          team: "Infantil",
+          opponent: "Rival",
+          reason: "caps",
+          players: [{ id, cap: 1, name: "Álex" }],
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar gorros y abrir acta" }));
+    expect(screen.getByRole("button", { name: "Guardando gorros…" })).toBeDisabled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8001);
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent("Tus cambios siguen aquí");
+    expect(screen.getByRole("button", { name: "Guardar gorros y abrir acta" })).toBeEnabled();
+  } finally {
+    cleanup();
+    vi.useRealTimers();
+  }
+});
 it("la carga y el error mantienen la salida al partido visible", async () => {
   history.replaceState({}, "", `/acta?match=${id}`);
   const view = render(<LiveMatchEntryState error="" />);

@@ -80,7 +80,7 @@ export function ActaScoreboard({
       </div>
       <div
         data-acta-meta
-        className="grid min-h-9 grid-cols-[auto_1fr] items-center gap-x-3 border-t border-white/15 px-3 text-sm text-blue-50"
+        className="flex min-h-9 flex-wrap items-center justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm text-blue-50"
       >
         <span className="font-bold">
           {s.phase === "finished"
@@ -96,7 +96,7 @@ export function ActaScoreboard({
           )}
         </span>
         <span
-          className="truncate text-right text-xs font-semibold text-blue-100"
+          className="text-right text-sm font-semibold text-blue-100"
           role="status"
           aria-live="polite"
         >

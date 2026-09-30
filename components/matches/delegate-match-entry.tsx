@@ -22,7 +22,7 @@ export function DelegateMatchEntry({
           <h2 className="text-pool-deep text-lg leading-tight font-extrabold">Acta del partido</h2>
         </div>
         {started && !finished ? (
-          <span className="bg-paper-card border-pool-blue/40 text-pool-deep shrink-0 rounded-lg border px-2 py-1 text-xs font-extrabold">
+          <span className="bg-paper-card border-pool-blue/40 text-pool-deep shrink-0 rounded-lg border px-2 py-1 text-sm font-extrabold">
             En curso
           </span>
         ) : null}

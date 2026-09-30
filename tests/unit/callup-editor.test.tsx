@@ -148,7 +148,9 @@ describe("CallupEditor", () => {
     expect(screen.queryByText(/Juan → Pepe/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Guardar convocatoria" }));
     expect(screen.getByText("Cambios solo para este partido")).toBeVisible();
-    expect(screen.getByText("Al volver al acta, se sincronizarán para los demás.")).toBeVisible();
+    expect(
+      screen.getByText("Los jugadores y gorros se actualizarán para los demás."),
+    ).toBeVisible();
     expect(screen.queryByRole("button", { name: /Este y los próximos/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Seguir editando" }));
     fireEvent.click(
@@ -215,9 +217,7 @@ describe("CallupEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Guardar convocatoria" }));
     expect(screen.getByText("Puedes guardar sin conexión")).toBeVisible();
     expect(
-      screen.getByText(
-        "Los cambios quedarán en este móvil y se enviarán al volver al acta con conexión.",
-      ),
+      screen.getByText("Los cambios quedan en este móvil y se envían cuando vuelve la conexión."),
     ).toBeVisible();
   });
   it("intercambia dos gorros ocupados con un toque durante un acta", () => {
@@ -741,7 +741,7 @@ describe("CallupEditor", () => {
     fireEvent.click(confirmClear);
 
     expect(screen.getByText("Sin nº")).toBeInTheDocument();
-    expect(screen.getByText(/Faltan 1 gorro por asignar/i)).toBeInTheDocument();
+    expect(screen.getByText(/Falta 1 gorro por asignar/i)).toBeInTheDocument();
   });
 
   it("pide confirmación al pulsar volver si hay cambios sin guardar", () => {

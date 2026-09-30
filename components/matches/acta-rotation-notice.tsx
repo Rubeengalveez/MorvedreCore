@@ -16,9 +16,9 @@ export function ActaRotationNotice({
   return (
     <section
       aria-label="Avisos antes del cuarto 4"
-      className="border-pool-deep/40 relative z-20 m-3 rounded-xl border bg-white p-3"
+      className="border-pool-deep text-pool-deep relative z-20 m-3 rounded-xl border-2 bg-white p-3"
     >
-      <h2 className="text-base font-extrabold">Antes del cuarto 4</h2>
+      <h2 className="text-lg font-extrabold">Antes del cuarto 4</h2>
       <p className="mt-1 text-sm text-slate-700">
         Último cuarto para que todos jueguen y descansen.
       </p>
@@ -27,9 +27,12 @@ export function ActaRotationNotice({
           const advice = rotationAdvice(sheet, side, 4);
           const players = participants(sheet, side).sort((a, b) => a.cap - b.cap);
           return (
-            <div key={side} className="min-w-0 space-y-2">
+            <div
+              key={side}
+              className="border-pool-deep min-w-0 overflow-hidden rounded-lg border bg-white"
+            >
               <h3
-                className={`rounded-md px-2 py-1 text-sm font-extrabold ${side === "us" ? "bg-pool-deep text-white" : "bg-ball-gold text-pool-deep"}`}
+                className={`px-2 py-2 text-base font-extrabold ${side === "us" ? "bg-pool-deep text-white" : "bg-ball-gold text-pool-deep"}`}
               >
                 {side === "us" ? "Morvedre" : "Rival"}
               </h3>
@@ -38,21 +41,21 @@ export function ActaRotationNotice({
                   advice.some((a) => a.key === p.key && a.kind === kind),
                 );
                 return list.length ? (
-                  <div key={kind} className={kind === "rest" ? "text-red-900" : "text-amber-950"}>
-                    <p className="flex items-center gap-1 text-xs font-extrabold">
+                  <div key={kind} className="text-pool-deep m-2 rounded-md bg-amber-50 p-2">
+                    <p className="flex items-start gap-1 text-sm leading-tight font-extrabold">
                       {kind === "rest" ? (
-                        <Moon size={14} aria-hidden="true" />
+                        <Moon size={18} className="shrink-0" aria-hidden="true" />
                       ) : (
-                        <Play size={14} aria-hidden="true" />
+                        <Play size={18} className="shrink-0" aria-hidden="true" />
                       )}
                       {kind === "rest" ? "Deben descansar" : "Deben jugar"}
                     </p>
-                    <div className="mt-1 flex flex-wrap gap-1">
+                    <div className="mt-2 flex flex-wrap gap-1">
                       {list.map((p) => (
                         <span
                           key={p.key}
                           title={p.name}
-                          className={`grid h-6 w-6 place-items-center rounded-md text-xs font-extrabold ${kind === "rest" ? "bg-red-100" : "bg-amber-100"}`}
+                          className={`border-pool-deep grid h-8 w-8 place-items-center rounded-md border text-base font-extrabold ${kind === "rest" ? "bg-slate-200" : "bg-ball-gold"}`}
                         >
                           {p.cap}
                           <span className="sr-only">: {p.name}</span>
@@ -63,12 +66,12 @@ export function ActaRotationNotice({
                 ) : null;
               })}
               {advice.some((a) => a.kind === "missing") && (
-                <p className="text-xs font-semibold text-amber-950">
+                <p className="text-pool-deep p-2 text-sm font-semibold">
                   Faltan datos de cuartos anteriores.
                 </p>
               )}
               {!advice.length && (
-                <p className="text-sm font-semibold text-emerald-800">Rotación al día</p>
+                <p className="text-pool-deep p-2 text-sm font-semibold">Rotación al día</p>
               )}
             </div>
           );
