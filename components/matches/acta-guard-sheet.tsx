@@ -10,7 +10,7 @@ import { useActaDialogFocus } from "./use-acta-dialog-focus";
 interface ActaGuardAction {
   label: string;
   detail?: string;
-  tone: "primary" | "secondary" | "danger";
+  tone: "primary" | "secondary" | "subtle" | "danger";
   onClick: () => void | Promise<void>;
 }
 
@@ -35,6 +35,7 @@ export interface ActaGuardSheetProps {
 const actionClasses = {
   primary: "border-pool-deep bg-pool-deep text-paper active:bg-ink-900",
   secondary: "border-pool-deep bg-paper-card text-pool-deep active:bg-pool-foam",
+  subtle: "border-slate-500 bg-slate-100 text-pool-deep active:bg-slate-200",
   danger: "border-red-800 bg-red-800 text-paper active:bg-red-900",
 } as const;
 
@@ -156,7 +157,7 @@ export function ActaGuardSheet({
                   type="button"
                   disabled={pending}
                   onClick={() => void action.onClick()}
-                  className={`${actionClasses[action.tone]} focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-center text-base leading-tight font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50`}
+                  className={`${actionClasses[action.tone]} ${action.tone === "subtle" ? "font-semibold" : "font-extrabold"} focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-center text-base leading-tight transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50`}
                 >
                   {pending && action.tone === "primary" ? (
                     <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />

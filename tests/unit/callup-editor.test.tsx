@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { Route } from "next";
 import { describe, expect, it, vi } from "vitest";
 import type { LiveSheet } from "@/lib/domain/live-match";
 
@@ -53,7 +54,102 @@ const CANDIDATES: CallupCandidate[] = [
 
 const INITIAL_PICKS: CallupPick[] = [{ player_id: "p1", cap_number: 7 }];
 
+function openNormalSave(backHref: "/admin/matches" | "/matches/match-1" = "/admin/matches") {
+  mockPush.mockClear();
+  mockReplaceMatchCallupResult.mockReset();
+  render(
+    <CallupEditor
+      matchId="match-1"
+      teamLabel="Cadete B"
+      opponent="Rival de prueba"
+      scheduledAt="2026-09-29T16:00:00.000Z"
+      initial={INITIAL_PICKS}
+      candidates={CANDIDATES}
+      template={INITIAL_PICKS}
+      editable
+      backHref={backHref as Route}
+      backLabel="Volver"
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
+  fireEvent.click(screen.getByRole("button", { name: "Añadir a Pau Martínez" }));
+  fireEvent.click(screen.getByRole("button", { name: "Guardar convocatoria" }));
+}
+
 describe("CallupEditor", () => {
+  it.each(["/admin/matches", "/matches/match-1"] as const)(
+    "guardar solo este partido vuelve al origen %s después de persistir",
+    async (backHref) => {
+      openNormalSave(backHref);
+      let resolveSave!: (value: { ok: true }) => void;
+      mockReplaceMatchCallupResult.mockReturnValue(
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+      );
+      fireEvent.click(screen.getByRole("button", { name: /Solo este partido/ }));
+      expect(mockReplaceMatchCallupResult).toHaveBeenCalledWith({
+        match_id: "match-1",
+        players: [...INITIAL_PICKS, { player_id: "p2", cap_number: 3 }],
+        save_template: false,
+      });
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: /Solo este partido/ })).toBeDisabled();
+      resolveSave({ ok: true });
+      await waitFor(() => expect(mockPush).toHaveBeenCalledWith(backHref));
+    },
+  );
+
+  it("permite volver de la confirmación de predeterminada sin guardar ni salir", () => {
+    openNormalSave();
+    fireEvent.click(screen.getByRole("button", { name: /Este y los próximos/ }));
+    expect(
+      screen.getByRole("dialog", { name: "¿Usar esta lista en los próximos partidos?" }),
+    ).toBeVisible();
+    expect(screen.getByText(/Los partidos ya creados no cambian/)).toBeVisible();
+    expect(mockReplaceMatchCallupResult).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Volver a las opciones" }));
+    expect(screen.getByRole("dialog", { name: "Guardar convocatoria" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Seguir editando" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(mockReplaceMatchCallupResult).not.toHaveBeenCalled();
+    expect(mockPush).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar convocatoria" }));
+    expect(screen.getByRole("dialog", { name: "Guardar convocatoria" })).toBeVisible();
+  });
+
+  it("confirma antes de guardar la predeterminada, conserva el error y sale solo al guardar", async () => {
+    openNormalSave("/matches/match-1");
+    mockReplaceMatchCallupResult.mockResolvedValueOnce({ ok: false, error: "No pudimos guardar." });
+    fireEvent.click(screen.getByRole("button", { name: /Este y los próximos/ }));
+    expect(mockReplaceMatchCallupResult).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Sí, guardar como predeterminada" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Sí, guardar como predeterminada" })).toBeEnabled(),
+    );
+    expect(
+      screen.getByRole("dialog", { name: "¿Usar esta lista en los próximos partidos?" }),
+    ).toHaveTextContent("No pudimos guardar.");
+    expect(mockPush).not.toHaveBeenCalled();
+    mockReplaceMatchCallupResult.mockResolvedValueOnce({ ok: true });
+    fireEvent.click(screen.getByRole("button", { name: "Sí, guardar como predeterminada" }));
+    await waitFor(() => expect(mockPush).toHaveBeenCalledWith("/matches/match-1"));
+    expect(mockReplaceMatchCallupResult).toHaveBeenLastCalledWith(
+      expect.objectContaining({ save_template: true }),
+    );
+  });
+
+  it("no sale si falla el guardado de este partido", async () => {
+    openNormalSave();
+    mockReplaceMatchCallupResult.mockRejectedValue(new Error("Error de conexión"));
+    fireEvent.click(screen.getByRole("button", { name: /Solo este partido/ }));
+    await waitFor(() => expect(screen.getByRole("dialog")).toHaveTextContent("Error de conexión"));
+    expect(mockPush).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /Solo este partido/ })).toBeEnabled(),
+    );
+  });
+
   it("obliga a elegir sustituto y enseña las jugadas antes de guardar un acta abierta", () => {
     const oldId = "10000000-0000-4000-8000-000000000001";
     const newId = "10000000-0000-4000-8000-000000000002";

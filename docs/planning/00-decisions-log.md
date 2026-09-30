@@ -1,5 +1,10 @@
 # Log de decisiones
 
+## 2026-09-30 - Guardado y salida de la edición
+
+- Guardar una convocatoria o los datos de un partido vuelve al destino de origen después de guardar correctamente. Los errores conservan la edición.
+- «Solo este partido» es la opción principal. «Este y los próximos» tiene un estilo menos destacado y una confirmación adicional que explica el cambio de lista predeterminada y permite volver sin guardar. Los partidos ya creados no cambian.
+
 ## 2026-09-30 - Ajustes posteriores de los paneles y la rotación
 
 - Se abordan los 15 puntos señalados por Rubén en `docs/audits/2026-09-30-acta-followup.md`. Los selectores reducidos y los gorros rivales ajustan su altura al contenido; las listas normales conservan su altura y desplazamiento.

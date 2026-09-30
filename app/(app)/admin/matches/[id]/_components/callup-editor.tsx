@@ -91,6 +91,7 @@ export function CallupEditor({
   const [openCap, setOpenCap] = useState<string | null>(null);
   const [pendingSource, setPendingSource] = useState(false);
   const [saveOpen, setSaveOpen] = useState(false);
+  const [confirmTemplate, setConfirmTemplate] = useState(false);
   const [clearCapsOpen, setClearCapsOpen] = useState(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -323,7 +324,7 @@ export function CallupEditor({
     setError("");
   }
 
-  function save(saveTemplate: boolean, leaveAfterSave = false) {
+  function save(saveTemplate: boolean) {
     if (missingCaps > 0) {
       setError(
         `Asigna ${missingCaps === 1 ? "el gorro pendiente" : `los ${missingCaps} gorros pendientes`} antes de guardar.`,
@@ -364,18 +365,10 @@ export function CallupEditor({
         setBaseline(draft);
         if (saveTemplate) setTemplate(draft);
         setSaveOpen(false);
-        if (leaveAfterSave) {
-          allowLeave.current = true;
-          setLeaveOpen(false);
-          router.push(backHref);
-          return;
-        }
-        setMessage(
-          saveTemplate
-            ? "Guardada para este partido y los próximos del equipo."
-            : "Convocatoria de este partido guardada.",
-        );
-        router.refresh();
+        setConfirmTemplate(false);
+        allowLeave.current = true;
+        setLeaveOpen(false);
+        router.push(backHref);
       } catch (caught) {
         setError(caught instanceof Error ? caught.message : "No pudimos guardar la convocatoria.");
       }
@@ -784,7 +777,7 @@ export function CallupEditor({
         pending={pending}
         error={error}
         actions={[
-          { label: "Guardar y volver", tone: "primary", onClick: () => save(false, true) },
+          { label: "Guardar y volver", tone: "primary", onClick: () => save(false) },
           { label: "Seguir editando", tone: "secondary", onClick: () => setLeaveOpen(false) },
           {
             label: "Salir sin guardar",
@@ -799,47 +792,87 @@ export function CallupEditor({
       />
       <ActaGuardSheet
         open={saveOpen}
-        onOpenChange={setSaveOpen}
+        onOpenChange={(open) => {
+          setSaveOpen(open);
+          if (!open) setConfirmTemplate(false);
+        }}
         context="Convocatoria"
-        title={onSaveLive ? "Guardar cambios del partido" : "Guardar convocatoria"}
+        title={
+          confirmTemplate
+            ? "¿Usar esta lista en los próximos partidos?"
+            : onSaveLive
+              ? "Guardar cambios del partido"
+              : "Guardar convocatoria"
+        }
         summary={
-          onSaveLive
-            ? online
-              ? "Cambios solo para este partido"
-              : "Puedes guardar sin conexión"
-            : "Elige dónde guardar esta lista"
+          confirmTemplate
+            ? `Nueva lista por defecto de ${teamLabel}`
+            : onSaveLive
+              ? online
+                ? "Cambios solo para este partido"
+                : "Puedes guardar sin conexión"
+              : "Cambios para este partido"
         }
         description={
-          onSaveLive
-            ? online
-              ? "Los jugadores y gorros se actualizarán para los demás."
-              : "Los cambios quedan en este móvil y se envían cuando vuelve la conexión."
-            : `Puedes usarla solo aquí o también como predeterminada de ${teamLabel}.`
+          confirmTemplate
+            ? "Guardarás este partido y esta será la lista predeterminada para los próximos. Los partidos ya creados no cambian."
+            : onSaveLive
+              ? online
+                ? "Los jugadores y gorros se actualizarán para los demás."
+                : "Los cambios quedan en este móvil y se envían cuando vuelve la conexión."
+              : "Se guardarán los jugadores y gorros de este partido."
         }
         icon="warning"
         pending={pending}
         error={error}
         actions={
-          onSaveLive
+          confirmTemplate
             ? [
-                { label: "Guardar este partido", tone: "primary", onClick: () => save(false) },
-                { label: "Seguir editando", tone: "secondary", onClick: () => setSaveOpen(false) },
-              ]
-            : [
                 {
-                  label: "Solo este partido",
-                  detail: "No cambia la lista por defecto",
+                  label: "Sí, guardar como predeterminada",
                   tone: "primary",
-                  onClick: () => save(false),
-                },
-                {
-                  label: "Este y los próximos",
-                  detail: `Nueva lista por defecto de ${teamLabel}`,
-                  tone: "secondary",
                   onClick: () => save(true),
                 },
-                { label: "Seguir editando", tone: "secondary", onClick: () => setSaveOpen(false) },
+                {
+                  label: "Volver a las opciones",
+                  tone: "secondary",
+                  onClick: () => {
+                    setConfirmTemplate(false);
+                    setError("");
+                  },
+                },
               ]
+            : onSaveLive
+              ? [
+                  { label: "Guardar este partido", tone: "primary", onClick: () => save(false) },
+                  {
+                    label: "Seguir editando",
+                    tone: "secondary",
+                    onClick: () => setSaveOpen(false),
+                  },
+                ]
+              : [
+                  {
+                    label: "Solo este partido",
+                    detail: "No cambia la lista por defecto",
+                    tone: "primary",
+                    onClick: () => save(false),
+                  },
+                  {
+                    label: "Este y los próximos",
+                    detail: `Nueva lista por defecto de ${teamLabel}`,
+                    tone: "subtle",
+                    onClick: () => {
+                      setError("");
+                      setConfirmTemplate(true);
+                    },
+                  },
+                  {
+                    label: "Seguir editando",
+                    tone: "secondary",
+                    onClick: () => setSaveOpen(false),
+                  },
+                ]
         }
       />
     </section>

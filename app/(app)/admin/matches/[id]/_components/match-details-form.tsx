@@ -4,7 +4,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, CalendarDays, ClipboardPenLine, Loader2, MapPin } from "lucide-react";
 import { useEffect, useRef, useState, useTransition } from "react";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
 import { useForm, useWatch } from "react-hook-form";
 import { z } from "zod";
 
@@ -101,9 +100,7 @@ export interface MatchDetailsFormProps {
 }
 
 export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: MatchDetailsFormProps) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<boolean>(false);
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const skipUnloadRef = useRef(false);
@@ -171,9 +168,8 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
     else leave(backHref);
   }
 
-  function save(values: FormValues, exitAfterSave: boolean) {
+  function save(values: FormValues) {
     setError(null);
-    setSuccess(false);
     const dt = parseDateTimeLocal(values.scheduled_at_local);
     if (!dt) {
       setError("Fecha u hora inválidas.");
@@ -193,21 +189,16 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
           notes: values.notes && values.notes.trim() !== "" ? values.notes : null,
         });
         form.reset(values);
-        if (exitAfterSave) {
-          skipUnloadRef.current = true;
-          setLeaveOpen(false);
-          leave(backHref);
-        } else {
-          setSuccess(true);
-          router.refresh();
-        }
+        skipUnloadRef.current = true;
+        setLeaveOpen(false);
+        leave(backHref);
       } catch (err) {
         setError(err instanceof Error ? err.message : "No pudimos guardar.");
       }
     });
   }
 
-  const onSubmit = form.handleSubmit((values) => save(values, false));
+  const onSubmit = form.handleSubmit(save);
 
   return (
     <>
@@ -229,11 +220,6 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
           {error ? (
             <Alert variant="danger" title="Error">
               {error}
-            </Alert>
-          ) : null}
-          {success ? (
-            <Alert variant="success" title="Cambios guardados">
-              Los datos del partido se han actualizado.
             </Alert>
           ) : null}
 
@@ -468,13 +454,10 @@ export function MatchDetailsForm({ match, teamLabel, backHref, backLabel }: Matc
             label: "Guardar y volver",
             tone: "primary",
             onClick: () =>
-              void form.handleSubmit(
-                (values) => save(values, true),
-                () => {
-                  setLeaveOpen(false);
-                  setError("Revisa los campos marcados para guardar.");
-                },
-              )(),
+              void form.handleSubmit(save, () => {
+                setLeaveOpen(false);
+                setError("Revisa los campos marcados para guardar.");
+              })(),
           },
           { label: "Seguir editando", tone: "secondary", onClick: () => setLeaveOpen(false) },
           {
