@@ -86,6 +86,15 @@ async function readLocal(page: Page): Promise<StoredMatch> {
   );
 }
 
+async function capture(page: Page, name: string) {
+  await page.evaluate(async () => {
+    await Promise.all(
+      document.getAnimations().map((animation) => animation.finished.catch(() => {})),
+    );
+  });
+  await page.screenshot({ path: `tmp/acta-audit/youth-redesign-${name}.png` });
+}
+
 test("recupera el borrador y anota tras recargar sin red", async ({ page, context }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -94,7 +103,7 @@ test("recupera el borrador y anota tras recargar sin red", async ({ page, contex
   await page.getByRole("button", { name: "Listo", exact: true }).click();
   for (const n of [1, 2, 3, 4])
     await page.getByRole("button", { name: `${n} Jugador ${n}`, exact: true }).click();
-  await page.getByRole("button", { name: "Cerrar aviso" }).click();
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await page.reload();
   await page.getByRole("button", { name: "Empezar partido", exact: true }).click();
   await expect(page.getByRole("button", { name: "2 Jugador 2", exact: true })).toHaveAttribute(
@@ -117,13 +126,14 @@ test("recupera el borrador y anota tras recargar sin red", async ({ page, contex
   expect((await readLocal(page)).sheet.events).toHaveLength(0);
   await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await page.setViewportSize({ width: 320, height: 740 });
+  await page.getByRole("button", { name: "Corregir jugadas" }).click();
   await page.getByRole("button", { name: "Revisar participación", exact: true }).click();
   await page.getByRole("button", { name: "Corregir cuarto 1" }).click();
   await expect(page.getByRole("button", { name: "Guardar selección" })).toBeInViewport();
   expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
     false,
   );
-  await page.getByRole("button", { name: "Cerrar aviso" }).click();
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
   await page.evaluate(async () => {
     await navigator.serviceWorker.register("/sw.js");
     await navigator.serviceWorker.ready;
@@ -143,7 +153,9 @@ test("recupera el borrador y anota tras recargar sin red", async ({ page, contex
   expect(errors).toEqual([]);
   await page.getByRole("button", { name: "Terminar cuarto", exact: true }).click();
   await page.getByRole("button", { name: "Sí, terminar cuarto 1", exact: true }).click();
-  await page.getByRole("button", { name: "Toca aquí para empezar el cuarto 2", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Toca aquí para empezar el cuarto 2", exact: true })
+    .click();
   for (const n of [13, 8, 9, 10, 11, 12, 14])
     await page.getByRole("button", { name: new RegExp(`^${n} Jugador ${n}\\b`) }).click();
   await page.getByRole("button", { name: "Continuar con Rival" }).click();
@@ -172,19 +184,31 @@ test("avisa en el cuarto 4 de ambos equipos y permite registrar una incidencia",
     );
   }
   await openLocal(page, record);
-  await expect(page.getByText(/Morvedre: 7 deben descansar/)).toBeVisible();
-  await expect(page.getByText(/Rival: 7 deben descansar/)).toBeVisible();
+  const notice = page.getByRole("region", { name: "Avisos antes del cuarto 4" });
+  await expect(notice.getByText("Deben descansar")).toHaveCount(2);
+  await expect(notice.getByText("Deben jugar")).toHaveCount(2);
+  await capture(page, "fourth-notice");
   await page.getByRole("button", { name: "Elegir jugadores del cuarto 4" }).click();
+  await capture(page, "fourth-selection-own");
   for (const n of [1, 2, 3, 4, 5, 6, 7])
     await page.getByRole("button", { name: new RegExp(`^${n} Jugador ${n}\\b`) }).click();
   await page.getByRole("button", { name: "Continuar con Rival" }).click();
+  await capture(page, "fourth-selection-rival");
   for (const n of [1, 2, 3, 4, 5, 6, 7])
     await page.getByRole("button", { name: new RegExp(`^${n}\\b`) }).click();
   await page.getByRole("button", { name: "Listo, empezar cuarto" }).click();
   await expect(page.getByRole("heading", { name: "Revisa la rotación" })).toBeVisible();
-  await expect(page.getByRole("dialog").getByText(/Morvedre · Jugador 2: Ya jugó 3/)).toBeVisible();
   await expect(
-    page.getByRole("dialog").getByText(/Rival · Gorro 9: Todavía no ha jugado/),
+    page
+      .getByRole("region", { name: "Avisos de Morvedre" })
+      .getByText("Jugador 2", { exact: true })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Avisos de Rival" })
+      .getByText("Gorro 9", { exact: true })
+      .first(),
   ).toBeAttached();
   await page.getByRole("button", { name: "Registrar así y empezar" }).click();
   await expect(page.getByRole("button", { name: "Terminar cuarto", exact: true })).toBeEnabled();
@@ -195,4 +219,59 @@ test("avisa en el cuarto 4 de ambos equipos y permite registrar una incidencia",
       .participation!.lineups.filter((l) => l.period === 4)
       .every((l) => Boolean(l.incident)),
   ).toBe(true);
+});
+
+test("mantiene filas uniformes, nombres en una línea y avisos visibles a 320 px", async ({
+  page,
+}) => {
+  const record = fixture();
+  record.sheet.phase = "playing";
+  record.sheet.period = 2;
+  record.sheet.players[2].name = "Juan Pepe Luis";
+  record.sheet.players[3].name = "Alejandro Molina Castro";
+  record.sheet.players.reverse();
+  record.sheet.participation!.opponentConfirmed = true;
+  for (const period of [1, 2]) {
+    const field = period === 1 ? [2, 3, 4, 5, 6, 7] : [3, 4, 5, 6, 7, 8];
+    record.sheet.participation!.lineups.push(
+      { period, side: "us", keeper: id(1), field: field.map(id) },
+      { period, side: "them", keeper: "1", field: field.map(String) },
+    );
+  }
+  await page.setViewportSize({ width: 320, height: 740 });
+  await openLocal(page, record);
+  await capture(page, "board-320");
+  const board = page.getByRole("region", { name: "Jugadores y estadísticas del partido" });
+  expect(
+    await board
+      .locator("[data-acta-board-player]")
+      .evaluateAll((buttons) => [...new Set(buttons.map((b) => b.getBoundingClientRect().height))]),
+  ).toEqual([76]);
+  await page.getByRole("button", { name: "Morvedre", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("button", { name: /Morvedre, gorro/ })).toHaveCount(7);
+  await expect(dialog).not.toContainText("exclusionLimit");
+  await expect(dialog.getByText("0/3 exp.").first()).toBeVisible();
+  await page.getByRole("button", { name: "Cerrar", exact: true }).click();
+  await page.getByRole("button", { name: "Corregir jugadas" }).click();
+  await page.getByRole("button", { name: "Revisar participación" }).click();
+  const table = page.getByRole("table", { name: "Participación de Morvedre" });
+  await expect(table.getByRole("rowheader")).toHaveText(
+    Array.from({ length: 14 }, (_, i) => String(i + 1)),
+  );
+  await capture(page, "review-320");
+  await page.getByRole("button", { name: "Corregir cuarto 2" }).click();
+  await page.getByRole("button", { name: "9 Jugador 9", exact: true }).click();
+  await expect(page.getByRole("alert")).toBeInViewport();
+  await expect(page.getByRole("button", { name: "Guardar selección" })).toBeInViewport();
+  await capture(page, "selection-error-320");
+  dialog = page.getByRole("dialog");
+  expect(
+    await dialog
+      .locator("[data-name-measure]")
+      .evaluateAll((nodes) => nodes.every((n) => getComputedStyle(n).whiteSpace === "nowrap")),
+  ).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth)).toBe(
+    false,
+  );
 });

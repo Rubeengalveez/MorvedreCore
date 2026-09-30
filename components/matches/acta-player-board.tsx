@@ -1,12 +1,14 @@
 "use client";
 
 import { ActaPlayerName } from "./acta-player-name";
+import { ActaQuarterMarks } from "./acta-quarter-marks";
 import { playerTotals, type LiveSheet, type Side } from "@/lib/domain/live-match";
 import { exclusionLimit } from "@/lib/domain/live-match-rules";
 import {
   controlsParticipation,
   participantKey,
   playedPeriods,
+  participantIsPlaying,
 } from "@/lib/domain/live-match-participation";
 import { validCapNumber } from "@/lib/domain/cap-number";
 
@@ -82,34 +84,49 @@ export function ActaPlayerBoard({
             const out = totals.red || totals.exclusions >= exclusionLimit(sheet);
             return (
               <button
+                data-acta-board-player
                 key={`${side}-${cap}`}
                 type="button"
                 disabled={!playing}
                 onClick={() => onPlayer(side, cap)}
-                className={`min-h-[76px] min-w-0 gap-1 ${side === "them" ? "flex flex-row items-center justify-center" : "grid grid-cols-[32px_minmax(0,1fr)] items-center"} border-t border-[#062048] px-2 py-1 text-left enabled:active:brightness-95 ${sanctionStyle(totals.exclusions, totals.red, exclusionLimit(sheet))}`}
+                className={`h-[76px] min-w-0 gap-1 ${side === "them" ? "flex flex-row items-center justify-center" : "grid grid-cols-[32px_minmax(0,1fr)] items-center"} border-t border-[#062048] px-2 py-1 text-left enabled:active:brightness-95 ${sanctionStyle(totals.exclusions, totals.red, exclusionLimit(sheet))}`}
                 aria-label={`${keeper ? "Portero de " : ""}${side === "us" ? "Morvedre" : "Rival"}, ${validCapNumber(cap) == null ? "sin gorro" : `gorro ${cap}`}${player ? `, ${player.name}` : ""}, ${keeper ? `${totals.saves} paradas, ${totals.conceded} goles encajados` : `${totals.goals} goles`}, ${totals.exclusions} de ${exclusionLimit(sheet)} expulsiones${totals.red ? ", roja" : ""}${out ? ", fuera" : ""}${keeper && cap === sheet.keeper ? ", portero en juego" : ""}`}
               >
                 <span
                   className={`${side === "them" ? "flex items-center justify-center" : "contents"}`}
                 >
-                  <strong
-                    className={`relative grid shrink-0 place-items-center rounded-md tabular-nums ${side === "us" ? "col-start-1 row-span-2 row-start-1 h-10 min-w-8 border border-[#062048] bg-[#062048] text-2xl font-black text-white" : "h-10 min-w-8 border border-[#062048] bg-[#f4c430] text-2xl font-black text-[#062048]"}`}
+                  <span
+                    className={`flex shrink-0 flex-col items-center gap-1 ${side === "us" ? "col-start-1 row-span-2 row-start-1" : ""}`}
                   >
-                    {validCapNumber(cap) ?? "—"}
-                    {out && (
-                      <span
-                        className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs"
-                        title={
-                          totals.red
-                            ? "Expulsado por tarjeta roja"
-                            : `Fuera por ${exclusionLimit(sheet)} expulsiones`
+                    <strong
+                      className={`relative grid shrink-0 place-items-center rounded-md border border-[#062048] tabular-nums ${controlsParticipation(sheet) ? "h-8 min-w-8 text-xl" : "h-10 min-w-8 text-2xl"} ${side === "us" ? "bg-[#062048] font-black text-white" : "bg-[#f4c430] font-black text-[#062048]"}`}
+                    >
+                      {validCapNumber(cap) ?? "—"}
+                      {out && (
+                        <span
+                          className="absolute -top-1 -right-1 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-red-600 text-[9px] font-black text-white shadow-xs"
+                          title={
+                            totals.red
+                              ? "Expulsado por tarjeta roja"
+                              : `Fuera por ${exclusionLimit(sheet)} expulsiones`
+                          }
+                        >
+                          <span aria-hidden="true">✕</span>
+                          <span className="sr-only">Fuera</span>
+                        </span>
+                      )}
+                    </strong>
+                    {controlsParticipation(sheet) && (
+                      <ActaQuarterMarks
+                        compact
+                        played={playedPeriods(sheet, side, participantKey(sheet, side, cap))}
+                        period={sheet.period}
+                        current={
+                          sheet.phase === "playing" && participantIsPlaying(sheet, side, cap)
                         }
-                      >
-                        <span aria-hidden="true">✕</span>
-                        <span className="sr-only">Fuera</span>
-                      </span>
+                      />
                     )}
-                  </strong>
+                  </span>
                   {player && (
                     <span className="relative col-start-2 row-start-1 min-w-0 overflow-hidden pr-3 pl-1 text-sm leading-tight font-semibold">
                       <ActaPlayerName name={player.name} />
@@ -157,25 +174,6 @@ export function ActaPlayerBoard({
                     </span>
                   </span>
                 </span>
-                {controlsParticipation(sheet) &&
-                  playedPeriods(sheet, side, participantKey(sheet, side, cap)).length > 0 && (
-                    <span
-                      className={`flex flex-wrap gap-1 ${side === "us" ? "col-span-2 justify-end" : "flex-col"}`}
-                      aria-label={`Ha jugado los cuartos ${playedPeriods(sheet, side, participantKey(sheet, side, cap)).join(" y ")}`}
-                    >
-                      {playedPeriods(sheet, side, participantKey(sheet, side, cap)).map(
-                        (period) => (
-                          <span
-                            key={period}
-                            aria-hidden="true"
-                            className="border-pool-deep text-pool-deep inline-flex h-5 min-w-5 items-center justify-center rounded border bg-white px-1 text-xs font-bold"
-                          >
-                            {period}
-                          </span>
-                        ),
-                      )}
-                    </span>
-                  )}
               </button>
             );
           }),

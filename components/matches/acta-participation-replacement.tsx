@@ -2,6 +2,8 @@
 
 import { useRef, useState } from "react";
 import { ActaGuardSheet } from "./acta-guard-sheet";
+import { ActaSelectionSheet } from "./acta-flow-sheet";
+import { ActaPlayerName } from "./acta-player-name";
 import {
   currentParticipants,
   participants,
@@ -84,8 +86,9 @@ export function ActaParticipationReplacement({
       recording.current = false;
     }
   }
+  const Sheet = confirming ? ActaGuardSheet : ActaSelectionSheet;
   return (
-    <ActaGuardSheet
+    <Sheet
       open
       onOpenChange={(open) => !open && onClose()}
       context="Participación"
@@ -167,7 +170,12 @@ export function ActaParticipationReplacement({
                     }}
                     className="border-pool-deep text-pool-deep min-h-14 rounded-xl border-2 bg-white p-3 text-left font-bold"
                   >
-                    {p.cap} · {p.name}
+                    <span className="flex min-w-0 items-center gap-2">
+                      <strong className="shrink-0">{p.cap}</strong>
+                      <span className="min-w-0 flex-1">
+                        <ActaPlayerName name={p.name} />
+                      </span>
+                    </span>
                     {playedPeriods(sheet, side, p.key, period).length >= 3 && (
                       <span className="mt-1 block text-sm text-red-900">Ya jugó 3 cuartos</span>
                     )}

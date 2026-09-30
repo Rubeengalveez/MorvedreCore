@@ -1,8 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Check, CircleAlert } from "lucide-react";
+import { Check, CircleAlert, Moon, Play } from "lucide-react";
 import { ActaGuardSheet } from "./acta-guard-sheet";
+import { ActaFlowSheet } from "./acta-flow-sheet";
+import { ActaPlayerName } from "./acta-player-name";
+import { ActaQuarterMarks } from "./acta-quarter-marks";
 import {
   participants,
   lineupFor,
@@ -67,7 +70,6 @@ export function ActaLineupSheet({
   const saving = useRef(false);
   const draftQueue = useRef(Promise.resolve(true));
   const [confirming, setConfirming] = useState(false);
-  const [incident, setIncident] = useState(draft.incident ?? false);
   const [error, setError] = useState("");
   const [fixed, setFixed] = useState(draft.fixedKeepers ?? sheet.participation!.fixedKeepers);
   const side = draft.step;
@@ -133,8 +135,7 @@ export function ActaLineupSheet({
       ? "Al corregir el portero, sus paradas y goles recibidos de ese tramo pasarán al portero elegido."
       : "";
   const advice = rotationAdvice(sheet, side, request.period);
-  const canComplete =
-    lineups.every((l) => Boolean(l.keeper)) && (incident || structures.length === 0);
+  const canComplete = lineups.every((l) => Boolean(l.keeper)) && structures.length === 0;
   async function update(next: LineupDraft) {
     draftRef.current = next;
     setDraft(next);
@@ -176,7 +177,7 @@ export function ActaLineupSheet({
         prepared,
         lineups,
         request.mode,
-        warnings.length || structures.length || incident
+        warnings.length || structures.length
           ? "Incidencia revisada con el entrenador o árbitro"
           : undefined,
       );
@@ -189,239 +190,269 @@ export function ActaLineupSheet({
       saving.current = false;
     }
   }
-  const title = confirming
-    ? keeperWarning && !warnings.length && !structures.length
-      ? "Corregir portero"
-      : "Revisa la rotación"
-    : `${side === "us" ? "Morvedre" : "Rival"} · Cuarto ${request.period}`;
-  const buttonClass =
-    "focus-visible:ring-pool-blue min-h-14 rounded-xl border-2 px-3 py-2 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none";
-  return (
-    <ActaGuardSheet
-      open
-      onOpenChange={(open) => !open && onClose()}
-      context={request.mode === "start" ? "Quién juega este cuarto" : "Corregir quién jugó"}
-      title={title}
-      icon="warning"
-      pending={busy}
-      stickyActions
-      error={error}
-      body={
-        confirming ? (
+  if (confirming)
+    return (
+      <ActaGuardSheet
+        open
+        onOpenChange={(open) => !open && setConfirming(false)}
+        context={`Cuarto ${request.period}`}
+        title={keeperWarning && !warnings.length ? "Corregir portero" : "Revisa la rotación"}
+        icon="warning"
+        pending={busy}
+        stickyActions
+        error={error}
+        body={
           <div className="space-y-3">
-            <p className="text-pool-deep text-base font-bold">
+            <p className="rounded-lg bg-amber-100 px-3 py-2 text-sm font-bold text-amber-950">
               Avísalo al entrenador o al árbitro antes de continuar.
             </p>
-            {[...structures, ...warnings, ...(keeperWarning ? [keeperWarning] : [])].map(
-              (text, i) => (
-                <p
-                  key={i}
-                  className="flex gap-2 rounded-xl border-2 border-amber-700 bg-amber-50 p-3 text-sm font-semibold text-amber-950"
-                >
-                  <CircleAlert size={20} className="shrink-0" aria-hidden="true" />
-                  {text}
-                </p>
-              ),
-            )}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-ink-700 text-sm">
-              {request.suggested
-                ? `Revisa si el gorro ${request.suggested} está jugando. Corrige la selección.`
-                : "Toca los que juegan este cuarto."}
-            </p>
-            <section aria-label="Portero del cuarto" className="space-y-2">
-              <h3 className="text-pool-deep text-base font-extrabold">Portero</h3>
-              <div className="grid grid-cols-2 gap-2">
-                {keepers.map((p) => (
-                  <button
-                    key={p.key}
-                    type="button"
-                    aria-pressed={selection.keeper === p.key}
-                    onClick={() => select(p.key, true)}
-                    className={`${buttonClass} ${selection.keeper === p.key ? "border-pool-deep bg-pool-deep text-white" : "border-pool-deep text-pool-deep bg-white"}`}
+            {(["Morvedre", "Rival"] as const).map((team) => {
+              const messages = warnings.filter((text) => text.startsWith(`${team} · `));
+              return messages.length ? (
+                <section key={team} aria-label={`Avisos de ${team}`} className="space-y-2">
+                  <h3
+                    className={`rounded-lg px-3 py-2 text-sm font-extrabold ${team === "Morvedre" ? "bg-pool-deep text-white" : "bg-ball-gold text-pool-deep"}`}
                   >
-                    <span className="flex items-center justify-between gap-2">
-                      <strong className="text-xl">{p.cap}</strong>
-                      {selection.keeper === p.key && <Check size={20} aria-hidden="true" />}
-                    </span>
-                    {side === "us" && (
-                      <span className="mt-1 block text-sm font-bold">{p.name}</span>
-                    )}
-                    {advice.some((a) => a.key === p.key && a.kind === "rest") &&
-                      fixed[side] !== p.key && (
-                        <span className="mt-1 block rounded-md bg-red-50 px-2 py-1 text-xs font-extrabold text-red-900">
-                          Debe descansar
-                        </span>
-                      )}
-                    {advice.some((a) => a.key === p.key && a.kind === "play") && (
-                      <span className="mt-1 block rounded-md bg-amber-50 px-2 py-1 text-xs font-extrabold text-amber-950">
-                        Debe jugar
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-              {rules.singleKeeper && keepers.length === 1 && request.period === 1 && (
-                <label className="border-pool-deep text-pool-deep flex min-h-12 items-center gap-3 rounded-xl border-2 bg-white p-3 text-sm font-semibold">
-                  <input
-                    type="checkbox"
-                    className="accent-pool-deep h-6 w-6 shrink-0"
-                    checked={fixed[side] === keepers[0].key}
-                    onChange={(e) => {
-                      const next = { ...fixed, [side]: e.target.checked ? keepers[0].key : null };
-                      setFixed(next);
-                      void update({ ...draftRef.current, fixedKeepers: next });
-                    }}
-                  />
-                  Mantener este portero los cuatro primeros cuartos
-                </label>
-              )}
-            </section>
-            <section aria-label="Jugadores de campo" className="space-y-2">
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="text-pool-deep text-base font-extrabold">Jugadores de campo</h3>
-                <span
-                  role="status"
-                  className="bg-pool-deep rounded-lg px-3 py-1 text-sm font-bold text-white"
-                >
-                  {selection.field.length} de {rules.fieldPlayers}
-                </span>
-              </div>
-              <div className={`grid ${side === "us" ? "grid-cols-2" : "grid-cols-4"} gap-2`}>
-                {options
-                  .filter((p) => ![1, 13].includes(p.cap))
-                  .map((p) => {
-                    const selected = selection.field.includes(p.key);
-                    const hint = advice.find((a) => a.key === p.key);
-                    const totals = playerTotals(sheet, side, p.cap);
-                    const out = totals.red || totals.exclusions >= rules.exclusionLimit;
-                    const periods = playedPeriods(sheet, side, p.key, request.period);
+                    {team}
+                  </h3>
+                  {messages.map((text) => {
+                    const content = text.slice(team.length + 3);
+                    const split = content.indexOf(": ");
                     return (
-                      <button
-                        key={p.key}
-                        type="button"
-                        aria-pressed={selected}
-                        onClick={() => select(p.key, false)}
-                        className={`${buttonClass} ${selected ? "border-pool-deep bg-pool-deep text-white" : "border-pool-deep text-pool-deep bg-white"}`}
+                      <div
+                        key={text}
+                        className="flex items-start gap-2 rounded-lg bg-white px-2 py-1.5 text-sm"
                       >
-                        <span className="flex items-center justify-between gap-1">
-                          <strong className="text-xl">{p.cap}</strong>
-                          {selected && <Check size={18} aria-hidden="true" />}
-                        </span>
-                        {side === "us" && (
-                          <span className="mt-1 block text-sm leading-snug font-bold">
-                            {p.name}
-                          </span>
-                        )}
-                        {periods.length > 0 && (
-                          <span className="mt-1 block text-xs font-semibold">
-                            Jugó {periods.join(" · ")}
-                          </span>
-                        )}
-                        {(hint || out) && (
-                          <span
-                            className={`mt-1 block rounded-md px-1.5 py-1 text-xs font-extrabold ${hint?.kind === "rest" || out ? "bg-red-50 text-red-900" : "bg-amber-50 text-amber-950"}`}
-                          >
-                            {out
-                              ? "Expulsado"
-                              : hint?.kind === "rest"
-                                ? "Debe descansar"
-                                : "Debe jugar"}
-                          </span>
-                        )}
-                      </button>
+                        <CircleAlert
+                          size={18}
+                          className="mt-0.5 shrink-0 text-red-800"
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <strong className="block">
+                            <ActaPlayerName name={content.slice(0, split)} />
+                          </strong>
+                          <p className="mt-0.5 leading-snug text-slate-700">
+                            {content.slice(split + 2)}
+                          </p>
+                        </div>
+                      </div>
                     );
                   })}
-              </div>
-            </section>
-            {advice.some((a) => a.kind === "rest" || a.kind === "play") && (
-              <p
-                role="status"
-                className="rounded-xl border-2 border-amber-700 bg-amber-50 p-3 text-sm font-semibold text-amber-950"
-              >
-                Comprueba los jugadores marcados. Avísalo al entrenador o al árbitro si no pueden
-                cumplir la rotación.
-              </p>
-            )}
-            {selection.field.length < rules.fieldPlayers && (
-              <label className="text-pool-deep flex min-h-12 items-center gap-3 text-sm font-semibold">
-                <input
-                  type="checkbox"
-                  className="accent-pool-deep h-6 w-6"
-                  checked={incident}
-                  onChange={(e) => {
-                    setIncident(e.target.checked);
-                    void update({ ...draftRef.current, incident: e.target.checked });
-                  }}
-                />
-                Faltan jugadores: registrar incidencia
-              </label>
+                </section>
+              ) : null;
+            })}
+            {keeperWarning && (
+              <p className="text-pool-deep text-sm font-semibold">{keeperWarning}</p>
             )}
           </div>
-        )
+        }
+        actions={[
+          { label: "Volver a revisar", tone: "primary", onClick: () => setConfirming(false) },
+          {
+            label:
+              request.mode === "start"
+                ? "Registrar así y empezar"
+                : keeperWarning && !warnings.length
+                  ? "Sí, corregir portero"
+                  : "Guardar con incidencia",
+            tone: "secondary",
+            onClick: commit,
+          },
+        ]}
+      />
+    );
+  const activeAdvice = advice.filter((a) => a.kind !== "missing" && fixed[side] !== a.key);
+  function playerButton(p: (typeof options)[number], keeper: boolean) {
+    const selected = keeper ? selection.keeper === p.key : selection.field.includes(p.key);
+    const hint = activeAdvice.find((a) => a.key === p.key);
+    const totals = playerTotals(sheet, side, p.cap);
+    const out = totals.red || totals.exclusions >= rules.exclusionLimit;
+    const history = playedPeriods(sheet, side, p.key, request.period);
+    return (
+      <button
+        key={p.key}
+        type="button"
+        aria-label={side === "us" ? `${p.cap} ${p.name}` : String(p.cap)}
+        aria-pressed={selected}
+        onClick={() => select(p.key, keeper)}
+        className={`flex h-14 min-w-0 items-center gap-2 rounded-xl border-2 px-2 text-left transition-colors motion-reduce:transition-none ${selected ? "border-pool-blue text-pool-deep bg-blue-50" : "border-pool-blue/70 text-pool-deep bg-white"} ${side === "them" ? "h-20 flex-col justify-center gap-1" : ""}`}
+      >
+        <span
+          className={`flex shrink-0 items-center gap-1 ${side === "them" ? "w-full justify-between" : ""}`}
+        >
+          <strong
+            className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-lg font-extrabold ${selected ? "bg-pool-deep text-white" : "text-pool-deep bg-slate-100"}`}
+          >
+            {p.cap}
+          </strong>
+          {side === "them" && selected && (
+            <Check size={18} className="text-pool-blue shrink-0" aria-hidden="true" />
+          )}
+          {(hint || out) && (
+            <span
+              title={out ? "Expulsado" : hint?.kind === "rest" ? "Debe descansar" : "Debe jugar"}
+              className={hint?.kind === "rest" || out ? "text-red-800" : "text-amber-900"}
+            >
+              {out ? (
+                <CircleAlert size={16} aria-hidden="true" />
+              ) : hint?.kind === "rest" ? (
+                <Moon size={16} aria-hidden="true" />
+              ) : (
+                <Play size={16} aria-hidden="true" />
+              )}
+              <span className="sr-only">
+                {out ? "Expulsado" : hint?.kind === "rest" ? "Debe descansar" : "Debe jugar"}
+              </span>
+            </span>
+          )}
+        </span>
+        {side === "us" && (
+          <span className="min-w-0 flex-1 text-sm font-bold">
+            <ActaPlayerName name={p.name} />
+          </span>
+        )}
+        {request.period > 1 && (
+          <ActaQuarterMarks
+            played={history}
+            period={request.period}
+            current={selected}
+            small={side === "them"}
+          />
+        )}
+        <span
+          aria-hidden="true"
+          className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${selected ? "bg-pool-blue text-white" : "border-2 border-slate-400"} ${side === "them" ? "sr-only absolute" : ""}`}
+        >
+          {selected && <Check size={14} />}
+        </span>
+      </button>
+    );
+  }
+  function advance() {
+    if (side === "us" && (request.mode === "start" || !draft.them.keeper)) {
+      if (!selection.keeper || selection.field.length !== rules.fieldPlayers) {
+        setError(`Elige un portero y ${rules.fieldPlayers} jugadores de campo.`);
+        return;
       }
-      actions={
-        confirming
-          ? [
-              { label: "Volver a revisar", tone: "primary", onClick: () => setConfirming(false) },
-              {
-                label:
-                  request.mode === "start"
-                    ? "Registrar así y empezar"
-                    : keeperWarning && !warnings.length && !structures.length
-                      ? "Sí, corregir portero"
-                      : "Guardar con incidencia",
-                tone: "secondary",
-                onClick: commit,
-              },
-            ]
-          : [
-              ...(side === "us" && (request.mode === "start" || !draft.them.keeper)
-                ? [
-                    {
-                      label: "Continuar con Rival",
-                      tone: "primary" as const,
-                      onClick: () => {
-                        if (
-                          !selection.keeper ||
-                          (!incident && selection.field.length !== rules.fieldPlayers)
-                        ) {
-                          setError(`Elige un portero y ${rules.fieldPlayers} jugadores de campo.`);
-                          return;
-                        }
-                        void update({ ...draftRef.current, step: "them" });
-                      },
-                    },
-                  ]
-                : [
-                    {
-                      label:
-                        request.mode === "start" ? "Listo, empezar cuarto" : "Guardar selección",
-                      tone: "primary" as const,
-                      onClick: () => {
-                        if (!canComplete) {
-                          setError(structures[0] ?? "Elige los porteros de ambos equipos.");
-                          return;
-                        }
-                        if (warnings.length || structures.length || keeperWarning)
-                          setConfirming(true);
-                        else void commit();
-                      },
-                    },
-                  ]),
-              ...(side === "them"
-                ? [
-                    {
-                      label: "Revisar Morvedre",
-                      tone: "secondary" as const,
-                      onClick: () => void update({ ...draftRef.current, step: "us" }),
-                    },
-                  ]
-                : []),
-            ]
+      void update({ ...draftRef.current, step: "them" });
+    } else {
+      if (!canComplete) {
+        setError(structures[0] ?? "Elige los porteros de ambos equipos.");
+        return;
       }
-    />
+      if (warnings.length || keeperWarning) setConfirming(true);
+      else void commit();
+    }
+  }
+  return (
+    <ActaFlowSheet
+      onClose={onClose}
+      onBack={side === "them" ? () => void update({ ...draftRef.current, step: "us" }) : undefined}
+      context={`Cuarto ${request.period} · ${request.mode === "start" ? "Quién juega" : "Corregir selección"}`}
+      title={`${side === "us" ? "Morvedre" : "Rival"} · Cuarto ${request.period}`}
+      pending={busy}
+      error={error}
+      controls={
+        <div className="space-y-2">
+          {request.mode === "start" && (
+            <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+              {(["us", "them"] as const).map((team) => (
+                <span
+                  key={team}
+                  className={`rounded-md px-3 py-1.5 ${side === team ? "bg-pool-deep text-white" : "bg-slate-100 text-slate-600"}`}
+                >
+                  {team === "us" ? "1. Morvedre" : "2. Rival"}
+                </span>
+              ))}
+            </div>
+          )}
+          {request.suggested && (
+            <p className="text-sm font-semibold">
+              Comprueba si está jugando el gorro {request.suggested}.
+            </p>
+          )}
+          {activeAdvice.length > 0 && (
+            <div
+              role="status"
+              className="rounded-lg bg-amber-50 px-3 py-2 text-sm leading-snug font-semibold text-amber-950"
+            >
+              {(["rest", "play"] as const).map((kind) => {
+                const list = options.filter((p) =>
+                  activeAdvice.some((a) => a.key === p.key && a.kind === kind),
+                );
+                return list.length ? (
+                  <p key={kind} className="flex items-start gap-2">
+                    {kind === "rest" ? (
+                      <Moon size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <Play size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
+                    )}
+                    <span>
+                      {kind === "rest" ? "Deben descansar" : "Deben jugar"}:{" "}
+                      <strong>{list.map((p) => p.cap).join(", ")}</strong>
+                    </span>
+                  </p>
+                ) : null;
+              })}
+            </div>
+          )}
+        </div>
+      }
+      footer={
+        <button
+          type="button"
+          disabled={busy}
+          onClick={advance}
+          className="bg-pool-deep min-h-14 w-full rounded-xl px-4 text-base font-extrabold text-white disabled:opacity-50"
+        >
+          {side === "us" && (request.mode === "start" || !draft.them.keeper)
+            ? "Continuar con Rival"
+            : request.mode === "start"
+              ? "Listo, empezar cuarto"
+              : "Guardar selección"}
+        </button>
+      }
+    >
+      <div className="space-y-4">
+        <section aria-label="Portero del cuarto" className="space-y-2">
+          <div className="flex items-center justify-between text-sm font-extrabold">
+            <h3>Portero</h3>
+            <span className={selection.keeper ? "text-pool-blue" : "text-slate-600"}>
+              {selection.keeper ? "1 de 1" : "Elige uno"}
+            </span>
+          </div>
+          <div className={side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2"}>
+            {keepers.map((p) => playerButton(p, true))}
+          </div>
+          {rules.singleKeeper && keepers.length === 1 && request.period === 1 && (
+            <label className="flex min-h-12 items-center gap-3 rounded-lg bg-blue-50 px-3 text-sm font-semibold">
+              <input
+                type="checkbox"
+                className="accent-pool-deep h-5 w-5 shrink-0"
+                checked={fixed[side] === keepers[0].key}
+                onChange={(e) => {
+                  const next = { ...fixed, [side]: e.target.checked ? keepers[0].key : null };
+                  setFixed(next);
+                  void update({ ...draftRef.current, fixedKeepers: next });
+                }}
+              />
+              Único portero para los cuatro cuartos
+            </label>
+          )}
+        </section>
+        <section aria-label="Jugadores de campo" className="space-y-2">
+          <div className="flex items-center justify-between gap-2 text-sm font-extrabold">
+            <h3>Jugadores de campo</h3>
+            <span role="status" className="bg-pool-deep rounded-lg px-2 py-1 text-white">
+              {selection.field.length} de {rules.fieldPlayers}
+            </span>
+          </div>
+          <div className={side === "us" ? "grid gap-1.5" : "grid grid-cols-3 gap-2"}>
+            {options.filter((p) => ![1, 13].includes(p.cap)).map((p) => playerButton(p, false))}
+          </div>
+        </section>
+      </div>
+    </ActaFlowSheet>
   );
 }

@@ -544,10 +544,10 @@ describe("alineaciones del acta infantil", () => {
   it("retira las marcas generales de las fichas desde el quinto conservando los datos", () => {
     const current = youthRecord(5);
     const view = render(<ActaPlayerBoard sheet={current.sheet} playing onPlayer={vi.fn()} />);
-    expect(screen.queryAllByLabelText(/Ha jugado los cuartos/)).toHaveLength(0);
+    expect(screen.queryAllByLabelText(/Cuartos jugados:/)).toHaveLength(0);
     view.unmount();
     render(<ActaPlayerBoard sheet={{ ...current.sheet, period: 4 }} playing onPlayer={vi.fn()} />);
-    expect(screen.queryAllByLabelText(/Ha jugado los cuartos/).length).toBeGreaterThan(0);
+    expect(screen.queryAllByLabelText(/Cuartos jugados:/).length).toBeGreaterThan(0);
   });
   it("pregunta si juega alguien no seleccionado, también del rival", () => {
     mock.hook.mockReturnValue({ ...mock.hook(), record: youthRecord() });
@@ -606,10 +606,40 @@ describe("alineaciones del acta infantil", () => {
     mock.hook.mockReturnValue({ ...mock.hook(), record: current });
     render(<LiveMatchClient />);
     expect(screen.getByText("Antes del cuarto 4")).toBeInTheDocument();
-    expect(screen.getByText(/Morvedre: 7 deben descansar/)).toBeInTheDocument();
-    expect(screen.getByText(/Rival: 7 deben descansar/)).toBeInTheDocument();
+    const notice = screen.getByRole("region", { name: "Avisos antes del cuarto 4" });
+    expect(within(notice).getAllByText("Deben descansar")).toHaveLength(2);
+    expect(within(notice).getAllByText("Deben jugar")).toHaveLength(2);
     expect(
       screen.getByRole("button", { name: "Elegir jugadores del cuarto 4" }),
     ).toBeInTheDocument();
+  });
+  it("muestra solo quienes juegan en el selector y renderiza el límite de expulsiones", () => {
+    mock.hook.mockReturnValue({ ...mock.hook(), record: youthRecord() });
+    render(<LiveMatchClient />);
+    expect(screen.queryByRole("button", { name: "Revisar participación" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Morvedre" }));
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByRole("button", { name: /Morvedre, gorro 9/ })).toBeNull();
+    expect(within(dialog).getByRole("button", { name: /Morvedre, gorro 2/ })).toHaveTextContent(
+      "0/3 exp.",
+    );
+    expect(dialog).not.toHaveTextContent("exclusionLimit");
+  });
+  it("abre una tabla de participación ordenada desde Corregir y permite cambiar de equipo", () => {
+    const current = youthRecord();
+    current.sheet.players.reverse();
+    mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: "Corregir jugadas" }));
+    fireEvent.click(screen.getByRole("button", { name: "Revisar participación" }));
+    const table = screen.getByRole("table", { name: "Participación de Morvedre" });
+    expect(
+      within(table)
+        .getAllByRole("rowheader")
+        .map((el) => el.textContent),
+    ).toEqual(Array.from({ length: 14 }, (_, i) => String(i + 1)));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Rival" }));
+    expect(screen.getByRole("table", { name: "Participación de Rival" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /lesión/ })).toBeNull();
   });
 });

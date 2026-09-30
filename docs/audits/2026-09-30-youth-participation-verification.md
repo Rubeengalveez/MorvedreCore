@@ -70,3 +70,21 @@ Los asesores de seguridad no señalaron nuevas incidencias en estas funciones/ta
 La aplicación compilada permanece abierta en el navegador integrado. El partido que ya tenía abierto el usuario es Absoluto: conserva su aspecto y no muestra la selección juvenil. Los escenarios juveniles se verificaron con datos ficticios en un navegador aislado, sin cambiar la categoría de ese partido real.
 
 La guía de uso está en `docs/guides/acta-en-directo.md`. El cambio queda preparado para revisar localmente y publicar en un paso posterior.
+
+## Revisión visual posterior a la prueba de Rubén
+
+Se corrige la primera presentación tras los comentarios del usuario:
+
+- Panel blanco de juego para alineación, inscritos rivales, selección de sustituto y consulta de participación. Panel azul de decisión únicamente para confirmar, advertir o salir. Ambos reutilizan la animación y el control de foco del acta.
+- Selector propio en filas de altura fija con nombre adaptativo; selector rival con gorros e iconos. Cuarto actual seleccionado destacado y cuartos anteriores diferenciados visualmente.
+- Tabla de consulta ordenada por gorro, con equipos alternables, filas alternadas y marcas de juego/descanso acompañadas de etiquetas accesibles.
+- Errores de selección y guardado junto a la acción inferior; panel más alto con scroll interior y acciones visibles.
+- Retirados el acceso superior a «Revisar participación», el control «Faltan jugadores: registrar incidencia» y los accesos a sustitución por lesión. Los datos de sustituciones anteriores siguen siendo corregibles.
+- Aviso previo al cuarto 4 con gorros concretos que necesitan jugar/descansar para cada equipo. Sin duplicar el recuadro de descanso.
+- Selector de acciones filtrado por alineación actual en los cuartos 1–4, salvo correcciones históricas. Interpolación de expulsiones corregida para mostrar números, no código.
+
+Verificación de esta revisión: 61 pruebas de componentes, participación y sincronización aprobadas; tres recorridos Playwright aprobados; compilación con TypeScript y lint de los archivos modificados correctos. El nuevo recorrido de 320 px comprueba alturas uniformes de 76 px en las fichas, orden de gorros, filtro de acciones y errores/guardar visibles en el viewport. Los otros dos conservan las comprobaciones de recuperación sin red y confirmación del cuarto 4.
+
+Se revisaron capturas a 320 y 393 px. Pretext confirmó, para 106 px disponibles y la tipografía del proyecto, que «Alejandro Molina Castro» y «Alejandro Molina C.» necesitan abreviarse a «Alejandro M. C.»; el componente adaptativo selecciona la variante que cabe y conserva el nombre completo accesible.
+
+El acta real abierta por Rubén se recargó con la compilación nueva y quedó mostrando la selección del cuarto 4 sin cambiar los jugadores elegidos ni comenzar el cuarto. No se ha publicado la aplicación.

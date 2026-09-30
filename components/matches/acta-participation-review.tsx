@@ -1,138 +1,187 @@
 "use client";
 
-import { ActaGuardSheet } from "./acta-guard-sheet";
+import { useState } from "react";
+import { Check, Moon, Pencil } from "lucide-react";
+import { ActaFlowSheet } from "./acta-flow-sheet";
+import { ActaPlayerName } from "./acta-player-name";
 import {
   lineupFor,
   participants,
   playedPeriods,
   rotationAdvice,
 } from "@/lib/domain/live-match-participation";
-import type { LiveSheet } from "@/lib/domain/live-match";
+import type { LiveSheet, Side } from "@/lib/domain/live-match";
 import type { Participation } from "@/lib/domain/live-match-rules";
 
 export function ActaParticipationReview({
   sheet,
   onClose,
   onCorrect,
-  onInjury,
   onReplacement,
   onRoster,
 }: {
   sheet: LiveSheet;
   onClose: () => void;
   onCorrect: (period: number) => void;
-  onInjury: () => void;
   onReplacement: (change: Participation["changes"][number]) => void;
   onRoster: () => void;
 }) {
+  const [side, setSide] = useState<Side>("us");
+  const advice =
+    sheet.period === 3 && sheet.phase === "break" ? rotationAdvice(sheet, side, 4) : [];
   return (
-    <ActaGuardSheet
-      open
-      onOpenChange={(open) => !open && onClose()}
+    <ActaFlowSheet
+      onClose={onClose}
       context="Participación"
       title="Cuartos jugados"
-      icon="saved"
-      body={
-        <div className="space-y-4">
-          {(["us", "them"] as const).map((side) => (
-            <section key={side} className="space-y-2">
-              <h3 className="text-pool-deep text-lg font-extrabold">
-                {side === "us" ? "Morvedre" : "Rival"}
-              </h3>
-              <div className="text-pool-deep grid grid-cols-[minmax(0,1fr)_repeat(4,1.5rem)] items-center gap-x-2 gap-y-2 text-sm">
-                <strong>Jugador</strong>
-                {[1, 2, 3, 4].map((p) => (
-                  <strong key={p} className="text-center">
-                    {p}
-                  </strong>
-                ))}
-                {participants(sheet, side).map((player) => (
-                  <div key={player.key} className="contents">
-                    <span className="min-w-0 font-semibold">
-                      {player.cap} · {side === "us" ? player.name : "Rival"}
-                    </span>
-                    {[1, 2, 3, 4].map((period) => (
-                      <span
-                        key={period}
-                        className="text-center font-bold"
-                        aria-label={
-                          !lineupFor(sheet, side, period)
-                            ? "Sin datos"
-                            : playedPeriods(sheet, side, player.key).includes(period)
-                              ? "Jugó"
-                              : "Descansó"
-                        }
-                      >
-                        {!lineupFor(sheet, side, period)
-                          ? "?"
-                          : playedPeriods(sheet, side, player.key).includes(period)
-                            ? "✓"
-                            : "—"}
-                      </span>
-                    ))}
-                  </div>
-                ))}
-              </div>
-              {sheet.period === 3 &&
-                sheet.phase === "break" &&
-                rotationAdvice(sheet, side, 4)
-                  .filter((a) => a.kind !== "missing")
-                  .map((a) => (
-                    <p
-                      key={a.key}
-                      className="rounded-xl border-2 border-amber-700 bg-amber-50 px-3 py-2 text-sm text-amber-950"
-                    >
-                      <strong>{a.name}</strong> · {a.message}
-                    </p>
-                  ))}
-            </section>
-          ))}
-          <div className="grid grid-cols-2 gap-2">
-            {[1, 2, 3, 4]
-              .filter((p) => p <= sheet.period)
-              .map((period) => (
+      controls={
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2" role="group" aria-label="Equipo que revisas">
+            {(["us", "them"] as const).map((team) => (
+              <button
+                key={team}
+                type="button"
+                aria-pressed={side === team}
+                onClick={() => setSide(team)}
+                className={`min-h-12 rounded-xl border-2 text-sm font-bold ${side === team ? (team === "us" ? "border-pool-deep bg-pool-deep text-white" : "border-pool-deep bg-ball-gold text-pool-deep") : "border-pool-blue/70 text-pool-deep bg-white"}`}
+              >
+                {team === "us" ? "Morvedre" : "Rival"}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 text-sm font-bold">
+            <span className="shrink-0">Corregir</span>
+            <div className="grid flex-1 grid-cols-4 gap-1">
+              {[1, 2, 3, 4].map((quarter) => (
                 <button
-                  key={period}
+                  key={quarter}
                   type="button"
-                  onClick={() => onCorrect(period)}
-                  className="border-pool-deep text-pool-deep min-h-12 rounded-xl border-2 bg-white px-3 py-2 text-sm font-bold"
+                  disabled={quarter > sheet.period}
+                  aria-label={`Corregir cuarto ${quarter}`}
+                  onClick={() => onCorrect(quarter)}
+                  className="border-pool-blue/70 text-pool-deep flex min-h-12 items-center justify-center gap-1 rounded-lg border bg-white font-bold disabled:opacity-30"
                 >
-                  Corregir cuarto {period}
+                  {quarter}
+                  <Pencil size={14} aria-hidden="true" />
                 </button>
               ))}
+            </div>
           </div>
-          {sheet.participation?.changes.map((change) => {
-            const options = participants(sheet, change.side);
-            return (
-              <button
-                key={change.id}
-                type="button"
-                onClick={() => onReplacement(change)}
-                className="border-pool-deep text-pool-deep min-h-12 w-full rounded-xl border-2 bg-white p-3 text-left text-sm font-bold"
-              >
-                Cuarto {change.period} · {change.side === "us" ? "Morvedre" : "Rival"}
-                <br />
-                {options.find((p) => p.key === change.outgoing)?.name} →{" "}
-                {options.find((p) => p.key === change.incoming)?.name}
-                <span className="text-pool-blue mt-1 block">Corregir sustitución</span>
-              </button>
-            );
-          })}
         </div>
       }
-      actions={[
-        { label: "Revisar gorros del rival", tone: "secondary", onClick: onRoster },
-        ...(sheet.phase === "playing" && sheet.period <= 4
-          ? [
-              {
-                label: "Registrar sustitución por lesión",
-                tone: "secondary" as const,
-                onClick: onInjury,
-              },
-            ]
-          : []),
-        { label: "Volver al acta", tone: "primary", onClick: onClose },
-      ]}
-    />
+      footer={
+        side === "them" ? (
+          <button
+            type="button"
+            onClick={onRoster}
+            className="border-pool-deep text-pool-deep min-h-12 w-full rounded-xl border-2 bg-white px-3 text-sm font-bold"
+          >
+            Revisar gorros del rival
+          </button>
+        ) : undefined
+      }
+    >
+      <table
+        className="w-full table-fixed border-separate border-spacing-0 text-sm"
+        aria-label={`Participación de ${side === "us" ? "Morvedre" : "Rival"}`}
+      >
+        <colgroup>
+          <col className="w-9" />
+          {side === "us" && <col />}
+          {[1, 2, 3, 4].map((p) => (
+            <col key={p} className={side === "us" ? "w-8" : undefined} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr className={side === "us" ? "bg-pool-deep text-white" : "bg-ball-gold text-pool-deep"}>
+            <th scope="col" className="rounded-tl-lg py-3">
+              Nº
+            </th>
+            {side === "us" && (
+              <th scope="col" className="text-left">
+                Jugador
+              </th>
+            )}
+            {[1, 2, 3, 4].map((p) => (
+              <th key={p} scope="col" className="py-3 last:rounded-tr-lg">
+                {p}º
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {participants(sheet, side)
+            .sort((a, b) => a.cap - b.cap)
+            .map((player, index) => {
+              const hint = advice.find((a) => a.key === player.key);
+              return (
+                <tr key={player.key} className={index % 2 ? "bg-blue-50" : "bg-white"}>
+                  <th
+                    scope="row"
+                    className={`h-12 text-center font-extrabold ${hint?.kind === "rest" ? "text-red-800" : "text-pool-deep"}`}
+                    title={hint?.message}
+                  >
+                    {player.cap}
+                  </th>
+                  {side === "us" && (
+                    <td className="min-w-0 pr-2 font-semibold">
+                      <ActaPlayerName name={player.name} />
+                    </td>
+                  )}
+                  {[1, 2, 3, 4].map((period) => {
+                    const known = Boolean(lineupFor(sheet, side, period));
+                    const played = playedPeriods(sheet, side, player.key).includes(period);
+                    return (
+                      <td
+                        key={period}
+                        className="text-center"
+                        aria-label={`Cuarto ${period}: ${known ? (played ? "Jugó" : "Descansó") : "Sin datos"}`}
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={`mx-auto grid h-6 w-6 place-items-center rounded-md ${!known ? "text-slate-500" : played ? "bg-emerald-700 text-white" : "bg-slate-100 text-slate-600"}`}
+                        >
+                          {!known ? "·" : played ? <Check size={16} /> : <Moon size={14} />}
+                        </span>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+        </tbody>
+      </table>
+      {advice
+        .filter((a) => a.kind === "missing")
+        .map((a) => (
+          <p
+            key={a.key}
+            className="mt-3 rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-950"
+          >
+            {a.message}
+          </p>
+        ))}
+      {sheet.participation?.changes
+        .filter((c) => c.side === side)
+        .map((change) => {
+          const options = participants(sheet, change.side);
+          return (
+            <button
+              key={change.id}
+              type="button"
+              onClick={() => onReplacement(change)}
+              className="border-pool-blue/70 mt-3 flex min-h-12 w-full items-center gap-3 rounded-xl border bg-white p-3 text-left text-sm"
+            >
+              <span className="min-w-0 flex-1">
+                <strong className="block">Sustitución · cuarto {change.period}</strong>
+                <ActaPlayerName
+                  name={`${options.find((p) => p.key === change.outgoing)?.name ?? "Jugador"} → ${options.find((p) => p.key === change.incoming)?.name ?? "Jugador"}`}
+                />
+              </span>
+              <Pencil size={18} className="shrink-0" aria-hidden="true" />
+            </button>
+          );
+        })}
+    </ActaFlowSheet>
   );
 }

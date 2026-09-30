@@ -22,9 +22,9 @@ Cada ficha muestra los cuartos jugados. Al terminar el tercero aparece un resume
 
 Si atribuyes una acción a alguien que no seleccionaste, la app pregunta si está jugando y te lleva a revisar la alineación. Los asistentes y lanzadores de penalti se eligen entre quienes están en el agua. Los gorros 1 y 13 siempre son porteros. La excepción de portero único debe marcarse expresamente en Alevín/Infantil.
 
-**Revisar participación** permite corregir un cuarto, registrar una lesión y corregir o anular una sustitución. En Infantil, una sanción definitiva pide quién entra; ambos jugadores cuentan como participantes. Si el sustituto juega los cuatro primeros, se avisa de que debe descansar el quinto. Una expulsión temporal no añade un sustituto.
+Desde **Corregir → Revisar participación** consultas una tabla ordenada por gorro. Cambia entre Morvedre y Rival y toca el cuarto que necesites corregir. También puedes corregir o anular una sustitución registrada. En Infantil, una sanción definitiva pide quién entra; ambos jugadores cuentan como participantes. Si el sustituto juega los cuatro primeros, se avisa de que debe descansar el quinto. Una expulsión temporal no añade un sustituto.
 
-Desde el quinto desaparecen las marcas y la selección de campo, conservando el descanso excepcional si procede. Puedes consultar los primeros cuatro desde **Corregir → Revisar participación**, y quedan incluidos en el PDF. En actas antiguas sin alineaciones, **?** significa que faltan datos, no que un jugador haya descansado.
+Desde el quinto desaparecen las marcas y la selección de campo, conservando el descanso excepcional si procede. Puedes consultar los primeros cuatro desde **Corregir → Revisar participación**, y quedan incluidos en el PDF. Los cuartos sin datos se muestran con un punto en la tabla y con **?** en el PDF; no significan descanso.
 
 ## Durante el juego
 

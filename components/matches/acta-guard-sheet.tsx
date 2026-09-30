@@ -13,7 +13,7 @@ interface ActaGuardAction {
   onClick: () => void | Promise<void>;
 }
 
-interface ActaGuardSheetProps {
+export interface ActaGuardSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   context: string;
@@ -117,7 +117,7 @@ export function ActaGuardSheet({
                 </Dialog.Description>
               ) : null}
 
-              {error ? (
+              {error && !stickyActions ? (
                 <p
                   role="alert"
                   className="bg-paper-card mt-3 rounded-xl border-2 border-red-800 p-3 text-sm font-bold text-red-800"
@@ -127,6 +127,11 @@ export function ActaGuardSheet({
               ) : null}
             </div>
             <div className={`mt-4 grid shrink-0 gap-2.5 ${stickyActions ? "bg-paper-card" : ""}`}>
+              {error && stickyActions ? (
+                <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-bold text-red-900">
+                  {error}
+                </p>
+              ) : null}
               {actions.map((action) => (
                 <button
                   key={action.label}
