@@ -52,13 +52,12 @@ export function ActaMatchControls({
           className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold text-[#062048] active:bg-slate-200 disabled:opacity-45"
         >
           <span>Entrenador</span>
-          <span className="flex items-baseline gap-1 text-[10px] leading-tight font-semibold whitespace-nowrap tabular-nums">
+          <span className="flex w-full items-baseline justify-center gap-1 text-sm leading-tight font-bold whitespace-nowrap tabular-nums">
             {us.limit ? (
               <>
-                <span className="text-slate-700">Quedan</span>
                 <span className="text-slate-700">M</span>
                 <span
-                  className={`text-xs font-black ${us.remaining ? "text-pool-deep" : "text-red-800"}`}
+                  className={`text-base font-black ${us.remaining ? "text-pool-deep" : "text-red-800"}`}
                 >
                   {us.remaining}
                 </span>
@@ -67,7 +66,7 @@ export function ActaMatchControls({
                 </span>
                 <span className="text-slate-700">R</span>
                 <span
-                  className={`text-xs font-black ${them.remaining ? "text-pool-deep" : "text-red-800"}`}
+                  className={`text-base font-black ${them.remaining ? "text-pool-deep" : "text-red-800"}`}
                 >
                   {them.remaining}
                 </span>

@@ -243,6 +243,13 @@ export function LiveMatchClient() {
   }, [notice]);
 
   useEffect(() => {
+    if (
+      !record?.sheet.pending &&
+      ["assist", "penalty-shooter", "penalty-result"].includes(panel ?? "")
+    ) {
+      setPanel(null);
+      return;
+    }
     if (!record?.sheet.pending || panel) return;
     setPanel(
       record.sheet.pending.kind === "assist"

@@ -121,6 +121,36 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("interfaz del acta", () => {
+  it.each(["assist", "penalty-shooter", "penalty-result"])(
+    "cierra el paso %s cuando otra pestaña completa la jugada",
+    async (step) => {
+      const current = record();
+      const action = event(step === "assist" ? "goal_counter" : "penalty", {
+        side: step === "assist" ? "us" : "them",
+      });
+      current.sheet.events = [action];
+      current.sheet.pending =
+        step === "assist"
+          ? { kind: "assist", goal_event_id: action.id }
+          : {
+              kind: "penalty_shot",
+              penalty_event_id: action.id,
+              shooter_cap: step === "penalty-result" ? 2 : null,
+            };
+      mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+      const view = render(<LiveMatchClient />);
+      await screen.findByRole("dialog");
+      mock.hook.mockReturnValue({
+        ...mock.hook(),
+        record: {
+          ...current,
+          sheet: { ...current.sheet, pending: null },
+        },
+      });
+      view.rerender(<LiveMatchClient />);
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    },
+  );
   it("al salir de un acta cerrada ofrece consulta y no corregir convocatoria", () => {
     const current = record();
     current.sheet.phase = "finished";
@@ -476,7 +506,7 @@ describe("interfaz del acta", () => {
     render(<LiveMatchClient />);
     expect(
       screen.getByRole("button", { name: /Entrenador: tiempos muertos Morvedre/ }),
-    ).toHaveTextContent("QuedanM2·R2");
+    ).toHaveTextContent("M2·R2");
     expect(screen.getByRole("button", { name: "Corregir jugadas" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Entrenador: tiempos muertos Morvedre/ }));
     expect(screen.getByRole("button", { name: "Tiempo muerto" })).toBeInTheDocument();

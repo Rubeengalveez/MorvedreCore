@@ -1272,3 +1272,11 @@ Rubén pide que Gol 1+ no ocupe varias líneas: se abrevia la etiqueta visible r
 Rubén pide fondo rojo para la tarjeta roja rival y textos de tiempos muertos más sutiles y compactos. Se mantiene el botón de ancho completo, se abrevia el aviso de prohibición y cupo agotado y se resume la confirmación a disponibles y concesión del árbitro. Contornos oscuros y límites automáticos se conservan; la normativa completa sigue documentada en la bitácora para la demo.
 
 Rubén solicita Morvedre azul y Rival amarillo en la selección de tiempos muertos y comunica que Infantil tampoco los permite con la normativa actualizada. Infantil pasa a cero por ambos equipos, en dominio y protección SQL; se conserva el historial anterior sin permitir nuevos tiempos. Migración 20261005164256_acta_infantil_no_timeouts.sql aplicada y verificada. La bitácora registra la nueva fuente comunicada por Rubén, pendiente de incorporar el enlace al anexo, y sustituye la regla provisional anterior para el traslado a la demo.
+
+### 2026-10-05 · Contador de entrenador y actualización local de la demo
+
+Rubén pide retirar Quedan, centrar M/R y ampliar las cifras manteniendo el tamaño del botón Entrenador. Aprueba después trasladar todos los cambios del acta a la demo del escritorio y comprobarla antes de dar una orden de publicación.
+
+Se completa el traslado local: mismos componentes y PDF, cupos de categoría, identidades, historial y convocatoria coherentes tras intercambio; se conservan plantillas, siete convocados de Morvedre Benjamín y almacenamiento propio. La revisión corrige en Core y demo el cierre del paso de asistencia o penalti terminado desde otra pestaña. Se guarda un respaldo previo de fuente y compilación de la demo, que no tenía repositorio Git.
+
+Demo: 252 pruebas unitarias, 24 de navegador, tipos, build y paridad de 19 archivos. Se comprueba la actualización de la caché anterior sin borrar el partido. Versión local 9977b275f50e. Bitácora y verificaciones en docs/audits/2026-10-05-acta-feedback-delegados.md y docs/acta-feedback-2026-10-05.md de la demo. No se publica; Cloudflare requiere la orden posterior que Rubén ha reservado.
