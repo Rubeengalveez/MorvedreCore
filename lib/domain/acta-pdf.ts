@@ -454,7 +454,7 @@ export function createActaPdf(record: LiveRecord): File {
 
   newPage("Lectura del partido");
   const comparisons: [string, number, number][] = [
-    [a.counterGoals ? `Goles (${a.counterGoals} de contra)` : "Goles", totalUs, totalThem],
+    ["Goles", totalUs, totalThem],
     ["Tiros totales", a.ownShooting.attempts + a.baseUs, a.rivalShots],
     ["Tiros fallados", a.ownShooting.misses, a.rivalMisses],
     ...(a.defensiveBlocks || a.ownShooting.blocked

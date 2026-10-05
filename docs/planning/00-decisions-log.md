@@ -1262,3 +1262,5 @@ Tras revisar el primer diseño, Rubén descarta una sección conjunta de métric
 Rubén simplifica después los encabezados de la tabla principal del PDF: «Bloqueo» y «Penalti». La tabla rival utiliza también «Penalti». El significado y los recuentos se conservan; se actualiza la bitácora para el traslado a la demo.
 
 Rubén solicita registrar superioridad rival y comparar su eficacia con nuestras expulsiones para analizar la defensa en inferioridad. Se mantienen sus cuatro acciones: Gol abre únicamente normal o superioridad, sin asistencia. En Lectura del partido se integra la eficacia de ambos equipos antes de Nuestros lanzamientos, junto al bloque de penaltis. La tabla rival incorpora G. 1+ cuando existe. Se aplica la migración de resultado rival y se corrige el cómputo de tiros acertados de contraataque en rankings y rendimiento personal. Fuentes y traslado a la demo continúan en la bitácora del acta.
+
+Rubén pide eliminar el detalle (x de contra) de la etiqueta Goles en Lectura del partido del PDF. Esa comparación muestra solo Goles y los totales; la tabla principal conserva G. contra. Decisión incorporada a la bitácora para trasladarla después a la demo.

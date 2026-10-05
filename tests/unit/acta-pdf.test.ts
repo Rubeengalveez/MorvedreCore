@@ -188,6 +188,7 @@ describe("createActaPdf", () => {
     const source = await createActaPdf(testRecord(sheet)).text();
     const detailed = [...source.matchAll(/\(((?:\\.|[^\\)])*)\) Tj/g)].map((m) => m[1]).join(" ");
     expect(detailed).toContain("G. contra");
+    expect(detailed).not.toContain("de contra)");
     expect(detailed).not.toContain("T. blq.");
     expect(detailed).toContain("BLOQUEADOS");
     expect(source).toContain("(Bloqueo)");
