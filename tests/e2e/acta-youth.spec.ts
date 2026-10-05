@@ -116,7 +116,7 @@ test("recupera el borrador y anota tras recargar sin red", async ({ page, contex
     await page.getByRole("button", { name: new RegExp(`^${n} Jugador ${n}\\b`) }).click();
   await page.getByRole("button", { name: "Continuar con Rival" }).click();
   for (const n of [13, 8, 9, 10, 11, 12, 14])
-    await page.getByRole("button", { name: new RegExp(`^${n}\\b`) }).click();
+    await page.getByRole("button", { name: String(n), exact: true }).click();
   await page.getByRole("button", { name: "Listo, empezar cuarto" }).click();
   const second = await readLocal(page);
   expect(second.sheet).toMatchObject({ period: 2, phase: "playing", keeper: 13 });
@@ -240,7 +240,7 @@ test("avisa en el cuarto 4 de ambos equipos y permite registrar una incidencia",
   await page.getByRole("button", { name: "Continuar con Rival" }).click();
   await capture(page, "fourth-selection-rival");
   for (const n of [1, 2, 3, 4, 5, 6, 7])
-    await page.getByRole("button", { name: new RegExp(`^${n}\\b`) }).click();
+    await page.getByRole("button", { name: String(n), exact: true }).click();
   await page.getByRole("button", { name: "Listo, empezar cuarto" }).click();
   await expect(page.getByRole("heading", { name: "Revisa la rotación" })).toBeVisible();
   await expect(
@@ -529,12 +529,14 @@ test("ajusta también la lista reducida de sustitutos después de una sanción",
     deleted: false,
   }));
   await openLocal(page, record);
-  await expect(page.getByRole("heading", { name: "Elige quién entra", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Elige un sustituto", exact: true }),
+  ).toBeVisible();
   expect(
     await page.getByRole("dialog").evaluate((node) => node.getBoundingClientRect().height),
-  ).toBeLessThan(650);
+  ).toBeLessThan(page.viewportSize()!.height - 24);
   await capture(page, "substitute-reduced-fit");
-  await page.getByRole("button", { name: "8 Jugador 8", exact: true }).click();
+  await page.getByRole("button", { name: "8 Jugador 8 · Disponible", exact: true }).click();
   await page.getByRole("button", { name: "Confirmar sustitución", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   expect((await readLocal(page)).sheet.participation!.changes).toContainEqual(

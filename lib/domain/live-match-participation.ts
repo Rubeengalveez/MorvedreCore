@@ -68,6 +68,10 @@ export function fieldPlayersNeeded(sheet: LiveSheet, side: Side, period = sheet.
 }
 
 export function currentKeeperKey(sheet: LiveSheet, side: Side, period = sheet.period) {
+  if (side === "us") {
+    const stint = sheet.keeperStints?.findLast((entry) => entry.period === period);
+    if (stint) return stint.playerId ?? participantKey(sheet, side, stint.cap);
+  }
   let key = lineupFor(sheet, side, period)?.keeper;
   for (const change of validChanges(sheet, side, period))
     if (change.outgoing === key) key = change.incoming;
@@ -391,14 +395,31 @@ export function lineupIssues(sheet: LiveSheet, lineup: PeriodLineup) {
   const issues: string[] = [];
   if (
     !keeper ||
-    !keeperOptions(sheet, lineup.side, lineup.period).some((p) => p.key === keeper.key)
+    (!keeperOptions(sheet, lineup.side, lineup.period).some((p) => p.key === keeper.key) &&
+      !(
+        lineup.side === "us" &&
+        sheet.keeperStints?.some(
+          (stint) => stint.period === lineup.period && stint.playerId === keeper.key,
+        )
+      ))
   )
     issues.push("Elige un portero con gorro 1 o 13, o el sustituto registrado.");
   const needed = fieldPlayersNeeded(sheet, lineup.side, lineup.period);
   if (lineup.field.length !== needed) issues.push(`Elige ${needed} jugadores de campo.`);
   if (new Set(keys).size !== keys.length || keys.some((key) => !options.some((p) => p.key === key)))
     issues.push("Revisa los jugadores seleccionados.");
-  if (lineup.field.some((key) => [1, 13].includes(options.find((p) => p.key === key)?.cap ?? 0)))
+  if (
+    lineup.field.some(
+      (key) =>
+        [1, 13].includes(options.find((p) => p.key === key)?.cap ?? 0) &&
+        !(
+          lineup.side === "us" &&
+          sheet.keeperStints?.some(
+            (stint) => stint.period === lineup.period && stint.playerId === key,
+          )
+        ),
+    )
+  )
     issues.push("Los gorros 1 y 13 son porteros.");
   return issues;
 }

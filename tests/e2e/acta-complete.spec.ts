@@ -77,6 +77,9 @@ test("juego habitual, penalti, entrenador y corrección de un cuarto anterior", 
     .getByRole("dialog")
     .getByRole("button", { name: /Morvedre/ })
     .click();
+  await page
+    .getByRole("button", { name: "Registrar tiempo muerto concedido", exact: true })
+    .click();
   await page.getByRole("button", { name: "Terminar cuarto", exact: true }).click();
   await capture(page, "end-quarter-320");
   await page.getByRole("button", { name: "Sí, terminar cuarto 1", exact: true }).click();
@@ -100,7 +103,7 @@ test("juego habitual, penalti, entrenador y corrección de un cuarto anterior", 
     after.events.filter((event) => !event.deleted && ["goal", "assist"].includes(event.kind)),
   ).toHaveLength(0);
   expect(after.events.filter((event) => !event.deleted).map((event) => event.kind)).toEqual([
-    "shot_blocked",
+    "shot_saved",
     "penalty",
     "penalty_missed",
     "timeout",

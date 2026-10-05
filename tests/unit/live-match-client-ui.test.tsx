@@ -413,7 +413,7 @@ describe("interfaz del acta", () => {
     render(<LiveMatchClient />);
     expect(
       screen.getByRole("button", { name: /Entrenador: tiempos muertos Morvedre/ }),
-    ).toHaveTextContent("M 0 · R 0");
+    ).toHaveTextContent("QuedanM2·R2");
     expect(screen.getByRole("button", { name: "Corregir jugadas" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: /Entrenador: tiempos muertos Morvedre/ }));
     expect(screen.getByRole("button", { name: "Tiempo muerto" })).toBeInTheDocument();
@@ -615,6 +615,7 @@ describe("interfaz del acta", () => {
 describe("alineaciones del acta infantil", () => {
   it("distingue las cuatro expulsiones de Benjamín en filas y selectores de ambos equipos", () => {
     const current = youthRecord();
+    current.sheet.participation!.enabled = false;
     current.sheet.category = "benjamin";
     current.sheet.events = (["us", "them"] as const).flatMap((side) =>
       [1, 2, 3, 4].flatMap((count) =>

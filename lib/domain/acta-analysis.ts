@@ -13,12 +13,15 @@ import { keeperQuarters } from "./live-match-keepers";
 
 export function actaPlayerTotals(sheet: LiveSheet, side: Side, cap: number) {
   const totals = playerTotals(sheet, side, cap);
-  const shots = (sheet.shootout?.shots ?? []).filter((shot) => shot.side === side && shot.cap === cap);
+  const shots = (sheet.shootout?.shots ?? []).filter(
+    (shot) => shot.side === side && shot.cap === cap,
+  );
   const goals = shots.filter((shot) => shot.outcome === "goal").length;
   const outside = shots.filter((shot) => shot.outcome === "out" || shot.outcome === "post").length;
-  const received = side === "us"
-    ? (sheet.shootout?.shots ?? []).filter((shot) => shot.side === "them" && shot.keeper === cap)
-    : [];
+  const received =
+    side === "us"
+      ? (sheet.shootout?.shots ?? []).filter((shot) => shot.side === "them" && shot.keeper === cap)
+      : [];
   const saves = received.filter((shot) => shot.outcome === "save").length;
   return {
     ...totals,
@@ -27,13 +30,15 @@ export function actaPlayerTotals(sheet: LiveSheet, side: Side, cap: number) {
     shots: totals.shots + shots.length,
     missedShots: totals.missedShots + shots.length - goals,
     shotsOut: totals.shotsOut + outside,
-    shotsBlocked: totals.shotsBlocked + shots.filter((shot) => shot.outcome === "save").length,
+    shotsSaved: totals.shotsSaved + shots.filter((shot) => shot.outcome === "save").length,
     penaltiesMissed: totals.penaltiesMissed + shots.length - goals,
     saves: totals.saves + saves,
     penaltySaves: totals.penaltySaves + saves,
     conceded: totals.conceded + received.filter((shot) => shot.outcome === "goal").length,
     received: totals.received + received.length,
-    receivedOut: totals.receivedOut + received.filter((shot) => shot.outcome === "out" || shot.outcome === "post").length,
+    receivedOut:
+      totals.receivedOut +
+      received.filter((shot) => shot.outcome === "out" || shot.outcome === "post").length,
   };
 }
 
@@ -45,29 +50,37 @@ export function actaAnalysis(sheet: LiveSheet) {
   const ratio = (value: number, total: number) => (total > 0 ? (value / total) * 100 : null);
   const shooting = (side: Side, cap?: number) => {
     const rows = events.filter((e) => e.side === side && (cap === undefined || e.cap === cap));
-    const penalties = shootoutShots.filter((shot) => shot.side === side && (cap === undefined || shot.cap === cap));
+    const penalties = shootoutShots.filter(
+      (shot) => shot.side === side && (cap === undefined || shot.cap === cap),
+    );
     const scored = penalties.filter((shot) => shot.outcome === "goal").length;
     const goals = rows.filter((e) => isGoal(e.kind)).length + scored;
     const misses = rows.filter((e) => isMissedShot(e.kind)).length + penalties.length - scored;
-    const penaltyGoals = rows.filter(
-      (e) => e.kind === "goal_penalty" || (e.kind === "goal" && e.origin === "penalty_flow"),
-    ).length + scored;
-    const penaltyMisses = rows.filter((e) => e.kind === "penalty_missed").length + penalties.length - scored;
-    const outside = rows.filter(
-      (e) => e.kind === "shot_out" || (e.kind === "penalty_missed" && e.missOutcome === "out"),
-    ).length + penalties.filter((shot) => shot.outcome === "out" || shot.outcome === "post").length;
+    const penaltyGoals =
+      rows.filter(
+        (e) => e.kind === "goal_penalty" || (e.kind === "goal" && e.origin === "penalty_flow"),
+      ).length + scored;
+    const penaltyMisses =
+      rows.filter((e) => e.kind === "penalty_missed").length + penalties.length - scored;
+    const outside =
+      rows.filter(
+        (e) => e.kind === "shot_out" || (e.kind === "penalty_missed" && e.missOutcome === "out"),
+      ).length +
+      penalties.filter((shot) => shot.outcome === "out" || shot.outcome === "post").length;
     const onTarget =
       goals +
       rows.filter(
         (e) =>
           ["shot_saved", "shot_blocked", "shot_corner"].includes(e.kind) ||
           (e.kind === "penalty_missed" && e.missOutcome === "save"),
-      ).length + penalties.filter((shot) => shot.outcome === "save").length;
+      ).length +
+      penalties.filter((shot) => shot.outcome === "save").length;
     return {
       goals,
       misses,
       outside,
       onTarget,
+      blocked: rows.filter((e) => e.kind === "shot_deflected").length,
       unclassified: rows.filter((e) => e.kind === "penalty_missed" && !e.missOutcome).length,
       attempts: goals + misses,
       accuracy: ratio(goals, goals + misses),
@@ -139,7 +152,8 @@ export function actaAnalysis(sheet: LiveSheet) {
     });
   }
   const ownShooting = shooting("us");
-  const rivalMisses = count("us", "save", "penalty_save", "keeper_out") +
+  const rivalMisses =
+    count("us", "save", "penalty_save", "keeper_out", "defensive_block") +
     shootoutShots.filter((shot) => shot.side === "them" && shot.outcome !== "goal").length;
   const rivalScorers = sheet.opponentCaps
     .map((cap) => ({ cap, goals: actaPlayerTotals(sheet, "them", cap).goals }))
@@ -163,12 +177,19 @@ export function actaAnalysis(sheet: LiveSheet) {
     rivalShots: finalScore(sheet, "them") + rivalMisses,
     rivalScorers,
     extraGoals: count("us", "goal_extra"),
+    counterGoals: count("us", "goal_counter"),
+    defensiveBlocks: count("us", "defensive_block"),
     extraOpportunities: count("them", "exclusion"),
     extraRate: ratio(count("us", "goal_extra"), count("them", "exclusion")),
-    unassignedConceded: events.filter(
-      (e) => e.side === "them" && isGoal(e.kind) && !players.some((p) => p.cap === e.keeper),
-    ).length + shootoutShots.filter(
-      (shot) => shot.side === "them" && shot.outcome === "goal" && !players.some((p) => p.cap === shot.keeper),
-    ).length,
+    unassignedConceded:
+      events.filter(
+        (e) => e.side === "them" && isGoal(e.kind) && !players.some((p) => p.cap === e.keeper),
+      ).length +
+      shootoutShots.filter(
+        (shot) =>
+          shot.side === "them" &&
+          shot.outcome === "goal" &&
+          !players.some((p) => p.cap === shot.keeper),
+      ).length,
   };
 }

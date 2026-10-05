@@ -1,5 +1,7 @@
 "use server";
 
+import { validateTimeoutChanges } from "@/lib/domain/live-match-timeouts";
+
 import { reconcileLiveRoster } from "@/lib/domain/live-match-roster";
 import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import { z } from "zod";
@@ -7,7 +9,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getAdminAccess } from "@/server/actions/admin/_helpers";
 import { canUseLiveMatch } from "@/lib/domain/permissions";
-import { defaultPeriods, sheetSchema, type LiveRecord } from "@/lib/domain/live-match";
+import {
+  defaultPeriods,
+  sheetSchema,
+  type LiveRecord,
+  type LiveSheet,
+} from "@/lib/domain/live-match";
 import type { Json } from "@/types/database";
 import { scheduleNotificationPush } from "@/server/notification-push";
 import { revalidatePath } from "next/cache";
@@ -203,6 +210,11 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
     .eq("match_id", data.matchId)
     .maybeSingle();
   if (previous.error) throw new Error("No pudimos comprobar la versión del acta.");
+  if (!data.takeover)
+    validateTimeoutChanges(
+      { ...data.sheet, category: match.teams?.category_code as LiveSheet["category"] },
+      previous.data ? sheetSchema.parse(previous.data.document) : undefined,
+    );
   const alreadySaved =
     previous.data?.mutation_id === data.mutation &&
     previous.data?.device_id === data.device &&
@@ -341,7 +353,7 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
     );
   }
   scheduleNotificationPush();
-    revalidatePath(`/matches/${data.matchId}`);
+  revalidatePath(`/matches/${data.matchId}`);
   revalidatePath(`/admin/matches/${data.matchId}`);
   return { revision, owner: me.id, sheet: canonical };
 }

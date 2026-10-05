@@ -24,6 +24,15 @@ export function emergencyKeeperCaps(sheet: LiveSheet, side: Side, period = sheet
       const incoming = capFor(change.incoming);
       const end = sheet.events.findIndex((e) => e.id === change.eventId);
       const event = sheet.events[end];
+      if (side === "us") {
+        const stint = sheet.keeperStints?.findLast(
+          (entry) =>
+            entry.period === quarter &&
+            (entry.afterEventId === null ||
+              sheet.events.findIndex((e) => e.id === entry.afterEventId) < end),
+        );
+        if (stint) keeper = stint.playerId ?? sheet.players.find((p) => p.cap === stint.cap)?.id;
+      }
       if (
         !event ||
         event.deleted ||

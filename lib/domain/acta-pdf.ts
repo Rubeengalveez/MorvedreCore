@@ -231,17 +231,21 @@ export function createActaPdf(record: LiveRecord): File {
     a.events.some(
       (e) => e.kind === "goal_penalty" || (e.kind === "goal" && e.origin === "penalty_flow"),
     );
+  const counterGoalColumn = a.counterGoals > 0;
+  const defensiveBlockColumn = a.defensiveBlocks > 0;
   const ownHead = [
     "Gorro",
     "Jugador",
     "Goles",
+    "G. 1+",
+    ...(counterGoalColumn ? ["G. contra"] : []),
+    ...(penaltyGoalColumn ? ["G. pen."] : []),
     "Tiros",
-    "Asistencias",
-    "Expulsiones",
-    "Penaltis",
-    "Goles 1+",
-    ...(penaltyGoalColumn ? ["Goles de penalti"] : []),
-    ...(ownCards ? ["Tarjetas"] : []),
+    "Asist.",
+    ...(defensiveBlockColumn ? ["Blq. def."] : []),
+    "Exp.",
+    "Pen. com.",
+    ...(ownCards ? ["Tarj."] : []),
   ];
   const rivalHead = [
     "Gorro",
@@ -281,12 +285,14 @@ export function createActaPdf(record: LiveRecord): File {
           capCell(p.cap),
           p.name,
           String(p.totals.goals),
+          String(p.totals.goalsExtra),
+          ...(counterGoalColumn ? [String(p.totals.goalsCounter)] : []),
+          ...(penaltyGoalColumn ? [String(p.shooting.penaltyGoals)] : []),
           String(p.totals.shots),
           String(p.totals.assists),
+          ...(defensiveBlockColumn ? [String(p.totals.defensiveBlocks)] : []),
           String(p.expulsions),
           String(p.totals.penaltiesCommitted),
-          String(p.totals.goalsExtra),
-          ...(penaltyGoalColumn ? [String(p.shooting.penaltyGoals)] : []),
           ...(ownCards ? [cards(p.totals.yellow, p.totals.red)] : []),
         ]
       : ownHead.map(() => "");
@@ -341,15 +347,7 @@ export function createActaPdf(record: LiveRecord): File {
     String(p.totals.conceded),
     String(p.quarters.length),
   ]);
-  if (keeperRows.length < 2)
-    keeperRows.push([
-      "-",
-      keeperRows.length ? "Sin segundo portero registrado" : "Sin portero registrado",
-      "-",
-      "-",
-      "-",
-      "-",
-    ]);
+  if (!keeperRows.length) keeperRows.push(["-", "Sin portero registrado", "-", "-", "-", "-"]);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   const kh = keeperRows.map((row) =>
@@ -453,9 +451,18 @@ export function createActaPdf(record: LiveRecord): File {
 
   newPage("Lectura del partido");
   const comparisons: [string, number, number][] = [
-    ["Goles", totalUs, totalThem],
+    [a.counterGoals ? `Goles (${a.counterGoals} de contra)` : "Goles", totalUs, totalThem],
     ["Tiros totales", a.ownShooting.attempts + a.baseUs, a.rivalShots],
     ["Tiros fallados", a.ownShooting.misses, a.rivalMisses],
+    ...(a.defensiveBlocks || a.ownShooting.blocked
+      ? [
+          ["Bloqueos defensivos", a.defensiveBlocks, a.ownShooting.blocked] as [
+            string,
+            number,
+            number,
+          ],
+        ]
+      : []),
     ["Expulsiones", a.count("us", "exclusion"), a.count("them", "exclusion")],
     ["Penaltis cometidos", a.count("us", "penalty"), a.count("them", "penalty")],
     ...(a.count("us", "timeout") + a.count("them", "timeout") > 0
@@ -550,15 +557,17 @@ export function createActaPdf(record: LiveRecord): File {
   const shotRows: [string, number][] = [
     ["ACIERTO DE TIRO", shots.goals],
     ["A PORTERÍA", shots.onTarget],
-    ["FUERA O PALO", shots.outside],
+    ["FUERA / PALO", shots.outside],
+    ...(shots.blocked ? [["BLOQUEADOS", shots.blocked] as [string, number]] : []),
   ];
+  const shotCardWidth = (182 - (shotRows.length - 1) * 4) / shotRows.length;
   shotRows.forEach(([label, value], i) => {
-    const x = 14 + i * 62;
+    const x = 14 + i * (shotCardWidth + 4);
     const sy = y + 11;
     doc.setDrawColor(...LINE);
     doc.setLineWidth(0.3);
-    doc.rect(x, sy, 58, 37);
-    text(label, x + 4, sy + 7, 10, true);
+    doc.rect(x, sy, shotCardWidth, 37);
+    text(label, x + 4, sy + 7, shots.blocked ? 8.5 : 10, true);
     text(
       pct(shots.attempts ? (value / shots.attempts) * 100 : null),
       x + 4,
@@ -568,13 +577,19 @@ export function createActaPdf(record: LiveRecord): File {
       BLUE,
     );
     text(
-      i === 0 ? `${value} goles de ${shots.attempts} tiros` : `${value} de ${shots.attempts} tiros`,
+      shots.blocked
+        ? i === 0
+          ? `${value} goles / ${shots.attempts} tiros`
+          : `${value} / ${shots.attempts} tiros`
+        : i === 0
+          ? `${value} goles de ${shots.attempts} tiros`
+          : `${value} de ${shots.attempts} tiros`,
       x + 4,
       sy + 27,
-      11,
+      shots.blocked ? (i === 0 ? 9 : 10) : 11,
       true,
     );
-    outlinedBar(x + 4, sy + 31, 50, value, shots.attempts);
+    outlinedBar(x + 4, sy + 31, shotCardWidth - 8, value, shots.attempts);
   });
   if (shots.unclassified) {
     fill(14, y + 49, 182, 8, PALE);
@@ -682,7 +697,7 @@ export function createActaPdf(record: LiveRecord): File {
   participants.forEach((p, i) => {
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
-    const h = Math.max(7.2, (doc.splitTextToSize(p.name, 63) as string[]).length * 3.51 + 3);
+    const h = Math.max(7.2, (doc.splitTextToSize(p.name, iw[1] - 3) as string[]).length * 3.51 + 3);
     if (y + h > bottom()) {
       y = newPage("Aportación individual") - 5;
       y = tableRow(ih, iw, 14, y, { header: true, height: 10, size: 8.5 });
@@ -855,6 +870,9 @@ export function createActaPdf(record: LiveRecord): File {
   const labels: Partial<Record<ActionKind, string>> = {
     goal: "Gol",
     goal_extra: "Gol de 1+",
+    goal_counter: "Gol de contraataque",
+    shot_deflected: "Tiro bloqueado",
+    defensive_block: "Bloqueo defensivo",
     goal_penalty: "Gol de penalti",
     exclusion: "Expulsión",
     penalty: "Penalti cometido",

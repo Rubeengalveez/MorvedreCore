@@ -28,6 +28,8 @@ import {
   type Participation,
 } from "@/lib/domain/live-match-rules";
 import { validCapNumber } from "@/lib/domain/cap-number";
+import { timeoutStatus, timeoutRegistrationError } from "@/lib/domain/live-match-timeouts";
+import { keeperSwapCandidates, swapKeeperCap } from "@/lib/domain/live-match-keeper-swap";
 import { orderedScore } from "@/lib/domain/live-match-score";
 
 import { useLiveMatch } from "./use-live-match";
@@ -70,6 +72,8 @@ type Panel =
   | "player-stats"
   | "goal"
   | "shot"
+  | "other-actions"
+  | "timeout-confirm"
   | "miss-correction"
   | "sanction"
   | "bench"
@@ -135,6 +139,10 @@ export function LiveMatchClient() {
     Participation["changes"][number] | null
   >(null);
   const [keeperParticipationOpen, setKeeperParticipationOpen] = useState(false);
+  const [keeperSwapOpen, setKeeperSwapOpen] = useState(false);
+  const [keeperSwapId, setKeeperSwapId] = useState<string | null>(null);
+  const [keeperSwapError, setKeeperSwapError] = useState("");
+  const [timeoutError, setTimeoutError] = useState("");
   const backActionRef = useRef<() => void>(() => {});
   const leaveActa = useActaBackGuard(() => backActionRef.current(), Boolean(record));
 
@@ -450,6 +458,7 @@ export function LiveMatchClient() {
         "goal",
         "shot",
         "sanction",
+        "other-actions",
         "keeper-action",
         "assist-relation",
         "penalty-relation",
@@ -482,6 +491,10 @@ export function LiveMatchClient() {
     }
     if (panel === "bench-side") {
       setPanel("bench");
+      return;
+    }
+    if (panel === "timeout-confirm") {
+      setPanel("bench-side");
       return;
     }
     if (panel === "penalty-result") {
@@ -552,6 +565,11 @@ export function LiveMatchClient() {
   }
 
   backActionRef.current = () => {
+    if (keeperSwapOpen) {
+      if (keeperSwapId) setKeeperSwapId(null);
+      else setKeeperSwapOpen(false);
+      return;
+    }
     if (
       lineupRequest ||
       participationReview ||
@@ -623,6 +641,13 @@ export function LiveMatchClient() {
 
   async function add(kind: ActionKind, eventSide: Side = side, missOutcome?: "out" | "save") {
     if (!s || (!playing && !editing)) return;
+    if (kind === "timeout") {
+      const message = timeoutRegistrationError(s, eventSide, editing?.id);
+      if (message) {
+        setTimeoutError(message);
+        return;
+      }
+    }
     if (
       !acceptAction(
         `${editing?.id ?? "new"}:${s.period}:${eventSide}:${cap}:${kind}:${missOutcome ?? ""}`,
@@ -674,7 +699,7 @@ export function LiveMatchClient() {
       : undefined;
     if (
       linkedAssist &&
-      (!["goal", "goal_extra"].includes(kind) ||
+      (!["goal", "goal_extra", "goal_counter"].includes(kind) ||
         linkedAssist.cap === event.cap ||
         linkedAssist.period !== event.period)
     ) {
@@ -747,7 +772,11 @@ export function LiveMatchClient() {
       }
     }
 
-    if (!editing && eventSide === "us" && (kind === "goal" || kind === "goal_extra")) {
+    if (
+      !editing &&
+      eventSide === "us" &&
+      (kind === "goal" || kind === "goal_extra" || kind === "goal_counter")
+    ) {
       const next = { ...s, events, pending: { kind: "assist" as const, goal_event_id: event.id } };
       if (await patch(next, false)) {
         setNotice(`${actionLabels[kind]} registrado`);
@@ -1151,6 +1180,8 @@ export function LiveMatchClient() {
           ? "Seleccionar jugador · Morvedre"
           : "Seleccionar gorro · Rival",
     bench: "Entrenador",
+    "other-actions": "Asistencia y defensa",
+    "timeout-confirm": `${side === "us" ? "Morvedre" : "Rival"} · Tiempo muerto`,
     "bench-side":
       benchKind === "timeout" ? "¿Quién pide tiempo muerto?" : "¿Qué entrenador recibe la tarjeta?",
     "bench-actions": `${side === "us" ? "Morvedre" : "Rival"} · Entrenador`,
@@ -1222,7 +1253,9 @@ export function LiveMatchClient() {
   const isKeeperCap = side === "us" && (cap === 1 || cap === 13 || cap === s.keeper);
   const showPlayerBanner =
     cap !== null &&
-    ["actions", "goal", "shot", "sanction", "miss-correction"].includes(activePanel);
+    ["actions", "goal", "shot", "sanction", "miss-correction", "other-actions"].includes(
+      activePanel,
+    );
 
   const panelHeightClass = (() => {
     if (activePanel === "keeper") {
@@ -1277,6 +1310,89 @@ export function LiveMatchClient() {
 
   return (
     <div className={styles.viewport}>
+      <ActaSelectionSheet
+        open={keeperSwapOpen}
+        icon="warning"
+        onOpenChange={setKeeperSwapOpen}
+        context={`Morvedre · Cuarto ${s.period}`}
+        title={keeperSwapId ? "Confirmar intercambio de gorros" : "Cambiar gorro con un jugador"}
+        pending={busy}
+        error={keeperSwapError}
+        body={
+          keeperSwapId ? (
+            (() => {
+              const incoming = s.players.find((player) => player.id === keeperSwapId);
+              const outgoing = s.players.find((player) => player.cap === s.keeper);
+              return (
+                <div className="space-y-3 text-base text-slate-800">
+                  <p className="rounded-xl bg-blue-50 p-3 font-bold">
+                    {incoming?.name} pasa de gorro {incoming?.cap} a {outgoing?.cap} y será portero.{" "}
+                    {outgoing?.name} llevará el gorro {incoming?.cap} y jugará de campo.
+                  </p>
+                  <p>
+                    Los dos siguen jugando este cuarto. Cada uno conserva sus goles, sanciones y
+                    acciones anteriores. Las próximas acciones de portería corresponden al nuevo
+                    portero.
+                  </p>
+                  <p>Registra el intercambio autorizado por el árbitro y comunicado a la mesa.</p>
+                  {s.participation?.fixedKeepers.us && (
+                    <p className="rounded-xl bg-amber-50 p-3 font-semibold">
+                      También cambias la elección de portero único para los próximos cuartos.
+                    </p>
+                  )}
+                </div>
+              );
+            })()
+          ) : (
+            <div className="space-y-3">
+              <p className="text-base font-semibold">
+                Elige quién intercambia su gorro con el portero. En los cuatro primeros cuartos solo
+                aparecen jugadores que ya están en el agua.
+              </p>
+              {keeperSwapCandidates(s).map((player) => (
+                <button
+                  key={player.id}
+                  type="button"
+                  disabled={!enabled}
+                  onClick={() => setKeeperSwapId(player.id)}
+                  className="border-pool-deep text-pool-deep min-h-14 w-full rounded-xl border-2 bg-white px-3 text-left font-bold"
+                >
+                  Gorro {player.cap} · {player.name}
+                </button>
+              ))}
+            </div>
+          )
+        }
+        actions={
+          keeperSwapId
+            ? [
+                {
+                  label: "Confirmar intercambio",
+                  tone: "primary",
+                  onClick: async () => {
+                    try {
+                      if (await change(swapKeeperCap(s, keeperSwapId), { rosterEdit: true })) {
+                        setKeeperSwapOpen(false);
+                        closePanel();
+                        setNotice("Gorros intercambiados · Nuevo portero registrado");
+                      }
+                    } catch (error) {
+                      setKeeperSwapError(
+                        error instanceof Error ? error.message : "No pudimos cambiar los gorros.",
+                      );
+                    }
+                  },
+                },
+                {
+                  label: "Volver a elegir",
+                  tone: "secondary",
+                  onClick: () => setKeeperSwapId(null),
+                },
+                { label: "Cancelar", tone: "secondary", onClick: () => setKeeperSwapOpen(false) },
+              ]
+            : [{ label: "Cancelar", tone: "secondary", onClick: () => setKeeperSwapOpen(false) }]
+        }
+      />
       <main
         id="main-content"
         className={`${styles.root} mx-auto flex h-dvh max-w-3xl flex-col overflow-hidden bg-[#f4f8fb] text-[#062048]`}
@@ -1851,11 +1967,20 @@ export function LiveMatchClient() {
                       ["Goles", totals.goals],
                       ...(side === "us"
                         ? ([
+                            ...(totals.goalsCounter > 0
+                              ? [["Goles de contraataque", totals.goalsCounter]]
+                              : []),
                             ["Asistencias", totals.assists],
                             ["Tiros totales", totals.shots],
                             ...(totals.shotsOut > 0 ? [["Fuera / palo", totals.shotsOut]] : []),
+                            ...(totals.shotsSaved > 0
+                              ? [["Parados por el portero rival", totals.shotsSaved]]
+                              : []),
                             ...(totals.shotsBlocked > 0
-                              ? [["Parados por el portero rival", totals.shotsBlocked]]
+                              ? [["Tiros bloqueados", totals.shotsBlocked]]
+                              : []),
+                            ...(totals.defensiveBlocks > 0
+                              ? [["Bloqueos defensivos", totals.defensiveBlocks]]
                               : []),
                             ...(totals.penaltiesMissed > 0
                               ? [["Penaltis fallados", totals.penaltiesMissed]]
@@ -1939,7 +2064,11 @@ export function LiveMatchClient() {
                             button("Tiro", () => setPanel("shot"), styles.actionShot)}
 
                           {side === "us" &&
-                            button("Asistencia", () => void add("assist"), styles.actionAssist)}
+                            button(
+                              "Otras acciones · Asistencia / bloqueo",
+                              () => setPanel("other-actions"),
+                              styles.actionAssist,
+                            )}
 
                           {button(
                             side === "us" ? "Expulsión / tarjeta" : "Expulsión",
@@ -1966,6 +2095,16 @@ export function LiveMatchClient() {
                         )}
 
                         {side === "us" &&
+                          cap === s.keeper &&
+                          !editing &&
+                          keeperSwapCandidates(s).length > 0 &&
+                          button("Cambiar gorro con un jugador", () => {
+                            setKeeperSwapId(null);
+                            setKeeperSwapError("");
+                            setKeeperSwapOpen(true);
+                          })}
+
+                        {side === "us" &&
                           !editing &&
                           button("Ver estadísticas del jugador", () => setPanel("player-stats"))}
                         {editing && button("Cambiar jugador", () => setPanel("players"))}
@@ -1983,25 +2122,45 @@ export function LiveMatchClient() {
                       styles.actionGoalExtra,
                     )}
                     {button(
-                      actionLabels["goal_penalty"],
-                      () => void add("goal_penalty"),
+                      actionLabels["goal_counter"],
+                      () => void add("goal_counter"),
                       styles.actionGoalPenalty,
                     )}
                   </div>
                 )}
 
                 {activePanel === "shot" && (
-                  <div className={styles.actionGrid}>
+                  <div className={styles.actionList}>
                     {button(
                       actionLabels["shot_out"],
                       () => void add("shot_out"),
                       styles.actionShotOut,
                     )}
                     {button(
-                      actionLabels["shot_blocked"],
-                      () => void add("shot_blocked"),
+                      actionLabels["shot_saved"],
+                      () => void add("shot_saved"),
                       styles.actionShotBlocked,
                     )}
+                    {button(
+                      actionLabels["shot_deflected"],
+                      () => void add("shot_deflected"),
+                      styles.actionShotOut,
+                    )}
+                  </div>
+                )}
+
+                {activePanel === "other-actions" && (
+                  <div className={styles.actionList}>
+                    {button("Asistencia", () => void add("assist"), styles.actionAssist)}
+                    {button(
+                      "Bloqueo defensivo",
+                      () => void add("defensive_block"),
+                      styles.actionShotBlocked,
+                    )}
+                    <p className="text-base font-semibold text-slate-700">
+                      Este jugador bloquea con el brazo un tiro rival antes de que llegue a nuestro
+                      portero.
+                    </p>
                   </div>
                 )}
 
@@ -2047,6 +2206,7 @@ export function LiveMatchClient() {
                       "Tiempo muerto",
                       () => {
                         setBenchKind("timeout");
+                        setTimeoutError("");
                         setPanel("bench-side");
                       },
                       styles.actionShot,
@@ -2059,15 +2219,27 @@ export function LiveMatchClient() {
                       },
                       styles.actionSanction,
                     )}
-                    <p className="text-center text-base font-semibold text-slate-700">
-                      Tiempos pedidos · Morvedre {timeoutCount(s, "us")} · Rival{" "}
-                      {timeoutCount(s, "them")}
-                    </p>
+                    <div className="grid gap-2">
+                      {(["us", "them"] as const).map((team) => {
+                        const state = timeoutStatus(s, team);
+                        return (
+                          <p
+                            key={team}
+                            className={`rounded-xl px-3 py-3 text-base font-bold ${state.allowed ? "bg-blue-50 text-blue-950" : "bg-red-50 text-red-900"}`}
+                          >
+                            {team === "us" ? "Morvedre" : "Rival"}:{" "}
+                            {state.limit
+                              ? `${state.used} de ${state.limit} pedidos · ${state.remaining ? `${state.remaining} disponibles` : "SIN TIEMPOS"}`
+                              : "No permitidos en esta categoría"}
+                          </p>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
 
                 {activePanel === "bench-side" && (
-                  <div className={styles.actionGrid}>
+                  <div className={styles.actionList}>
                     {(["us", "them"] as const).map((team) => (
                       <button
                         key={team}
@@ -2080,8 +2252,11 @@ export function LiveMatchClient() {
                         }
                         onClick={() => {
                           setSide(team);
-                          if (benchKind === "timeout") void add("timeout", team);
-                          else setPanel("bench-actions");
+                          if (benchKind === "timeout") {
+                            const message = timeoutRegistrationError(s, team);
+                            setTimeoutError(message);
+                            if (!message) setPanel("timeout-confirm");
+                          } else setPanel("bench-actions");
                         }}
                       >
                         <span>
@@ -2090,17 +2265,57 @@ export function LiveMatchClient() {
                           </strong>
                           {benchKind === "timeout" && (
                             <span className="mt-1 block text-sm">
-                              {timeoutCount(s, team)} pedidos
+                              {timeoutStatus(s, team).used}/{timeoutStatus(s, team).limit} pedidos ·{" "}
+                              {timeoutStatus(s, team).remaining
+                                ? `${timeoutStatus(s, team).remaining} disponibles`
+                                : "SIN TIEMPOS"}
                             </span>
                           )}
                         </span>
                       </button>
                     ))}
+                    {timeoutError && (
+                      <p
+                        role="alert"
+                        className="rounded-xl bg-red-50 p-3 text-base font-bold text-red-900"
+                      >
+                        {timeoutError}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {activePanel === "timeout-confirm" && (
+                  <div className={styles.actionList}>
+                    <p className="rounded-xl bg-blue-50 p-3 text-lg font-bold text-blue-950">
+                      {timeoutStatus(s, side, editing?.id).remaining} disponibles de{" "}
+                      {timeoutStatus(s, side, editing?.id).limit} por partido.
+                    </p>
+                    <p className="text-base font-semibold text-slate-700">
+                      Regístralo si el árbitro lo ha concedido. El equipo debe tener la posesión del
+                      balón o corresponderle el saque; también puede pedirlo antes de un penalti. No
+                      se permite entre cuartos ni durante VAR.
+                    </p>
+                    {button(
+                      "Registrar tiempo muerto concedido",
+                      () => void add("timeout"),
+                      styles.actionShot,
+                    )}
+                    {timeoutError && (
+                      <p role="alert" className="rounded-xl bg-red-50 p-3 font-bold text-red-900">
+                        {timeoutError}
+                      </p>
+                    )}
                   </div>
                 )}
 
                 {activePanel === "bench-actions" && (
                   <div className={styles.actionList}>
+                    {benchKind === "timeout" && timeoutError && (
+                      <p role="alert" className="rounded-xl bg-red-50 p-3 font-bold text-red-900">
+                        {timeoutError}
+                      </p>
+                    )}
                     {(benchKind === "timeout"
                       ? (["timeout"] as const)
                       : (["coach_yellow", "coach_red"] as const)
@@ -2396,7 +2611,7 @@ export function LiveMatchClient() {
                             .filter(
                               (goal) =>
                                 goal.side === "us" &&
-                                ["goal", "goal_extra"].includes(goal.kind) &&
+                                ["goal", "goal_extra", "goal_counter"].includes(goal.kind) &&
                                 goal.cap !== editing.cap &&
                                 !active.some(
                                   (candidate) =>
@@ -2422,7 +2637,7 @@ export function LiveMatchClient() {
                           {!active.some(
                             (goal) =>
                               goal.side === "us" &&
-                              ["goal", "goal_extra"].includes(goal.kind) &&
+                              ["goal", "goal_extra", "goal_counter"].includes(goal.kind) &&
                               goal.cap !== editing.cap &&
                               !active.some(
                                 (candidate) =>
@@ -2484,14 +2699,18 @@ export function LiveMatchClient() {
                             ?.name ?? "Jugador de Morvedre")}
                       </strong>
                       <p>
-                        {["goal", "goal_extra"].includes(assistRelation.corrected.kind)
+                        {["goal", "goal_extra", "goal_counter"].includes(
+                          assistRelation.corrected.kind,
+                        )
                           ? assistRelation.corrected.cap === assistRelation.assist.cap
                             ? "El jugador que marca no puede darse una asistencia a sí mismo."
                             : "Al corregir el gol, la asistencia debe seguir en el mismo cuarto."
                           : "Este gol cambia de tipo y ya no admite una asistencia vinculada."}
                       </p>
                     </div>
-                    {["goal", "goal_extra"].includes(assistRelation.corrected.kind) &&
+                    {["goal", "goal_extra", "goal_counter"].includes(
+                      assistRelation.corrected.kind,
+                    ) &&
                       assistRelation.corrected.cap !== assistRelation.assist.cap && (
                         <button
                           type="button"
@@ -2502,7 +2721,9 @@ export function LiveMatchClient() {
                           Mantener asistencia y guardar
                         </button>
                       )}
-                    {["goal", "goal_extra"].includes(assistRelation.corrected.kind) && (
+                    {["goal", "goal_extra", "goal_counter"].includes(
+                      assistRelation.corrected.kind,
+                    ) && (
                       <details className={styles.assistRelationChoices}>
                         <summary>Elegir otro asistente</summary>
                         <div className={styles.assistRelationPlayerList}>
@@ -2538,7 +2759,9 @@ export function LiveMatchClient() {
                       onClick={() => void saveAssistRelation("remove")}
                     >
                       <Trash2 size={18} aria-hidden="true" />
-                      {["goal", "goal_extra"].includes(assistRelation.corrected.kind)
+                      {["goal", "goal_extra", "goal_counter"].includes(
+                        assistRelation.corrected.kind,
+                      )
                         ? "Guardar gol sin asistencia"
                         : "Quitar asistencia y guardar"}
                     </button>
@@ -3552,7 +3775,11 @@ export function LiveMatchClient() {
               tone: "danger",
               onClick: () => {
                 setExitOpen(false);
-                leaveActa(new URLSearchParams(window.location.search).get("from") === "dashboard" ? "/dashboard" : `/matches/${record.matchId}`);
+                leaveActa(
+                  new URLSearchParams(window.location.search).get("from") === "dashboard"
+                    ? "/dashboard"
+                    : `/matches/${record.matchId}`,
+                );
               },
             },
           ]}

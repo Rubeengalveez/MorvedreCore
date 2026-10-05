@@ -18,6 +18,7 @@ export function matchRules(category?: string) {
     exclusionLimit: category === "benjamin" || category === "escuela" ? 4 : 3,
     singleKeeper: category === "alevin" || category === "infantil",
     compulsoryReplacement: youth,
+    timeoutLimit: ["benjamin", "alevin", "escuela"].includes(category ?? "") ? 0 : 2,
     periods: youth ? 6 : 4,
     minimumPlayers:
       category === "infantil" ? 9 : ["benjamin", "alevin"].includes(category ?? "") ? 8 : 1,

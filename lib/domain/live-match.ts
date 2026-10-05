@@ -10,12 +10,15 @@ import {
 export const actionLabels = {
   goal: "Gol normal",
   goal_extra: "Gol en superioridad · 1+",
+  goal_counter: "Gol de contraataque",
   goal_penalty: "Gol de penalti",
   assist: "Asistencia",
   shot_out: "Tiro fuera / palo",
   shot_saved: "Parada del portero rival",
   shot_blocked: "Parada del portero rival",
   shot_corner: "Parada del portero rival",
+  shot_deflected: "Tiro bloqueado",
+  defensive_block: "Bloqueo defensivo",
   penalty_missed: "Penalti fallado",
   exclusion: "Expulsión",
   penalty: "Penalti cometido",
@@ -346,7 +349,7 @@ export const sheetSchema = z
           fail("Hay una jugada vinculada que ya no existe.");
         } else if (event.kind === "assist") {
           if (
-            !["goal", "goal_extra"].includes(related.kind) ||
+            !["goal", "goal_extra", "goal_counter"].includes(related.kind) ||
             related.side !== "us" ||
             related.cap === event.cap ||
             related.period !== event.period
@@ -453,13 +456,14 @@ export interface LiveRecord {
 }
 
 export const isGoal = (kind: ActionKind) =>
-  kind === "goal" || kind === "goal_extra" || kind === "goal_penalty";
+  kind === "goal" || kind === "goal_extra" || kind === "goal_penalty" || kind === "goal_counter";
 
 export const isMissedShot = (kind: ActionKind) =>
   kind === "shot_out" ||
   kind === "shot_saved" ||
   kind === "shot_blocked" ||
   kind === "shot_corner" ||
+  kind === "shot_deflected" ||
   kind === "penalty_missed";
 
 export function activeEvents(sheet: LiveSheet): MatchEvent[] {
@@ -500,6 +504,8 @@ export function playerTotals(sheet: LiveSheet, side: Side, cap: number) {
     goals,
     goalsNormal: typedGoals.filter((event) => event.kind === "goal").length,
     goalsExtra: typedGoals.filter((event) => event.kind === "goal_extra").length,
+    goalsCounter: typedGoals.filter((event) => event.kind === "goal_counter").length,
+    defensiveBlocks: events.filter((event) => event.kind === "defensive_block").length,
     goalsPenalty: typedGoals.filter((event) => event.kind === "goal_penalty").length,
     assists: events.filter((event) => event.kind === "assist").length,
     exclusions,
@@ -518,7 +524,8 @@ export function playerTotals(sheet: LiveSheet, side: Side, cap: number) {
         event.kind === "shot_out" ||
         (event.kind === "penalty_missed" && event.missOutcome === "out"),
     ).length,
-    shotsBlocked: events.filter(
+    shotsBlocked: events.filter((event) => event.kind === "shot_deflected").length,
+    shotsSaved: events.filter(
       (event) =>
         event.kind === "shot_blocked" ||
         event.kind === "shot_saved" ||

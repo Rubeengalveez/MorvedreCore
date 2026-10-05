@@ -10,6 +10,7 @@ import {
 } from "@/lib/pwa/live-match-sync";
 import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import type { LiveSheet } from "@/lib/domain/live-match";
+import { validateTimeoutChanges } from "@/lib/domain/live-match-timeouts";
 import { prepareParticipation } from "@/lib/domain/live-match-participation";
 import type { LineupDraft } from "@/lib/domain/live-match-rules";
 import {
@@ -241,6 +242,7 @@ export function useLiveMatch() {
     localWriting.current = true;
     setBusy(true);
     try {
+      validateTimeoutChanges(sheet, current.current?.sheet);
       const parsed = identifyLiveSheet(sheet, current.current?.sheet);
       await writeQueue.current;
       const latest = current.current!;

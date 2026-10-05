@@ -103,7 +103,18 @@ export function ActaLineupSheet({
   const side = draft.step;
   const selection = draft[side];
   const options = participants(sheet, side).sort((a, b) => a.cap - b.cap);
-  const keepers = keeperOptions(sheet, side, request.period);
+  const historicalKeeper =
+    request.mode === "correct" && side === "us"
+      ? sheet.keeperStints?.find((stint) => stint.period === request.period)?.playerId
+      : undefined;
+  const keepers = historicalKeeper
+    ? options.filter(
+        (p) =>
+          p.key === historicalKeeper ||
+          (keeperOptions(sheet, side, request.period).some((k) => k.key === p.key) &&
+            !selection.field.includes(p.key)),
+      )
+    : keeperOptions(sheet, side, request.period);
   const rules = {
     ...matchRules(sheet.category),
     fieldPlayers: fieldPlayersNeeded(sheet, side, request.period),
@@ -615,7 +626,12 @@ export function ActaLineupSheet({
             className={side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2"}
           >
             {options
-              .filter((p) => ![1, 13].includes(p.cap) && p.key !== selection.keeper)
+              .filter(
+                (p) =>
+                  (!keepers.some((keeper) => keeper.key === p.key) ||
+                    selection.field.includes(p.key)) &&
+                  p.key !== selection.keeper,
+              )
               .map((p) => playerButton(p, false))}
           </div>
         </section>

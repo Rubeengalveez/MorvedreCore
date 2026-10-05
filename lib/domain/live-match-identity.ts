@@ -18,8 +18,11 @@ export function identifyLiveSheet(sheet: LiveSheet, previous?: LiveSheet): LiveS
           )?.cap ?? null),
     events: sheet.events.map((event) => {
       const old = oldEvents.get(event.id);
-      const playerChanged = old && old.cap !== event.cap;
-      const keeperChanged = old && old.keeper !== event.keeper;
+      const playerChanged =
+        old && (old.playerId ? old.playerId !== byCap.get(event.cap!) : old.cap !== event.cap);
+      const keeperChanged =
+        old &&
+        (old.keeperId ? old.keeperId !== byCap.get(event.keeper!) : old.keeper !== event.keeper);
       return {
         ...event,
         playerId:
@@ -47,8 +50,8 @@ export function identifyLiveSheet(sheet: LiveSheet, previous?: LiveSheet): LiveS
     })),
     keeperStints: sheet.keeperStints?.map((stint, index) => {
       const changed =
-        previous?.keeperStints?.[index]?.cap !== undefined &&
-        previous.keeperStints[index].cap !== stint.cap;
+        previous?.keeperStints?.[index]?.playerId !== undefined &&
+        previous.keeperStints[index].playerId !== byCap.get(stint.cap);
       return {
         ...stint,
         playerId: changed || !stint.playerId ? byCap.get(stint.cap) : stint.playerId,
@@ -60,8 +63,13 @@ export function identifyLiveSheet(sheet: LiveSheet, previous?: LiveSheet): LiveS
           ...sheet.shootout,
           shots: sheet.shootout.shots.map((shot) => {
             const old = oldShots.get(shot.id);
-            const playerChanged = old && old.cap !== shot.cap;
-            const keeperChanged = old && old.keeper !== shot.keeper;
+            const playerChanged =
+              old && (old.playerId ? old.playerId !== byCap.get(shot.cap) : old.cap !== shot.cap);
+            const keeperChanged =
+              old &&
+              (old.keeperId
+                ? old.keeperId !== byCap.get(shot.keeper!)
+                : old.keeper !== shot.keeper);
             return {
               ...shot,
               playerId:

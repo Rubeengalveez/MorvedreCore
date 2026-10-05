@@ -120,6 +120,61 @@ function testRecord(sheet = testSheet()): LiveRecord {
 }
 
 describe("createActaPdf", () => {
+  it("integra métricas nuevas solo cuando existen y no añade un segundo portero vacío", async () => {
+    const sheet = testSheet();
+    sheet.keeper = 1;
+    sheet.keeperStints = [{ period: 1, cap: 1, afterEventId: null }];
+    sheet.events = sheet.events
+      .filter((e) => !["save", "penalty_save", "keeper_out"].includes(e.kind) || e.cap === 1)
+      .map((e) => ({ ...e, keeper: e.keeper === 13 ? 1 : e.keeper }));
+    const plain = await createActaPdf(testRecord(sheet)).text();
+    expect(plain).not.toContain("Sin segundo portero registrado");
+    expect(plain).not.toContain("G. contra");
+    expect(plain).not.toContain("T. blq.");
+    expect(plain).not.toContain("Blq. def.");
+    expect(plain).not.toContain("Bloqueos defensivos");
+    sheet.events.push(
+      ...(["goal_counter", "shot_deflected", "defensive_block"] as const).map((kind, i) => ({
+        id: `feedback-${i}`,
+        kind,
+        side: "us" as const,
+        cap: 4,
+        period: 1,
+        keeper: null,
+        deleted: false,
+      })),
+    );
+    const source = await createActaPdf(testRecord(sheet)).text();
+    const detailed = [...source.matchAll(/\(((?:\\.|[^\\)])*)\) Tj/g)].map((m) => m[1]).join(" ");
+    expect(detailed).toContain("G. contra");
+    expect(detailed).not.toContain("T. blq.");
+    expect(detailed).toContain("BLOQUEADOS");
+    expect(detailed).toContain("Blq. def.");
+    expect(detailed).toContain("Bloqueos defensivos");
+    const rosterColumns = [
+      "Goles",
+      "G. 1+",
+      "G. contra",
+      "G. pen.",
+      "Tiros",
+      "Asist.",
+      "Blq. def.",
+      "Exp.",
+      "Pen. com.",
+    ];
+    const positions = rosterColumns.map((label) => detailed.indexOf(label));
+    expect(positions.every((position) => position >= 0)).toBe(true);
+    expect(positions).toEqual([...positions].sort((x, y) => x - y));
+    const contribution = detailed.slice(
+      detailed.indexOf("Aportaci"),
+      detailed.indexOf("Nuestra porter"),
+    );
+    expect(contribution).not.toContain("T. blq.");
+    expect(contribution).not.toContain("G. contra");
+    expect(contribution).not.toContain("Blq. def.");
+    expect(detailed).not.toContain("Goles de contra:");
+    expect(detailed).not.toContain("Tiros bloqueados:");
+  });
   it.each(["benjamin", "alevin", "infantil"] as const)(
     "omite el apéndice de participación en %s y conserva cuartos y penaltis",
     async (category) => {

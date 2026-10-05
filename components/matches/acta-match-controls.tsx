@@ -1,4 +1,5 @@
-import { timeoutCount, type LiveSheet, type Side } from "@/lib/domain/live-match";
+import { type LiveSheet, type Side } from "@/lib/domain/live-match";
+import { timeoutStatus } from "@/lib/domain/live-match-timeouts";
 
 export function ActaMatchControls({
   sheet,
@@ -17,6 +18,8 @@ export function ActaMatchControls({
   onPeriods: () => void;
   isAway?: boolean;
 }) {
+  const us = timeoutStatus(sheet, "us");
+  const them = timeoutStatus(sheet, "them");
   return (
     <>
       <div
@@ -45,12 +48,33 @@ export function ActaMatchControls({
           type="button"
           disabled={!playing}
           onClick={onBench}
-          aria-label={`Entrenador: tiempos muertos Morvedre ${timeoutCount(sheet, "us")}, rival ${timeoutCount(sheet, "them")}; tarjetas`}
-          className="flex min-h-14 min-w-0 flex-col items-center justify-center rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold [overflow-wrap:anywhere] active:bg-slate-200 disabled:opacity-45"
+          aria-label={`Entrenador: tiempos muertos ${us.limit ? `Morvedre ${us.used} de ${us.limit} usados, ${us.remaining} disponibles; rival ${them.used} de ${them.limit} usados, ${them.remaining} disponibles` : "no permitidos en esta categoría"}; tarjetas`}
+          className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold active:bg-slate-200 disabled:opacity-45"
         >
           <span>Entrenador</span>
-          <span className="mt-0.5 text-sm font-bold text-slate-700 tabular-nums">
-            M {timeoutCount(sheet, "us")} · R {timeoutCount(sheet, "them")}
+          <span className="flex items-baseline gap-1 text-[10px] leading-tight font-semibold whitespace-nowrap tabular-nums">
+            {us.limit ? (
+              <>
+                <span className="text-slate-700">Quedan</span>
+                <span className="text-slate-700">M</span>
+                <span
+                  className={`text-xs font-black ${us.remaining ? "text-pool-deep" : "text-red-800"}`}
+                >
+                  {us.remaining}
+                </span>
+                <span aria-hidden="true" className="text-slate-500">
+                  ·
+                </span>
+                <span className="text-slate-700">R</span>
+                <span
+                  className={`text-xs font-black ${them.remaining ? "text-pool-deep" : "text-red-800"}`}
+                >
+                  {them.remaining}
+                </span>
+              </>
+            ) : (
+              "Sin tiempos"
+            )}
           </span>
         </button>
         <button

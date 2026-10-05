@@ -113,19 +113,37 @@ if (process.argv.includes("--shootout")) {
   sheet.shootout = {
     firstSide: "us",
     shots: ours.flatMap((outcome, i) => [
-      { id: `shootout-us-${i}`, side: "us", cap: 2 + i % 5, keeper: null, outcome },
-      { id: `shootout-them-${i}`, side: "them", cap: 2 + i % 5, keeper: 13, outcome: theirs[i] },
+      { id: `shootout-us-${i}`, side: "us", cap: 2 + (i % 5), keeper: null, outcome },
+      { id: `shootout-them-${i}`, side: "them", cap: 2 + (i % 5), keeper: 13, outcome: theirs[i] },
     ]),
   };
 }
-const outputPath = process.argv.includes("--shootout")
-  ? "output/pdf/acta-tanda-penaltis.pdf"
-  : "output/pdf/acta-redisenada.pdf";
+if (process.argv.includes("--feedback")) {
+  add(4, "us", 2, "goal_counter");
+  add(4, "us", 3, "shot_deflected");
+  add(4, "us", 4, "defensive_block");
+}
+if (process.argv.includes("--single-keeper")) {
+  sheet.keeper = 1;
+  sheet.keeperStints = sheet.keeperStints.map((stint) => ({ ...stint, cap: 1 }));
+  sheet.events = sheet.events.map((event) => ({
+    ...event,
+    keeper: event.keeper === 13 ? 1 : event.keeper,
+    cap:
+      ["save", "penalty_save", "keeper_out"].includes(event.kind) && event.cap === 13
+        ? 1
+        : event.cap,
+  }));
+}
+const outputPath = process.argv.includes("--feedback")
+  ? "output/pdf/acta-feedback-delegados.pdf"
+  : process.argv.includes("--single-keeper")
+    ? "output/pdf/acta-un-portero.pdf"
+    : process.argv.includes("--shootout")
+      ? "output/pdf/acta-tanda-penaltis.pdf"
+      : "output/pdf/acta-redisenada.pdf";
 mkdirSync("output/pdf", { recursive: true });
-writeFileSync(
-  outputPath,
-  Buffer.from(await createActaPdf(record).arrayBuffer()),
-);
+writeFileSync(outputPath, Buffer.from(await createActaPdf(record).arrayBuffer()));
 mkdirSync("tmp/pdfs", { recursive: true });
 writeFileSync("tmp/pdfs/record.json", JSON.stringify(record));
 console.log(outputPath);
