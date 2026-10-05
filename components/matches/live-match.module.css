@@ -718,11 +718,17 @@
 }
 
 .timeoutAvailable {
-  color: #062048;
+  color: inherit;
 }
 
 .timeoutExhausted {
   color: #991b1b;
+}
+
+.timeoutTeamUs .timeoutExhausted {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .timeoutError {

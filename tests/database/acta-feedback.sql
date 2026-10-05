@@ -45,7 +45,7 @@ begin
     rev := public.save_live_match_sheet(mid,actor,device,0,gen_random_uuid(),doc);
     select goals into score_value from public.match_stats where match_id=mid and player_id=player;
     if score_value <> 1 then raise exception 'FAIL counter goal projection'; end if;
-    if category not in ('benjamin','alevin') then
+    if category not in ('benjamin','alevin','infantil') then
       events := events || jsonb_build_array(
         jsonb_build_object('id',gen_random_uuid(),'side','us','cap',null,'kind','timeout','period',1,'keeper',null,'deleted',false),
         jsonb_build_object('id',gen_random_uuid(),'side','us','cap',null,'kind','timeout','period',1,'keeper',null,'deleted',false),

@@ -2241,7 +2241,7 @@ export function LiveMatchClient() {
                         key={team}
                         type="button"
                         disabled={!enabled}
-                        className={styles.action + " " + styles.actionSecondary}
+                        className={`${styles.action} ${styles.actionSecondary} ${team === "us" ? `${styles.actionShot} ${styles.timeoutTeamUs}` : styles.actionAssist}`}
                         onClick={() => {
                           setSide(team);
                           if (benchKind === "timeout") {

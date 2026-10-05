@@ -107,7 +107,7 @@ describe("feedback de delegados del acta", () => {
     "respeta el cupo provisional de %s para los dos equipos",
     (category) => {
       const sheet = { ...youthSheet(), category, phase: "playing" as const };
-      const limit = ["benjamin", "alevin"].includes(category) ? 0 : 2;
+      const limit = ["benjamin", "alevin", "infantil"].includes(category) ? 0 : 2;
       for (const side of ["us", "them"] as const) {
         expect(timeoutStatus(sheet, side).limit).toBe(limit);
         const full = {
@@ -154,9 +154,9 @@ describe("feedback de delegados del acta", () => {
         sheet,
       ),
     ).toThrow();
-    expect(timeoutRegistrationError({ ...sheet, events: [], phase: "break" }, "us")).toContain(
-      "solo durante el cuarto",
-    );
+    expect(
+      timeoutRegistrationError({ ...sheet, category: "cadete", events: [], phase: "break" }, "us"),
+    ).toContain("solo durante el cuarto");
   });
 
   it("intercambia gorros conservando identidad, participación e historial de los dos porteros", () => {

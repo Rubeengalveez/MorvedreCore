@@ -94,7 +94,7 @@ test("superioridad rival: cuadrícula, roja aparte, portero y corrección sin co
   });
 });
 
-for (const category of ["benjamin", "alevin"] as const) {
+for (const category of ["benjamin", "alevin", "infantil"] as const) {
   test(`${category}: un aviso legible, sin solicitud de tiempo muerto y con tarjetas`, async ({
     page,
   }) => {
@@ -226,6 +226,33 @@ test("feedback: contra con asistencia, tiro bloqueado, defensa y cupos a 320px s
   });
   expect(warningBorder).toEqual({ color: "rgb(6, 32, 72)", width: "2px" });
   await capture(page, "feedback-timeout-warning-320");
+  const timeoutColors = await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Morvedre/ })
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      const exhausted = [...element.querySelectorAll("strong")].find(
+        (item) => item.textContent === "SIN TIEMPOS",
+      )!;
+      return {
+        background: style.backgroundColor,
+        text: style.color,
+        exhausted: getComputedStyle(exhausted).color,
+      };
+    });
+  expect(timeoutColors).toEqual({
+    background: "rgb(22, 87, 168)",
+    text: "rgb(255, 255, 255)",
+    exhausted: "rgb(255, 255, 255)",
+  });
+  const rivalColors = await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /Rival/ })
+    .evaluate((element) => {
+      const style = getComputedStyle(element);
+      return { background: style.backgroundColor, text: style.color };
+    });
+  expect(rivalColors).toEqual({ background: "rgb(244, 196, 48)", text: "rgb(6, 32, 72)" });
   await page.getByRole("dialog").getByRole("button", { name: /Rival/ }).click();
   await page
     .getByRole("button", { name: "Registrar tiempo muerto concedido", exact: true })

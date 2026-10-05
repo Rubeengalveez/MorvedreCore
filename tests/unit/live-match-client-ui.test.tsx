@@ -443,7 +443,7 @@ describe("interfaz del acta", () => {
     });
   });
 
-  it.each(["benjamin", "alevin"] as const)(
+  it.each(["benjamin", "alevin", "infantil"] as const)(
     "explica una sola vez que %s no permite tiempos y conserva tarjetas",
     (category) => {
       const current = record();
