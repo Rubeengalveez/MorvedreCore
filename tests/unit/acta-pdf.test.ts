@@ -131,7 +131,7 @@ describe("createActaPdf", () => {
     expect(plain).not.toContain("Sin segundo portero registrado");
     expect(plain).not.toContain("G. contra");
     expect(plain).not.toContain("T. blq.");
-    expect(plain).not.toContain("Blq. def.");
+    expect(plain).not.toContain("(Bloqueo)");
     expect(plain).not.toContain("Bloqueos defensivos");
     sheet.events.push(
       ...(["goal_counter", "shot_deflected", "defensive_block"] as const).map((kind, i) => ({
@@ -149,7 +149,10 @@ describe("createActaPdf", () => {
     expect(detailed).toContain("G. contra");
     expect(detailed).not.toContain("T. blq.");
     expect(detailed).toContain("BLOQUEADOS");
-    expect(detailed).toContain("Blq. def.");
+    expect(source).toContain("(Bloqueo)");
+    expect(source).toContain("(Penalti)");
+    expect(source).not.toContain("Blq. def.");
+    expect(source).not.toContain("Pen. com.");
     expect(detailed).toContain("Bloqueos defensivos");
     const rosterColumns = [
       "Goles",
@@ -158,9 +161,9 @@ describe("createActaPdf", () => {
       "G. pen.",
       "Tiros",
       "Asist.",
-      "Blq. def.",
+      "Bloqueo",
       "Exp.",
-      "Pen. com.",
+      "Penalti",
     ];
     const positions = rosterColumns.map((label) => detailed.indexOf(label));
     expect(positions.every((position) => position >= 0)).toBe(true);
@@ -171,7 +174,7 @@ describe("createActaPdf", () => {
     );
     expect(contribution).not.toContain("T. blq.");
     expect(contribution).not.toContain("G. contra");
-    expect(contribution).not.toContain("Blq. def.");
+    expect(contribution).not.toContain("Bloqueo");
     expect(detailed).not.toContain("Goles de contra:");
     expect(detailed).not.toContain("Tiros bloqueados:");
   });

@@ -242,16 +242,16 @@ export function createActaPdf(record: LiveRecord): File {
     ...(penaltyGoalColumn ? ["G. pen."] : []),
     "Tiros",
     "Asist.",
-    ...(defensiveBlockColumn ? ["Blq. def."] : []),
+    ...(defensiveBlockColumn ? ["Bloqueo"] : []),
     "Exp.",
-    "Pen. com.",
+    "Penalti",
     ...(ownCards ? ["Tarj."] : []),
   ];
   const rivalHead = [
     "Gorro",
     "Goles",
     rivalCards ? "Exp." : "Expulsiones",
-    "Penaltis",
+    "Penalti",
     ...(rivalCards ? ["Tarjetas"] : []),
   ];
   const ownWidths = [
