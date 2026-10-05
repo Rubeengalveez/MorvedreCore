@@ -72,7 +72,7 @@ export const participationSchema = z.object({
         side: z.enum(["us", "them"]),
         incoming: participant,
         outgoing: participant,
-        reason: z.enum(["sanction", "injury"]),
+        reason: z.enum(["sanction", "injury", "keeper_swap"]),
         eventId: z.string().uuid().optional(),
         afterEventId: z.string().uuid().nullable().optional(),
       }),

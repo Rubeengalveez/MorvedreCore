@@ -1343,7 +1343,10 @@ export function LiveMatchClient() {
                 <div className="space-y-3 text-base text-slate-800">
                   <p className={styles.informationNotice}>
                     {incoming?.name} pasa de gorro {incoming?.cap} a {outgoing?.cap} y será portero.{" "}
-                    {outgoing?.name} llevará el gorro {incoming?.cap} y jugará de campo.
+                    {outgoing?.name} llevará el gorro {incoming?.cap}.
+                    {incoming &&
+                      !participantIsPlaying(s, "us", incoming.cap) &&
+                      " El nuevo portero entra en el agua y el anterior pasa al banquillo."}
                   </p>
                   <p>
                     Cada uno conserva sus goles, sanciones y acciones anteriores. Las próximas
@@ -1359,10 +1362,9 @@ export function LiveMatchClient() {
               );
             })()
           ) : (
-            <div className="space-y-3">
-              <p className="text-base font-semibold">
-                Elige quién intercambia su gorro con el portero. En los cuatro primeros cuartos solo
-                aparecen jugadores que ya están en el agua.
+            <div className={styles.keeperSwapList}>
+              <p className={styles.keeperSwapIntro}>
+                Elige quién intercambia su gorro con el portero.
               </p>
               {keeperSwapCandidates(s).map((player) => (
                 <button
@@ -1370,9 +1372,15 @@ export function LiveMatchClient() {
                   type="button"
                   disabled={!enabled}
                   onClick={() => setKeeperSwapId(player.id)}
-                  className="border-pool-deep text-pool-deep min-h-14 w-full rounded-xl border-2 bg-white px-3 text-left font-bold"
+                  aria-label={`Gorro ${player.cap} · ${player.name}`}
+                  className={styles.keeperSwapChoice}
                 >
-                  Gorro {player.cap} · {player.name}
+                  <span className={styles.keeperSwapCap} aria-hidden="true">
+                    {player.cap}
+                  </span>
+                  <span className={styles.keeperSwapName}>
+                    <ActaPlayerName name={player.name} />
+                  </span>
                 </button>
               ))}
             </div>
@@ -2220,7 +2228,10 @@ export function LiveMatchClient() {
                       styles.actionSanction,
                     )}
                     {!timeoutStatus(s, "us").limit ? (
-                      <div className={styles.timeoutNotice} role="note">
+                      <div
+                        className={`${styles.timeoutNotice} ${styles.timeoutUnavailable}`}
+                        role="note"
+                      >
                         <strong>Tiempos muertos no permitidos</strong>
                       </div>
                     ) : (
@@ -2248,7 +2259,7 @@ export function LiveMatchClient() {
                         key={team}
                         type="button"
                         disabled={!enabled}
-                        className={`${styles.action} ${styles.actionSecondary} ${team === "us" ? `${styles.actionShot} ${styles.timeoutTeamUs}` : styles.actionAssist}`}
+                        className={`${styles.action} ${styles.benchTeamChoice} ${team === "us" ? `${styles.actionShot} ${styles.timeoutTeamUs}` : styles.actionAssist}`}
                         onClick={() => {
                           setSide(team);
                           if (benchKind === "timeout") {

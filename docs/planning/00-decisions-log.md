@@ -1280,3 +1280,8 @@ Rubén pide retirar Quedan, centrar M/R y ampliar las cifras manteniendo el tama
 Se completa el traslado local: mismos componentes y PDF, cupos de categoría, identidades, historial y convocatoria coherentes tras intercambio; se conservan plantillas, siete convocados de Morvedre Benjamín y almacenamiento propio. La revisión corrige en Core y demo el cierre del paso de asistencia o penalti terminado desde otra pestaña. Se guarda un respaldo previo de fuente y compilación de la demo, que no tenía repositorio Git.
 
 Demo: 252 pruebas unitarias, 24 de navegador, tipos, build y paridad de 19 archivos. Se comprueba la actualización de la caché anterior sin borrar el partido. Versión local 9977b275f50e. Bitácora y verificaciones en docs/audits/2026-10-05-acta-feedback-delegados.md y docs/acta-feedback-2026-10-05.md de la demo. No se publica; Cloudflare requiere la orden posterior que Rubén ha reservado.
+
+
+### 2026-10-06 — Ajustes finales del acta en Core y demo
+
+Rubén pide ampliar y centrar la prohibición de tiempos muertos, dar altura a la elección de entrenador y rediseñar el intercambio de gorros con toda la convocatoria disponible. Implementado en ambas aplicaciones; el intercambio desde banquillo registra participación conservando identidades e historial. La publicación de la demo continúa pendiente de su orden.

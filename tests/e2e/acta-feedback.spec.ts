@@ -295,7 +295,7 @@ test("intercambio rápido: confirma gorros, conserva participación y persiste a
   await page.getByRole("button", { name: "Cambiar gorro con un jugador", exact: true }).click();
   await capture(page, "feedback-keeper-swap-320");
   const swap = page.getByRole("dialog").filter({ hasText: "Cambiar gorro con un jugador" });
-  await expect(swap.getByRole("button", { name: /Gorro 8/ })).toHaveCount(0);
+  await expect(swap.getByRole("button", { name: /Gorro 8/ })).toBeVisible();
   await swap.getByRole("button", { name: "Gorro 2 · Jugador 2", exact: true }).click();
   await capture(page, "feedback-keeper-confirm-320");
   await page.getByRole("button", { name: "Confirmar intercambio", exact: true }).click();
@@ -311,4 +311,57 @@ test("intercambio rápido: confirma gorros, conserva participación y persiste a
     "aria-label",
     /gorro 1/,
   );
+});
+
+test("ajustes visuales: avisos, tarjetas y cambio con un convocado del banquillo", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  const record = fixture();
+  record.sheet.phase = "playing";
+  record.sheet.participation!.opponentConfirmed = true;
+  record.sheet.participation!.lineups = ["us", "them"].map((side) => ({
+    period: 1,
+    side: side as "us" | "them",
+    keeper: side === "us" ? id(1) : "1",
+    field: [2, 3, 4, 5, 6, 7].map((cap) => (side === "us" ? id(cap) : String(cap))),
+  }));
+  await openLocal(page, record);
+  await page.getByRole("button", { name: /^Entrenador:/ }).click();
+  const cards = page.getByRole("button", { name: "Tarjeta al entrenador", exact: true });
+  const notice = page.getByRole("note").filter({ hasText: "Tiempos muertos no permitidos" });
+  const noticeBox = (await notice.boundingBox())!;
+  const cardBox = (await cards.boundingBox())!;
+  expect(Math.abs(noticeBox.height - cardBox.height)).toBeLessThanOrEqual(1);
+  expect(noticeBox.width).toBe(cardBox.width);
+  await expect(notice).toHaveCSS("text-align", "center");
+  await expect(notice).toHaveCSS("font-size", "17px");
+  await capture(page, "polish-timeouts-320");
+  await cards.click();
+  for (const name of ["Morvedre", "Rival"]) {
+    const team = page.getByRole("dialog").getByRole("button", { name, exact: true });
+    expect((await team.boundingBox())!.height).toBeGreaterThanOrEqual(70);
+  }
+  await capture(page, "polish-coach-cards-320");
+  await page.getByRole("button", { name: /Cerrar/ }).click();
+  await page.getByRole("button", { name: /Portero en juego,/ }).click();
+  await page.getByRole("button", { name: "Cambiar gorro con un jugador", exact: true }).click();
+  await expect(page.getByRole("button", { name: /^Gorro / })).toHaveCount(13);
+  await expect(page.getByRole("dialog")).not.toContainText("solo aparecen jugadores");
+  await capture(page, "polish-keeper-list-320");
+  await page.getByRole("button", { name: "Gorro 8 · Jugador 8", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("el anterior pasa al banquillo");
+  await page.getByRole("button", { name: "Confirmar intercambio", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const next = (await readLocal(page)).sheet;
+  expect(next.participation!.changes.at(-1)).toMatchObject({
+    incoming: id(8),
+    outgoing: id(1),
+    reason: "keeper_swap",
+  });
+  expect(next.keeperStints!.at(-1)?.playerId).toBe(id(8));
+  await page.reload();
+  await expect(
+    page.getByRole("button", { name: /Portero de Morvedre, gorro 1, Jugador 8/ }),
+  ).toBeVisible();
 });

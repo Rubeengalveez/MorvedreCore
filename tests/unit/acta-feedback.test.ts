@@ -197,10 +197,17 @@ describe("feedback de delegados del acta", () => {
     expect(playerTotals(next, "us", 2).saves).toBe(1);
   });
 
-  it("solo ofrece jugadores del agua y rechaza sancionados, jugadas pendientes y categorías mayores", () => {
+  it("ofrece convocados del banquillo y rechaza sancionados, jugadas pendientes y categorías mayores", () => {
     const sheet = startYouth(youthSheet(), 1);
-    expect(keeperSwapCandidates(sheet).some((p) => p.cap === 8)).toBe(false);
-    expect(() => swapKeeperCap(sheet, youthKey(8))).toThrow();
+    expect(keeperSwapCandidates(sheet).some((p) => p.cap === 8)).toBe(true);
+    const next = swapKeeperCap(sheet, youthKey(8));
+    expect(currentParticipants(next, "us")?.has(youthKey(8))).toBe(true);
+    expect(currentParticipants(next, "us")?.has(youthKey(1))).toBe(false);
+    expect(currentParticipants(next, "us")?.size).toBe(currentParticipants(sheet, "us")?.size);
+    expect(currentKeeperKey(next, "us")).toBe(youthKey(8));
+    expect(playedPeriods(next, "us", youthKey(1))).toEqual([1]);
+    expect(playedPeriods(next, "us", youthKey(8))).toEqual([1]);
+    expect(sheetSchema.safeParse(next).success).toBe(true);
     expect(keeperSwapCandidates({ ...sheet, category: "cadete" })).toEqual([]);
     expect(() => swapKeeperCap({ ...sheet, category: "cadete" }, youthKey(2))).toThrow();
     expect(() =>
