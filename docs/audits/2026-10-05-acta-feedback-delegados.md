@@ -156,3 +156,8 @@ Comprobación de esta revisión: 39 pruebas unitarias de Core y 12 pruebas de fe
 Ajuste visual solicitado después: Cambiar gorro con un jugador utiliza exactamente las clases de las filas de sustitutos: superficie blanca, contorno azul, gorro azul oscuro, nombre, indicación «Se pone en portería» y flecha. Se elimina el diseño azul anterior. La lista completa de convocados disponibles y la confirmación se mantienen. Aplicado en Core y demo.
 
 Demo con el estilo final recompilada: `morvedre-acta-demo-55a2e0a34987`, 74 recursos sin conexión. TypeScript y ESLint correctos; paridad de 19 archivos con Core.
+
+
+### Publicación autorizada · 6 de octubre de 2026
+
+Rubén autoriza actualizar la demo existente. Publicada en https://morvedre.damp-breeze-d21e.workers.dev/ con Wrangler 4.145.0, cuenta y Worker existentes. Versión de Cloudflare: `45b13ea8-6a01-4b05-8d04-7e111fa83363`; versión de la aplicación: `morvedre-acta-demo-55a2e0a34987`, 84 recursos sin conexión. Versión anterior de Cloudflare: `33d82ff5-c50a-4a25-86d2-d52afca44148`, conservada como punto de retorno. Se verifican HTTP 200 de las cuatro rutas principales y coincidencia exacta del service worker y offline-version.json con el resultado preparado. Dos pruebas sobre producción correctas: partido real de Benjamín con intercambio y asistencia sin red, y selección de entrenador/intercambio desde banquillo persistido tras recargar. Las claves de las actas locales se mantienen. Evidencias en `docs/evidence/cloudflare-deploy-2026-10-06.log`, `cloudflare-release-2026-10-06.json` y `cloudflare-release-browser-2026-10-06.json` de la demo.
