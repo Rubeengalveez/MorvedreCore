@@ -49,7 +49,7 @@ export function ActaMatchControls({
           disabled={!playing}
           onClick={onBench}
           aria-label={`Entrenador: tiempos muertos ${us.limit ? `Morvedre ${us.used} de ${us.limit} usados, ${us.remaining} disponibles; rival ${them.used} de ${them.limit} usados, ${them.remaining} disponibles` : "no permitidos en esta categoría"}; tarjetas`}
-          className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold active:bg-slate-200 disabled:opacity-45"
+          className="flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-xl bg-slate-100 px-1 text-sm leading-tight font-extrabold text-[#062048] active:bg-slate-200 disabled:opacity-45"
         >
           <span>Entrenador</span>
           <span className="flex items-baseline gap-1 text-[10px] leading-tight font-semibold whitespace-nowrap tabular-nums">

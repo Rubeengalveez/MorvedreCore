@@ -404,21 +404,23 @@ describe("interfaz del acta", () => {
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: /Rival, gorro 4,/ }));
     fireEvent.click(screen.getByRole("button", { name: "Gol" }));
-    fireEvent.click(screen.getByRole("button", { name: "Gol normal" }));
     expect(screen.getByRole("heading", { name: "Portero en juego" })).toBeInTheDocument();
     expect(screen.getByText(/Elige quién está de portero/)).toBeInTheDocument();
     expect(mock.change).not.toHaveBeenCalled();
   });
 
-  it("mantiene cuatro acciones rivales y registra superioridad sin pedir asistencia", async () => {
+  it("ordena las cuatro acciones rivales y separa la roja sin pedir asistencia", async () => {
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: /Rival, gorro 4,/ }));
     const actions = screen.getByRole("dialog");
-    for (const label of ["Gol", "Expulsión", "Penalti", "Tarjeta roja"])
-      expect(within(actions).getByRole("button", { name: label })).toBeInTheDocument();
-    expect(within(actions).queryByRole("button", { name: /superioridad/ })).toBeNull();
-    fireEvent.click(within(actions).getByRole("button", { name: "Gol" }));
-    expect(screen.getByRole("button", { name: "Gol normal" })).toBeInTheDocument();
+    const grid = within(actions).getByRole("button", { name: "Gol" }).parentElement!;
+    expect(
+      within(grid)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Gol", "Gol 1+", "Penalti", "Expulsión"]);
+    expect(within(grid).queryByRole("button", { name: "Tarjeta roja" })).toBeNull();
+    expect(within(actions).getByRole("button", { name: "Tarjeta roja" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Gol de contraataque" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Gol en superioridad · 1+" }));
     await waitFor(() => expect(mock.change).toHaveBeenCalledOnce());
@@ -427,6 +429,49 @@ describe("interfaz del acta", () => {
       pending: null,
     });
     expect(screen.queryByRole("heading", { name: /asistencia/i })).toBeNull();
+  });
+
+  it("registra el bloqueo directamente y no ofrece asistencias independientes", async () => {
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Morvedre, gorro 2,/ }));
+    expect(screen.queryByRole("button", { name: /Otras acciones|Asistencia/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Bloqueo defensivo" }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledOnce());
+    expect(mock.change.mock.calls[0][0].events.at(-1)).toMatchObject({
+      kind: "defensive_block",
+      cap: 2,
+    });
+  });
+
+  it.each(["benjamin", "alevin"] as const)(
+    "explica una sola vez que %s no permite tiempos y conserva tarjetas",
+    (category) => {
+      const current = record();
+      current.sheet.category = category;
+      mock.hook.mockReturnValue({ ...mock.hook(), record: current });
+      render(<LiveMatchClient />);
+      fireEvent.click(screen.getByRole("button", { name: /^Entrenador:/ }));
+      expect(screen.queryByRole("button", { name: "Tiempo muerto" })).toBeNull();
+      expect(screen.getByRole("note")).toHaveTextContent(
+        "En esta categoría ningún equipo puede pedirlos.",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Tarjeta al entrenador" }));
+      expect(
+        screen.getByRole("heading", { name: "¿Qué entrenador recibe la tarjeta?" }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it.each([1, 5, 6])("ofrece el intercambio desde Portero en juego en el cuarto %s", (period) => {
+    mock.hook.mockReturnValue({ ...mock.hook(), record: youthRecord(period) });
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Portero en juego,/ }));
+    if (period === 1)
+      expect(screen.getByRole("heading", { name: "Revisar portero" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar gorro con un jugador" }));
+    expect(screen.getByRole("button", { name: "Gorro 2 · Jugador 2" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Gorro 8 · Jugador 8" }) !== null).toBe(period > 4);
+    expect(mock.change).not.toHaveBeenCalled();
   });
 
   it("muestra entrenador, tiempos y tarjetas en pasos claros", () => {

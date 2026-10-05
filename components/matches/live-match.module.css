@@ -687,6 +687,59 @@
   font-size: 16px;
 }
 
+.informationNotice,
+.warningNotice,
+.timeoutNotice {
+  border: 2px solid #062048;
+  border-radius: 12px;
+  padding: 12px;
+  background: #e8f1fc;
+  color: #062048;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.timeoutNotice p {
+  margin-top: 4px;
+  color: #062048;
+}
+
+.warningNotice {
+  background: #fff0bd;
+}
+
+.rivalGoalExtra {
+  white-space: nowrap;
+}
+
+.timeoutConditions {
+  border: 2px solid #062048;
+  border-radius: 12px;
+  padding: 12px;
+  background: #ffffff;
+  color: #334155;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.timeoutAvailable {
+  color: #062048;
+}
+
+.timeoutExhausted {
+  color: #991b1b;
+}
+
+.timeoutError {
+  border: 2px solid #062048;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff1f2;
+  color: #881337;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .actionDangerOutline {
   --button-bg: #ffffff;
   --button-ink: #991b1b;
