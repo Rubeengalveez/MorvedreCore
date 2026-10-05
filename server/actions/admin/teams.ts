@@ -3,9 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
+import { teamDefaultCapsSchema } from "@/lib/domain/team-default-caps";
 import type { Tables } from "@/types/database";
 import { canRosterPlayer, defaultTeamColor } from "@/lib/domain/teams";
-import type { CategoryCode, TeamGender } from "@/lib/domain/categories";
+import {
+  calendarSeasonStartYear,
+  type CategoryCode,
+  type TeamGender,
+} from "@/lib/domain/categories";
 import {
   createTeamSchema,
   idSchema,
@@ -34,6 +39,27 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+export async function saveTeamDefaultCaps(input: unknown): Promise<void> {
+  await requirePermission("manage_teams");
+  const parsed = teamDefaultCapsSchema.safeParse(input);
+  if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Revisa los gorros.");
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("save_team_default_caps", {
+    p_team_id: parsed.data.team_id,
+    p_players: parsed.data.players,
+    p_expected: parsed.data.expected,
+  });
+  if (error)
+    throw new Error(
+      error.message.includes("Actualiza") || error.message.includes("14 jugadores")
+        ? error.message
+        : "No pudimos guardar los gorros. Vuelve a intentarlo.",
+    );
+  revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath(`/team/${parsed.data.team_id}`);
+  revalidatePath("/admin/matches", "layout");
+}
+
 export async function createTeam(input: {
   season_id: string;
   category_code: CategoryCode;
@@ -52,16 +78,24 @@ export async function createTeam(input: {
   }
 
   const supabase = await createClient();
+  const { data: currentSeason, error: seasonError } = await supabase
+    .from("seasons")
+    .select("id")
+    .eq("is_current", true)
+    .maybeSingle();
+  throwIfError(seasonError, "No pudimos comprobar la temporada actual.");
+  if (!currentSeason) throw new Error("Activa una temporada antes de crear equipos.");
   const { data, error } = await supabase
     .from("teams")
     .insert({
-      season_id: parsed.data.season_id,
+      season_id: currentSeason.id,
       category_code: parsed.data.category_code,
       label: parsed.data.label,
       gender: parsed.data.gender,
       team_type: parsed.data.category_code === "escuela" ? "school" : "competitive",
       color: parsed.data.color ?? defaultTeamColor(parsed.data.category_code),
       home_pool: parsed.data.home_pool ?? null,
+      notes: parsed.data.notes ?? null,
     })
     .select("*")
     .single();
@@ -76,6 +110,7 @@ export async function createTeam(input: {
     throw new Error("No pudimos crear el equipo. Inténtalo de nuevo.");
   }
 
+  revalidatePath("/team");
   revalidatePath("/admin/teams");
   revalidatePath("/admin");
 
@@ -125,8 +160,10 @@ export async function updateTeam(
     throw new Error("No pudimos actualizar el equipo. Inténtalo de nuevo.");
   }
 
+  revalidatePath("/team");
   revalidatePath("/admin/teams");
   revalidatePath(`/admin/teams/${parsedId.data.id}`);
+  revalidatePath(`/team/${parsedId.data.id}`);
 
   return data as Team;
 }
@@ -143,8 +180,6 @@ export async function assignStaff(input: {
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
-  const isCoachRole = parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach";
-  const accessRole = isCoachRole ? "coach" : parsed.data.role === "delegate" ? "delegate" : null;
   const supabase = await createClient();
   const { error } = await supabase.from("team_staff").insert({
     team_id: parsed.data.team_id,
@@ -163,30 +198,11 @@ export async function assignStaff(input: {
     throw new Error("No pudimos asignar el rol. Inténtalo de nuevo.");
   }
 
-  if (accessRole) {
-    const { error: roleError } = await supabase.from("user_roles").upsert(
-      {
-        profile_id: parsed.data.profile_id,
-        role: accessRole,
-        scope_team_id: parsed.data.team_id,
-        granted_by: admin.id,
-      },
-      { onConflict: "profile_id,role,scope_team_id", ignoreDuplicates: true },
-    );
-
-    if (roleError) {
-      await supabase
-        .from("team_staff")
-        .delete()
-        .eq("team_id", parsed.data.team_id)
-        .eq("profile_id", parsed.data.profile_id)
-        .eq("role", parsed.data.role);
-      throw new Error("No pudimos completar los permisos del entrenador. Inténtalo de nuevo.");
-    }
-  }
-
   revalidatePath("/admin/staff");
   revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath("/admin/teams");
+  revalidatePath("/team");
+  revalidatePath(`/team/${parsed.data.team_id}`);
   revalidatePath("/attendance");
   revalidatePath("/dashboard");
 }
@@ -213,31 +229,11 @@ export async function unassignStaff(input: {
 
   throwIfError(error, "No pudimos quitar el rol. Inténtalo de nuevo.");
 
-  if (parsed.data.role === "head_coach" || parsed.data.role === "assistant_coach" || parsed.data.role === "delegate") {
-    const isCoachRole = parsed.data.role !== "delegate";
-    const matchingRoles = isCoachRole ? ["head_coach", "assistant_coach"] : ["delegate"];
-    const { data: remainingCoachStaff, error: remainingError } = await supabase
-      .from("team_staff")
-      .select("role")
-      .eq("team_id", parsed.data.team_id)
-      .eq("profile_id", parsed.data.profile_id)
-      .in("role", matchingRoles)
-      .limit(1);
-
-    throwIfError(remainingError, "No pudimos comprobar los permisos del entrenador.");
-    if ((remainingCoachStaff ?? []).length === 0) {
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .delete()
-        .eq("profile_id", parsed.data.profile_id)
-        .eq("role", isCoachRole ? "coach" : "delegate")
-        .eq("scope_team_id", parsed.data.team_id);
-      throwIfError(roleError, "No pudimos retirar los permisos del entrenador.");
-    }
-  }
-
   revalidatePath("/admin/staff");
   revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath("/admin/teams");
+  revalidatePath("/team");
+  revalidatePath(`/team/${parsed.data.team_id}`);
   revalidatePath("/attendance");
   revalidatePath("/dashboard");
 }
@@ -260,7 +256,7 @@ export async function rosterPlayer(input: {
 
   const { data: team, error: teamError } = await supabase
     .from("teams")
-    .select("id, category_code, season_id, seasons(start_date, end_date)")
+    .select("id, category_code, season_id, seasons!teams_season_id_fkey(start_date, end_date)")
     .eq("id", parsed.data.team_id)
     .maybeSingle();
 
@@ -287,20 +283,40 @@ export async function rosterPlayer(input: {
   const seasonRow = (team as { seasons?: { start_date?: string } | null }).seasons;
   const seasonYear = seasonRow?.start_date
     ? new Date(seasonRow.start_date).getFullYear()
-    : new Date().getFullYear();
+    : calendarSeasonStartYear();
 
   if (!canRosterPlayer(player.birth_year, team.category_code as CategoryCode, seasonYear)) {
     throw new Error(
-      "El jugador no encaja en la categoría del equipo (admite como máximo un año de diferencia).",
+      "El jugador no encaja en la categoría del equipo (admite su categoría y la inmediatamente inferior).",
     );
   }
 
-  const { error } = await supabase.from("team_rosters").insert({
-    team_id: parsed.data.team_id,
-    player_id: parsed.data.player_id,
-    squad_number: parsed.data.squad_number ?? null,
-    joined_at: parsed.data.joined_at ?? todayIso(),
-  });
+  const { data: existing, error: existingError } = await supabase
+    .from("team_rosters")
+    .select("left_at")
+    .eq("team_id", parsed.data.team_id)
+    .eq("player_id", parsed.data.player_id)
+    .maybeSingle();
+  throwIfError(existingError, "No pudimos comprobar la plantilla.");
+  if (existing && existing.left_at === null) {
+    throw new Error("El jugador ya está en este equipo.");
+  }
+  const { error, count } = existing
+    ? await supabase
+        .from("team_rosters")
+        .update(
+          { left_at: null, squad_number: parsed.data.squad_number ?? null },
+          { count: "exact" },
+        )
+        .eq("team_id", parsed.data.team_id)
+        .eq("player_id", parsed.data.player_id)
+        .eq("left_at", existing.left_at!)
+    : await supabase.from("team_rosters").insert({
+        team_id: parsed.data.team_id,
+        player_id: parsed.data.player_id,
+        squad_number: parsed.data.squad_number ?? null,
+        joined_at: parsed.data.joined_at ?? todayIso(),
+      });
 
   if (error) {
     if (error.code === "23505") {
@@ -308,8 +324,14 @@ export async function rosterPlayer(input: {
     }
     throw new Error("No pudimos añadir al jugador. Inténtalo de nuevo.");
   }
+  if (existing && count === 0) {
+    throw new Error("La plantilla ha cambiado. Actualiza el equipo y vuelve a intentarlo.");
+  }
 
   revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath("/admin/teams");
+  revalidatePath("/team");
+  revalidatePath(`/team/${parsed.data.team_id}`);
   revalidatePath("/admin/players");
   revalidatePath(`/profile/${parsed.data.player_id}`);
 }
@@ -333,6 +355,9 @@ export async function unrosterPlayer(input: { team_id: string; player_id: string
   throwIfError(error, "No pudimos sacar al jugador del equipo.");
 
   revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath("/admin/teams");
+  revalidatePath("/team");
+  revalidatePath(`/team/${parsed.data.team_id}`);
   revalidatePath("/admin/players");
   revalidatePath(`/profile/${parsed.data.player_id}`);
 }

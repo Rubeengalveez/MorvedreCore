@@ -1,63 +1,60 @@
 "use client";
-
-import { useState } from "react";
-import { Calendar, Copy, Check } from "lucide-react";
-
+import { useEffect, useRef, useState } from "react";
+import { Calendar, Check, Copy } from "lucide-react";
+import { shopPrimary } from "@/components/shop/shop-ui";
 export function CalendarSyncCard({ token, baseUrl }: { token: string; baseUrl: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const feedUrl = `${baseUrl}/api/calendar/feed.ics?token=${token}`;
-
-  async function handleCopy() {
+  const [origin, setOrigin] = useState(baseUrl);
+  const [status, setStatus] = useState("");
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    queueMicrotask(() => setOrigin(window.location.origin));
+  }, []);
+  const feedUrl =
+    token && origin ? `${origin}/api/calendar/feed.ics?token=${encodeURIComponent(token)}` : "";
+  async function copy() {
     try {
       await navigator.clipboard.writeText(feedUrl);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
+      setStatus("Enlace copiado");
+    } catch {
+      input.current?.focus();
+      input.current?.select();
+      setStatus("Enlace seleccionado. Mantén pulsado y elige Copiar.");
     }
   }
-
   return (
-    <section className="border-ink-300 bg-paper-card shadow-elev-1 flex flex-col gap-2 rounded-md border p-3">
-      <div className="flex items-center gap-2">
-        <div className="bg-pool-foam flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
-          <Calendar className="text-pool-teal h-4.5 w-4.5" />
-        </div>
-        <h2 className="font-display text-pool-deep text-sm font-extrabold">
-          Sincronizar calendario
-        </h2>
-      </div>
-      <p className="text-ink-600 text-xs">
-        Copia este enlace para añadir tus entrenamientos y partidos a Google Calendar o Apple
-        Calendar de manera automática.
-      </p>
-      <div className="mt-1 flex items-center gap-2">
+    <section className="border-pool-deep/70 overflow-hidden rounded-2xl border-2 bg-white">
+      <h2 className="bg-pool-deep flex items-center gap-2 px-4 py-3 text-lg font-extrabold text-white">
+        <Calendar aria-hidden="true" className="h-5 w-5" />
+        Mi calendario
+      </h2>
+      <div className="text-pool-deep space-y-3 p-4">
+        <p className="text-base font-medium">
+          Añade tus partidos y entrenamientos al calendario del móvil.
+        </p>
         <input
-          type="text"
+          ref={input}
           readOnly
           value={feedUrl}
-          aria-label="Enlace de suscripción al calendario"
-          onClick={(e) => (e.target as HTMLInputElement).select()}
-          className="border-ink-300 bg-paper-sunk text-ink-700 min-h-12 min-w-0 flex-1 rounded-xl border px-3 font-mono text-xs select-all focus-visible:ring-2 focus-visible:ring-pool-blue focus:outline-none"
+          aria-label="Enlace personal del calendario"
+          onClick={(event) => event.currentTarget.select()}
+          className="border-pool-deep/65 min-h-12 w-full rounded-xl border-2 bg-blue-50 px-3 text-base"
         />
         <button
           type="button"
-          onClick={handleCopy}
-          className="bg-pool-deep text-paper hover:bg-ink-900 focus-visible:ring-pool-blue inline-flex min-h-12 shrink-0 touch-manipulation items-center justify-center gap-1 rounded-xl px-3.5 text-sm font-bold transition-colors focus-visible:ring-2 focus-visible:outline-none"
+          disabled={!feedUrl}
+          onClick={() => void copy()}
+          className={`${shopPrimary} w-full`}
         >
-          {copied ? (
-            <>
-              <Check className="text-success h-3.5 w-3.5" />
-              <span>Copiado</span>
-            </>
-          ) : (
-            <>
-              <Copy className="h-3.5 w-3.5" />
-              <span>Copiar</span>
-            </>
-          )}
+          <Copy aria-hidden="true" className="h-5 w-5" />
+          Copiar enlace
         </button>
+        {status && (
+          <p role="status" className="flex items-start gap-2 text-sm font-bold">
+            <Check aria-hidden="true" className="h-5 w-5 shrink-0" />
+            {status}
+          </p>
+        )}
+        <p className="text-sm font-semibold">Este enlace es personal. No lo compartas.</p>
       </div>
     </section>
   );

@@ -6,13 +6,13 @@ function source(path: string): string {
   return readFileSync(join(process.cwd(), path), "utf8");
 }
 
-const adminHome = source("app/(app)/admin/page.tsx");
+const adminHome = source("components/admin/admin-home-menu.tsx");
 const adminLayout = source("app/(app)/admin/layout.tsx");
 const topBar = source("components/layout/top-bar.tsx");
 const helpers = source("server/actions/admin/_helpers.ts");
 const trainingsLayout = source("app/(app)/admin/trainings/layout.tsx");
 const matchesLayout = source("app/(app)/admin/matches/layout.tsx");
-const trainingsPage = source("app/(app)/admin/trainings/page.tsx");
+const trainingsPage = source("server/queries/admin-trainings.ts");
 const matchesPage = source("app/(app)/admin/matches/page.tsx");
 const matchDetail = source("app/(app)/admin/matches/[id]/page.tsx");
 const matchEdit = source("app/(app)/admin/matches/[id]/editar/page.tsx");
@@ -37,8 +37,8 @@ describe("coach admin access", () => {
   });
 
   it("scopes training and match reads to the coach teams", () => {
-    expect(trainingsPage).toContain('teamsQuery = teamsQuery.in("id", teamScope)');
-    expect(trainingsPage).toContain('blocksQuery = blocksQuery.in("team_id", teamScope)');
+    expect(trainingsPage).toContain("scope.includes(team.id)");
+    expect(trainingsPage).toContain('.in("team_id", managedTeamIds)');
     expect(matchesPage).toContain('matchesQuery = matchesQuery.in("team_id", teamScope)');
     expect(matchDetail).toContain('getTeamScope(access, "match_operations")');
     expect(matchDetail).toContain('matchQuery = matchQuery.in("team_id", scope)');

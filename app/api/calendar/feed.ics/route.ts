@@ -228,13 +228,32 @@ export async function GET(request: Request) {
       .order("scheduled_at", { ascending: true }),
   ]);
 
-  const trainingEvents = (trainings ?? []).map((t) =>
-    trainingToVEvent(
-      t,
-      teamIdToLabel.get(t.team_id) ?? "Equipo",
-      teamIdToColor.get(t.team_id) ?? "#0A2E5C",
-    ),
-  );
+  const { data: calendarStaff } = await admin
+    .from("team_staff")
+    .select("team_id")
+    .eq("profile_id", activeProfileId)
+    .in("team_id", teamIds);
+  const jointKeys = new Set<string>();
+  const trainingEvents = (trainings ?? [])
+    .filter((t) => {
+      if (
+        t.player_ids &&
+        !t.player_ids.includes(activeProfileId) &&
+        !calendarStaff?.some((staff) => staff.team_id === t.team_id)
+      )
+        return false;
+      const key = `${t.joint_id ?? t.id}/${t.scheduled_at}/${t.cancelled}/${t.kind}/${t.location}/${t.duration_minutes}`;
+      if (jointKeys.has(key)) return false;
+      jointKeys.add(key);
+      return true;
+    })
+    .map((t) =>
+      trainingToVEvent(
+        t,
+        teamIdToLabel.get(t.team_id) ?? "Equipo",
+        teamIdToColor.get(t.team_id) ?? "#0A2E5C",
+      ),
+    );
   const matchEvents = (matches ?? []).map((m) =>
     matchToVEvent(
       m,

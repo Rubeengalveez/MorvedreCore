@@ -7,13 +7,13 @@ import {
   lineupSelectionMessage,
   currentParticipants,
   eligibleForAction,
-  mustRestFifth,
   outstandingReplacement,
   participantIsPlaying,
   playedPeriods,
   prepareParticipation,
   replaceParticipant,
   rotationAdvice,
+  rotationCompletion,
   saveLineups,
   reviseReplacement,
   editOpponentCaps,
@@ -60,6 +60,58 @@ function start(sheet: LiveSheet, period: number, field = [2, 3, 4, 5, 6, 7]) {
 }
 
 describe("participación de categorías inferiores", () => {
+  it.each([
+    ["benjamin", 8],
+    ["alevin", 8],
+    ["infantil", 9],
+  ])("%s exige un mínimo de %i convocados para ambos equipos", (category, minimum) => {
+    const sheet = fixture(category as string);
+    const size = minimum as number;
+    expect(() =>
+      editOpponentCaps(
+        sheet,
+        Array.from({ length: size - 1 }, (_, i) => i + 1),
+      ),
+    ).toThrow(`mínimo ${size}`);
+    expect(() => editLiveRoster(sheet, sheet.players.slice(0, size - 1), [])).toThrow(
+      `mínimo ${size}`,
+    );
+    expect(
+      editOpponentCaps(
+        sheet,
+        Array.from({ length: size }, (_, i) => i + 1),
+      ).opponentCaps,
+    ).toHaveLength(size);
+    expect(
+      editLiveRoster(sheet, sheet.players.slice(0, size), []).players.filter((p) => !p.retired),
+    ).toHaveLength(size);
+  });
+  it.each(["benjamin", "alevin", "infantil"])(
+    "%s exime automáticamente al único portero del descanso",
+    (category) => {
+      let sheet = fixture(category);
+      sheet = {
+        ...sheet,
+        players: sheet.players.filter((p) => p.cap !== 13),
+        opponentCaps: sheet.opponentCaps.filter((cap) => cap !== 13),
+      };
+      const field = category === "infantil" ? [2, 3, 4, 5, 6, 7] : [2, 3, 4, 5, 6];
+      for (let period = 1; period <= 4; period++) sheet = start(sheet, period, field);
+      for (const side of ["us", "them"] as const) {
+        const keeper = side === "us" ? id(1) : "1";
+        expect(
+          rotationAdvice(sheet, side, 4).some((a) => a.key === keeper && a.kind === "rest"),
+        ).toBe(false);
+        expect(
+          rotationCompletion(sheet).some(
+            (message) =>
+              message.includes(side === "us" ? "Jugador 1:" : "Gorro 1:") &&
+              message.includes("sin descansar"),
+          ),
+        ).toBe(false);
+      }
+    },
+  );
   it("guía según lo que falta en cada equipo y categoría", () => {
     const sheet = fixture("escuela");
     const field = [2, 3, 4, 5, 6].map(id);
@@ -330,7 +382,7 @@ describe("participación de categorías inferiores", () => {
     expect(playedPeriods(replacement, "us", id(20))).toEqual([1]);
     expect(playedPeriods(replacement, "us", id(2))).toEqual([]);
   });
-  it("calcula el descanso del quinto tras sustitución infantil y lo retira al anular la sanción", () => {
+  it("libera la participación desde el quinto y retira el cambio al anular la sanción", () => {
     let sheet = fixture();
     sheet = start(sheet, 1, [2, 3, 4, 5, 6, 9]);
     sheet = start(sheet, 2, [2, 3, 4, 5, 6, 9]);
@@ -362,13 +414,11 @@ describe("participación de categorías inferiores", () => {
     expect(outstandingReplacement(sheet)).toBeNull();
     expect(currentParticipants(sheet, "us")?.has(id(2))).toBe(false);
     expect(playedPeriods(sheet, "us", id(2))).toEqual([1, 2, 3, 4]);
-    expect(mustRestFifth(sheet, "us")).toEqual([id(9)]);
-    expect(eligibleForAction({ ...sheet, period: 5 }, "us", 9)).toBe(false);
+    expect(eligibleForAction({ ...sheet, period: 5 }, "us", 9)).toBe(true);
     sheet = {
       ...sheet,
       events: sheet.events.map((e) => (e.id === required.eventId ? { ...e, deleted: true } : e)),
     };
-    expect(mustRestFifth(sheet, "us")).toEqual([]);
     expect(playedPeriods(sheet, "us", id(9))).toEqual([1, 2, 3]);
   });
   it("aplica cuatro expulsiones solo al formato Benjamín/Escuela", () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  canUseLiveMatch,
   canAccessAdminArea,
   canAccessAdminModule,
   canManageTeam,
@@ -25,13 +26,14 @@ describe("shared administrative capabilities", () => {
     ).toBe(false);
   });
 
-  it("requires an explicit team for coaching", () => {
+  it("uses the explicit staff assignment, ignoring a legacy global coach role", () => {
     const access = capabilities({
       roles: [{ role: "coach", scope_team_id: null }],
       staff: [{ role: "head_coach", team_id: "a" }],
     });
-    expect(canAccessAdminArea(access)).toBe(false);
-    expect(canManageTeam(access, "trainings", "a")).toBe(false);
+    expect(canAccessAdminArea(access)).toBe(true);
+    expect(canManageTeam(access, "trainings", "a")).toBe(true);
+    expect(canManageTeam(access, "trainings", "b")).toBe(false);
   });
 
   it("scopes coaches to their own teams across reads and mutations", () => {
@@ -50,7 +52,7 @@ describe("shared administrative capabilities", () => {
   });
 
   it.each(["roles", "staff"] as const)(
-    "allows delegate operations from %s without schedule access",
+    "allows the same team operations for delegates from %s",
     (source) => {
       const access = capabilities(
         source === "roles"
@@ -66,8 +68,12 @@ describe("shared administrative capabilities", () => {
       expect(canAccessAdminModule(access, "manage_matches")).toBe(true);
       expect(canManageTeam(access, "match_operations", "a")).toBe(true);
       expect(canManageTeam(access, "match_operations", "b")).toBe(false);
-      expect(canManageTeam(access, "match_schedule", "a")).toBe(false);
-      expect(canAccessAdminModule(access, "manage_trainings")).toBe(false);
+      expect(canManageTeam(access, "match_schedule", "a")).toBe(true);
+      expect(canManageTeam(access, "trainings", "a")).toBe(true);
+      expect(canUseLiveMatch(access, "a")).toBe(true);
+      expect(canUseLiveMatch(access, "b")).toBe(false);
+      expect(access.coachTeamIds.has("a")).toBe(false);
+      expect(canAccessAdminModule(access, "manage_trainings")).toBe(true);
     },
   );
 
@@ -80,7 +86,7 @@ describe("shared administrative capabilities", () => {
       ],
     });
     expect(getTeamScope(access, "match_operations")).toEqual(["a", "b"]);
-    expect(getTeamScope(access, "match_schedule")).toEqual(["a"]);
+    expect(getTeamScope(access, "match_schedule")).toEqual(["a", "b"]);
   });
 
   it("grants modular permissions only to their module", () => {

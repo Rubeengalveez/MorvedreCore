@@ -1,300 +1,378 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import type { Route } from "next";
 import {
-  Calendar as CalendarIcon,
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Grid3x3,
+  CircleHelp,
+  Loader2,
 } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
-import { cn } from "@/lib/utils/cn";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import {
-  addDaysIso,
   addMonths,
-  currentYearMonth,
-  daysInMonth,
-  isoDateFromDate,
+  formatLongDate,
+  formatTimeOfDay,
   monthLabel,
   todayIso,
   type YearMonth,
 } from "@/lib/domain/calendar";
+import {
+  calendarMonthKey,
+  calendarMonth,
+  calendarReturnParams,
+  calendarAttendanceStatus,
+  groupCalendarTrainings,
+} from "@/lib/domain/calendar-presentation";
 import type { CalendarData } from "@/server/queries/calendar";
-
 import { CalendarKey } from "./calendar-key";
 import { EventSheet } from "./event-sheet";
 import { MonthView } from "./month-view";
-import { WeekView } from "./week-view";
 
 export interface CalendarViewTeam {
   id: string;
   label: string;
   color: string;
 }
-
 export interface CalendarViewProps {
   teams: CalendarViewTeam[];
-  defaultTeamId: string | null;
+  people: Array<{ id: string; name: string }>;
+  player: string;
+  team: string;
+  yearMonth: YearMonth;
   eventsByDay: CalendarData;
-  isCoach: boolean;
-  isAdmin: boolean;
-  availabilityByDay: Map<string, boolean>;
-  userAttendanceBySession?: Map<string, boolean>;
-  showAttendance?: boolean;
+  initialDay?: string;
+  origin?: string;
+  notificationId?: string;
+  canManageAttendance?: boolean;
 }
-
-type ViewMode = "month" | "week";
-
-function startOfWeekIso(d: Date): string {
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  return addDaysIso(isoDateFromDate(d), diff);
-}
+const control =
+  "border-pool-deep/65 text-pool-deep focus-visible:outline-pool-blue flex min-h-12 items-center justify-center gap-1.5 rounded-xl border-2 bg-blue-50 px-2 text-sm font-extrabold whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2";
 
 export function CalendarView({
   teams,
-  defaultTeamId,
+  people,
+  player,
+  team,
+  yearMonth,
   eventsByDay,
-  isCoach,
-  isAdmin,
-  availabilityByDay,
-  userAttendanceBySession,
-  showAttendance,
+  initialDay,
+  origin,
+  notificationId,
+  canManageAttendance = false,
 }: CalendarViewProps) {
-  const [yearMonth, setYearMonth] = useState<YearMonth>(() => currentYearMonth());
-  const [weekStartIso, setWeekStartIso] = useState<string>(() => startOfWeekIso(new Date()));
-  const [viewMode, setViewMode] = useState<ViewMode>("month");
-  const initialTeamFilter = teams.length === 1 ? (defaultTeamId ?? teams[0]?.id ?? "") : "";
-  const [teamFilter, setTeamFilter] = useState<string>(initialTeamFilter);
-  const [selectedIso, setSelectedIso] = useState<string>(() => todayIso());
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const month = calendarMonthKey(yearMonth);
+  const today = todayIso();
+  const [selectedIso, setSelectedIso] = useState(
+    initialDay?.startsWith(month) ? initialDay : today.startsWith(month) ? today : `${month}-01`,
+  );
   const [open, setOpen] = useState(false);
-
-  const filteredEvents = useMemo(() => {
-    if (!teamFilter) return eventsByDay;
-    const out: CalendarData = new Map();
-    for (const [iso, day] of eventsByDay) {
-      const trainings = day.trainings.filter((t) => t.team_id === teamFilter);
-      const matches = day.matches.filter((m) => m.team_id === teamFilter);
-      if (trainings.length > 0 || matches.length > 0) out.set(iso, { trainings, matches });
-    }
-    return out;
-  }, [eventsByDay, teamFilter]);
-
-  const selectedDay = selectedIso ? (filteredEvents.get(selectedIso) ?? null) : null;
-
-  const monthOptions = useMemo(() => {
-    const list: Array<{ value: string; label: string }> = [];
-    const today = new Date();
-    for (let i = -6; i <= 6; i += 1) {
-      const d = new Date(today.getFullYear(), today.getMonth() + i, 1);
-      const label = d.toLocaleDateString("es-ES", { month: "long", year: "numeric" });
-      list.push({
-        value: `${d.getFullYear()}-${d.getMonth()}`,
-        label: label.charAt(0).toUpperCase() + label.slice(1),
-      });
-    }
-    return list;
-  }, []);
-
-  function updateSelectedDayOnMonthNav(newYm: YearMonth) {
-    const dayToSelect = Math.min(
-      new Date(selectedIso).getDate(),
-      daysInMonth(newYm.year, newYm.month),
-    );
-    const pad = (n: number) => String(n).padStart(2, "0");
-    setSelectedIso(`${newYm.year}-${pad(newYm.month + 1)}-${pad(dayToSelect)}`);
+  const [legendOpen, setLegendOpen] = useState(false);
+  const [monthOpen, setMonthOpen] = useState(false);
+  const [pickedMonth, setPickedMonth] = useState(month);
+  const [monthError, setMonthError] = useState<string | null>(null);
+  function navigate(next: { month?: string; player?: string; team?: string }) {
+    const params = new URLSearchParams({
+      month: next.month ?? month,
+      player: next.player ?? player,
+    });
+    const nextTeam = next.team ?? team;
+    if (nextTeam) params.set("team", nextTeam);
+    if (origin === "dashboard" || origin === "notification") params.set("from", origin);
+    if (origin === "notification" && notificationId) params.set("notificationId", notificationId);
+    startTransition(() => router.replace(`/calendar?${params}` as Route, { scroll: false }));
   }
-
-  function goPrev() {
-    if (viewMode === "week") {
-      setWeekStartIso(addDaysIso(weekStartIso, -7));
-      return;
-    }
-    const nextYm = addMonths(yearMonth, -1);
-    setYearMonth(nextYm);
-    updateSelectedDayOnMonthNav(nextYm);
-  }
-
-  function goNext() {
-    if (viewMode === "week") {
-      setWeekStartIso(addDaysIso(weekStartIso, 7));
-      return;
-    }
-    const nextYm = addMonths(yearMonth, 1);
-    setYearMonth(nextYm);
-    updateSelectedDayOnMonthNav(nextYm);
-  }
-
-  function goToday() {
-    const today = new Date();
-    setYearMonth({ year: today.getFullYear(), month: today.getMonth() });
-    setWeekStartIso(startOfWeekIso(today));
-    setSelectedIso(todayIso());
-  }
-
-  const navLabel =
-    viewMode === "week"
-      ? `Semana ${weekStartIso.slice(8, 10)}/${weekStartIso.slice(5, 7)}`
-      : monthLabel(yearMonth);
-
+  const selected = eventsByDay.get(selectedIso);
+  const day = selected
+    ? { ...selected, trainings: groupCalendarTrainings(selected.trainings) }
+    : null;
+  const returnParams = calendarReturnParams(month, player, team, selectedIso);
+  const activities = [
+    ...(day?.trainings ?? []).map((event) => ({
+      scheduledAt: event.scheduled_at,
+      label: event.cancelled ? "Entrenamiento cancelado" : "Entrenamiento",
+    })),
+    ...(day?.matches ?? []).map((event) => ({
+      scheduledAt: event.scheduled_at,
+      label:
+        event.status === "cancelled"
+          ? "Partido cancelado"
+          : event.status === "postponed"
+            ? "Partido aplazado"
+            : "Partido",
+    })),
+  ].sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt));
+  const attendance = calendarAttendanceStatus(day?.trainings ?? []);
   return (
-    <div className="flex flex-col gap-2">
-      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-3">
-        <div className="grid grid-cols-[1fr_auto] gap-2">
-          <div
-            role="tablist"
-            aria-label="Modo de vista"
-            className="bg-paper-sunk grid min-h-12 grid-cols-2 gap-1 rounded-xl p-1"
+    <div className="flex flex-col gap-2" aria-busy={pending}>
+      <header className="flex min-h-12 items-center gap-2.5 px-1">
+        <span className="bg-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white">
+          <CalendarDays className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <h1 className="text-pool-deep flex-1 text-2xl font-extrabold">Calendario</h1>
+        {canManageAttendance && (
+          <Link
+            href={`/attendance?${returnParams}` as Route}
+            className="text-pool-blue focus-visible:outline-pool-blue inline-flex min-h-12 shrink-0 items-center rounded-lg px-1 text-sm font-extrabold whitespace-nowrap focus-visible:outline-2"
           >
-            {[
-              { id: "month" as const, Icon: Grid3x3, label: "Mes" },
-              { id: "week" as const, Icon: CalendarIcon, label: "Semana" },
-            ].map(({ id, Icon, label }) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={viewMode === id}
-                onClick={() => setViewMode(id)}
-                className={cn(
-                  "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center gap-1 rounded-lg px-2 text-xs font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
-                  viewMode === id
-                    ? "bg-pool-deep text-paper shadow-elev-1"
-                    : "bg-paper-card text-ink-600",
-                )}
+            Pasar lista
+          </Link>
+        )}
+      </header>
+      {(people.length > 1 || teams.length > 1) && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {people.length > 1 && (
+            <label className="relative min-w-0">
+              <span className="sr-only">Calendario de</span>
+              <select
+                disabled={pending}
+                value={player}
+                onChange={(event) => navigate({ player: event.target.value, team: "" })}
+                className={`${control} w-full appearance-none pr-9`}
               >
-                <Icon className="hidden h-4 w-4 min-[390px]:block" aria-hidden="true" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={goToday}
-            className="min-h-12 rounded-xl px-3 text-sm font-extrabold"
-          >
-            Hoy
-          </Button>
+                <option value="all">Toda la familia</option>
+                {people.map((person) => (
+                  <option value={person.id} key={person.id}>
+                    {person.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="text-pool-blue pointer-events-none absolute top-4 right-3 h-4 w-4"
+                aria-hidden="true"
+              />
+            </label>
+          )}
+          {teams.length > 1 && (
+            <label className="relative min-w-0">
+              <span className="sr-only">Filtrar por equipo</span>
+              <select
+                disabled={pending}
+                value={team}
+                onChange={(event) => navigate({ team: event.target.value })}
+                className={`${control} w-full appearance-none pr-9`}
+              >
+                <option value="">Todos los equipos</option>
+                {teams.map((item) => (
+                  <option value={item.id} key={item.id}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="text-pool-blue pointer-events-none absolute top-4 right-3 h-4 w-4"
+                aria-hidden="true"
+              />
+            </label>
+          )}
         </div>
-
-        {teams.length > 1 ? (
-          <Select
-            id="calendar-team-filter"
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-            className="border-ink-300 bg-paper mt-2 min-h-12 w-full rounded-xl border px-3 text-sm font-semibold"
-          >
-            <option value="">Todos mis equipos</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.label}
-              </option>
-            ))}
-          </Select>
-        ) : null}
-
-        <div className="mt-2 flex items-center justify-between gap-2">
+      )}
+      <section
+        className="border-pool-deep/75 overflow-hidden rounded-2xl border-2 bg-white"
+        aria-label="Calendario mensual"
+      >
+        <div className="bg-pool-deep grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center gap-1 px-1 text-white">
           <button
             type="button"
-            onClick={goPrev}
-            aria-label="Anterior"
-            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            disabled={pending || (yearMonth.year <= 2000 && yearMonth.month === 0)}
+            onClick={() => navigate({ month: calendarMonthKey(addMonths(yearMonth, -1)) })}
+            aria-label="Mes anterior"
+            className="focus-visible:outline-ball-gold flex h-12 w-12 items-center justify-center rounded-xl hover:bg-white/15 focus-visible:outline-2"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft aria-hidden="true" className="h-6 w-6" />
           </button>
-
-          <div className="relative min-w-0 flex-1">
-            <div className="bg-paper-sunk flex min-h-12 items-center justify-center gap-1.5 rounded-xl px-3">
-              <span className="font-display text-pool-deep truncate text-base font-extrabold">
-                {navLabel}
-              </span>
-              <ChevronDown className="text-ink-600 h-4 w-4 shrink-0" />
-            </div>
-            <select
-              value={`${yearMonth.year}-${yearMonth.month}`}
-              onChange={(e) => {
-                const [y, m] = e.target.value.split("-").map(Number);
-                if (y != null && m != null) {
-                  const newYm = { year: y, month: m };
-                  setYearMonth(newYm);
-                  updateSelectedDayOnMonthNav(newYm);
-                }
-              }}
-              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              title="Seleccionar mes"
-              aria-label="Seleccionar mes"
-            >
-              {monthOptions.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <button
             type="button"
-            onClick={goNext}
-            aria-label="Siguiente"
-            className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue hover:bg-pool-foam flex min-h-12 min-w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
+            disabled={pending}
+            onClick={() => setMonthOpen(true)}
+            className="focus-visible:outline-ball-gold flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-1 text-base font-extrabold whitespace-nowrap focus-visible:outline-2"
           >
-            <ChevronRight className="h-5 w-5" />
+            <span aria-live="polite">{monthLabel(yearMonth)}</span>
+            <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0" />
+          </button>
+          <button
+            type="button"
+            disabled={pending || (yearMonth.year >= 2100 && yearMonth.month === 11)}
+            onClick={() => navigate({ month: calendarMonthKey(addMonths(yearMonth, 1)) })}
+            aria-label="Mes siguiente"
+            className="focus-visible:outline-ball-gold flex h-12 w-12 items-center justify-center rounded-xl hover:bg-white/15 focus-visible:outline-2"
+          >
+            <ChevronRight aria-hidden="true" className="h-6 w-6" />
           </button>
         </div>
-      </div>
-
-      <CalendarKey showAttendance={!!showAttendance} />
-
-      <div className="border-ink-300 bg-paper-card shadow-elev-1 rounded-2xl border p-2 sm:p-3">
-        {viewMode === "month" ? (
+        <div className="p-1 sm:p-2">
           <MonthView
             year={yearMonth.year}
             month={yearMonth.month}
-            eventsByDay={filteredEvents}
+            eventsByDay={eventsByDay}
+            selectedIso={selectedIso}
             onDayClick={(iso) => {
-              setSelectedIso(iso);
-              setOpen(true);
+              if (!pending) {
+                setSelectedIso(iso);
+                setOpen(true);
+              }
             }}
-            selectedIso={selectedIso}
-            availabilityByDay={availabilityByDay}
-            userAttendanceBySession={showAttendance ? userAttendanceBySession : undefined}
           />
-        ) : (
-          <WeekView
-            startIso={weekStartIso}
-            eventsByDay={filteredEvents}
-            availabilityByDay={availabilityByDay}
-            userAttendanceBySession={userAttendanceBySession}
-            showAttendance={showAttendance}
-            onDayClick={setSelectedIso}
-            onEventClick={(kind, id) => {
-              const dayIso = Array.from(filteredEvents.entries()).find(([, dayEvents]) =>
-                kind === "training"
-                  ? dayEvents.trainings.some((t) => t.id === id)
-                  : dayEvents.matches.some((m) => m.id === id),
-              )?.[0];
-              if (dayIso) setSelectedIso(dayIso);
-              setOpen(true);
-            }}
-            selectedIso={selectedIso}
-            isCoach={isCoach}
-            isAdmin={isAdmin}
-          />
-        )}
+        </div>
+        <div
+          role="status"
+          className="text-pool-blue mt-2 flex min-h-6 items-center justify-center gap-1.5 px-2 pb-2 text-xs font-bold"
+        >
+          {pending ? (
+            <>
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none"
+                aria-hidden="true"
+              />
+              Cargando mes…
+            </>
+          ) : (
+            <>
+              <span className="bg-pool-blue rounded px-1 text-white">E</span> Entrenamiento{" "}
+              <span className="bg-ball-gold text-pool-deep ml-2 rounded-full px-1">P</span> Partido
+            </>
+          )}
+        </div>
+      </section>
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() =>
+            month === today.slice(0, 7)
+              ? setSelectedIso(today)
+              : navigate({ month: today.slice(0, 7) })
+          }
+          className={`${control}`}
+        >
+          Hoy
+        </button>
+        <button type="button" onClick={() => setLegendOpen(true)} className={`${control}`}>
+          <CircleHelp className="h-4 w-4 shrink-0" aria-hidden="true" />
+          Leyenda
+        </button>
+        <Link
+          href={`/attendance/history?${returnParams}&month=${month}&player=${player}` as Route}
+          className={`${control}`}
+        >
+          Asistencia
+        </Link>
       </div>
-
-
+      {!!people.length && (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => setOpen(true)}
+          aria-label={`Ver ${formatLongDate(`${selectedIso}T12:00:00`)}: ${activities.length} actividades`}
+          className="border-pool-deep/65 text-pool-deep focus-visible:outline-pool-blue flex min-h-20 w-full items-center gap-3 rounded-2xl border-2 bg-white px-4 py-3 text-left focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-2 leading-5">
+            <span className="flex items-center justify-between gap-2">
+              <span className="text-base leading-6 font-extrabold whitespace-nowrap">
+                {selectedIso === today && "Hoy · "}
+                {formatLongDate(`${selectedIso}T12:00:00`).split(" de ")[0]}
+              </span>
+              {activities.length > 0 && (
+                <span className="border-pool-deep/65 shrink-0 rounded-lg border bg-blue-50 px-1.5 py-0.5 text-xs font-bold whitespace-nowrap">
+                  {activities.length} {activities.length === 1 ? "actividad" : "actividades"}
+                </span>
+              )}
+            </span>
+            {activities[0] ? (
+              <span className="flex items-center gap-2 text-sm font-semibold">
+                <span className="text-base font-extrabold tabular-nums whitespace-nowrap">
+                  {formatTimeOfDay(activities[0].scheduledAt)}
+                </span>
+                <span>{activities[0].label}</span>
+              </span>
+            ) : (
+              <span className="text-sm font-semibold">Sin entrenamientos ni partidos</span>
+            )}
+            {attendance && (
+              <span
+                className={`self-start rounded-lg border px-2 py-1 text-sm font-bold ${attendance === "present" ? "border-green-800 bg-green-50 text-green-900" : attendance === "absent" ? "border-red-800 bg-red-50 text-red-900" : "border-amber-800 bg-amber-50 text-amber-950"}`}
+              >
+                {attendance === "present"
+                  ? "Asistió al entrenamiento"
+                  : attendance === "absent"
+                    ? "No asistió al entrenamiento"
+                    : "Asistencia parcial o pendiente"}
+              </span>
+            )}
+          </span>
+          <ChevronRight className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
+        </button>
+      )}
+      {!people.length && (
+        <p className="border-pool-deep/65 text-pool-deep rounded-xl border-2 bg-white p-3 text-sm font-semibold">
+          Tus actividades aparecerán cuando tengas un equipo asignado.
+        </p>
+      )}
       <EventSheet
         open={open}
         onOpenChange={setOpen}
         iso={selectedIso}
-        day={selectedDay}
-        isCoach={isCoach || isAdmin}
-        isAdmin={isAdmin}
+        day={day}
+        returnParams={returnParams}
+      />
+      <ActaGuardSheet
+        open={legendOpen}
+        onOpenChange={setLegendOpen}
+        context="Calendario"
+        title="Cómo leer tu calendario"
+        description="Significado de las actividades y de la asistencia registrada."
+        icon="saved"
+        actions={[]}
+        body={<CalendarKey showAttendance />}
+      />
+      <ActaGuardSheet
+        open={monthOpen}
+        onOpenChange={setMonthOpen}
+        context="Calendario"
+        title="Ir a un mes"
+        description="Elige el mes que quieres consultar."
+        icon="saved"
+        error={monthError}
+        body={
+          <label className="text-pool-deep flex flex-col gap-2 text-base font-extrabold">
+            Mes y año
+            <input
+              type="month"
+              min="2000-01"
+              max="2100-12"
+              value={pickedMonth}
+              onInput={(event) => {
+                setPickedMonth(event.currentTarget.value);
+                setMonthError(null);
+              }}
+              onChange={(event) => {
+                setPickedMonth(event.target.value);
+                setMonthError(null);
+              }}
+              className="border-pool-deep/65 focus-visible:outline-pool-blue min-h-14 w-full rounded-xl border-2 bg-white px-3 text-base focus-visible:outline-2"
+            />
+          </label>
+        }
+        actions={[
+          {
+            label: "Ver este mes",
+            tone: "primary",
+            onClick: () => {
+              if (calendarMonthKey(calendarMonth(pickedMonth)) !== pickedMonth) {
+                setMonthError("Elige un mes válido.");
+                return;
+              }
+              setMonthOpen(false);
+              navigate({ month: pickedMonth });
+            },
+          },
+        ]}
       />
     </div>
   );

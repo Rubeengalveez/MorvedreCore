@@ -90,5 +90,5 @@ export function getProfilePermissionLinks(
           icon: ShieldCheck,
         }
       : null,
-  ].filter((link): link is ProfileActionLink => link != null);
+  ].filter((link) => link != null);
 }

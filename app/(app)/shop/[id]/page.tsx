@@ -1,123 +1,74 @@
 import { redirect, notFound } from "next/navigation";
-import { MessageCircle } from "lucide-react";
-
+import type { Route } from "next";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getShopProduct } from "@/server/queries/shop";
-import { formatCents } from "@/lib/domain/shop";
+import { shopMoney } from "@/lib/domain/shop-management";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { PageShell } from "@/components/ui/page-shell";
+import { ShopNavigation } from "@/components/shop/shop-navigation";
+import { ShopSection } from "@/components/shop/shop-ui";
+import { ShopContact } from "@/components/shop/shop-contact";
 import { AddToCartButton } from "./_components/add-to-cart-button";
 import { ProductGallery } from "./_components/product-gallery";
-import { FloatingCartButton } from "../_components/floating-cart-button";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const product = await getShopProduct(id);
-  if (!product) return { title: "Producto — Morvedre Core" };
-  return { title: `${product.title} — Morvedre Core` };
+  const product = await getShopProduct((await params).id);
+  return { title: `${product?.title ?? "Producto"} — Morvedre Core` };
 }
-
-export default async function ShopDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ShopDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ q?: string; category?: string }>;
+}) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const { id } = await params;
-  const product = await getShopProduct(id);
-  if (!product) notFound();
-  const whatsappMessage = encodeURIComponent(
-    `Hola Sol, vengo de la tienda de Morvedre Core y me gustaría tener más información sobre “${product.title}”. Gracias.`,
-  );
-  const whatsappUrl = `https://wa.me/34655111532?text=${whatsappMessage}`;
-
+  const product = await getShopProduct((await params).id);
+  if (!product || !product.available) notFound();
+  const filters = await searchParams;
+  const backParams = new URLSearchParams();
+  if (typeof filters.q === "string") backParams.set("q", filters.q.slice(0, 200));
+  if (typeof filters.category === "string")
+    backParams.set("category", filters.category.slice(0, 40));
   return (
-    <PageShell width="lg" className="gap-4 pb-8">
-      <FloatingCartButton profileId={ctx.ownProfile.id} />
-      <PageBackLink href="/shop">Volver a la tienda</PageBackLink>
-
-      <header className="border-ink-200 bg-paper-card shadow-elev-1 relative overflow-hidden rounded-2xl border p-4 sm:p-5">
-        <span className="bg-pool-blue absolute inset-y-4 left-0 w-1 rounded-r-full" aria-hidden="true" />
-        <div className="pl-1.5">
-          <p className="text-pool-blue text-xs font-extrabold tracking-[0.1em] uppercase">
-            {product.category}
-          </p>
-          <h1 className="text-pool-deep mt-1.5 text-2xl leading-tight font-extrabold tracking-tight text-balance sm:text-3xl">
+    <PageShell width="md" className="gap-4 pb-8">
+      <PageBackLink href={`/shop${backParams.size ? `?${backParams}` : ""}` as Route}>
+        Volver a productos
+      </PageBackLink>
+      <ShopNavigation profileId={ctx.ownProfile.id} active="products" />
+      <article className="border-pool-deep/65 overflow-hidden rounded-2xl border-2 bg-white">
+        <ProductGallery title={product.title} images={product.images} />
+        <header className="space-y-2 p-4">
+          <p className="text-sm font-bold text-slate-600">{product.category}</p>
+          <h1 className="text-pool-deep text-2xl leading-tight font-extrabold [overflow-wrap:anywhere]">
             {product.title}
           </h1>
-          <p className="bg-pool-foam text-pool-deep mt-3 inline-flex items-baseline gap-2 rounded-xl px-3 py-2 font-mono text-2xl leading-none font-extrabold tabular-nums sm:text-3xl">
-            <span className="text-ink-600 font-sans text-sm font-bold">Precio</span>
-            {formatCents(product.price_cents, product.currency)}
+          <p className="text-pool-deep text-3xl font-extrabold tabular-nums">
+            {shopMoney(product.price_cents)}
           </p>
-        </div>
-      </header>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1.08fr)_minmax(320px,0.92fr)] md:items-start md:gap-8">
-        <div className="flex min-w-0 flex-col gap-4">
-          <ProductGallery
-            title={product.title}
-            images={product.images.map((image) => ({
-              id: image.id,
-              url: image.url,
-              alt: image.alt,
-              is_cover: image.is_cover,
-            }))}
-          />
-          <section className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border">
-            <h2 className="bg-pool-deep text-paper font-display px-4 py-2.5 text-lg font-extrabold sm:px-5">
-              Detalles
-            </h2>
-            <p className="text-ink-700 px-4 py-4 text-base leading-relaxed whitespace-pre-line sm:px-5">
-              {product.description}
-            </p>
-          </section>
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-4 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
-          {product.available ? (
-            <section className="border-pool-blue/30 bg-pool-ice shadow-elev-1 rounded-2xl border p-4 sm:p-5">
-              <AddToCartButton
-                profileId={ctx.ownProfile.id}
-                productId={product.id}
-                available={product.available}
-                sizes={product.sizes}
-                personalizationEnabled={product.personalization_enabled}
-                personalizationLabel={product.personalization_label}
-                personalizationMaxLength={product.personalization_max_length}
-              />
-            </section>
-          ) : (
-            <p className="border-ink-300 bg-paper-card text-pool-deep rounded-2xl border p-4 text-center text-base font-semibold">
-              Este producto no está disponible ahora mismo.
-            </p>
-          )}
-
-          <section className="bg-pool-deep text-paper rounded-2xl p-4 shadow-sm sm:p-5">
-            <div className="flex items-start gap-3">
-              <span className="bg-paper-card/15 text-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-                <MessageCircle className="h-5 w-5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <h2 className="font-display text-paper text-lg font-extrabold">
-                  ¿Tienes alguna duda?
-                </h2>
-                <p className="text-paper mt-1 text-sm leading-relaxed font-semibold">
-                  Pregunta directamente a Sol, la encargada de la equipación.
-                </p>
-              </div>
-            </div>
-            <a
-              href={whatsappUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-paper-card text-pool-deep hover:bg-pool-foam focus-visible:ring-ball-gold mt-4 inline-flex min-h-12 w-full touch-manipulation items-center justify-center gap-2 rounded-xl px-4 text-base font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none"
-            >
-              <MessageCircle className="h-5 w-5" aria-hidden="true" />
-              Preguntar a Sol por WhatsApp
-            </a>
-          </section>
-        </div>
-      </div>
+        </header>
+      </article>
+      <ShopSection title="Detalles">
+        <p className="text-pool-deep text-[1.0625rem] leading-relaxed font-semibold whitespace-pre-line">
+          {product.description}
+        </p>
+      </ShopSection>
+      <ShopContact
+        message={`Hola Sol, tengo una duda sobre ${product.title} de la tienda de Morvedre Core.`}
+      />
+      <ShopSection title="Prepara tu producto">
+        <AddToCartButton
+          profileId={ctx.ownProfile.id}
+          productId={product.id}
+          available={product.available}
+          sizes={product.sizes}
+          personalizationEnabled={product.personalization_enabled}
+          personalizationLabel={product.personalization_label}
+          personalizationMaxLength={product.personalization_max_length}
+        />
+      </ShopSection>
     </PageShell>
   );
 }

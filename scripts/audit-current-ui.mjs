@@ -95,7 +95,6 @@ const routes = focusMode
       ["admin-news-new", "/admin/news/new"],
       ["admin-matches", "/admin/matches"],
       ["admin-players", "/admin/players"],
-      ["admin-player-import", "/admin/players/import"],
       ["admin-seasons", "/admin/seasons"],
       ["admin-staff", "/admin/staff"],
       ["admin-teams", "/admin/teams"],

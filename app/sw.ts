@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
 import { CacheFirst, ExpirationPlugin, NetworkOnly, Serwist } from "serwist";
+import { pushNotificationView } from "@/lib/pwa/push-notification";
 import { getSafeNotificationPath } from "@/lib/pwa/notification-url";
 
 declare global {
@@ -100,28 +101,14 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("push", (event) => {
   if (!event.data) return;
+  let payload: unknown;
   try {
-    const data = event.data.json();
-    const title = data.title || "Morvedre Core";
-    const options: NotificationOptions = {
-      body: data.body || "",
-      icon: "/brand/icon-192.png",
-      badge: "/brand/icon-192.png",
-      data: {
-        href: getSafeNotificationPath(data.href),
-      },
-    };
-    event.waitUntil(self.registration.showNotification(title, options));
+    payload = event.data.json();
   } catch {
-    const text = event.data.text();
-    event.waitUntil(
-      self.registration.showNotification("Morvedre Core", {
-        body: text,
-        icon: "/brand/icon-192.png",
-        badge: "/brand/icon-192.png",
-      }),
-    );
+    payload = { body: event.data.text() };
   }
+  const view = pushNotificationView(payload);
+  event.waitUntil(self.registration.showNotification(view.title, view.options));
 });
 
 self.addEventListener("notificationclick", (event) => {

@@ -24,6 +24,101 @@ const MATCH = {
 } as MatchRow;
 
 describe("MatchDetailsForm", () => {
+  it("conserva la piscina existente al guardar otros datos y no la reemplaza por un valor automático", async () => {
+    mockUpdate.mockReset().mockResolvedValue({});
+    mockLeave.mockClear();
+    render(
+      <MatchDetailsForm
+        match={{
+          ...MATCH,
+          location: "Piscina del torneo",
+          maps_url: "https://maps.example.test/piscina",
+        }}
+        teamLabel="Infantil"
+        backHref="/admin/matches"
+        backLabel="Volver"
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Competición" }), {
+      target: { value: "league" },
+    });
+    fireEvent.click(screen.getByRole("radio", { name: "Local" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Piscina" }));
+    expect(screen.getByRole("textbox", { name: "Nombre de la piscina" })).toHaveValue(
+      "Piscina del torneo",
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "match-1",
+        expect.objectContaining({
+          location: "Piscina del torneo",
+          maps_url: "https://maps.example.test/piscina",
+        }),
+      ),
+    );
+  });
+
+  it("mantiene pool_name cuando solo se cambia el rival", async () => {
+    mockUpdate.mockReset().mockResolvedValue({});
+    render(
+      <MatchDetailsForm
+        match={{ ...MATCH, pool_name: "Piscina heredada" }}
+        teamLabel="Infantil"
+        backHref="/admin/matches"
+        backLabel="Volver"
+      />,
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "Rival" }), {
+      target: { value: "Otro rival" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+    expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty("pool_name");
+    expect(mockUpdate.mock.calls[0][1]).toHaveProperty("location", null);
+  });
+
+  it("lleva al campo oculto que contiene un error de mapa y abre sus detalles", async () => {
+    mockUpdate.mockReset();
+    render(
+      <MatchDetailsForm
+        match={{ ...MATCH, maps_url: "http://inseguro.test" }}
+        teamLabel="Infantil"
+        backHref="/admin/matches"
+        backLabel="Volver"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await screen.findByText("Pega un enlace seguro que empiece por https://.");
+    expect(screen.getByRole("tab", { name: "Piscina" })).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByRole("textbox", { name: "Enlace de Google Maps" })).toBeVisible();
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("pide confirmación antes de cancelar y guarda al aceptarla", async () => {
+    mockUpdate.mockReset().mockResolvedValue({});
+    render(
+      <MatchDetailsForm
+        match={MATCH}
+        teamLabel="Infantil"
+        backHref="/admin/matches"
+        backLabel="Volver"
+      />,
+    );
+    fireEvent.change(screen.getByRole("combobox", { name: "Estado del partido" }), {
+      target: { value: "cancelled" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar cambios" }));
+    await screen.findByRole("heading", { name: "¿Cancelar este partido?" });
+    expect(mockUpdate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar partido y guardar" }));
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(
+        "match-1",
+        expect.objectContaining({ status: "cancelled" }),
+      ),
+    );
+  });
   it.each(["/admin/matches", "/matches/match-1"] as const)(
     "guarda y vuelve a %s solo cuando se han guardado los datos",
     async (backHref) => {

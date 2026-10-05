@@ -1,11 +1,17 @@
 "use client";
 
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
 import { useMemo, useRef, useState, useTransition } from "react";
-import { CheckCircle2, ChevronRight, RotateCcw, Save, Search, X } from "lucide-react";
+import { CheckCircle2, ChevronRight, Save, Search, X } from "lucide-react";
 
 import { createSwimTime } from "@/server/actions/swim-times";
 import { validCapNumber } from "@/lib/domain/cap-number";
-import { describeSwimTime, formatSwimTime, normalizeSearchTerm, parseSwimTime } from "@/lib/domain/swim-times";
+import {
+  describeSwimTime,
+  formatSwimTime,
+  normalizeSearchTerm,
+  parseSwimTime,
+} from "@/lib/domain/swim-times";
 
 type Player = {
   player_id: string;
@@ -49,7 +55,8 @@ export function SwimTimeEntryList({
   const [successBanner, setSuccessBanner] = useState<string | null>(null);
   const [todayEntries, setTodayEntries] = useState<ExistingEntry[]>(existingEntries);
   const [isPending, startTransition] = useTransition();
-  const operationId = useRef<string | null>(null);
+  const operation = useRef<{ key: string; id: string } | null>(null);
+  const busy = useRef(false);
 
   const selectedPlayer = useMemo(
     () => players.find((p) => p.player_id === selectedPlayerId) ?? null,
@@ -112,6 +119,7 @@ export function SwimTimeEntryList({
   }
 
   function handleSave() {
+    if (busy.current) return;
     if (!selectedPlayer) {
       setError("Selecciona primero un jugador.");
       return;
@@ -138,40 +146,53 @@ export function SwimTimeEntryList({
     const centiseconds = parsedTime.centiseconds;
     const time50Cs = distance === 50 ? centiseconds : null;
     const time100Cs = distance === 100 ? centiseconds : null;
+    const key = JSON.stringify([teamId, selectedPlayer.player_id, today, time50Cs, time100Cs]);
+    if (operation.current?.key !== key) operation.current = { key, id: crypto.randomUUID() };
+    const operationId = operation.current.id;
+    busy.current = true;
 
     startTransition(async () => {
-      const result = await createSwimTime({
-        teamId,
-        playerId: selectedPlayer.player_id,
-        operationId: (operationId.current = crypto.randomUUID()),
-        testDate: today,
-        time50Cs,
-        time100Cs,
-      });
+      try {
+        const result = await createSwimTime({
+          teamId,
+          playerId: selectedPlayer.player_id,
+          operationId,
+          testDate: today,
+          time50Cs,
+          time100Cs,
+        });
 
-      if (!result.ok) {
-        setError(result.error);
-        return;
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+
+        setTodayEntries((prev) => [
+          {
+            id: result.entryId,
+            revision: result.revision,
+            player_id: selectedPlayer.player_id,
+            test_date: today,
+            time_50_cs: time50Cs,
+            time_100_cs: time100Cs,
+          },
+          ...prev,
+        ]);
+
+        const formatted = formatSwimTime(centiseconds);
+        setSuccessBanner(
+          `Guardado para ${selectedPlayer.full_name}: ${distance} m en ${formatted}.`,
+        );
+        clearTime();
+        setWarningAccepted(false);
+        operation.current = null;
+      } catch {
+        setError(
+          "No pudimos confirmar el guardado. Vuelve a intentarlo; no se duplicará el tiempo.",
+        );
+      } finally {
+        busy.current = false;
       }
-
-      setTodayEntries((prev) => [
-        {
-          id: result.entryId,
-          revision: result.revision,
-          player_id: selectedPlayer.player_id,
-          test_date: today,
-          time_50_cs: time50Cs,
-          time_100_cs: time100Cs,
-        },
-        ...prev,
-      ]);
-
-      const formatted = formatSwimTime(centiseconds);
-      setSuccessBanner(
-        `¡Guardado para ${selectedPlayer.full_name}: ${distance} m en ${formatted}!`,
-      );
-      clearTime();
-      setWarningAccepted(false);
     });
   }
 
@@ -181,7 +202,7 @@ export function SwimTimeEntryList({
       {successBanner ? (
         <div
           role="status"
-          className="bg-emerald-600 text-paper flex items-center justify-between gap-3 rounded-2xl p-4 shadow-md text-lg sm:text-xl font-black animate-in fade-in duration-200"
+          className="text-paper flex items-center justify-between gap-3 rounded-2xl border-2 border-emerald-900 bg-emerald-800 p-4 text-base font-bold shadow-md"
         >
           <div className="flex items-center gap-3">
             <CheckCircle2 className="h-8 w-8 shrink-0 text-emerald-200" aria-hidden="true" />
@@ -190,7 +211,7 @@ export function SwimTimeEntryList({
           <button
             type="button"
             onClick={() => setSuccessBanner(null)}
-            className="hover:bg-emerald-700 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-emerald-700"
             aria-label="Cerrar aviso"
           >
             <X className="h-6 w-6" aria-hidden="true" />
@@ -200,14 +221,16 @@ export function SwimTimeEntryList({
 
       {/* PASO 1: Selección de Jugador */}
       <section
-        className={`border-ink-200 bg-paper-card rounded-2xl border shadow-xs ${selectedPlayer ? "p-2.5" : "p-4 sm:p-5"}`}
+        className={`border-pool-deep/65 bg-paper-card rounded-2xl border shadow-xs ${selectedPlayer ? "p-2.5" : "p-4 sm:p-5"}`}
         aria-label={selectedPlayer ? "Jugador seleccionado" : undefined}
         aria-labelledby={selectedPlayer ? undefined : "step-player-heading"}
       >
-        <div className={`items-center justify-between gap-3 ${selectedPlayer ? "hidden" : "mb-3 flex"}`}>
+        <div
+          className={`items-center justify-between gap-3 ${selectedPlayer ? "hidden" : "mb-3 flex"}`}
+        >
           <h2
             id="step-player-heading"
-            className="text-pool-deep text-base sm:text-lg font-black uppercase tracking-wide flex items-center gap-2"
+            className="text-pool-deep flex items-center gap-2 text-base font-black tracking-wide uppercase sm:text-lg"
           >
             <span className="bg-pool-deep text-paper flex h-6 w-6 items-center justify-center rounded-full text-xs font-black">
               1
@@ -219,30 +242,28 @@ export function SwimTimeEntryList({
         {selectedPlayer ? (
           /* Jugador seleccionado en tarjeta elegante y legible */
           <div className="bg-pool-foam/40 border-pool-blue/30 flex items-center justify-between gap-3 rounded-xl border p-2">
-            <div className="flex items-center gap-3 min-w-0">
-              <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-black shadow-xs">
-                {selectedCap != null
-                  ? `#${selectedCap}`
-                  : selectedPlayer.full_name.charAt(0)}
+            <div className="flex min-w-0 flex-1 items-center gap-3">
+              <span className="bg-pool-deep text-paper flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-base font-black shadow-xs">
+                {selectedCap != null ? `#${selectedCap}` : selectedPlayer.full_name.charAt(0)}
               </span>
-              <div className="min-w-0">
-                <p className="text-ink-900 truncate text-base font-extrabold leading-snug sm:text-lg">
-                  {selectedPlayer.full_name}
+              <div className="min-w-0 flex-1">
+                <p className="text-ink-900 min-w-0 text-base leading-snug font-extrabold sm:text-lg">
+                  <AdaptivePlayerName name={selectedPlayer.full_name} />
                 </p>
               </div>
             </div>
 
             <button
               type="button"
+              disabled={isPending}
               onClick={() => {
                 setSelectedPlayerId(null);
                 clearTime();
                 setError("");
               }}
-              className="text-pool-blue hover:text-paper hover:bg-pool-blue bg-paper border-pool-blue/30 flex min-h-10 shrink-0 touch-manipulation items-center gap-1.5 whitespace-nowrap rounded-lg border px-3 py-2 text-sm font-bold shadow-xs transition-colors"
+              className="text-pool-blue hover:text-paper hover:bg-pool-blue bg-paper border-pool-deep/65 flex min-h-12 shrink-0 touch-manipulation items-center gap-1.5 rounded-lg border-2 px-3 py-2 text-sm font-bold whitespace-nowrap shadow-xs transition-colors disabled:opacity-60"
               aria-label="Cambiar jugador seleccionado"
             >
-              <RotateCcw className="h-4 w-4" aria-hidden="true" />
               <span>Cambiar</span>
             </button>
           </div>
@@ -253,7 +274,7 @@ export function SwimTimeEntryList({
               <label className="relative block">
                 <span className="sr-only">Buscar jugador</span>
                 <Search
-                  className="text-ink-400 pointer-events-none absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2"
+                  className="text-pool-blue pointer-events-none absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2"
                   aria-hidden="true"
                 />
                 <input
@@ -261,11 +282,19 @@ export function SwimTimeEntryList({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Buscar por nombre..."
-                  className="border-ink-300 bg-paper text-ink-900 focus:border-pool-blue focus:ring-pool-blue h-12 w-full rounded-xl border pl-11 pr-4 text-base font-bold focus:ring-2 focus:outline-none"
+                  className="border-pool-deep/65 bg-paper text-ink-900 focus:border-pool-blue focus:ring-pool-blue h-12 w-full rounded-xl border pr-4 pl-11 text-base font-bold focus:ring-2 focus:outline-none"
                 />
               </label>
             ) : null}
 
+            {!filteredPlayers.length ? (
+              <p
+                role="status"
+                className="border-pool-deep/65 text-pool-deep rounded-xl border-2 bg-white p-4 font-bold"
+              >
+                No encontramos a ese jugador. Prueba otro nombre o gorro.
+              </p>
+            ) : null}
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {filteredPlayers.map((player) => {
                 const recorded = timesTodayByPlayer.get(player.player_id);
@@ -275,26 +304,31 @@ export function SwimTimeEntryList({
                     key={player.player_id}
                     type="button"
                     onClick={() => handleSelectPlayer(player.player_id)}
-                    className="border-ink-200 hover:border-pool-blue hover:bg-pool-foam/30 active:bg-pool-foam focus-visible:ring-pool-blue flex min-h-14 touch-manipulation items-center justify-between gap-3 rounded-xl border bg-paper p-2.5 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
+                    className="border-pool-deep/65 hover:border-pool-blue hover:bg-pool-foam/30 active:bg-pool-foam focus-visible:ring-pool-blue bg-paper flex min-h-14 touch-manipulation items-center justify-between gap-3 rounded-xl border p-2.5 text-left transition-all focus-visible:ring-2 focus-visible:outline-none"
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="bg-pool-deep text-paper flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-base font-black">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                      <span className="bg-pool-deep text-paper flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-base font-black">
                         {cap != null ? cap : player.full_name.charAt(0)}
                       </span>
-                      <div className="min-w-0">
-                        <span className="block text-ink-900 font-extrabold text-base truncate">
-                          {player.full_name}
+                      <div className="min-w-0 flex-1">
+                        <span className="text-ink-900 block min-w-0 text-base font-extrabold">
+                          <AdaptivePlayerName name={player.full_name} />
                         </span>
                         {recorded?.time50 != null || recorded?.time100 != null ? (
-                          <span className="text-emerald-700 text-xs font-bold block">
-                            Hoy: {recorded.time50 != null ? `50m (${formatSwimTime(recorded.time50)})` : ""}
+                          <span className="block text-sm font-bold text-emerald-800">
+                            Hoy:{" "}
+                            {recorded.time50 != null
+                              ? `50m (${formatSwimTime(recorded.time50)})`
+                              : ""}
                             {recorded.time50 != null && recorded.time100 != null ? " · " : ""}
-                            {recorded.time100 != null ? `100m (${formatSwimTime(recorded.time100)})` : ""}
+                            {recorded.time100 != null
+                              ? `100m (${formatSwimTime(recorded.time100)})`
+                              : ""}
                           </span>
                         ) : null}
                       </div>
                     </div>
-                    <ChevronRight className="h-5 w-5 text-ink-400 shrink-0" aria-hidden="true" />
+                    <ChevronRight className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
                   </button>
                 );
               })}
@@ -306,14 +340,14 @@ export function SwimTimeEntryList({
       {/* PASO 2 y 3: Distancia y Tiempo (Solo cuando hay jugador seleccionado) */}
       {selectedPlayer ? (
         <section
-          className="border-ink-200 bg-paper-card flex flex-col gap-3 rounded-2xl border p-3 shadow-xs sm:p-4"
+          className="border-pool-deep/65 bg-paper-card flex flex-col gap-3 rounded-2xl border p-3 shadow-xs sm:p-4"
           aria-labelledby="step-time-heading"
         >
           {/* Paso 2: Distancia */}
           <div>
             <h2
               id="step-time-heading"
-              className="text-pool-deep mb-2 flex items-center gap-2 text-sm font-black uppercase tracking-wide sm:text-base"
+              className="text-pool-deep mb-2 flex items-center gap-2 text-sm font-black tracking-wide uppercase sm:text-base"
             >
               <span className="bg-pool-deep text-paper flex h-6 w-6 items-center justify-center rounded-full text-xs font-black">
                 2
@@ -323,36 +357,42 @@ export function SwimTimeEntryList({
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
+                disabled={isPending}
+                aria-pressed={distance === 50}
                 onClick={() => {
                   setDistance(50);
+                  setWarningAccepted(false);
                   setError("");
                 }}
-                className={`min-h-12 touch-manipulation rounded-xl border flex flex-col items-center justify-center p-1.5 transition-all ${
+                className={`flex min-h-12 touch-manipulation flex-col items-center justify-center rounded-xl border p-1.5 transition-all ${
                   distance === 50
-                    ? "bg-pool-deep text-paper border-pool-deep shadow-xs ring-2 ring-pool-deep/20"
-                    : "bg-paper text-ink-700 border-ink-200 hover:border-ink-300"
+                    ? "bg-pool-deep text-paper border-pool-deep ring-pool-deep/20 shadow-xs ring-2"
+                    : "bg-paper text-ink-700 border-pool-deep/65 hover:border-pool-deep/65"
                 }`}
               >
                 <span className="text-lg font-black tracking-wide sm:text-xl">50 m</span>
-                <span className="hidden text-xs font-bold uppercase tracking-wider opacity-80 sm:block">
+                <span className="hidden text-xs font-bold tracking-wider uppercase opacity-80 sm:block">
                   2 largos
                 </span>
               </button>
 
               <button
                 type="button"
+                disabled={isPending}
+                aria-pressed={distance === 100}
                 onClick={() => {
                   setDistance(100);
+                  setWarningAccepted(false);
                   setError("");
                 }}
-                className={`min-h-12 touch-manipulation rounded-xl border flex flex-col items-center justify-center p-1.5 transition-all ${
+                className={`flex min-h-12 touch-manipulation flex-col items-center justify-center rounded-xl border p-1.5 transition-all ${
                   distance === 100
-                    ? "bg-pool-deep text-paper border-pool-deep shadow-xs ring-2 ring-pool-deep/20"
-                    : "bg-paper text-ink-700 border-ink-200 hover:border-ink-300"
+                    ? "bg-pool-deep text-paper border-pool-deep ring-pool-deep/20 shadow-xs ring-2"
+                    : "bg-paper text-ink-700 border-pool-deep/65 hover:border-pool-deep/65"
                 }`}
               >
                 <span className="text-lg font-black tracking-wide sm:text-xl">100 m</span>
-                <span className="hidden text-xs font-bold uppercase tracking-wider opacity-80 sm:block">
+                <span className="hidden text-xs font-bold tracking-wider uppercase opacity-80 sm:block">
                   4 largos
                 </span>
               </button>
@@ -361,21 +401,22 @@ export function SwimTimeEntryList({
 
           {/* Paso 3: Tiempo */}
           <div>
-            <h2 className="text-pool-deep mb-2 flex items-center gap-2 text-sm font-black uppercase tracking-wide sm:text-base">
+            <h2 className="text-pool-deep mb-2 flex items-center gap-2 text-sm font-black tracking-wide uppercase sm:text-base">
               <span className="bg-pool-deep text-paper flex h-6 w-6 items-center justify-center rounded-full text-xs font-black">
                 3
               </span>
               Tiempo conseguido
             </h2>
 
-            <div className="bg-paper-sunk border-ink-200 flex flex-col items-center gap-1.5 rounded-xl border p-2.5 sm:p-3">
-              <div className="grid w-full max-w-sm grid-cols-3 gap-2">
+            <div className="bg-paper-sunk border-pool-deep/65 flex flex-col items-center gap-1.5 rounded-xl border px-1 py-2.5 sm:p-3">
+              <div className="grid w-full max-w-sm grid-cols-[0.85fr_1fr_1.2fr] gap-1 sm:grid-cols-3">
                 <label className="flex flex-col gap-1 text-center">
-                  <span className="text-ink-600 text-[10px] font-extrabold uppercase sm:text-xs">Minutos</span>
+                  <span className="text-pool-deep text-sm font-bold">Minutos</span>
                   <input
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
+                    disabled={isPending}
                     value={minutesInput}
                     onChange={(event) => {
                       setMinutesInput(keepDigits(event.target.value, 2));
@@ -384,15 +425,16 @@ export function SwimTimeEntryList({
                     }}
                     placeholder="0"
                     aria-label="Minutos"
-                    className="bg-paper text-pool-deep border-pool-blue h-12 w-full rounded-xl border-2 text-center font-mono text-2xl font-black tabular-nums shadow-inner focus:ring-4 focus:ring-pool-blue/20 focus:outline-none"
+                    className="bg-paper text-pool-deep border-pool-blue focus:ring-pool-blue/20 h-12 w-full rounded-xl border-2 text-center font-mono text-2xl font-black tabular-nums shadow-inner focus:ring-4 focus:outline-none"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-center">
-                  <span className="text-ink-600 text-[10px] font-extrabold uppercase sm:text-xs">Segundos</span>
+                  <span className="text-pool-deep text-sm font-bold">Segundos</span>
                   <input
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
+                    disabled={isPending}
                     value={secondsInput}
                     onChange={(event) => {
                       setSecondsInput(keepDigits(event.target.value, 2));
@@ -401,15 +443,16 @@ export function SwimTimeEntryList({
                     }}
                     placeholder={distance === 50 ? "34" : "15"}
                     aria-label="Segundos"
-                    className="bg-paper text-pool-deep border-pool-blue h-12 w-full rounded-xl border-2 text-center font-mono text-2xl font-black tabular-nums shadow-inner focus:ring-4 focus:ring-pool-blue/20 focus:outline-none"
+                    className="bg-paper text-pool-deep border-pool-blue focus:ring-pool-blue/20 h-12 w-full rounded-xl border-2 text-center font-mono text-2xl font-black tabular-nums shadow-inner focus:ring-4 focus:outline-none"
                   />
                 </label>
                 <label className="flex flex-col gap-1 text-center">
-                  <span className="text-ink-600 text-[10px] font-extrabold uppercase sm:text-xs">Centésimas</span>
+                  <span className="text-pool-deep text-sm font-bold">Centésimas</span>
                   <input
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
+                    disabled={isPending}
                     value={hundredthsInput}
                     onChange={(event) => {
                       setHundredthsInput(keepDigits(event.target.value, 2));
@@ -418,7 +461,7 @@ export function SwimTimeEntryList({
                     }}
                     placeholder="00"
                     aria-label="Centésimas"
-                    className="bg-paper text-pool-deep border-pool-blue h-12 w-full rounded-xl border-2 text-center font-mono text-2xl font-black tabular-nums shadow-inner focus:ring-4 focus:ring-pool-blue/20 focus:outline-none"
+                    className="bg-paper text-pool-deep border-pool-blue focus:ring-pool-blue/20 h-12 w-full rounded-xl border-2 text-center font-mono text-2xl font-black tabular-nums shadow-inner focus:ring-4 focus:outline-none"
                   />
                 </label>
               </div>
@@ -428,7 +471,7 @@ export function SwimTimeEntryList({
                   ✓ {describeSwimTime(parsedTime.centiseconds)}
                 </p>
               ) : (
-                <p className="text-ink-500 mt-1 text-center text-sm font-bold">
+                <p className="mt-1 text-center text-sm font-bold text-slate-700">
                   Las centésimas son opcionales
                 </p>
               )}
@@ -439,10 +482,10 @@ export function SwimTimeEntryList({
           {error ? (
             <div
               role="alert"
-              className={`p-3.5 rounded-xl text-base font-bold ${
+              className={`rounded-xl p-3.5 text-base font-bold ${
                 warningAccepted
-                  ? "bg-amber-100 text-amber-900 border border-amber-300"
-                  : "bg-rose-100 text-rose-900 border border-rose-300"
+                  ? "border-2 border-amber-800 bg-amber-100 text-amber-900"
+                  : "border-2 border-rose-800 bg-rose-100 text-rose-900"
               }`}
             >
               {error}
@@ -454,10 +497,10 @@ export function SwimTimeEntryList({
             type="button"
             disabled={isPending || !hasTimeInput}
             onClick={handleSave}
-            className={`min-h-12 touch-manipulation w-full rounded-xl text-base sm:text-lg font-black text-paper shadow-md flex items-center justify-center gap-2.5 transition-all ${
+            className={`text-paper flex min-h-12 w-full touch-manipulation items-center justify-center gap-2.5 rounded-xl text-base font-black shadow-md transition-all sm:text-lg ${
               isPending || !hasTimeInput
                 ? "bg-ink-300 cursor-not-allowed opacity-60"
-                : "bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98]"
+                : "bg-pool-deep hover:bg-pool-blue active:scale-[0.98]"
             }`}
           >
             <Save className="h-6 w-6" aria-hidden="true" />
@@ -471,8 +514,8 @@ export function SwimTimeEntryList({
       ) : null}
 
       {selectedPlayer ? (
-        <section className="border-ink-200 bg-paper-card rounded-2xl border p-3 shadow-xs">
-          <h2 className="text-pool-deep text-sm font-black uppercase tracking-wide">
+        <section className="border-pool-deep/65 bg-paper-card rounded-2xl border p-3 shadow-xs">
+          <h2 className="text-pool-deep text-sm font-black tracking-wide uppercase">
             Tiempos de hoy
           </h2>
           <div className="mt-2 grid grid-cols-2 gap-2">
@@ -484,7 +527,7 @@ export function SwimTimeEntryList({
                   key={meters}
                   className={`flex min-h-14 items-center justify-between rounded-xl border px-3 ${
                     value == null
-                      ? "border-ink-200 bg-paper-sunk text-ink-500"
+                      ? "border-pool-deep/65 bg-paper-sunk text-slate-700"
                       : "border-emerald-200 bg-emerald-50 text-emerald-800"
                   }`}
                 >
@@ -502,17 +545,17 @@ export function SwimTimeEntryList({
       {/* Historial de tiempos registrados hoy */}
       {todayEntries.length > 0 && !selectedPlayer ? (
         <section
-          className="border-ink-200 bg-paper-card rounded-2xl border p-4 sm:p-5 shadow-sm"
+          className="border-pool-deep/65 bg-paper-card rounded-2xl border p-4 shadow-sm sm:p-5"
           aria-labelledby="today-times-heading"
         >
           <h2
             id="today-times-heading"
-            className="text-pool-deep text-base sm:text-lg font-black uppercase tracking-wider mb-3 flex items-center justify-between"
+            className="text-pool-deep mb-3 flex items-center justify-between text-base font-black tracking-wider uppercase sm:text-lg"
           >
             <span>Tiempos registrados hoy ({todayEntries.length})</span>
           </h2>
 
-          <div className="divide-ink-200 divide-y">
+          <div className="space-y-3 p-3">
             {todayEntries.map((entry) => {
               const player = players.find((p) => p.player_id === entry.player_id);
               const name = player?.full_name ?? "Jugador";
@@ -520,23 +563,25 @@ export function SwimTimeEntryList({
               return (
                 <div
                   key={entry.id}
-                  className="py-3 flex items-center justify-between gap-3 text-base"
+                  className="border-pool-deep/65 flex flex-col gap-3 rounded-xl border-2 p-3 text-base"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
                     <span className="bg-pool-foam text-pool-deep flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm font-black">
                       {cap != null ? `#${cap}` : "•"}
                     </span>
-                    <span className="font-extrabold text-ink-900 truncate">{name}</span>
+                    <span className="text-ink-900 min-w-0 font-extrabold">
+                      <AdaptivePlayerName name={name} />
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex shrink-0 items-center gap-2">
                     {entry.time_50_cs != null ? (
-                      <span className="bg-pool-deep text-paper px-2.5 py-1 rounded-lg text-sm sm:text-base font-black tabular-nums">
+                      <span className="bg-pool-deep text-paper rounded-lg px-2.5 py-1 text-sm font-black tabular-nums sm:text-base">
                         50m: {formatSwimTime(entry.time_50_cs)}
                       </span>
                     ) : null}
                     {entry.time_100_cs != null ? (
-                      <span className="bg-pool-deep text-paper px-2.5 py-1 rounded-lg text-sm sm:text-base font-black tabular-nums">
+                      <span className="bg-pool-deep text-paper rounded-lg px-2.5 py-1 text-sm font-black tabular-nums sm:text-base">
                         100m: {formatSwimTime(entry.time_100_cs)}
                       </span>
                     ) : null}

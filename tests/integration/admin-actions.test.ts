@@ -29,7 +29,6 @@ import {
   updateTeamSchema,
   userRoleEnum,
 } from "@/lib/domain/admin-schemas";
-import { xlsxRowSchema } from "@/lib/domain/import-schema";
 
 describe("isoDate", () => {
   it("accepts a valid YYYY-MM-DD date", () => {
@@ -349,7 +348,9 @@ describe("createPlayerSchema", () => {
   });
 
   it("requires an initial team", () => {
-    expect(createPlayerSchema.safeParse({ ...validPlayer, team_id: undefined }).success).toBe(false);
+    expect(createPlayerSchema.safeParse({ ...validPlayer, team_id: undefined }).success).toBe(
+      false,
+    );
   });
 
   it("trims whitespace from full_name", () => {
@@ -650,86 +651,6 @@ describe("roleAssignmentSchema and userRoleEnum", () => {
   });
 });
 
-describe("xlsxRowSchema", () => {
-  const currentYear = new Date().getFullYear();
-  it("accepts a minimal valid row", () => {
-    expect(
-      xlsxRowSchema(currentYear).safeParse({
-        nombre_completo: "Jugador",
-        ano_nacimiento: 2015,
-      }).success,
-    ).toBe(true);
-  });
-
-  it("rejects empty nombre_completo", () => {
-    expect(
-      xlsxRowSchema(currentYear).safeParse({ nombre_completo: "", ano_nacimiento: 2015 }).success,
-    ).toBe(false);
-  });
-
-  it("rejects non-numeric ano_nacimiento", () => {
-    expect(
-      xlsxRowSchema(currentYear).safeParse({ nombre_completo: "X", ano_nacimiento: "abc" }).success,
-    ).toBe(false);
-  });
-
-  it("rejects birth_year outside the [1900, 2100] range", () => {
-    expect(
-      xlsxRowSchema(currentYear).safeParse({ nombre_completo: "X", ano_nacimiento: 1899 }).success,
-    ).toBe(false);
-  });
-
-  it("treats empty dorsal as missing (not 0)", () => {
-    const result = xlsxRowSchema(currentYear).safeParse({
-      nombre_completo: "X",
-      ano_nacimiento: 2015,
-      dorsal: "",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.dorsal).toBeUndefined();
-    }
-  });
-
-  it("rejects dorsal out of range", () => {
-    expect(
-      xlsxRowSchema(currentYear).safeParse({
-        nombre_completo: "X",
-        ano_nacimiento: 2015,
-        dorsal: 15,
-      }).success,
-    ).toBe(false);
-    expect(
-      xlsxRowSchema(currentYear).safeParse({
-        nombre_completo: "X",
-        ano_nacimiento: 2015,
-        dorsal: 100,
-      }).success,
-    ).toBe(false);
-  });
-
-  it("rejects invalid email_tutor", () => {
-    expect(
-      xlsxRowSchema(currentYear).safeParse({
-        nombre_completo: "X",
-        ano_nacimiento: 2015,
-        email_tutor: "not-an-email",
-      }).success,
-    ).toBe(false);
-  });
-
-  it("defaults relacion to legal_guardian when missing", () => {
-    const result = xlsxRowSchema(currentYear).safeParse({
-      nombre_completo: "X",
-      ano_nacimiento: 2015,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.relacion).toBe("legal_guardian");
-    }
-  });
-});
-
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(),
 }));
@@ -841,3 +762,5 @@ describe("requireAdmin (mocked supabase)", () => {
     expect(typeof helpers.requireAdmin).toBe("function");
   });
 });
+
+vi.mock("@/server/notification-push", () => ({ scheduleNotificationPush: vi.fn() }));

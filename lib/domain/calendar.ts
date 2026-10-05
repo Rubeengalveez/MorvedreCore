@@ -1,3 +1,5 @@
+import { getAttendanceDayKey } from "./attendance";
+
 const MONTHS_ES = [
   "Enero",
   "Febrero",
@@ -102,7 +104,11 @@ export function getNext30Days(from: Date): Date[] {
 export function formatTimeOfDay(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  return new Intl.DateTimeFormat("es-ES", {
+    timeZone: "Europe/Madrid",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
 }
 
 export function formatTimeRangeFromDuration(iso: string, durationMinutes: number): string {
@@ -200,7 +206,7 @@ export function isSameLocalDay(a: Date, b: Date): boolean {
 }
 
 export function todayIso(): string {
-  return isoDateFromDate(new Date());
+  return getAttendanceDayKey(new Date());
 }
 
 export function addDaysIso(startIso: string, days: number): string {
@@ -211,6 +217,6 @@ export function addDaysIso(startIso: string, days: number): string {
 }
 
 export function currentYearMonth(): YearMonth {
-  const d = new Date();
-  return { year: d.getFullYear(), month: d.getMonth() };
+  const day = todayIso();
+  return { year: Number(day.slice(0, 4)), month: Number(day.slice(5, 7)) - 1 };
 }

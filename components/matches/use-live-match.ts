@@ -34,10 +34,30 @@ export function useLiveMatch() {
   const canWrite = useRef(false);
   const syncRef = useRef<() => Promise<void>>(async () => {});
 
-  function persist(next: StoredMatch | ((latest: StoredMatch) => StoredMatch)) {
+  function persist(
+    next: StoredMatch | ((latest: StoredMatch) => StoredMatch),
+    expected?: { mutation: string; draftRevision: number },
+  ) {
     const task = writeQueue.current.then(async () => {
       const value = typeof next === "function" ? next(current.current!) : next;
-      await writeLocalMatch(value);
+      const previous = current.current!;
+      const guard =
+        expected ??
+        (canWrite.current
+          ? { mutation: previous.mutation, draftRevision: previous.draftRevision ?? 0 }
+          : undefined);
+      try {
+        await writeLocalMatch(value, guard);
+      } catch (failure) {
+        if (guard) {
+          const latest = await readLocalMatch(previous.matchId).catch(() => undefined);
+          if (latest && latest.viewer === previous.viewer && latest.device === previous.device) {
+            current.current = latest;
+            setRecord(latest);
+          }
+        }
+        throw failure;
+      }
       current.current = value;
       setRecord(value);
     });
@@ -141,6 +161,7 @@ export function useLiveMatch() {
                     cached.revision === remote.revision
                       ? cached.lineupDraft
                       : undefined,
+                  draftRevision: cached?.draftRevision ?? 0,
                   device: remote.device || liveDevice(),
                   dirty: remote.revision === 0,
                   mutation: remote.mutation || generateUuid(),
@@ -212,21 +233,37 @@ export function useLiveMatch() {
     };
   }, []);
 
-  async function change(sheet: LiveSheet, options?: { rosterEdit?: true }) {
+  async function change(
+    sheet: LiveSheet,
+    options?: { rosterEdit?: true; expectedDraftRevision?: number },
+  ) {
     if (!canWrite.current || localWriting.current) return false;
     localWriting.current = true;
     setBusy(true);
     try {
       const parsed = identifyLiveSheet(sheet, current.current?.sheet);
       await writeQueue.current;
-      await persist((latest) => ({
-        ...latest,
-        sheet: parsed,
-        lineupDraft: undefined,
-        mutation: generateUuid(),
-        dirty: true,
-        rosterEdit: options?.rosterEdit || latest.rosterEdit,
-      }));
+      const latest = current.current!;
+      const expected = {
+        mutation: latest.mutation,
+        draftRevision: options?.expectedDraftRevision ?? latest.draftRevision ?? 0,
+      };
+      if ((latest.draftRevision ?? 0) !== expected.draftRevision)
+        throw new Error(
+          "La selección ha cambiado. Cierra la lista y vuelve a abrirla antes de guardar.",
+        );
+      await persist(
+        (latest) => ({
+          ...latest,
+          sheet: parsed,
+          lineupDraft: undefined,
+          draftRevision: expected.draftRevision + 1,
+          mutation: generateUuid(),
+          dirty: true,
+          rosterEdit: options?.rosterEdit || latest.rosterEdit,
+        }),
+        expected,
+      );
       setError("");
       void syncRef.current();
       return true;
@@ -299,7 +336,27 @@ export function useLiveMatch() {
   async function saveLineupDraft(draft: LineupDraft) {
     if (!canWrite.current) return false;
     try {
-      await persist((latest) => ({ ...latest, lineupDraft: draft }));
+      await writeQueue.current;
+      const latest = current.current!;
+      const expected = {
+        mutation: draft.baseMutation,
+        draftRevision: draft.baseDraftRevision ?? latest.draftRevision ?? 0,
+      };
+      if (
+        latest.mutation !== expected.mutation ||
+        (latest.draftRevision ?? 0) !== expected.draftRevision
+      )
+        throw new Error(
+          "La selección ha cambiado. Cierra la lista y vuelve a abrirla antes de guardar.",
+        );
+      await persist(
+        (currentRecord) => ({
+          ...currentRecord,
+          lineupDraft: draft,
+          draftRevision: expected.draftRevision + 1,
+        }),
+        expected,
+      );
       return true;
     } catch (e) {
       setError(e instanceof Error ? e.message : "No pudimos guardar la selección en este móvil.");

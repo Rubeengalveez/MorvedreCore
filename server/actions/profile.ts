@@ -1,12 +1,12 @@
 "use server";
 
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import sharp from "sharp";
-
-import { updateProfileSchema } from "@/lib/domain/admin-schemas";
+import { z } from "zod";
+import { selfProfilePayload, selfProfileSchema } from "@/lib/domain/self-profile";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { normalizeSpanishPhone } from "@/lib/domain/phone";
 import { validateAvatarImageFile } from "@/lib/uploads/images";
 
 export type UpdateProfileState = { ok?: true; error?: string } | null;
@@ -15,90 +15,145 @@ export async function updateProfile(
   _prev: UpdateProfileState,
   formData: FormData,
 ): Promise<UpdateProfileState> {
-  const rawPhone = String(formData.get("phone_e164") ?? "");
-  const parsed = updateProfileSchema.safeParse({
+  const parsed = selfProfileSchema.safeParse({
     full_name: formData.get("full_name"),
-    birth_year: formData.get("birth_year"),
-    cap_number: formData.has("cap_number") ? formData.get("cap_number") : undefined,
-    phone_e164: rawPhone ? (normalizeSpanishPhone(rawPhone) ?? rawPhone) : "",
-    email_contact: formData.has("email_contact") ? formData.get("email_contact") : undefined,
+    phone_e164: formData.get("phone_e164") ?? "",
+    email_contact: formData.get("email_contact") ?? "",
+    cap_number: formData.get("cap_number") ? Number(formData.get("cap_number")) : null,
   });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Datos inválidos." };
-  }
-
-  const supabase = await createClient();
+  const revision = z.iso.datetime({ offset: true }).safeParse(formData.get("updated_at"));
+  if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Revisa tus datos." };
+  if (!revision.success) return { error: "Vuelve a abrir tus datos antes de guardar." };
+  const db = await createClient();
   const {
     data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return { error: "Tu sesión ha caducado. Vuelve a iniciar sesión." };
-  }
-
+    error: authError,
+  } = await db.auth.getUser();
+  if (authError || !user) return { error: "Tu sesión ha caducado. Vuelve a iniciar sesión." };
   const admin = createAdminClient();
-  const { data: currentProfile, error: profileError } = await admin
+  const { data: profile, error: profileError } = await admin
     .from("profiles")
-    .select("id")
+    .select("id,birth_year,photo_url,updated_at,is_active")
     .eq("auth_user_id", user.id)
     .maybeSingle();
-  if (profileError || !currentProfile) {
-    return { error: "No pudimos localizar tu perfil." };
-  }
-
+  if (profileError || !profile?.is_active)
+    return { error: "No pudimos localizar tu perfil activo." };
+  if (profile.updated_at !== revision.data)
+    return {
+      error: "Tus datos han cambiado en otra sesión. Vuelve a abrir la ficha para revisarlos.",
+    };
+  if (
+    formData.has("birth_year") &&
+    String(formData.get("birth_year") ?? "") !== String(profile.birth_year ?? "")
+  )
+    return {
+      error: "El club gestiona el año de nacimiento. Pide a un administrador que lo revise.",
+    };
+  const { data: roles, error: rolesError } = await db
+    .from("user_roles")
+    .select("role")
+    .eq("profile_id", profile.id);
+  if (rolesError) return { error: "No pudimos comprobar tu ficha del club." };
+  const isPlayer = (roles ?? []).some((role) => role.role === "player");
+  if (!isPlayer && formData.has("cap_number"))
+    return { error: "El gorro solo se puede cambiar en una ficha de jugador." };
   const avatarValue = formData.get("avatar_file");
-  const avatarFile = avatarValue instanceof File && avatarValue.size > 0 ? avatarValue : null;
+  const file = avatarValue instanceof File && avatarValue.size > 0 ? avatarValue : null;
   const removePhoto = formData.get("remove_photo") === "true";
+  let path: string | null = null;
   let photoUrl: string | null | undefined;
-
-  if (avatarFile) {
+  if (file && removePhoto) return { error: "Elige si quieres cambiar la foto o quitarla." };
+  if (file) {
     try {
-      await validateAvatarImageFile(avatarFile);
-      const normalized = await sharp(Buffer.from(await avatarFile.arrayBuffer()), {
+      await validateAvatarImageFile(file);
+      const normalized = await sharp(Buffer.from(await file.arrayBuffer()), {
         limitInputPixels: 40_000_000,
       })
         .rotate()
         .resize(512, 512, { fit: "cover", position: "centre" })
-        .jpeg({ quality: 88, mozjpeg: true })
+        .jpeg({ quality: 88 })
         .toBuffer();
-      const path = `${currentProfile.id}/avatar.jpg`;
-      const { error: uploadError } = await admin.storage.from("avatars").upload(path, normalized, {
+      path = `${profile.id}/${randomUUID()}.jpg`;
+      const { error } = await admin.storage.from("avatars").upload(path, normalized, {
         contentType: "image/jpeg",
         cacheControl: "31536000",
-        upsert: true,
+        upsert: false,
       });
-      if (uploadError) throw uploadError;
-      const { data } = admin.storage.from("avatars").getPublicUrl(path);
-      photoUrl = `${data.publicUrl}?v=${Date.now()}`;
+      if (error) throw error;
+      photoUrl = admin.storage.from("avatars").getPublicUrl(path).data.publicUrl;
     } catch {
+      if (path)
+        await admin.storage
+          .from("avatars")
+          .remove([path])
+          .catch(() => undefined);
       return { error: "No pudimos preparar la foto. Usa un JPG o PNG de hasta 5 MB." };
     }
-  } else if (removePhoto) {
-    await admin.storage.from("avatars").remove([`${currentProfile.id}/avatar.jpg`]);
-    photoUrl = null;
+  } else if (removePhoto) photoUrl = null;
+  const { cap_number, ...contact } = selfProfilePayload(parsed.data);
+  let failed: string | null = null;
+  try {
+    const { data: saved, error } = await admin
+      .from("profiles")
+      .update({
+        ...contact,
+        ...(isPlayer && formData.has("cap_number") ? { cap_number } : {}),
+        ...(photoUrl !== undefined ? { photo_url: photoUrl } : {}),
+      })
+      .eq("id", profile.id)
+      .eq("auth_user_id", user.id)
+      .eq("is_active", true)
+      .eq("updated_at", revision.data)
+      .select("id")
+      .maybeSingle();
+    if (error || !saved) {
+      failed = error
+        ? "No pudimos confirmar el guardado. Vuelve a abrir tus datos para comprobarlo."
+        : "Tus datos han cambiado en otra sesión. Vuelve a abrir la ficha para revisarlos.";
+    }
+  } catch {
+    failed = "No pudimos confirmar el guardado. Vuelve a abrir tus datos para comprobarlo.";
   }
-
-  const { error } = await admin
-    .from("profiles")
-    .update({
-      full_name: parsed.data.full_name,
-      photo_url: photoUrl,
-      birth_year: parsed.data.birth_year,
-      phone_e164: parsed.data.phone_e164,
-      ...(formData.has("cap_number") ? { cap_number: parsed.data.cap_number } : {}),
-      ...(formData.has("email_contact") ? { email_contact: parsed.data.email_contact } : {}),
-    })
-    .eq("auth_user_id", user.id);
-
-  if (error) {
-    return { error: "No pudimos guardar los cambios. Inténtalo de nuevo." };
+  if (failed && path) {
+    try {
+      const { data: current, error: verificationError } = await admin
+        .from("profiles")
+        .select("photo_url")
+        .eq("auth_user_id", user.id)
+        .maybeSingle();
+      if (!verificationError && current) {
+        if (current.photo_url === photoUrl) failed = null;
+        else {
+          await admin.storage
+            .from("avatars")
+            .remove([path])
+            .catch(() => undefined);
+          failed = "No pudimos guardar. Tu foto anterior se conserva. Vuelve a intentarlo.";
+        }
+      } else
+        failed = "No pudimos confirmar el guardado. Vuelve a abrir tus datos para comprobarlo.";
+    } catch {
+      failed = "No pudimos confirmar el guardado. Vuelve a abrir tus datos para comprobarlo.";
+    }
   }
-
-  revalidatePath("/profile");
-  revalidatePath("/dashboard");
-  revalidatePath("/team");
-  revalidatePath("/rankings");
-
+  if (failed) return { error: failed };
+  if (photoUrl !== undefined && profile.photo_url) {
+    try {
+      const url = new URL(profile.photo_url);
+      const base = new URL(
+        admin.storage.from("avatars").getPublicUrl(`${profile.id}/`).data.publicUrl,
+      );
+      if (url.origin === base.origin && url.pathname.startsWith(base.pathname)) {
+        const suffix = decodeURIComponent(url.pathname.slice(base.pathname.length));
+        if (suffix && !suffix.includes("/") && !suffix.includes("..")) {
+          const oldPath = `${profile.id}/${suffix}`;
+          if (oldPath !== path) await admin.storage.from("avatars").remove([oldPath]);
+        }
+      }
+    } catch {
+      photoUrl = undefined;
+    }
+  }
+  for (const route of ["/profile", "/dashboard", "/team", "/rankings"]) revalidatePath(route);
   return { ok: true };
 }

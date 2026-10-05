@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { cache } from "react";
 import { isMissingShopPersonalizationSchema, type ShopOrderStatus } from "@/lib/domain/shop";
 
 export interface ShopProduct {
@@ -11,7 +12,6 @@ export interface ShopProduct {
   image_url: string | null;
   sizes: string[];
   available: boolean;
-  max_per_order: number;
   personalization_enabled: boolean;
   personalization_label: string;
   personalization_max_length: number;
@@ -73,16 +73,16 @@ export interface ShopOrder {
 }
 
 const PRODUCT_FIELDS =
-  "id, title, description, category, price_cents, currency, image_url, sizes, available, max_per_order, personalization_enabled, personalization_label, personalization_max_length, created_by, created_at, updated_at";
+  "id, title, description, category, price_cents, currency, image_url, sizes, available, personalization_enabled, personalization_label, personalization_max_length, created_by, created_at, updated_at";
 
 const LEGACY_PRODUCT_FIELDS =
-  "id, title, description, category, price_cents, currency, image_url, sizes, available, max_per_order, created_by, created_at, updated_at";
+  "id, title, description, category, price_cents, currency, image_url, sizes, available, created_by, created_at, updated_at";
 
 const ORDER_FIELDS =
   "id, order_reference, requested_by, approved_by, managed_by, status, total_cents, currency, contact_phone_e164, notes, parent_notes, admin_notes, requested_at, approved_at, ordered_at, received_at, delivered_at, cancelled_at, updated_at";
 
 const ITEM_FIELDS =
-  "id, order_id, product_id, size, personalization, quantity, unit_price_cents, subtotal_cents";
+  "id, order_id, product_id, size, personalization, quantity, unit_price_cents, subtotal_cents, product_title_snapshot, product_image_snapshot";
 
 const LEGACY_ITEM_FIELDS =
   "id, order_id, product_id, size, quantity, unit_price_cents, subtotal_cents";
@@ -143,7 +143,7 @@ export async function getShopProducts(filter?: {
   );
 }
 
-export async function getShopProduct(productId: string): Promise<ShopProduct | null> {
+export const getShopProduct = cache(async (productId: string): Promise<ShopProduct | null> => {
   const supabase = await createClient();
   const currentResult = await supabase
     .from("shop_products")
@@ -161,13 +161,13 @@ export async function getShopProduct(productId: string): Promise<ShopProduct | n
     productData = legacyResult.data as unknown as Record<string, unknown> | null;
     productError = legacyResult.error;
   }
-  if (productError) return null;
+  if (productError) throw new Error("No pudimos cargar este producto. Vuelve a intentarlo.");
   const products = await attachProductImages(
     normalizeProductRows(productData ? [productData] : []),
     supabase,
   );
   return products[0] ?? null;
-}
+});
 
 export async function getShopCategories(): Promise<string[]> {
   const supabase = await createClient();
@@ -255,7 +255,7 @@ export async function getShopOrder(orderId: string): Promise<ShopOrder | null> {
     .select(ORDER_FIELDS)
     .eq("id", orderId)
     .maybeSingle();
-  if (orderErr) return null;
+  if (orderErr) throw new Error("No pudimos cargar este pedido. Vuelve a intentarlo.");
   if (!orderData) return null;
 
   const currentItemsResult = await supabase
@@ -272,7 +272,8 @@ export async function getShopOrder(orderId: string): Promise<ShopOrder | null> {
     itemRows = legacyItemsResult.data as unknown as Array<Record<string, unknown>> | null;
     itemsError = legacyItemsResult.error;
   }
-  if (itemsError) return null;
+  if (itemsError)
+    throw new Error("No pudimos cargar los productos del pedido. Vuelve a intentarlo.");
 
   const items = await hydrateOrderItems(normalizeItemRows(itemRows ?? []), supabase);
   const profileMap = await loadProfileNames(supabase, collectProfileIdsFromOrders([orderData]));
@@ -281,16 +282,25 @@ export async function getShopOrder(orderId: string): Promise<ShopOrder | null> {
 }
 
 export async function getShopOrdersForPlayer(profileId: string): Promise<ShopOrder[]> {
+  return getShopOrdersForProfiles([profileId]);
+}
+export async function getShopOrdersForProfiles(profileIds: string[]): Promise<ShopOrder[]> {
+  if (!profileIds.length) return [];
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("shop_orders")
-    .select(ORDER_FIELDS)
-    .eq("requested_by", profileId)
-    .in("status", ["pending_admin", "ordered", "received", "delivered", "cancelled"])
-    .order("requested_at", { ascending: false })
-    .limit(50);
-  if (error) return [];
-  return hydrateOrders(data ?? [], supabase);
+  const rows: Array<Record<string, unknown>> = [];
+  for (let offset = 0; ; offset += 500) {
+    const { data, error } = await supabase
+      .from("shop_orders")
+      .select(ORDER_FIELDS)
+      .in("requested_by", profileIds)
+      .order("requested_at", { ascending: false })
+      .order("id")
+      .range(offset, offset + 499);
+    if (error) throw new Error("No pudimos cargar tus pedidos. Vuelve a intentarlo.");
+    rows.push(...((data ?? []) as unknown as Array<Record<string, unknown>>));
+    if ((data?.length ?? 0) < 500) break;
+  }
+  return hydrateShopOrders(rows, supabase);
 }
 
 export async function getPendingShopOrdersForParent(parentId: string): Promise<ShopOrder[]> {
@@ -299,7 +309,8 @@ export async function getPendingShopOrdersForParent(parentId: string): Promise<S
     .from("parent_child_links")
     .select("child_profile_id")
     .eq("parent_profile_id", parentId);
-  if (linkErr) return [];
+  if (linkErr)
+    throw new Error("No pudimos comprobar los pedidos de tu familia. Vuelve a intentarlo.");
   const childIds = (links ?? []).map((l) => (l as { child_profile_id: string }).child_profile_id);
   if (childIds.length === 0) return [];
 
@@ -309,8 +320,9 @@ export async function getPendingShopOrdersForParent(parentId: string): Promise<S
     .in("requested_by", childIds)
     .eq("status", "pending_parent")
     .order("requested_at", { ascending: true });
-  if (error) return [];
-  return hydrateOrders(data ?? [], supabase);
+  if (error)
+    throw new Error("No pudimos cargar los pedidos pendientes de tu familia. Vuelve a intentarlo.");
+  return hydrateShopOrders(data ?? [], supabase);
 }
 
 export async function getShopOrdersForKanban(statuses: ShopOrderStatus[]): Promise<ShopOrder[]> {
@@ -321,31 +333,37 @@ export async function getShopOrdersForKanban(statuses: ShopOrderStatus[]): Promi
     .in("status", statuses)
     .order("requested_at", { ascending: false });
   if (error) throw new Error("No pudimos cargar los pedidos de tienda: " + error.message);
-  return hydrateOrders(data ?? [], supabase);
+  return hydrateShopOrders(data ?? [], supabase);
 }
 
-async function hydrateOrders(
+export async function hydrateShopOrders(
   orderRows: Array<Record<string, unknown>>,
   supabase: Awaited<ReturnType<typeof createClient>>,
 ): Promise<ShopOrder[]> {
   if (orderRows.length === 0) return [];
   const orderIds = orderRows.map((o) => (o as { id: string }).id);
 
-  const currentItemsResult = await supabase
-    .from("shop_order_items")
-    .select(ITEM_FIELDS)
-    .in("order_id", orderIds);
-  let itemRows = currentItemsResult.data as unknown as Array<Record<string, unknown>> | null;
-  let itemsError = currentItemsResult.error;
-  if (isMissingShopPersonalizationSchema(itemsError)) {
-    const legacyItemsResult = await supabase
-      .from("shop_order_items")
-      .select(LEGACY_ITEM_FIELDS)
-      .in("order_id", orderIds);
-    itemRows = legacyItemsResult.data as unknown as Array<Record<string, unknown>> | null;
-    itemsError = legacyItemsResult.error;
+  const itemRows: Array<Record<string, unknown>> = [];
+  for (let offset = 0; ; offset += 500) {
+    let result: { data: unknown[] | null; error: { code?: string; message: string } | null } =
+      await supabase
+        .from("shop_order_items")
+        .select(ITEM_FIELDS)
+        .in("order_id", orderIds)
+        .order("id")
+        .range(offset, offset + 499);
+    if (isMissingShopPersonalizationSchema(result.error)) {
+      result = await supabase
+        .from("shop_order_items")
+        .select(LEGACY_ITEM_FIELDS)
+        .in("order_id", orderIds)
+        .order("id")
+        .range(offset, offset + 499);
+    }
+    if (result.error) throw new Error("No pudimos cargar las líneas del pedido.");
+    itemRows.push(...((result.data ?? []) as unknown as Array<Record<string, unknown>>));
+    if ((result.data?.length ?? 0) < 500) break;
   }
-  if (itemsError) throw new Error("No pudimos cargar las líneas de pedido: " + itemsError.message);
 
   const items = await hydrateOrderItems(normalizeItemRows(itemRows ?? []), supabase);
   const itemsByOrder = new Map<string, ShopOrderItem[]>();
@@ -404,6 +422,8 @@ async function hydrateOrderItems(
       quantity: number;
       unit_price_cents: number;
       subtotal_cents: number;
+      product_title_snapshot?: string | null;
+      product_image_snapshot?: string | null;
     }>
   ).map((i) => {
     const p = productMap.get(i.product_id);
@@ -416,8 +436,11 @@ async function hydrateOrderItems(
       quantity: i.quantity,
       unit_price_cents: i.unit_price_cents,
       subtotal_cents: i.subtotal_cents,
-      product_title: p?.title,
-      product_image_url: p?.image_url ?? null,
+      product_title: i.product_title_snapshot ?? p?.title,
+      product_image_url:
+        i.product_title_snapshot != null
+          ? (i.product_image_snapshot ?? null)
+          : (p?.image_url ?? null),
       product_category: p?.category,
     };
   });

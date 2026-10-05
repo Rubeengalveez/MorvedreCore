@@ -50,6 +50,7 @@ describe("attendance summaries", () => {
       absent: 0,
       total: 0,
       percentage: null,
+      unreviewed: 0,
     });
   });
 
@@ -79,14 +80,15 @@ describe("attendance summaries", () => {
 
     expect(reports[0]).toMatchObject({
       session_count: 2,
-      reviewed_session_count: 1,
+      reviewed_session_count: 0,
       absent: 1,
-      percentage: 0,
+      percentage: 75,
     });
     expect(reports[0]?.players[1]).toMatchObject({
       full_name: "Bruno López",
-      total: 0,
-      percentage: null,
+      total: 2,
+      percentage: 100,
+      unreviewed: 2,
     });
   });
 });

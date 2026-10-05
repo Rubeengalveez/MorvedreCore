@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { readPendingLocalMatches, type StoredMatch } from "@/lib/pwa/live-match-store";
+import {
+  parseStoredMatch,
+  readPendingLocalMatches,
+  writeLocalMatch,
+  type StoredMatch,
+} from "@/lib/pwa/live-match-store";
 
 const match = (n: number): StoredMatch => ({
   matchId: `00000000-0000-4000-8000-${String(n).padStart(12, "0")}`,
@@ -91,4 +96,60 @@ it("preserva el documento ilegible sin bloquear los otros ni borrarlo", async ()
   ).toEqual([match(2).matchId]);
   expect(records[0]).toBe(corrupt);
   expect(close).toHaveBeenCalledOnce();
+});
+
+it.each([
+  { date: "fecha-rota" },
+  { revision: "rota" },
+  { draftRevision: -1 },
+  { homeAway: "invalid" },
+  { flight: { revision: -1 } },
+])("no envía metadatos corruptos ni borra el documento: %j", async (fields) => {
+  const corrupt = { ...match(1), ...fields };
+  records = [corrupt, match(2)];
+  expect(parseStoredMatch(corrupt)).toBeUndefined();
+  expect(
+    (await readPendingLocalMatches("viewer", "device")).map((record) => record.matchId),
+  ).toEqual([match(2).matchId]);
+  expect(records[0]).toBe(corrupt);
+});
+
+it("rechaza una escritura antigua dentro de la misma transacción IndexedDB", async () => {
+  const put = vi.fn();
+  const closeDb = vi.fn();
+  const current = { ...match(1), draftRevision: 2 };
+  vi.stubGlobal("indexedDB", {
+    open: () => {
+      const openRequest: { result?: unknown; onsuccess?: () => void } = {};
+      queueMicrotask(() => {
+        openRequest.result = {
+          close: closeDb,
+          transaction: () => {
+            const tx: { onabort?: () => void; abort: () => void; objectStore: () => object } = {
+              abort: () => tx.onabort?.(),
+              objectStore: () => ({
+                put,
+                get: () => {
+                  const read: { result: StoredMatch; onsuccess?: () => void } = { result: current };
+                  queueMicrotask(() => read.onsuccess?.());
+                  return read;
+                },
+              }),
+            };
+            return tx;
+          },
+        };
+        openRequest.onsuccess?.();
+      });
+      return openRequest;
+    },
+  });
+  await expect(
+    writeLocalMatch(
+      { ...match(1), draftRevision: 2 },
+      { mutation: current.mutation, draftRevision: 1 },
+    ),
+  ).rejects.toThrow("otra pestaña");
+  expect(put).not.toHaveBeenCalled();
+  expect(closeDb).toHaveBeenCalledOnce();
 });

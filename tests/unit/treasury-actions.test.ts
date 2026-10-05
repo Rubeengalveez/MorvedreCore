@@ -35,6 +35,7 @@ function query(response: { data: unknown; error: { message: string } | null }) {
     gte: vi.fn(() => chain),
     lte: vi.fn(() => chain),
     lt: vi.fn(() => chain),
+    or: vi.fn(() => chain),
     order: vi.fn(() => chain),
     range: vi.fn(async (from: number, to: number) => ({
       data: Array.isArray(response.data) ? response.data.slice(from, to + 1) : response.data,
@@ -56,6 +57,22 @@ beforeEach(() => {
 });
 
 describe("treasury writes", () => {
+  it("selects orders by approval date, with request date only for legacy orders", async () => {
+    const orders = query({ data: [], error: null });
+    mocks.from.mockImplementation((table) =>
+      table === "shop_orders" ? orders : query({ data: [], error: null }),
+    );
+    await buildTreasuryPeriodClosure(input);
+    expect(orders.select).toHaveBeenCalledWith(
+      expect.stringContaining("approved_at"),
+      expect.anything(),
+    );
+    expect(orders.or).toHaveBeenCalledWith(
+      expect.stringMatching(
+        /and\(approved_at\.gte\..*approved_at\.lt\..*\),and\(approved_at\.is\.null,requested_at\.gte\./,
+      ),
+    );
+  });
   it("loads all assignments beyond the first API page", async () => {
     const rows = Array.from({ length: 1205 }, (_, index) => ({
       id: `assignment-${index}`,

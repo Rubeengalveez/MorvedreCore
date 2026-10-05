@@ -32,9 +32,7 @@ function validateCs(totalCs: number, distance: SwimDistance): ParsedSwimTime {
     return { ok: false, message: "El tiempo debe estar entre 0,01 s y 59:59,99." };
   }
   const warning =
-    distance === 50
-      ? totalCs < 1800 || totalCs > 18_000
-      : totalCs < 4000 || totalCs > 36_000;
+    distance === 50 ? totalCs < 1800 || totalCs > 18_000 : totalCs < 4000 || totalCs > 36_000;
   return { ok: true, centiseconds: totalCs, warning };
 }
 
@@ -88,15 +86,29 @@ export function formatSwimTime(centiseconds: number): string {
 }
 
 export function getSwimProfileSummary(entries: SwimTimeEntryInput[]) {
-  const recent = [...entries].sort((a, b) =>
-    b.test_date.localeCompare(a.test_date) || b.created_at.localeCompare(a.created_at),
+  const recent = [...entries].sort(
+    (a, b) => b.test_date.localeCompare(a.test_date) || b.created_at.localeCompare(a.created_at),
   );
   const latest50 = recent.find((entry) => entry.time_50_cs != null)?.time_50_cs ?? null;
   const latest100 = recent.find((entry) => entry.time_100_cs != null)?.time_100_cs ?? null;
-  const best50 = entries.reduce<number | null>((best, entry) =>
-    entry.time_50_cs == null ? best : best == null ? entry.time_50_cs : Math.min(best, entry.time_50_cs), null);
-  const best100 = entries.reduce<number | null>((best, entry) =>
-    entry.time_100_cs == null ? best : best == null ? entry.time_100_cs : Math.min(best, entry.time_100_cs), null);
+  const best50 = entries.reduce<number | null>(
+    (best, entry) =>
+      entry.time_50_cs == null
+        ? best
+        : best == null
+          ? entry.time_50_cs
+          : Math.min(best, entry.time_50_cs),
+    null,
+  );
+  const best100 = entries.reduce<number | null>(
+    (best, entry) =>
+      entry.time_100_cs == null
+        ? best
+        : best == null
+          ? entry.time_100_cs
+          : Math.min(best, entry.time_100_cs),
+    null,
+  );
   return { latest50, latest100, best50, best100 };
 }
 
@@ -157,7 +169,7 @@ export interface SwimRankingRow {
 export function categoryForSwimEntry(entry: SwimTimeEntryInput): CategoryCode | null {
   if (entry.team_category === "escuela") return "escuela";
   if (entry.birth_year == null) return null;
-  return safeInferCategory(entry.birth_year, entry.season_end_year);
+  return safeInferCategory(entry.birth_year, entry.season_end_year - 1);
 }
 
 function timeForDistance(entry: SwimTimeEntryInput, distance: SwimDistance): number | null {

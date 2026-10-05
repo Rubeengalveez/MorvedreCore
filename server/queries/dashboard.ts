@@ -1,6 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
 
 export interface DashboardWeekEvent {
+  maps_url?: string | null;
+  opponent?: string;
+  is_home?: boolean;
+  player_ids?: string[] | null;
+  team_player_ids?: Record<string, string[] | null>;
+  training_kind?: string;
+  location?: string | null;
+  team_ids?: string[];
+  joint_id?: string | null;
   id: string;
   team_id: string;
   kind: "training" | "match";
@@ -46,6 +55,7 @@ export interface DashboardCoachSession {
   scheduled_at: string;
   end_at: string | null;
   location: string | null;
+  kind?: string;
   is_past: boolean;
   present_count: number;
   absent_count: number;
@@ -76,6 +86,8 @@ export async function getDashboardAudience(
       .eq("profile_id", profileId),
     supabase.from("user_roles").select("role, scope_team_id").eq("profile_id", profileId),
   ]);
+  if (rosterRes.error || staffRes.error || rolesRes.error)
+    throw new Error("No pudimos cargar tu actividad del club.");
 
   const playerTeamIds: string[] = [];
   for (const row of rosterRes.data ?? []) {
@@ -149,11 +161,12 @@ export async function hasCurrentAttendancePermission(
 
 export async function getAttendanceTeams(seasonId: string): Promise<DashboardStaffTeam[]> {
   const supabase = await createClient();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("teams")
     .select("id, label, color")
     .eq("season_id", seasonId)
     .order("label", { ascending: true });
+  if (error) throw new Error("No pudimos cargar los equipos. Inténtalo de nuevo.");
 
   return (data ?? []).map((team) => ({
     id: team.id,
@@ -167,53 +180,109 @@ export async function getUpcomingDashboardEvents(
   teamIds: string[],
   now: Date = new Date(),
   limit = 8,
+  viewer?: { profileIds: string[]; staffTeamIds: string[] },
 ): Promise<DashboardWeekEvent[]> {
   if (teamIds.length === 0) return [];
   const supabase = await createClient();
-  const from = new Date(now.getTime() - 2 * 60 * 60 * 1000).toISOString();
+  const from = new Date(now.getTime() - 8 * 60 * 60 * 1000).toISOString();
   const until = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  let trainingQuery = supabase
+    .from("training_sessions")
+    .select(
+      "id, team_id, joint_id, player_ids, kind, label, location, maps_url, scheduled_at, duration_minutes, cancelled, teams!training_sessions_team_id_fkey(label, color)",
+    )
+    .in("team_id", teamIds)
+    .eq("cancelled", false)
+    .gt("end_at", now.toISOString())
+    .gte("scheduled_at", from)
+    .lte("scheduled_at", until)
+    .order("scheduled_at", { ascending: true })
+    .limit(Math.min(1000, limit * teamIds.length));
+
+  if (viewer) {
+    const audience = [
+      "player_ids.is.null",
+      ...(viewer.profileIds.length ? [`player_ids.ov.{${viewer.profileIds.join(",")}}`] : []),
+      ...(viewer.staffTeamIds.length ? [`team_id.in.(${viewer.staffTeamIds.join(",")})`] : []),
+    ];
+    trainingQuery = trainingQuery.or(audience.join(","));
+  }
   const [trainingsRes, matchesRes] = await Promise.all([
-    supabase
-      .from("training_sessions")
-      .select(
-        "id, team_id, scheduled_at, duration_minutes, cancelled, teams!training_sessions_team_id_fkey(label, color)",
-      )
-      .in("team_id", teamIds)
-      .eq("cancelled", false)
-      .gte("scheduled_at", from)
-      .lte("scheduled_at", until)
-      .order("scheduled_at", { ascending: true })
-      .limit(limit),
+    trainingQuery,
     supabase
       .from("matches")
       .select(
-        "id, team_id, opponent, scheduled_at, status, teams!matches_team_id_fkey(label, color)",
+        "id, team_id, opponent, is_home, pool_name, location, maps_url, scheduled_at, status, teams!matches_team_id_fkey(label, color)",
       )
       .in("team_id", teamIds)
       .in("status", ["scheduled", "in_progress"])
-      .gte("scheduled_at", from)
-      .lte("scheduled_at", until)
+      .or(`status.eq.in_progress,and(scheduled_at.gte.${from},scheduled_at.lte.${until})`)
       .order("scheduled_at", { ascending: true })
       .limit(limit),
   ]);
+  if (trainingsRes.error || matchesRes.error) throw new Error("No pudimos cargar la agenda.");
 
-  const today = new Intl.DateTimeFormat("en-CA").format(now);
-  const tomorrowDate = new Date(now);
-  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-  const tomorrow = new Intl.DateTimeFormat("en-CA").format(tomorrowDate);
+  const today = getClubDayKey(now);
+  const tomorrowDate = new Date(`${today}T12:00:00Z`);
+  tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+  const tomorrow = getClubDayKey(tomorrowDate);
   const events: DashboardWeekEvent[] = [];
 
   for (const row of trainingsRes.data ?? []) {
+    if (new Date(row.scheduled_at).getTime() + row.duration_minutes * 60000 <= now.getTime())
+      continue;
+    if (
+      row.player_ids &&
+      viewer &&
+      !viewer.staffTeamIds.includes(row.team_id) &&
+      !viewer.profileIds.some((id) => row.player_ids?.includes(id))
+    )
+      continue;
+    const joint = row.joint_id
+      ? events.find(
+          (e) =>
+            e.joint_id === row.joint_id &&
+            e.scheduled_at === row.scheduled_at &&
+            e.duration_minutes === row.duration_minutes &&
+            e.training_kind === row.kind &&
+            e.location === row.location,
+        )
+      : null;
+    if (joint) {
+      joint.team_ids?.push(row.team_id);
+      if (joint.team_player_ids) joint.team_player_ids[row.team_id] = row.player_ids;
+      joint.team_label += ` · ${joinedOne(row.teams)?.label ?? "Equipo"}`;
+      joint.player_ids =
+        joint.player_ids === null || row.player_ids === null
+          ? null
+          : [...new Set([...(joint.player_ids ?? []), ...row.player_ids])];
+      continue;
+    }
     const team = joinedOne(row.teams) as { label?: string; color?: string } | null;
-    const date = new Intl.DateTimeFormat("en-CA").format(new Date(row.scheduled_at));
+    const date = getClubDayKey(new Date(row.scheduled_at));
     events.push({
       id: row.id,
       team_id: row.team_id,
+      team_ids: [row.team_id],
+      player_ids: row.player_ids,
+      team_player_ids: { [row.team_id]: row.player_ids },
+      training_kind: row.kind,
+      location: row.location,
+      maps_url: row.maps_url,
+      joint_id: row.joint_id,
       kind: "training",
       date,
       scheduled_at: row.scheduled_at,
       duration_minutes: row.duration_minutes,
-      title: "Entrenamiento",
+      title:
+        row.label ||
+        (
+          { meeting: "Reunión", dry: "Físico/seco", physical: "Físico/seco" } as Record<
+            string,
+            string
+          >
+        )[row.kind] ||
+        "Agua",
       team_label: team?.label ?? "Equipo",
       team_color: team?.color ?? "#1E5AA8",
       cancelled: false,
@@ -225,7 +294,12 @@ export async function getUpcomingDashboardEvents(
 
   for (const row of matchesRes.data ?? []) {
     const team = joinedOne(row.teams) as { label?: string; color?: string } | null;
-    const date = new Intl.DateTimeFormat("en-CA").format(new Date(row.scheduled_at));
+    const date = getClubDayKey(new Date(row.scheduled_at));
+    if (
+      row.status !== "in_progress" &&
+      new Date(row.scheduled_at).getTime() + 120 * 60000 <= now.getTime()
+    )
+      continue;
     events.push({
       id: row.id,
       team_id: row.team_id,
@@ -233,6 +307,10 @@ export async function getUpcomingDashboardEvents(
       date,
       scheduled_at: row.scheduled_at,
       title: `Partido contra ${row.opponent}`,
+      opponent: row.opponent,
+      is_home: row.is_home,
+      location: row.pool_name || row.location,
+      maps_url: row.maps_url,
       team_label: team?.label ?? "Equipo",
       team_color: team?.color ?? "#1E5AA8",
       cancelled: false,
@@ -242,7 +320,13 @@ export async function getUpcomingDashboardEvents(
     });
   }
 
-  return events.sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)).slice(0, limit);
+  return events
+    .sort(
+      (a, b) =>
+        Number(b.status === "in_progress") - Number(a.status === "in_progress") ||
+        a.scheduled_at.localeCompare(b.scheduled_at),
+    )
+    .slice(0, limit);
 }
 
 const clubDayFormatter = new Intl.DateTimeFormat("en-CA", {
@@ -261,11 +345,13 @@ export function getClubDayKey(value: Date): string {
 }
 
 interface CoachSessionRow {
+  player_ids: string[] | null;
   id: string;
   team_id: string;
   scheduled_at: string;
   end_at: string | null;
   location: string | null;
+  kind?: string;
 }
 
 async function hydrateCoachSessions(
@@ -290,6 +376,8 @@ async function hydrateCoachSessions(
       .lte("joined_at", rosterDay)
       .or(`left_at.is.null,left_at.gte.${rosterDay}`),
   ]);
+  if (attendanceRes.error || rosterRes.error)
+    throw new Error("No pudimos cargar las listas de asistencia. Inténtalo de nuevo.");
   const attendanceRows = attendanceRes.data ?? [];
   const attendanceBySession = new Map<string, typeof attendanceRows>();
   for (const row of attendanceRows) {
@@ -303,7 +391,9 @@ async function hydrateCoachSessions(
   const profilesRes =
     rosterIds.length > 0
       ? await supabase.from("profiles").select("id, full_name").in("id", rosterIds)
-      : { data: [] };
+      : { data: [], error: null };
+  if (profilesRes.error)
+    throw new Error("No pudimos cargar los nombres de la plantilla. Inténtalo de nuevo.");
   const profiles = new Map((profilesRes.data ?? []).map((profile) => [profile.id, profile]));
   const rosterByTeam = new Map<string, typeof roster>();
   for (const row of roster) {
@@ -317,6 +407,7 @@ async function hydrateCoachSessions(
     const savedRows = attendanceBySession.get(session.id) ?? [];
     const savedByPlayer = new Map(savedRows.map((row) => [row.player_id, row]));
     const players: DashboardAttendancePlayer[] = (rosterByTeam.get(session.team_id) ?? [])
+      .filter((row) => !session.player_ids || session.player_ids.includes(row.player_id))
       .map((row) => {
         const profile = profiles.get(row.player_id);
         if (!profile) return null;
@@ -342,6 +433,7 @@ async function hydrateCoachSessions(
       scheduled_at: session.scheduled_at,
       end_at: session.end_at,
       location: session.location,
+      kind: session.kind,
       is_past: new Date(session.scheduled_at).getTime() <= nowTime,
       present_count: presentCount,
       absent_count: absentCount,
@@ -363,14 +455,15 @@ export async function getCoachAttendanceSessions(
   const center = new Date(`${day}T12:00:00.000Z`).getTime();
   const from = new Date(center - 36 * 60 * 60 * 1000).toISOString();
   const until = new Date(center + 36 * 60 * 60 * 1000).toISOString();
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("training_sessions")
-    .select("id, team_id, scheduled_at, end_at, location")
+    .select("id, team_id, scheduled_at, end_at, location, player_ids, kind")
     .in("team_id", teamIds)
     .eq("cancelled", false)
     .gte("scheduled_at", from)
     .lte("scheduled_at", until)
     .order("scheduled_at", { ascending: true });
+  if (error) throw new Error("No pudimos cargar los entrenamientos. Inténtalo de nuevo.");
   const sessions = ((data ?? []) as CoachSessionRow[]).filter(
     (session) => getClubDayKey(new Date(session.scheduled_at)) === day,
   );
@@ -385,13 +478,14 @@ export async function getCoachAttendanceSession(
   if (staffTeams.length === 0) return null;
   const supabase = await createClient();
   const teamIds = Array.from(new Set(staffTeams.map((team) => team.id)));
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("training_sessions")
-    .select("id, team_id, scheduled_at, end_at, location")
+    .select("id, team_id, scheduled_at, end_at, location, player_ids, kind")
     .eq("id", sessionId)
     .in("team_id", teamIds)
     .eq("cancelled", false)
     .maybeSingle();
+  if (error) throw new Error("No pudimos cargar el entrenamiento. Inténtalo de nuevo.");
   if (!data) return null;
   const session = data as CoachSessionRow;
   const sessions = await hydrateCoachSessions(
@@ -402,4 +496,3 @@ export async function getCoachAttendanceSession(
   );
   return sessions[0] ?? null;
 }
-

@@ -13,7 +13,7 @@ export function resolveShopContactPhone(input: {
   deferToGuardian: boolean;
 }): string | null {
   if (input.deferToGuardian) return null;
-  return input.storedPhone ?? input.submittedPhone;
+  return input.submittedPhone ?? input.storedPhone;
 }
 
 export const SHOP_ORDER_STATUS_LABELS: Record<ShopOrderStatus, string> = {
@@ -43,24 +43,12 @@ export function isMissingShopPersonalizationSchema(
   );
 }
 
-export const SHOP_KANBAN_COLUMNS: ReadonlyArray<{
-  id: ShopOrderStatus;
-  title: string;
-  emoji: string;
-}> = [
-  { id: "pending_parent", title: "Pendiente de familia", emoji: "🟡" },
-  { id: "pending_admin", title: "Pendientes de Sol", emoji: "🟢" },
-  { id: "ordered", title: "Pedido al proveedor", emoji: "📦" },
-  { id: "received", title: "Recibido", emoji: "📥" },
-  { id: "delivered", title: "Entregado", emoji: "✅" },
-];
-
 const SHOP_MANAGER_TRANSITIONS: Record<ShopOrderStatus, ReadonlyArray<ShopOrderStatus>> = {
   pending_parent: ["cancelled"],
-  pending_admin: ["ordered", "cancelled"],
-  ordered: ["received", "cancelled"],
+  pending_admin: ["ordered", "delivered", "cancelled"],
+  ordered: ["received", "delivered", "cancelled"],
   received: ["delivered", "cancelled"],
-  delivered: [],
+  delivered: ["pending_admin"],
   rejected: [],
   cancelled: [],
 };
@@ -80,7 +68,6 @@ export const MAX_TITLE = 80;
 export const MIN_TITLE = 3;
 export const MAX_DESCRIPTION = 2000;
 export const MIN_DESCRIPTION = 1;
-export const MAX_QUANTITY = 20;
 export const MIN_QUANTITY = 1;
 export const MAX_CATEGORIES_PER_FILTER = 20;
 export const MAX_PRICE_FILTER_EUR = 1000;
@@ -97,7 +84,6 @@ export interface ParsedProduct {
     image_url: string | null;
     sizes: string[];
     available: boolean;
-    max_per_order: number;
     personalization_enabled: boolean;
     personalization_label: string;
     personalization_max_length: number;
@@ -144,10 +130,6 @@ export function parseProduct(input: unknown): ParsedProduct {
         .filter((s) => s.length > 0 && s.length <= 20)
     : [];
   const available = v.available === false ? false : true;
-  const maxPerOrder = typeof v.max_per_order === "number" ? Math.floor(v.max_per_order) : 10;
-  if (maxPerOrder < 1 || maxPerOrder > MAX_QUANTITY) {
-    return { ok: false, error: "Cantidad máxima por pedido entre 1 y " + MAX_QUANTITY + "." };
-  }
   const personalizationEnabled = v.personalization_enabled === true;
   const personalizationLabel =
     typeof v.personalization_label === "string" && v.personalization_label.trim().length > 0
@@ -174,7 +156,6 @@ export function parseProduct(input: unknown): ParsedProduct {
       image_url: imageUrl,
       sizes,
       available,
-      max_per_order: maxPerOrder,
       personalization_enabled: personalizationEnabled,
       personalization_label: personalizationLabel,
       personalization_max_length: personalizationMaxLength,
@@ -211,9 +192,9 @@ export function parseCartItem(input: unknown): ParsedCartItem {
   if (personalization && personalization.length > 60) {
     return { ok: false, error: "La personalización es demasiado larga." };
   }
-  const quantity = typeof v.quantity === "number" ? Math.floor(v.quantity) : Number.NaN;
-  if (!Number.isFinite(quantity) || quantity < MIN_QUANTITY || quantity > MAX_QUANTITY) {
-    return { ok: false, error: "Cantidad entre " + MIN_QUANTITY + " y " + MAX_QUANTITY + "." };
+  const quantity = typeof v.quantity === "number" ? v.quantity : Number.NaN;
+  if (!Number.isSafeInteger(quantity) || quantity < MIN_QUANTITY) {
+    return { ok: false, error: "Indica una cantidad entera de al menos una unidad." };
   }
   return { ok: true, value: { product_id: productId, size, personalization, quantity } };
 }
@@ -246,8 +227,8 @@ export function summarizeCart(
     id: string;
     title?: string;
     price_cents: number;
+    currency?: string;
     available: boolean;
-    max_per_order: number;
     sizes?: string[];
     personalization_enabled?: boolean;
     personalization_max_length?: number;
@@ -263,9 +244,13 @@ export function summarizeCart(
     const product = productById.get(item.product_id);
     if (!product) return { ok: false, error: "Producto no disponible." };
     if (!product.available) return { ok: false, error: "Producto no disponible." };
-    if (item.quantity > product.max_per_order) {
-      return { ok: false, error: "Cantidad máxima superada para un producto." };
-    }
+    if (
+      !Number.isSafeInteger(product.price_cents) ||
+      product.price_cents <= 0 ||
+      product.price_cents > MAX_CENTS ||
+      (product.currency && product.currency !== "EUR")
+    )
+      return { ok: false, error: "El precio de un producto no es válido. Actualiza el carrito." };
     const size = item.size?.trim() || null;
     if (product.sizes && product.sizes.length > 0 && (!size || !product.sizes.includes(size))) {
       return {
@@ -286,7 +271,14 @@ export function summarizeCart(
         error: `La personalización de ${product.title ?? "el producto"} es demasiado larga.`,
       };
     }
+    if (!Number.isSafeInteger(item.quantity) || item.quantity < 1)
+      return { ok: false, error: "Indica una cantidad entera de al menos una unidad." };
     const subtotal = product.price_cents * item.quantity;
+    if (subtotal + total > 2147483647)
+      return {
+        ok: false,
+        error: "El importe del pedido es demasiado grande. Divide la solicitud en varios pedidos.",
+      };
     lines.push({
       product_id: item.product_id,
       size,
@@ -329,6 +321,5 @@ export const SHOP_LIMITS = {
   MIN_TITLE,
   MAX_DESCRIPTION,
   MIN_DESCRIPTION,
-  MAX_QUANTITY,
   MIN_QUANTITY,
 } as const;

@@ -1,15 +1,22 @@
 "use server";
+import { scheduleNotificationPush } from "@/server/notification-push";
 
 import { createHmac, randomBytes } from "node:crypto";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
 import { z } from "zod";
+import { accountPasswordSchema } from "@/lib/domain/account-password";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendAdminAccessRequestNotification } from "@/lib/email/resend";
-import { findUniqueExactProfile, findUniqueFlexiblePlayer, normalizeFullName, requiresTemporaryPassword } from "@/lib/domain/access-onboarding";
+import {
+  findUniqueExactProfile,
+  findUniqueFlexiblePlayer,
+  normalizeFullName,
+  requiresTemporaryPassword,
+} from "@/lib/domain/access-onboarding";
 
 const signInSchema = z.object({
   email: z.string().email("Introduce un email válido."),
@@ -20,29 +27,14 @@ const emailSchema = z.object({
   email: z.string().email("Introduce un email válido."),
 });
 
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d).{10,}$/;
-
-const updatePasswordSchema = z
-  .object({
-    newPassword: z
-      .string()
-      .min(10, "Mínimo 10 caracteres.")
-      .regex(PASSWORD_REGEX, "La contraseña debe tener al menos una letra y un número."),
-    confirmPassword: z.string().min(1, "Confirma la contraseña."),
-  })
-  .refine(
-    (data: { newPassword: string; confirmPassword: string }) =>
-      data.newPassword === data.confirmPassword,
-    {
-      message: "Las contraseñas no coinciden.",
-      path: ["confirmPassword"],
-    },
-  );
-
 const submitAccessRequestSchema = z
   .object({
     email: z.string().email("Introduce un email válido."),
-    fullName: z.string().trim().min(2, "Introduce tu nombre completo.").max(100, "Máximo 100 caracteres."),
+    fullName: z
+      .string()
+      .trim()
+      .min(2, "Introduce tu nombre completo.")
+      .max(100, "Máximo 100 caracteres."),
     role: z.enum(["player", "parent"], {
       message: "Selecciona un tipo de cuenta.",
     }),
@@ -83,7 +75,11 @@ const accessRequestIdSchema = z.string().uuid("Identificador de solicitud invál
 
 export type PasswordResetState = { error?: string; success?: boolean } | null;
 export type UpdatePasswordState = { error?: string } | null;
-export type SubmitAccessRequestState = { error?: string; success?: boolean; accessMethod?: "google" | "email" } | null;
+export type SubmitAccessRequestState = {
+  error?: string;
+  success?: boolean;
+  accessMethod?: "google" | "email";
+} | null;
 export interface IssuedCredential {
   email: string;
   temporaryPassword: string;
@@ -107,10 +103,15 @@ function buildLoginErrorUrl(next: string | undefined, errorCode: string) {
   return `/login?${params.toString()}` as Route;
 }
 
-const childClaimsSchema = z.array(z.object({
-  fullName: z.string().trim().min(5).max(100),
-  birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
-})).min(1).max(10);
+const childClaimsSchema = z
+  .array(
+    z.object({
+      fullName: z.string().trim().min(5).max(100),
+      birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
+    }),
+  )
+  .min(1)
+  .max(10);
 
 function parseChildClaims(raw: string | undefined) {
   try {
@@ -196,59 +197,91 @@ async function rateLimitCheck(email: string) {
 
 async function consumeIdentityCheckBudget(): Promise<boolean> {
   const requestHeaders = await headers();
-  const ip = requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim()
-    || requestHeaders.get("x-real-ip") || "unknown";
+  const ip =
+    requestHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    requestHeaders.get("x-real-ip") ||
+    "unknown";
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!key) return false;
   const fingerprint = createHmac("sha256", key).update(ip).digest("hex");
   const admin = createAdminClient();
   const since = new Date(Date.now() - 15 * 60 * 1000).toISOString();
-  const [{ count: perIp, error: ipError }, { count: global, error: globalError }] = await Promise.all([
-    admin.from("access_identity_checks").select("id", { count: "exact", head: true })
-      .eq("requester_hash", fingerprint).gte("checked_at", since),
-    admin.from("access_identity_checks").select("id", { count: "exact", head: true })
-      .gte("checked_at", since),
-  ]);
+  const [{ count: perIp, error: ipError }, { count: global, error: globalError }] =
+    await Promise.all([
+      admin
+        .from("access_identity_checks")
+        .select("id", { count: "exact", head: true })
+        .eq("requester_hash", fingerprint)
+        .gte("checked_at", since),
+      admin
+        .from("access_identity_checks")
+        .select("id", { count: "exact", head: true })
+        .gte("checked_at", since),
+    ]);
   if (ipError || globalError || (perIp ?? 0) >= 30 || (global ?? 0) >= 1000) return false;
-  const { error } = await admin.from("access_identity_checks").insert({ requester_hash: fingerprint });
+  const { error } = await admin
+    .from("access_identity_checks")
+    .insert({ requester_hash: fingerprint });
   if (error) return false;
-  await admin.from("access_identity_checks").delete()
+  await admin
+    .from("access_identity_checks")
+    .delete()
     .lt("checked_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
   return true;
 }
 
 async function findPlayerProfile(fullName: string, birthYear: number, allowLinked: boolean) {
   const admin = createAdminClient();
-  const { data: profiles, error } = await admin.from("profiles")
+  const { data: profiles, error } = await admin
+    .from("profiles")
     .select("id, full_name, auth_user_id")
-    .eq("birth_year", birthYear).eq("is_active", true).limit(300);
+    .eq("birth_year", birthYear)
+    .eq("is_active", true)
+    .limit(300);
   if (error) return null;
   const candidate = findUniqueFlexiblePlayer(
-    (profiles ?? []).filter((profile) => allowLinked || !profile.auth_user_id), fullName,
+    (profiles ?? []).filter((profile) => allowLinked || !profile.auth_user_id),
+    fullName,
   );
   if (!candidate) return null;
   const [{ data: playerRole }, { data: season }] = await Promise.all([
-    admin.from("user_roles").select("id").eq("profile_id", candidate.id)
-      .eq("role", "player").is("scope_team_id", null).maybeSingle(),
+    admin
+      .from("user_roles")
+      .select("id")
+      .eq("profile_id", candidate.id)
+      .eq("role", "player")
+      .is("scope_team_id", null)
+      .maybeSingle(),
     admin.from("seasons").select("id").eq("is_current", true).maybeSingle(),
   ]);
   if (!playerRole || !season) return null;
-  const { data: rosters } = await admin.from("team_rosters")
+  const { data: rosters } = await admin
+    .from("team_rosters")
     .select("team_id, team:teams!team_rosters_team_id_fkey(season_id)")
-    .eq("player_id", candidate.id).is("left_at", null).limit(20);
+    .eq("player_id", candidate.id)
+    .is("left_at", null)
+    .limit(20);
   const currentRoster = rosters?.find((row) => row.team?.season_id === season.id);
   return currentRoster ? { id: candidate.id, teamId: currentRoster.team_id } : null;
 }
 
-export async function checkPlayerIdentity(input: unknown): Promise<"found" | "missing" | "limited"> {
-  const parsed = z.object({
-    fullName: z.string().trim().min(5).max(100),
-    birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
-    forParent: z.boolean(),
-  }).safeParse(input);
+export async function checkPlayerIdentity(
+  input: unknown,
+): Promise<"found" | "missing" | "limited"> {
+  const parsed = z
+    .object({
+      fullName: z.string().trim().min(5).max(100),
+      birthYear: z.number().int().min(1900).max(new Date().getFullYear()),
+      forParent: z.boolean(),
+    })
+    .safeParse(input);
   if (!parsed.success) return "missing";
-  if (!await consumeIdentityCheckBudget()) return "limited";
-  const match = await findPlayerProfile(parsed.data.fullName, parsed.data.birthYear, parsed.data.forParent);
+  if (!(await consumeIdentityCheckBudget())) return "limited";
+  const match = await findPlayerProfile(
+    parsed.data.fullName,
+    parsed.data.birthYear,
+    parsed.data.forParent,
+  );
   return match ? "found" : "missing";
 }
 
@@ -363,7 +396,7 @@ export async function updatePassword(
   _prevState: UpdatePasswordState,
   formData: FormData,
 ): Promise<UpdatePasswordState> {
-  const parsed = updatePasswordSchema.safeParse({
+  const parsed = accountPasswordSchema.safeParse({
     newPassword: formData.get("newPassword"),
     confirmPassword: formData.get("confirmPassword"),
   });
@@ -383,6 +416,15 @@ export async function updatePassword(
     return { error: "Tu sesión ha caducado. Vuelve a iniciar sesión." };
   }
 
+  const profileAdmin = createAdminClient();
+  const { data: ownProfile, error: ownProfileError } = await profileAdmin
+    .from("profiles")
+    .select("id,is_active,must_change_password")
+    .eq("auth_user_id", user.id)
+    .maybeSingle();
+  if (ownProfileError || !ownProfile?.is_active) {
+    return { error: "No pudimos comprobar tu cuenta activa. Vuelve a iniciar sesión." };
+  }
   const { error: updateError } = await supabase.auth.updateUser({
     password: parsed.data.newPassword,
   });
@@ -391,13 +433,16 @@ export async function updatePassword(
     return { error: "No pudimos cambiar la contraseña. Inténtalo de nuevo." };
   }
 
-  const profileAdmin = createAdminClient();
-  const { error: profileError } = await profileAdmin
+  const { data: savedProfile, error: profileError } = await profileAdmin
     .from("profiles")
     .update({ must_change_password: false })
-    .eq("auth_user_id", user.id);
+    .eq("auth_user_id", user.id)
+    .eq("id", ownProfile.id)
+    .eq("is_active", true)
+    .select("id")
+    .maybeSingle();
 
-  if (profileError) {
+  if (profileError || !savedProfile) {
     return { error: "Contraseña cambiada, pero no pudimos actualizar el perfil." };
   }
 
@@ -409,7 +454,11 @@ export async function updatePassword(
       .eq("status", "approved");
   }
 
-  redirect("/dashboard" as Route);
+  redirect(
+    (!ownProfile.must_change_password && formData.get("returnTo") === "/profile/settings"
+      ? "/profile/settings"
+      : "/dashboard") as Route,
+  );
 }
 
 export async function submitAccessRequest(
@@ -443,16 +492,24 @@ export async function submitAccessRequest(
   }
   const childrenClaims = parsedChildren?.success ? parsedChildren.data : [];
   let childrenIds: string[] = [];
-  if ((role === "player" || role === "parent") && !await consumeIdentityCheckBudget()) {
-    return { error: "Has hecho demasiadas comprobaciones. Inténtalo más tarde o habla con el administrador." };
+  if ((role === "player" || role === "parent") && !(await consumeIdentityCheckBudget())) {
+    return {
+      error:
+        "Has hecho demasiadas comprobaciones. Inténtalo más tarde o habla con el administrador.",
+    };
   }
 
   const admin = createAdminClient();
   const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const googleUserId = user?.email?.toLowerCase() === email && user.email_confirmed_at && user.identities?.some(
-    (identity) => identity.provider === "google",
-  ) ? user.id : null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const googleUserId =
+    user?.email?.toLowerCase() === email &&
+    user.email_confirmed_at &&
+    user.identities?.some((identity) => identity.provider === "google")
+      ? user.id
+      : null;
 
   if (await rateLimitCheck(email)) {
     return {
@@ -475,8 +532,11 @@ export async function submitAccessRequest(
     return { error: "Este correo ya está registrado. Entra con Google o recupera tu contraseña." };
   }
   if (googleUserId) {
-    const { data: linkedProfile } = await admin.from("profiles")
-      .select("id").eq("auth_user_id", googleUserId).maybeSingle();
+    const { data: linkedProfile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("auth_user_id", googleUserId)
+      .maybeSingle();
     if (linkedProfile) return { error: "Esta cuenta ya tiene un perfil. Entra en la app." };
   }
 
@@ -486,19 +546,26 @@ export async function submitAccessRequest(
   if (role === "player" && birthYear) {
     const candidate = await findPlayerProfile(fullName, birthYear, false);
     if (!candidate) {
-      return { error: "Revisa que el nombre esté bien escrito y completo y que el año de nacimiento sea correcto." };
+      return {
+        error:
+          "Revisa que el nombre esté bien escrito y completo y que el año de nacimiento sea correcto.",
+      };
     }
     candidateProfileId = candidate.id;
     playerTeamId = candidate.teamId;
   }
 
   if (role === "parent") {
-    const { data: profiles } = await admin.from("profiles")
+    const { data: profiles } = await admin
+      .from("profiles")
       .select("id, full_name, email_contact")
       .ilike("email_contact", email)
-      .is("auth_user_id", null).eq("is_active", true).limit(20);
+      .is("auth_user_id", null)
+      .eq("is_active", true)
+      .limit(20);
     const candidate = findUniqueExactProfile(
-      (profiles ?? []).filter((profile) => profile.email_contact?.toLowerCase() === email), fullName,
+      (profiles ?? []).filter((profile) => profile.email_contact?.toLowerCase() === email),
+      fullName,
     );
     if (candidate) candidateProfileId = candidate.id;
   }
@@ -507,7 +574,10 @@ export async function submitAccessRequest(
     for (const child of childrenClaims) {
       const childProfile = await findPlayerProfile(child.fullName, child.birthYear, true);
       if (!childProfile) {
-        return { error: "Revisa que el nombre del jugador esté bien escrito y completo y que el año de nacimiento sea correcto." };
+        return {
+          error:
+            "Revisa que el nombre del jugador esté bien escrito y completo y que el año de nacimiento sea correcto.",
+        };
       }
       childrenIds.push(childProfile.id);
     }
@@ -551,8 +621,11 @@ export async function submitAccessRequest(
     }
   }
 
-  const { data: adminRoles } = await admin.from("user_roles").select("profile_id")
-    .eq("role", "admin").is("scope_team_id", null);
+  const { data: adminRoles } = await admin
+    .from("user_roles")
+    .select("profile_id")
+    .eq("role", "admin")
+    .is("scope_team_id", null);
   const adminIds = Array.from(new Set((adminRoles ?? []).map((row) => row.profile_id)));
   if (adminIds.length) {
     const { error: notificationError } = await admin.from("notifications").insert(
@@ -564,15 +637,20 @@ export async function submitAccessRequest(
         href: "/admin/access-requests",
       })),
     );
-    if (notificationError) console.error("[submitAccessRequest] admin notification error:", notificationError);
+    if (notificationError)
+      console.error("[submitAccessRequest] admin notification error:", notificationError);
   }
+  scheduleNotificationPush();
   const mail = await sendAdminAccessRequestNotification({ email, fullName, role });
-  if (!mail.success) console.error("[submitAccessRequest] admin email notification error:", mail.error);
+  if (!mail.success)
+    console.error("[submitAccessRequest] admin email notification error:", mail.error);
 
   return { success: true, accessMethod: googleUserId ? "google" : "email" };
 }
 
-export async function getAccessRequests(status?: "pending" | "approved" | "activated" | "rejected") {
+export async function getAccessRequests(
+  status?: "pending" | "approved" | "activated" | "rejected",
+) {
   try {
     await requireCurrentAdminProfile();
   } catch {
@@ -635,12 +713,15 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
     return { error: "Este acceso necesita un perfil creado previamente por el club." };
   }
 
-  const tempPassword = requiresTemporaryPassword(request.auth_user_id) ? generateTemporaryPassword() : null;
+  const tempPassword = requiresTemporaryPassword(request.auth_user_id)
+    ? generateTemporaryPassword()
+    : null;
   let authUserId: string | null = null;
   let createdAuthUser = false;
   let createdProfileId: string | null = null;
   let linkedExistingProfile = false;
-  let originalProfile: { email_contact: string | null; must_change_password: boolean } | null = null;
+  let originalProfile: { email_contact: string | null; must_change_password: boolean } | null =
+    null;
   let insertedRole = false;
   let linkedChildren: string[] = [];
 
@@ -651,11 +732,18 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
       if (!existingAuth || existingAuth.id !== request.auth_user_id) {
         return { error: "La cuenta de Google ya no coincide con la solicitud." };
       }
-      const { data: googleAuth, error: googleError } = await adminUser.auth.admin.getUserById(request.auth_user_id);
-      if (googleError || !googleAuth.user?.email_confirmed_at ||
+      const { data: googleAuth, error: googleError } = await adminUser.auth.admin.getUserById(
+        request.auth_user_id,
+      );
+      if (
+        googleError ||
+        !googleAuth.user?.email_confirmed_at ||
         !googleAuth.user.identities?.some((identity) => identity.provider === "google") ||
-        googleAuth.user.email?.toLowerCase() !== request.email.toLowerCase()) {
-        return { error: "No pudimos verificar la identidad de Google. Pide que envíen otra solicitud." };
+        googleAuth.user.email?.toLowerCase() !== request.email.toLowerCase()
+      ) {
+        return {
+          error: "No pudimos verificar la identidad de Google. Pide que envíen otra solicitud.",
+        };
       }
       const { data: linkedProfile } = await adminUser
         .from("profiles")
@@ -665,7 +753,11 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
       if (linkedProfile) return { error: "Esta cuenta de Google ya tiene un perfil vinculado." };
       authUserId = request.auth_user_id;
     } else {
-      if (existingAuth) return { error: "Ese correo ya tiene una cuenta. Pide que accedan con Google o recuperen su contraseña." };
+      if (existingAuth)
+        return {
+          error:
+            "Ese correo ya tiene una cuenta. Pide que accedan con Google o recuperen su contraseña.",
+        };
       const { data: newAuth, error: createAuthError } = await adminUser.auth.admin.createUser({
         email: request.email,
         password: tempPassword!,
@@ -684,28 +776,39 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
     if (request.candidate_profile_id) {
       const { data: candidate } = await adminUser
         .from("profiles")
-        .select("id, auth_user_id, full_name, birth_year, is_active, email_contact, must_change_password")
+        .select(
+          "id, auth_user_id, full_name, birth_year, is_active, email_contact, must_change_password",
+        )
         .eq("id", request.candidate_profile_id)
         .single();
 
       if (!candidate || candidate.auth_user_id || !candidate.is_active) {
         throw new Error("El perfil indicado ya no está disponible.");
       }
-      if (request.role === "player"
-        ? !findUniqueFlexiblePlayer([candidate], request.full_name)
-        : normalizeFullName(candidate.full_name) !== normalizeFullName(request.full_name)) {
+      if (
+        request.role === "player"
+          ? !findUniqueFlexiblePlayer([candidate], request.full_name)
+          : normalizeFullName(candidate.full_name) !== normalizeFullName(request.full_name)
+      ) {
         throw new Error("El nombre ya no coincide con el perfil indicado.");
       }
-      if (request.role !== "player" && candidate.email_contact?.toLowerCase() !== request.email.toLowerCase()) {
+      if (
+        request.role !== "player" &&
+        candidate.email_contact?.toLowerCase() !== request.email.toLowerCase()
+      ) {
         throw new Error("El correo ya no coincide con el perfil indicado.");
       }
       if (request.role === "player" && candidate.birth_year !== request.birth_year) {
         throw new Error("Los datos del jugador ya no coinciden con su perfil.");
       }
       if (request.role === "player") {
-        const { data: roster } = await adminUser.from("team_rosters").select("team_id")
-          .eq("player_id", candidate.id).eq("team_id", request.team_id!)
-          .is("left_at", null).maybeSingle();
+        const { data: roster } = await adminUser
+          .from("team_rosters")
+          .select("team_id")
+          .eq("player_id", candidate.id)
+          .eq("team_id", request.team_id!)
+          .is("left_at", null)
+          .maybeSingle();
         if (!roster) throw new Error("El jugador ya no figura en el equipo solicitado.");
       }
       originalProfile = {
@@ -754,20 +857,33 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
     }
 
     if (request.role !== "staff") {
-      const { data: existingRole } = await adminUser.from("user_roles").select("id")
-        .eq("profile_id", profileId).eq("role", request.role).is("scope_team_id", null).maybeSingle();
+      const { data: existingRole } = await adminUser
+        .from("user_roles")
+        .select("id")
+        .eq("profile_id", profileId)
+        .eq("role", request.role)
+        .is("scope_team_id", null)
+        .maybeSingle();
       if (!existingRole) {
         const { error: roleError } = await adminUser.from("user_roles").insert({
-          profile_id: profileId, role: request.role, scope_team_id: null,
+          profile_id: profileId,
+          role: request.role,
+          scope_team_id: null,
         });
         if (roleError) throw new Error("No se pudo asignar el rol.");
         insertedRole = true;
       }
     } else {
-      const { data: staffRoles } = await adminUser.from("user_roles").select("role")
-        .eq("profile_id", profileId).in("role", ["coach", "delegate", "directiva", "admin"]);
-      const { data: staffAssignments } = await adminUser.from("team_staff").select("team_id")
-        .eq("profile_id", profileId).limit(1);
+      const { data: staffRoles } = await adminUser
+        .from("user_roles")
+        .select("role")
+        .eq("profile_id", profileId)
+        .in("role", ["coach", "delegate", "directiva", "admin"]);
+      const { data: staffAssignments } = await adminUser
+        .from("team_staff")
+        .select("team_id")
+        .eq("profile_id", profileId)
+        .limit(1);
       if (!staffRoles?.length && !staffAssignments?.length) {
         throw new Error("El perfil no tiene un rol de personal autorizado.");
       }
@@ -775,14 +891,19 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
 
     if (request.role === "parent" && request.children && request.children.length > 0) {
       const childIds = request.children.map((child) => child.child_profile_id);
-      const { data: existingLinks } = await adminUser.from("parent_child_links")
-        .select("child_profile_id").eq("parent_profile_id", profileId).in("child_profile_id", childIds);
+      const { data: existingLinks } = await adminUser
+        .from("parent_child_links")
+        .select("child_profile_id")
+        .eq("parent_profile_id", profileId)
+        .in("child_profile_id", childIds);
       const existingChildIds = new Set((existingLinks ?? []).map((link) => link.child_profile_id));
-      const links = request.children.filter((child) => !existingChildIds.has(child.child_profile_id)).map((child) => ({
-        parent_profile_id: profileId,
-        child_profile_id: child.child_profile_id,
-        relation: request.relation ?? "other",
-      }));
+      const links = request.children
+        .filter((child) => !existingChildIds.has(child.child_profile_id))
+        .map((child) => ({
+          parent_profile_id: profileId,
+          child_profile_id: child.child_profile_id,
+          relation: request.relation ?? "other",
+        }));
       if (links.length) {
         const { error: parentLinkError } = await adminUser.from("parent_child_links").insert(links);
         if (parentLinkError) throw new Error("No se pudo vincular a los hijos.");
@@ -797,7 +918,10 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
         approved_by_profile_id: adminProfile.id,
         approved_at: new Date().toISOString(),
       })
-      .eq("id", request.id).eq("status", "pending").select("id").maybeSingle();
+      .eq("id", request.id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
 
     if (statusError || !updatedRequest) {
       throw new Error("No se pudo actualizar el estado de la solicitud.");
@@ -810,18 +934,28 @@ export async function approveAccessRequest(formData: FormData): Promise<AccessRe
   } catch (err) {
     let canDeleteCreatedAuthUser = true;
     if (linkedChildren.length && request.candidate_profile_id) {
-      await adminUser.from("parent_child_links").delete()
-        .eq("parent_profile_id", request.candidate_profile_id).in("child_profile_id", linkedChildren);
+      await adminUser
+        .from("parent_child_links")
+        .delete()
+        .eq("parent_profile_id", request.candidate_profile_id)
+        .in("child_profile_id", linkedChildren);
     }
     if (insertedRole && request.candidate_profile_id) {
-      await adminUser.from("user_roles").delete()
-        .eq("profile_id", request.candidate_profile_id).eq("role", request.role).is("scope_team_id", null);
+      await adminUser
+        .from("user_roles")
+        .delete()
+        .eq("profile_id", request.candidate_profile_id)
+        .eq("role", request.role)
+        .is("scope_team_id", null);
     }
     if (linkedExistingProfile && request.candidate_profile_id && originalProfile) {
-      const { data: restoredProfile, error: restoreError } = await adminUser.from("profiles")
+      const { data: restoredProfile, error: restoreError } = await adminUser
+        .from("profiles")
         .update({ auth_user_id: null, ...originalProfile })
-        .eq("id", request.candidate_profile_id).eq("auth_user_id", authUserId!)
-        .select("id").maybeSingle();
+        .eq("id", request.candidate_profile_id)
+        .eq("auth_user_id", authUserId!)
+        .select("id")
+        .maybeSingle();
       if (restoreError || !restoredProfile) {
         canDeleteCreatedAuthUser = false;
         console.error("[approveAccessRequest] could not restore linked profile:", restoreError);
@@ -897,10 +1031,17 @@ export async function rejectAccessRequest(formData: FormData): Promise<AccessReq
   }
 
   const admin = createAdminClient();
-  const { data: rejected, error } = await admin.from("access_requests")
-    .update({ status: "rejected", rejected_at: new Date().toISOString(),
-      rejected_by_profile_id: adminProfile.id })
-    .eq("id", parsed.data).eq("status", "pending").select("id").maybeSingle();
+  const { data: rejected, error } = await admin
+    .from("access_requests")
+    .update({
+      status: "rejected",
+      rejected_at: new Date().toISOString(),
+      rejected_by_profile_id: adminProfile.id,
+    })
+    .eq("id", parsed.data)
+    .eq("status", "pending")
+    .select("id")
+    .maybeSingle();
 
   if (error || !rejected) {
     console.error("[rejectAccessRequest] error:", error);

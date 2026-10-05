@@ -1,0 +1,76 @@
+begin;
+do $test$
+declare
+  actor uuid := gen_random_uuid();
+  actor_profile uuid;
+  season uuid;
+  team_a uuid;
+  team_b uuid;
+  match_a uuid;
+  affected integer;
+  denied boolean;
+  message text;
+begin
+  insert into auth.users(id) values(actor);
+  insert into public.profiles(auth_user_id, full_name) values(actor, 'Prueba temporal de personal') returning id into actor_profile;
+  insert into public.seasons(label,start_date,end_date,is_current) values('Prueba temporal personal ' || actor::text,'2097-09-01','2098-07-31',false) returning id into season;
+  insert into public.teams(season_id,category_code,gender,label) values(season,'cadete','male','Prueba personal A') returning id into team_a;
+  insert into public.teams(season_id,category_code,gender,label) values(season,'cadete','male','Prueba personal B') returning id into team_b;
+  insert into public.matches(season_id,team_id,opponent,scheduled_at) values(season,team_a,'Rival prueba','2097-10-01T12:00:00Z') returning id into match_a;
+  perform set_config('request.jwt.claim.sub',actor::text,true);
+  perform set_config('request.jwt.claims',jsonb_build_object('sub',actor,'role','authenticated')::text,true);
+
+  insert into public.team_staff(team_id,profile_id,role) values(team_a,actor_profile,'head_coach');
+  if not exists(select 1 from public.user_roles where profile_id=actor_profile and role='coach' and scope_team_id=team_a) then raise exception 'FAIL: no se activa el rol de entrenador'; end if;
+  execute 'set local role authenticated';
+  if not public.can_manage_match_of(team_a) or not public.can_manage_training_of(team_a) or not public.can_manage_attendance_for(team_a) then raise exception 'FAIL: permisos entrenador'; end if;
+  if public.can_manage_match_of(team_b) or public.can_manage_training_of(team_b) then raise exception 'FAIL: acceso a otro equipo'; end if;
+  update public.matches set opponent='Cambio entrenador' where id=match_a;
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'FAIL: entrenador no modifica su partido'; end if;
+  execute 'reset role';
+  message := '';
+  begin perform public.save_live_match_sheet(match_a,actor_profile,gen_random_uuid(),0,gen_random_uuid(),'{"players":"invalid","events":[]}'::jsonb,false,false);
+  exception when others then get stacked diagnostics message = message_text; end;
+  if message <> 'Acta inválida.' then raise exception 'FAIL: autorización de acta entrenador: %',message; end if;
+  message := '';
+  begin perform public.prepare_live_match_caps(match_a,actor_profile,'[]'::jsonb);
+  exception when others then get stacked diagnostics message = message_text; end;
+  if message like '%delegado%' or message like '%permiso%' or message = '' then raise exception 'FAIL: preparación de acta entrenador: %',message; end if;
+
+  update public.team_staff set role='delegate' where team_id=team_a and profile_id=actor_profile;
+  if exists(select 1 from public.user_roles where profile_id=actor_profile and role='coach' and scope_team_id=team_a) then raise exception 'FAIL: mantiene el permiso antiguo de entrenador'; end if;
+  if not exists(select 1 from public.user_roles where profile_id=actor_profile and role='delegate' and scope_team_id=team_a) then raise exception 'FAIL: no se activa el rol delegado'; end if;
+  execute 'set local role authenticated';
+  if not public.can_manage_match_of(team_a) or not public.can_manage_training_of(team_a) then raise exception 'FAIL: gestión delegado'; end if;
+  if public.can_manage_attendance_for(team_a) then raise exception 'FAIL: delegado puede pasar lista'; end if;
+  if public.can_manage_match_of(team_b) or public.can_manage_training_of(team_b) then raise exception 'FAIL: delegado accede a otro equipo'; end if;
+  update public.matches set opponent='Cambio delegado' where id=match_a;
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'FAIL: delegado no modifica partido'; end if;
+  insert into public.training_blocks(team_id,label,weekdays,start_date,end_date,start_time,end_time) values(team_a,'Horario prueba',array[1]::smallint[],'2097-10-01','2097-10-31','18:00','19:00');
+  denied := false;
+  begin insert into public.training_blocks(team_id,label,weekdays,start_date,end_date,start_time,end_time) values(team_b,'No permitido',array[1]::smallint[],'2097-10-01','2097-10-31','18:00','19:00');
+  exception when insufficient_privilege then denied := true; end;
+  if not denied then raise exception 'FAIL: delegado crea horario ajeno'; end if;
+  denied := false;
+  begin insert into public.team_staff(team_id,profile_id,role) values(team_b,actor_profile,'head_coach');
+  exception when insufficient_privilege then denied := true; end;
+  if not denied then raise exception 'FAIL: delegado se concede entrenador'; end if;
+  execute 'reset role';
+  message := '';
+  begin perform public.save_live_match_sheet(match_a,actor_profile,gen_random_uuid(),0,gen_random_uuid(),'{"players":"invalid","events":[]}'::jsonb,false,false);
+  exception when others then get stacked diagnostics message = message_text; end;
+  if message <> 'Acta inválida.' then raise exception 'FAIL: autorización de acta delegado: %',message; end if;
+
+  insert into public.user_roles(profile_id,role,scope_team_id) values(actor_profile,'coach',team_b);
+  delete from public.team_staff where team_id=team_a and profile_id=actor_profile;
+  if exists(select 1 from public.user_roles where profile_id=actor_profile and role='delegate' and scope_team_id=team_a) then raise exception 'FAIL: permiso delegado huérfano'; end if;
+  if not exists(select 1 from public.user_roles where profile_id=actor_profile and role='coach' and scope_team_id=team_b) then raise exception 'FAIL: se borran permisos de otro equipo'; end if;
+  execute 'set local role authenticated';
+  if public.can_manage_match_of(team_a) then raise exception 'FAIL: conserva acceso al equipo al retirar la asignación'; end if;
+  execute 'reset role';
+  raise notice 'PASS: asignación, cambio, revocación, alcance, acta y exclusión de pasar lista para delegado';
+end;
+$test$;
+rollback;

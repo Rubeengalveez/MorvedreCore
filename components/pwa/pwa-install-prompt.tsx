@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { MdGetApp, MdClose, MdPhoneIphone } from "react-icons/md";
 import { Button } from "@/components/ui/button";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 
 const STORAGE_KEY_DISMISSED = "morvedre:pwa-install:dismissed-until";
 const STORAGE_KEY_INSTALLED = "morvedre:pwa-install:installed";
@@ -128,66 +129,40 @@ export function PwaInstallPrompt() {
 
   return (
     <>
-      {showIosModal && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="ios-install-title"
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs"
-        >
-          <div className="bg-paper-card border-ink-200 shadow-elev-4 w-full max-w-sm rounded-lg border p-5">
-            <div className="flex items-center justify-between gap-2">
-              <h2 id="ios-install-title" className="font-display text-pool-deep text-lg font-bold">
-                Instalar en tu iPhone o iPad
-              </h2>
-              <button
-                type="button"
-                onClick={() => dismiss("dismissed")}
-                className="text-ink-500 hover:text-ink-900 focus-visible:ring-pool-blue flex h-12 w-12 touch-manipulation items-center justify-center rounded-full focus-visible:ring-2 focus-visible:outline-none"
-                aria-label="Cerrar instrucciones"
+      <ActaGuardSheet
+        open={showIosModal}
+        onOpenChange={setShowIosModal}
+        context="Instalar la app"
+        title="Instalar en tu iPhone o iPad"
+        description="Sigue estos tres pasos en Safari."
+        icon="saved"
+        body={
+          <ol className="text-pool-deep space-y-3 text-base leading-normal">
+            {[
+              <>
+                Pulsa <strong>Compartir</strong> en Safari: el cuadro con una flecha hacia arriba.
+              </>,
+              <>
+                Elige <strong>Añadir a la pantalla de inicio</strong>.
+              </>,
+              <>
+                Pulsa <strong>Añadir</strong> en la esquina superior derecha.
+              </>,
+            ].map((step, index) => (
+              <li
+                key={index}
+                className="border-pool-deep flex items-start gap-3 rounded-xl border bg-white p-3"
               >
-                <MdClose className="h-5 w-5" />
-              </button>
-            </div>
-            <ol className="text-ink-700 mt-4 space-y-3 text-sm leading-normal">
-              <li className="flex items-start gap-2">
-                <span className="bg-pool-foam text-pool-deep flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black">
-                  1
+                <span className="bg-pool-deep grid h-8 w-8 shrink-0 place-items-center rounded-lg font-extrabold text-white">
+                  {index + 1}
                 </span>
-                <span>
-                  Pulsa el botón de <strong>Compartir</strong> en la barra inferior de Safari (el
-                  icono de cuadro con flecha hacia arriba).
-                </span>
+                <span>{step}</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="bg-pool-foam text-pool-deep flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black">
-                  2
-                </span>
-                <span>
-                  Baja por las opciones y toca en{" "}
-                  <strong>&ldquo;Añadir a la pantalla de inicio&rdquo;</strong>.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="bg-pool-foam text-pool-deep flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-black">
-                  3
-                </span>
-                <span>
-                  Pulsa <strong>Añadir</strong> en la esquina superior derecha.
-                </span>
-              </li>
-            </ol>
-            <Button
-              variant="primary"
-              size="md"
-              onClick={() => dismiss("dismissed")}
-              className="mt-5 w-full font-bold"
-            >
-              ¡Entendido!
-            </Button>
-          </div>
-        </div>
-      )}
+            ))}
+          </ol>
+        }
+        actions={[{ label: "Entendido", tone: "primary", onClick: () => dismiss("dismissed") }]}
+      />
       <div
         role="dialog"
         aria-label="Instalar Morvedre Core"

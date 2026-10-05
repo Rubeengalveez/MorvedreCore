@@ -1,3 +1,4 @@
+import { getMatchBackTarget } from "@/lib/domain/match-navigation";
 import { DelegateMatchEntry } from "@/components/matches/delegate-match-entry";
 import { MatchMvpCard } from "@/components/matches/match-mvp-card";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
@@ -106,7 +107,26 @@ async function getMatchStatsList(
   }>;
 }
 
-export default async function MatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MatchDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{
+    from?: string;
+    notificationId?: string;
+    teamId?: string;
+    teamTab?: string;
+    teamList?: string;
+    teamCount?: string;
+    teamFrom?: string;
+    teamAdminTab?: string;
+    calendarMonth?: string;
+    calendarPlayer?: string;
+    calendarTeam?: string;
+    calendarDay?: string;
+  }>;
+}) {
   const { id } = await params;
   const [ctx, match] = await Promise.all([getActiveProfileContext(), getMatchById(id)]);
   if (!ctx) redirect("/login");
@@ -119,6 +139,8 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
       : Promise.resolve([] as MatchScorer[]),
     getMatchStatsList(id).catch(() => []),
   ]);
+
+  const backTarget = getMatchBackTarget({ ...(await searchParams), matchTeamId: match.team_id });
 
   const statsMap = new Map(statsList.map((s) => [s.player_id, s]));
 
@@ -147,7 +169,7 @@ export default async function MatchDetailPage({ params }: { params: Promise<{ id
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <div className="flex items-center justify-between gap-2">
-        <PageBackLink href="/calendar">Calendario</PageBackLink>
+        <PageBackLink href={backTarget.href as Route}>{backTarget.label}</PageBackLink>
         {canEditMatch ? (
           <Link
             href={`/admin/matches/${match.id}/editar?from=match` as Route}

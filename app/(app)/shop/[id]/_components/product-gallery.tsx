@@ -2,9 +2,16 @@
 
 import { useRef, useState } from "react";
 import Image from "next/image";
-import { ChevronLeft, ChevronRight, ShoppingBag, X, ZoomIn } from "lucide-react";
+import { ChevronLeft, ChevronRight, ShoppingBag, X } from "lucide-react";
 
-import { Sheet, SheetBody, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetBody,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils/cn";
 
 export interface ProductGalleryImage {
@@ -49,23 +56,17 @@ export function ProductGallery({
         type="button"
         onClick={() => activeImage && setExpanded(true)}
         disabled={!activeImage}
-        className="border-ink-200 bg-pool-foam shadow-elev-2 group focus-visible:ring-pool-blue relative aspect-[4/5] overflow-hidden rounded-[1.75rem] border text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-default"
+        className="group focus-visible:ring-pool-blue relative aspect-[4/3] max-h-[320px] overflow-hidden border-0 bg-white p-3 text-left focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-default sm:aspect-square"
         aria-label={activeImage ? `Ampliar imagen de ${title}` : undefined}
       >
         {activeImage ? (
-          <>
-            <Image
-              src={activeImage.url}
-              alt={activeImage.alt ?? title}
-              width={900}
-              height={1125}
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
-            />
-            <span className="bg-pool-deep/85 text-paper shadow-elev-2 absolute right-3 bottom-3 inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-extrabold">
-              <ZoomIn className="h-4 w-4" aria-hidden="true" />
-              Ampliar
-            </span>
-          </>
+          <Image
+            src={activeImage.url}
+            alt={activeImage.alt ?? title}
+            fill
+            sizes="(max-width: 767px) 90vw, 720px"
+            className="object-contain p-3 transition-transform duration-300 group-hover:scale-[1.02] motion-reduce:transition-none"
+          />
         ) : (
           <span className="text-pool-deep flex h-full w-full items-center justify-center bg-[linear-gradient(135deg,var(--pool-foam),var(--paper))]">
             <ShoppingBag className="h-14 w-14" aria-hidden="true" />
@@ -75,7 +76,8 @@ export function ProductGallery({
 
       {images.length > 1 ? (
         <div
-          className="no-scrollbar flex gap-2 overflow-x-auto pb-1"
+          role="group"
+          className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-1"
           aria-label="Fotos del producto"
         >
           {images.map((image, index) => (
@@ -86,10 +88,10 @@ export function ProductGallery({
               aria-label={`Ver foto ${index + 1} de ${images.length}`}
               aria-current={active === index ? "true" : undefined}
               className={cn(
-                "bg-paper-sunk focus-visible:ring-pool-blue relative h-18 w-18 shrink-0 touch-manipulation overflow-hidden rounded-xl border transition-[border-color,opacity,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
+                "bg-paper-sunk focus-visible:ring-pool-blue relative h-16 w-16 shrink-0 touch-manipulation overflow-hidden rounded-xl border transition-[border-color,opacity,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none",
                 active === index
-                  ? "border-action ring-action/25 ring-2"
-                  : "border-ink-300 opacity-75",
+                  ? "border-pool-blue ring-pool-blue/25 ring-2"
+                  : "border-pool-deep/65",
               )}
             >
               <Image
@@ -111,6 +113,9 @@ export function ProductGallery({
           className="bg-pool-deep text-paper border-pool-deep gap-2 rounded-none"
         >
           <SheetTitle className="sr-only">{title} ampliado</SheetTitle>
+          <SheetDescription className="sr-only">
+            Fotos del producto. Puedes cerrar la vista para volver al pedido.
+          </SheetDescription>
           <SheetClose className="bg-paper text-pool-deep focus-visible:ring-ball-gold shadow-elev-3 absolute top-[max(1rem,env(safe-area-inset-top))] right-4 z-20 flex h-12 min-w-12 touch-manipulation items-center justify-center gap-2 rounded-full px-3 font-extrabold focus-visible:ring-2 focus-visible:outline-none">
             <X className="h-5 w-5" aria-hidden="true" />
             <span className="sr-only sm:not-sr-only">Cerrar</span>

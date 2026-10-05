@@ -1,11 +1,57 @@
 import { describe, expect, it } from "vitest";
 import {
   buildAttendanceResult,
+  countAttendanceOccurrences,
   canEditAttendanceForDay,
   diffAttendance,
   markAllPresent,
   type AttendanceRow,
 } from "@/lib/domain/attendance";
+
+describe("countAttendanceOccurrences", () => {
+  it("counts a shared session once per player and preserves any recorded presence", () => {
+    const rows = [
+      {
+        player_id: "a",
+        session_id: "1",
+        joint_id: "joint",
+        scheduled_at: "2026-10-05T17:00:00Z",
+        present: false,
+      },
+      {
+        player_id: "a",
+        session_id: "2",
+        joint_id: "joint",
+        scheduled_at: "2026-10-05T17:00:00Z",
+        present: true,
+      },
+      {
+        player_id: "b",
+        session_id: "2",
+        joint_id: "joint",
+        scheduled_at: "2026-10-05T17:00:00Z",
+        present: false,
+      },
+      {
+        player_id: "a",
+        session_id: "3",
+        joint_id: null,
+        scheduled_at: "2026-10-06T17:00:00Z",
+        present: false,
+      },
+      {
+        player_id: "a",
+        session_id: "4",
+        joint_id: "joint",
+        scheduled_at: "2026-10-07T17:00:00Z",
+        present: true,
+      },
+    ];
+    const counts = countAttendanceOccurrences(rows);
+    expect(counts.get("a")).toEqual({ attended: 2, total: 3 });
+    expect(counts.get("b")).toEqual({ attended: 0, total: 1 });
+  });
+});
 
 describe("canEditAttendanceForDay", () => {
   const tuesdayMorning = new Date("2026-07-14T08:00:00.000Z");

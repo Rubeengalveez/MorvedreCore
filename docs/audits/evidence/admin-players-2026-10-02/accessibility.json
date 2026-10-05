@@ -1,0 +1,66 @@
+{
+  "date": "2026-10-03",
+  "directory": {
+    "result": {
+      "type": "object",
+      "value": {
+        "incomplete": [
+          {
+            "id": "color-contrast",
+            "nodes": [
+              {
+                "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element",
+                "target": [
+                  "a[aria-label=\"Inicio\"] > .max-w-full.truncate.leading-tight"
+                ]
+              },
+              {
+                "summary": "Fix any of the following:\n  Element's background color could not be determined because it's partially obscured by another element",
+                "target": [
+                  "a[aria-label=\"Asistencia\"] > .max-w-full.truncate.leading-tight > .min-\\[480px\\]\\:hidden"
+                ]
+              },
+              {
+                "summary": "Fix any of the following:\n  Element's background color could not be determined because it partially overlaps other elements",
+                "target": [
+                  "a[aria-label=\"Calendario\"] > .max-w-full.truncate.leading-tight > .min-\\[480px\\]\\:hidden"
+                ]
+              }
+            ]
+          }
+        ],
+        "violations": []
+      }
+    }
+  },
+  "filters": {
+    "result": {
+      "type": "object",
+      "value": {
+        "incomplete": [],
+        "violations": []
+      }
+    }
+  },
+  "expandedForm": {
+    "result": {
+      "type": "object",
+      "value": {
+        "incomplete": [],
+        "violations": []
+      }
+    }
+  },
+  "review": {
+    "result": {
+      "type": "object",
+      "value": {
+        "incomplete": [
+          "aria-hidden-focus",
+          "color-contrast"
+        ],
+        "violations": []
+      }
+    }
+  }
+}

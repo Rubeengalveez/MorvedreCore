@@ -4,12 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AttendanceSheet } from "@/components/attendance/attendance-sheet";
 import type { DashboardCoachSession } from "@/server/queries/dashboard";
 
-const { markAttendanceMock } = vi.hoisted(() => ({
+const { markAttendanceMock, pushMock } = vi.hoisted(() => ({
   markAttendanceMock: vi.fn().mockResolvedValue({ updated: 2 }),
+  pushMock: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn(), push: vi.fn(), back: vi.fn() }),
+  useRouter: () => ({ refresh: vi.fn(), push: pushMock, back: vi.fn() }),
 }));
 
 vi.mock("@/server/actions/admin", () => ({
@@ -47,118 +48,100 @@ const session: DashboardCoachSession = {
 
 describe("AttendanceSheet", () => {
   beforeEach(() => {
-    markAttendanceMock.mockClear();
-    markAttendanceMock.mockResolvedValue({ updated: 2 });
+    markAttendanceMock.mockReset().mockResolvedValue({ updated: 2 });
+    pushMock.mockReset();
   });
-
-  it("starts with every unmarked player present and saves automatically", async () => {
+  it("prepara la lista sin guardar y la registra al terminar", async () => {
     render(<AttendanceSheet session={session} canEdit />);
-
-    const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
-    expect(within(anaControls).getByRole("button", { name: "Ha venido" })).toHaveAttribute(
+    const controls = screen.getByRole("group", { name: "Asistencia de Ana García" });
+    expect(within(controls).getByRole("button", { name: "Ha venido: Ana García" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    expect(within(anaControls).getByRole("button", { name: "No ha venido" })).toHaveAttribute(
-      "aria-pressed",
-      "false",
-    );
-
-    await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
+    expect(markAttendanceMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar lista y volver" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith("/attendance?date=2026-07-13"));
+    expect(markAttendanceMock).toHaveBeenCalledTimes(1);
     expect(markAttendanceMock).toHaveBeenCalledWith({
       session_id: session.id,
-      entries: [
-        { player_id: session.players[0]!.id, present: true, reason: null },
-        { player_id: session.players[1]!.id, present: true, reason: null },
-      ],
+      entries: session.players.map((player) => ({
+        player_id: player.id,
+        present: true,
+        reason: null,
+      })),
     });
-    await waitFor(() => expect(screen.queryByText("Guardando cambios…")).not.toBeInTheDocument());
   });
-
-  it("marks an absence with one tap and saves it without a save button", async () => {
+  it("marca una falta con una pulsación y evita repetir el mismo guardado", async () => {
     render(<AttendanceSheet session={session} canEdit />);
-
+    fireEvent.click(screen.getByRole("button", { name: "No ha venido: Ana García" }));
     await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
-    markAttendanceMock.mockClear();
-
-    const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
-    fireEvent.click(within(anaControls).getByRole("button", { name: "No ha venido" }));
-
-    await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
-    expect(markAttendanceMock).toHaveBeenCalledWith({
-      session_id: session.id,
-      entries: [
-        { player_id: session.players[0]!.id, present: false, reason: null },
-        { player_id: session.players[1]!.id, present: true, reason: null },
-      ],
+    expect(markAttendanceMock.mock.calls[0][0].entries[0]).toEqual({
+      player_id: session.players[0].id,
+      present: false,
+      reason: null,
     });
-    expect(screen.queryByRole("button", { name: "Guardar lista" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "No ha venido: Ana García" }));
+    expect(markAttendanceMock).toHaveBeenCalledTimes(1);
   });
-
-  it("allows a saved absence from another day to be corrected", async () => {
-    const pastSession: DashboardCoachSession = {
-      ...session,
-      is_past: true,
-      present_count: 1,
-      absent_count: 1,
-      unmarked_count: 0,
-      players: [
-        { ...session.players[0]!, attendance: false },
-        { ...session.players[1]!, attendance: true },
-      ],
-    };
-    render(<AttendanceSheet session={pastSession} canEdit />);
-
+  it("espera los cambios rápidos en orden y bloquea la edición al terminar", async () => {
+    let resolveSave!: (value: { updated: number }) => void;
+    markAttendanceMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+    render(<AttendanceSheet session={session} canEdit />);
+    fireEvent.click(screen.getByRole("button", { name: "No ha venido: Ana García" }));
+    await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
+    fireEvent.click(screen.getByRole("button", { name: "Ha venido: Ana García" }));
+    fireEvent.click(screen.getByRole("button", { name: "Guardar lista y volver" }));
+    expect(screen.getByRole("button", { name: "No ha venido: Ana García" })).toBeDisabled();
+    expect(pushMock).not.toHaveBeenCalled();
+    resolveSave({ updated: 2 });
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    expect(markAttendanceMock).toHaveBeenCalledTimes(2);
+    expect(markAttendanceMock.mock.calls[1][0].entries[0].present).toBe(true);
+  });
+  it("un error conserva la selección, permite reintentar y no navega antes de guardar", async () => {
+    markAttendanceMock.mockRejectedValueOnce(new Error("Sin conexión"));
+    render(<AttendanceSheet session={session} canEdit />);
+    fireEvent.click(screen.getByRole("button", { name: "No ha venido: Ana García" }));
+    await waitFor(() =>
+      expect(screen.getByRole("alert")).toHaveTextContent("No se han guardado los cambios"),
+    );
+    expect(pushMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Reintentar guardado" }));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Lista guardada"));
+    expect(markAttendanceMock.mock.calls[1][0].entries[0].present).toBe(false);
+    expect(pushMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Guardar lista y volver" }));
+    await waitFor(() => expect(pushMock).toHaveBeenCalled());
+    expect(markAttendanceMock).toHaveBeenCalledTimes(2);
+  });
+  it("conserva el origen y permite seguir revisando sin escribir al abrir", () => {
+    render(
+      <AttendanceSheet
+        session={session}
+        canEdit
+        origin="calendar"
+        calendarHref="/calendar?month=2026-07&day=2026-07-13"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Calendario" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(markAttendanceMock).not.toHaveBeenCalled();
-    const anaControls = screen.getByRole("group", { name: "Asistencia de Ana García" });
-    fireEvent.click(within(anaControls).getByRole("button", { name: "Ha venido" }));
-
-    await waitFor(() => expect(markAttendanceMock).toHaveBeenCalledTimes(1));
-    expect(markAttendanceMock).toHaveBeenCalledWith({
-      session_id: session.id,
-      entries: [
-        { player_id: session.players[0]!.id, present: true, reason: null },
-        { player_id: session.players[1]!.id, present: true, reason: null },
-      ],
-    });
+    fireEvent.click(screen.getByRole("button", { name: "Seguir revisando" }));
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-
-  it("places the save status after the player list", () => {
-    const savedSession: DashboardCoachSession = {
-      ...session,
-      present_count: 2,
-      absent_count: 0,
-      unmarked_count: 0,
-      players: session.players.map((player) => ({ ...player, attendance: true })),
-    };
-    const { container } = render(<AttendanceSheet session={savedSession} canEdit />);
-
-    const playerList = screen.getByRole("list", { name: `Jugadores de ${session.team_label}` });
-    const saveStatus = container.querySelector('[aria-live="polite"]');
-
-    expect(saveStatus).not.toBeNull();
-    expect(playerList.nextElementSibling).toBe(saveStatus);
-  });
-
-  it("keeps the back navigation outside the team card", () => {
-    const { container } = render(<AttendanceSheet session={session} canEdit={false} />);
-
-    const backLink = screen.getByRole("link", { name: "Volver a entrenamientos" });
-    const teamCard = container.querySelector("header");
-
-    expect(teamCard).not.toBeNull();
-    expect(teamCard).not.toContainElement(backLink);
-    expect(teamCard?.previousElementSibling).toContainElement(backLink);
-  });
-
-  it("shows a future session in read-only mode without saving defaults", () => {
+  it("consulta el futuro sin controles de asistencia ni escrituras", () => {
     render(<AttendanceSheet session={session} canEdit={false} />);
-
+    expect(screen.getByText("Podrás pasar lista el día del entrenamiento.")).toBeVisible();
+    expect(screen.queryByRole("button", { name: /Ha venido:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /No ha venido:/ })).not.toBeInTheDocument();
     expect(markAttendanceMock).not.toHaveBeenCalled();
-    expect(screen.getByText("Lista todavía no disponible")).toBeVisible();
-    expect(screen.getByText("Ana García")).toBeVisible();
-    expect(screen.getByText("Pablo Pérez")).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Ha venido" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "No ha venido" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Volver a entrenamientos" }));
+    expect(pushMock).toHaveBeenCalledWith("/attendance?date=2026-07-13");
   });
 });

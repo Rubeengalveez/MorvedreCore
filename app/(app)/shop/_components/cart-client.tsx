@@ -1,410 +1,403 @@
 "use client";
-
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
-import { Check, PackageOpen, Phone, Send, ShoppingBag, Trash2 } from "lucide-react";
-
+import { Check, Minus, PackageOpen, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useShopCart } from "@/hooks/use-shop-cart";
-import { formatCents, summarizeCart } from "@/lib/domain/shop";
+import { summarizeCart } from "@/lib/domain/shop";
+import { shopMoney } from "@/lib/domain/shop-management";
 import type { ShopProduct } from "@/server/queries/shop";
 import { createShopOrder } from "@/server/actions/admin/shop";
 import { normalizeSpanishPhone } from "@/lib/domain/phone";
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-
+import { ShopDecisionSheet } from "@/components/shop/shop-decision-sheet";
+import { shopControl, shopPrimary, shopSecondary, ShopError } from "@/components/shop/shop-ui";
 export interface CartClientProps {
   profileId: string;
   products: ShopProduct[];
   initialPhone: string | null;
   requiresGuardian: boolean;
 }
-
 export function CartClient({
   profileId,
   products,
   initialPhone,
   requiresGuardian,
 }: CartClientProps) {
-  const router = useRouter();
-  const cart = useShopCart(profileId);
-  const [notes, setNotes] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [phone, setPhone] = useState(initialPhone ?? "");
-  const [phoneOpen, setPhoneOpen] = useState(false);
+  const router = useRouter(),
+    cart = useShopCart(profileId);
+  const [notes, setNotes] = useState(""),
+    [phone, setPhone] = useState(initialPhone ?? ""),
+    [error, setError] = useState<string | null>(null),
+    [confirmation, setConfirmation] = useState(false),
+    [success, setSuccess] = useState<{ id: string; order_reference: string } | null>(null);
   const [pending, startTransition] = useTransition();
-
-  const cartSummary = summarizeCart(
+  const submitting = useRef(false);
+  const summary = summarizeCart(
     cart.items.map((item) => ({
       product_id: item.productId,
       size: item.size,
       personalization: item.personalization,
-      quantity: 1,
+      quantity: item.quantity,
     })),
     products,
   );
-  const productById = new Map(products.map((product) => [product.id, product]));
-  function handleCheckout() {
+  const byId = new Map(products.map((product) => [product.id, product]));
+  function submit() {
+    if (submitting.current || !summary.ok) return;
+    const contact = normalizeSpanishPhone(phone);
+    if (!requiresGuardian && !contact) {
+      setError("Escribe un teléfono válido para que Sol pueda contactar contigo.");
+      return;
+    }
+    if (!navigator.onLine) {
+      setError(
+        "Ahora no tienes conexión. Tu carrito sigue guardado; confirma el pedido cuando vuelva la conexión.",
+      );
+      return;
+    }
+    submitting.current = true;
     setError(null);
-    if (!cartSummary.ok) {
-      setError(cartSummary.error ?? "Revisa los productos del carrito.");
-      return;
-    }
-    if (requiresGuardian) {
-      submitCheckout(null);
-      return;
-    }
-    const normalizedPhone = initialPhone ?? normalizeSpanishPhone(phone);
-    if (!normalizedPhone) {
-      setPhoneOpen(true);
-      return;
-    }
-    submitCheckout(normalizedPhone);
-  }
-
-  function submitCheckout(contactPhone: string | null) {
     startTransition(async () => {
+      let requestStarted = false;
       try {
+        const items = summary.lines!.map((line) => ({
+          product_id: line.product_id,
+          size: line.size,
+          personalization: line.personalization,
+          quantity: line.quantity,
+        }));
+        const key = cart.checkoutKey(
+          JSON.stringify({ items, total: summary.total_cents, notes: notes.trim() }),
+        );
+        requestStarted = true;
         const result = await createShopOrder({
-          items: cartSummary.lines!.map((line) => ({
-            product_id: line.product_id,
-            size: line.size,
-            personalization: line.personalization,
-            quantity: 1,
-          })),
+          checkout_key: key,
+          expected_total_cents: summary.total_cents!,
+          items,
           notes: notes.trim() || null,
-          contact_phone: contactPhone,
+          contact_phone: requiresGuardian ? null : contact,
         });
         cart.clear();
-        setSuccess(true);
-        window.setTimeout(
-          () =>
-            router.push((requiresGuardian ? `/shop/orders/${result.id}` : "/shop/orders") as never),
-          1200,
-        );
+        setSuccess(result);
+        setConfirmation(false);
+        router.refresh();
       } catch (caught) {
-        setError(caught instanceof Error ? caught.message : "No hemos podido enviar la solicitud.");
+        const message =
+          caught instanceof Error
+            ? caught.message
+            : "No pudimos confirmar el pedido. Tu carrito sigue guardado.";
+        setError(
+          message.startsWith("El precio ha cambiado")
+            ? "El precio ha cambiado. Revisa el nuevo total antes de confirmar."
+            : message.startsWith("Un producto ya no está disponible")
+              ? "Un producto ya no está disponible. Vuelve al carrito para quitarlo."
+              : message,
+        );
+        if (requestStarted) router.refresh();
+      } finally {
+        submitting.current = false;
       }
     });
   }
-
-  if (success) {
+  if (success)
     return (
-      <div
+      <section
         role="status"
-        className="border-success/25 bg-success/10 flex min-h-64 flex-col items-center justify-center rounded-[1.75rem] border px-6 text-center"
+        className="border-pool-deep/65 text-pool-deep overflow-hidden rounded-2xl border-2 bg-white"
       >
-        <span className="bg-pool-deep text-paper flex h-14 w-14 items-center justify-center rounded-2xl">
+        <div className="bg-pool-deep flex items-center gap-3 p-4 text-white">
           <Check className="h-7 w-7" aria-hidden="true" />
-        </span>
-        <h2 className="font-display text-pool-deep mt-4 text-2xl font-extrabold">
-          {requiresGuardian ? "Enviado a tu familia" : "Solicitud enviada"}
-        </h2>
-        <p className="text-ink-600 mt-2 max-w-sm text-base leading-relaxed">
-          {requiresGuardian
-            ? "Sol recibirá el pedido cuando una persona adulta de tu familia lo apruebe."
-            : "Te llevamos a tus pedidos…"}
-        </p>
-      </div>
+          <h2 className="text-2xl font-extrabold">
+            {requiresGuardian ? "Enviado a tu familia" : "Pedido confirmado"}
+          </h2>
+        </div>
+        <div className="space-y-4 p-5">
+          <p className="text-lg font-extrabold">Pedido {success.order_reference}</p>
+          <p>
+            {requiresGuardian
+              ? "Tu familia debe aprobarlo antes de que llegue a Sol."
+              : "Sol ya tiene el pedido. Puedes seguir su estado en Mis pedidos."}
+          </p>
+          <Link href={`/shop/orders/${success.id}` as Route} className={`${shopPrimary} w-full`}>
+            Ver mi pedido
+          </Link>
+          <Link href="/shop" className={`${shopSecondary} w-full`}>
+            Volver a productos
+          </Link>
+        </div>
+      </section>
     );
-  }
-
-  if (!cart.hydrated) {
+  if (!cart.hydrated)
     return (
       <div
         role="status"
-        className="border-ink-200 bg-paper-card text-ink-600 min-h-40 animate-pulse rounded-2xl border p-6 text-center text-base motion-reduce:animate-none"
+        className="border-pool-deep/65 text-pool-deep rounded-2xl border-2 bg-white p-6 text-center font-bold"
       >
-        Cargando carrito…
+        Preparando tu carrito…
       </div>
     );
-  }
-
-  if (cart.items.length === 0) {
+  if (!cart.items.length)
     return (
-      <div className="border-ink-200 bg-paper-card flex min-h-72 flex-col items-center justify-center rounded-[1.75rem] border border-dashed px-6 text-center">
-        <span className="bg-pool-foam text-pool-deep flex h-14 w-14 items-center justify-center rounded-2xl">
-          <ShoppingBag className="h-7 w-7" aria-hidden="true" />
-        </span>
-        <h2 className="font-display text-pool-deep mt-4 text-2xl font-extrabold">
-          Tu carrito está vacío
-        </h2>
-        <p className="text-ink-600 mt-2 max-w-sm text-base leading-relaxed">
-          Elige una prenda o producto para preparar tu solicitud.
-        </p>
-        <Link
-          href={"/shop" as Route}
-          className="bg-pool-deep text-paper focus-visible:ring-pool-blue mt-5 inline-flex min-h-12 items-center rounded-xl px-5 text-base font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-        >
+      <section className="border-pool-deep/65 text-pool-deep space-y-4 rounded-2xl border-2 bg-white px-5 py-8 text-center">
+        <ShoppingBag className="mx-auto h-12 w-12" aria-hidden="true" />
+        <h2 className="text-2xl font-extrabold">Tu carrito está vacío</h2>
+        <p>Elige tus productos y aparecerán aquí.</p>
+        <Link href="/shop" className={shopPrimary}>
           Ver productos
         </Link>
-      </div>
+      </section>
     );
-  }
-
   return (
     <>
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-[minmax(0,1fr)_340px] md:items-start">
-        <div className="flex flex-col gap-5">
-          <section aria-labelledby="cart-products-heading">
-            <div className="mb-3 flex items-end justify-between px-1">
-              <h2
-                id="cart-products-heading"
-                className="font-display text-pool-deep text-xl font-extrabold"
+      <ol
+        aria-label="Pasos del pedido"
+        className="text-pool-deep grid grid-cols-3 gap-2 text-sm font-bold"
+      >
+        {["Elige", "Revisa", "Confirma"].map((label, i) => (
+          <li
+            key={label}
+            aria-current={i === 1 ? "step" : undefined}
+            className="flex flex-col items-center gap-1"
+          >
+            <span
+              className={`border-pool-deep/65 grid h-8 w-8 place-items-center rounded-full border ${i === 1 ? "bg-pool-deep text-white" : "bg-white"}`}
+            >
+              {i + 1}
+            </span>
+            {label}
+          </li>
+        ))}
+      </ol>
+      {cart.error ? <ShopError>{cart.error}</ShopError> : null}
+      <section aria-labelledby="cart-products">
+        <h2 id="cart-products" className="text-pool-deep mb-3 text-xl font-extrabold">
+          Tus productos
+        </h2>
+        <ul className="space-y-3">
+          {cart.items.map((item) => {
+            const product = byId.get(item.productId);
+            const available = product?.available;
+            return (
+              <li
+                key={JSON.stringify([item.productId, item.size, item.personalization])}
+                className="border-pool-deep/65 text-pool-deep space-y-3 rounded-2xl border-2 bg-white p-3"
               >
-                Productos elegidos
-              </h2>
-              <span className="text-ink-500 text-sm font-semibold tabular-nums">
-                {cart.items.length}
-              </span>
-            </div>
-            <ul className="flex flex-col gap-3">
-              {cart.items.map((item) => {
-                const product = productById.get(item.productId);
-                if (!product) {
-                  return (
-                    <li
-                      key={`${item.productId}-${item.size ?? ""}-${item.personalization ?? ""}`}
-                      className="border-goggle-red/25 bg-goggle-red/5 shadow-elev-1 grid min-h-24 grid-cols-[minmax(0,1fr)_3rem] items-center gap-3 rounded-2xl border px-4 py-4"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-pool-deep font-extrabold">Producto retirado</p>
-                        <p className="text-ink-600 mt-1 text-sm leading-relaxed">
-                          Ya no forma parte del catálogo. Puedes quitarlo para continuar con tu
-                          solicitud.
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          cart.removeItem(
-                            item.productId,
-                            item.size ?? null,
-                            item.personalization ?? null,
-                          )
-                        }
-                        className="border-ink-200 text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-12 w-12 items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                        aria-label="Eliminar producto retirado"
-                      >
-                        <Trash2 className="h-5 w-5" aria-hidden="true" />
-                      </button>
-                    </li>
-                  );
-                }
-                return (
-                  <li
-                    key={`${item.productId}-${item.size ?? ""}-${item.personalization ?? ""}`}
-                    className="border-ink-200 bg-paper-card shadow-elev-1 hover:border-pool-blue/35 hover:shadow-elev-2 relative grid min-h-32 grid-cols-[5rem_minmax(0,1fr)_3rem] items-center gap-3 overflow-hidden rounded-2xl border p-3 pl-4 transition-[border-color,box-shadow,transform] active:scale-[0.995] motion-reduce:transition-none sm:grid-cols-[5.5rem_minmax(0,1fr)_auto_3rem] sm:p-4 sm:pl-5"
-                  >
-                    <span
-                      className="bg-pool-blue absolute inset-y-0 left-0 w-1"
-                      aria-hidden="true"
-                    />
-                    {product.image_url ? (
+                <div className="flex items-center gap-3">
+                  <div className="grid h-20 w-20 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100">
+                    {product?.image_url ? (
                       <Image
                         src={product.image_url}
-                        alt={product.title}
                         width={80}
-                        height={96}
-                        className="border-ink-200 h-24 w-20 shrink-0 rounded-xl border object-cover sm:h-26 sm:w-22"
+                        height={80}
+                        alt=""
+                        className="h-full w-full object-contain"
                       />
                     ) : (
-                      <span className="bg-pool-foam text-pool-deep flex h-24 w-20 shrink-0 items-center justify-center rounded-xl sm:h-26 sm:w-22">
-                        <PackageOpen className="h-7 w-7" aria-hidden="true" />
-                      </span>
+                      <PackageOpen className="h-7 w-7" aria-hidden="true" />
                     )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-pool-deep line-clamp-2 text-base leading-snug font-extrabold">
-                        {product.title}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <Link
+                      href={`/shop/${item.productId}` as Route}
+                      className="block text-base leading-snug font-extrabold [overflow-wrap:anywhere]"
+                    >
+                      {product?.title ?? "Producto retirado"}
+                    </Link>
+                    {item.size ? (
+                      <p className="mt-1 text-sm font-semibold">Talla {item.size}</p>
+                    ) : null}
+                    {item.personalization ? (
+                      <p className="mt-1 text-sm font-semibold [overflow-wrap:anywhere]">
+                        Nombre: {item.personalization}
                       </p>
-                      {!product.available ? (
-                        <p className="text-goggle-red mt-1 text-xs font-extrabold">
-                          Retirado temporalmente
-                        </p>
-                      ) : null}
-                      <div className="mt-2 flex flex-wrap gap-1.5">
-                        <span className="border-ink-200 bg-paper-sunk text-ink-700 rounded-full border px-2.5 py-1 text-xs font-bold">
-                          {item.size ? `Talla ${item.size}` : "Talla única"}
-                        </span>
-                        {item.personalization ? (
-                          <span className="border-pool-blue/20 bg-pool-foam text-pool-deep max-w-full truncate rounded-full border px-2.5 py-1 text-xs font-bold">
-                            {product.personalization_label}: {item.personalization}
+                    ) : null}
+                    {product ? (
+                      <p className="mt-1 text-lg font-extrabold tabular-nums">
+                        {shopMoney(product.price_cents * item.quantity)}
+                        {item.quantity > 1 ? (
+                          <span className="ml-2 text-sm font-semibold text-slate-600">
+                            {shopMoney(product.price_cents)}/ud.
                           </span>
                         ) : null}
-                      </div>
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                {!available ? (
+                  <ShopError>
+                    Este producto ya no está disponible. Quítalo para continuar.
+                  </ShopError>
+                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  {available ? (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={pending || item.quantity <= 1}
+                        aria-label={`Una unidad menos de ${product.title}`}
+                        className={`${shopSecondary} h-12 w-12 p-0 disabled:opacity-40`}
+                        onClick={() => cart.setQuantity(item, item.quantity - 1)}
+                      >
+                        <Minus className="h-5 w-5" aria-hidden="true" />
+                      </button>
+                      <span className="min-w-8 text-center font-extrabold tabular-nums">
+                        <span aria-hidden="true">{item.quantity}</span>
+                        <span className="sr-only">
+                          {item.quantity} {item.quantity === 1 ? "unidad" : "unidades"}
+                        </span>
+                      </span>
+                      <button
+                        type="button"
+                        disabled={pending}
+                        aria-label={`Una unidad más de ${product.title}`}
+                        className={`${shopSecondary} h-12 w-12 p-0`}
+                        onClick={() => cart.setQuantity(item, item.quantity + 1)}
+                      >
+                        <Plus className="h-5 w-5" aria-hidden="true" />
+                      </button>
                     </div>
-                    <p className="text-pool-deep col-start-2 font-mono text-lg font-extrabold tabular-nums sm:col-auto">
-                      {formatCents(product.price_cents, product.currency)}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        cart.removeItem(
-                          item.productId,
-                          item.size ?? null,
-                          item.personalization ?? null,
-                        )
-                      }
-                      className="border-ink-200 text-goggle-red hover:bg-goggle-red/5 focus-visible:ring-goggle-red flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center rounded-xl border transition-colors focus-visible:ring-2 focus-visible:outline-none"
-                      aria-label={`Eliminar ${product.title}`}
-                    >
-                      <Trash2 className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-
-          <section
-            aria-labelledby="cart-notes-heading"
-            className="border-ink-200 bg-paper-card rounded-2xl border p-4 shadow-sm"
-          >
-            <h2
-              id="cart-notes-heading"
-              className="font-display text-pool-deep text-lg font-extrabold"
-            >
-              Indicaciones del pedido
-            </h2>
-            <p className="text-ink-600 mt-1 text-sm leading-relaxed">
-              Opcional. Úsalo solo si necesitas aclarar algo a la encargada.
-            </p>
-            <label htmlFor="shop-order-notes" className="sr-only">
-              Indicaciones del pedido
-            </label>
-            <textarea
-              id="shop-order-notes"
-              name="notes"
-              value={notes}
-              onChange={(event) => setNotes(event.target.value)}
-              autoComplete="off"
-              rows={3}
-              placeholder="Escribe una indicación general…"
-              className="border-ink-300 bg-paper text-pool-deep placeholder:text-ink-500 focus-visible:ring-pool-blue mt-3 w-full resize-y rounded-xl border p-3 text-base outline-none focus-visible:ring-2"
-            />
-          </section>
+                  ) : null}
+                  <button
+                    type="button"
+                    disabled={pending}
+                    onClick={() => cart.removeItem(item.productId, item.size, item.personalization)}
+                    className={`${shopSecondary} border-red-800 bg-red-50 text-red-900`}
+                    aria-label={`Quitar ${product?.title ?? "producto retirado"}`}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                    Quitar
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </section>
+      <details className="border-pool-deep/65 text-pool-deep rounded-2xl border-2 bg-white p-4">
+        <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-3 font-extrabold">
+          Añadir una indicación para Sol
+          <Plus className="h-5 w-5 shrink-0" aria-hidden="true" />
+        </summary>
+        <label htmlFor="shop-order-notes" className="mt-3 block text-base font-semibold">
+          Indicaciones para Sol (opcional)
+        </label>
+        <textarea
+          id="shop-order-notes"
+          rows={2}
+          maxLength={500}
+          disabled={pending}
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          placeholder="¿Necesitas aclarar algo del pedido?"
+          className={`${shopControl} resize-y py-3`}
+        />
+      </details>
+      <section className="border-pool-deep/65 text-pool-deep space-y-4 rounded-2xl border-2 bg-white p-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-xl font-extrabold">Total del pedido</h2>
+          <strong className="text-2xl whitespace-nowrap tabular-nums">
+            {summary.ok ? shopMoney(summary.total_cents!) : "—"}
+          </strong>
         </div>
-
-        <aside className="border-pool-deep bg-pool-deep text-paper shadow-elev-2 rounded-xl border p-5 md:sticky md:top-[calc(var(--top-bar-height)+1rem)]">
-          <p className="text-paper text-xs font-extrabold tracking-[0.08em] uppercase">Resumen</p>
-          {cartSummary.ok ? (
-            <>
-              <div className="mt-3 flex items-end justify-between gap-4">
-                <span className="text-paper text-base font-semibold">Total</span>
-                <span className="text-paper font-mono text-3xl font-extrabold tabular-nums">
-                  {formatCents(cartSummary.total_cents!, "EUR")}
-                </span>
-              </div>
-              <p className="text-paper mt-3 text-sm leading-relaxed">
-                {cart.items.length} {cart.items.length === 1 ? "producto" : "productos"}.{" "}
-                {requiresGuardian
-                  ? "Primero lo revisará tu familia; todavía no se enviará a Sol."
-                  : "Se guardará en Mis pedidos y la encargada recibirá el aviso."}
-              </p>
-            </>
-          ) : (
-            <p role="alert" className="text-paper mt-3 text-sm font-semibold">
-              {cartSummary.error}
-            </p>
-          )}
-
-          {error ? (
-            <p
-              role="alert"
-              className="bg-paper/10 text-paper mt-3 rounded-lg px-3 py-2 text-sm font-semibold"
-            >
-              {error}
-            </p>
-          ) : null}
-
-          <button
-            type="button"
-            disabled={pending || !cartSummary.ok}
-            onClick={handleCheckout}
-            className="bg-paper text-pool-deep hover:bg-pool-foam focus-visible:ring-ball-gold mt-5 inline-flex min-h-13 w-full touch-manipulation items-center justify-center gap-2 rounded-lg px-4 text-base font-extrabold transition-[background-color,transform,opacity] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
-          >
-            <Send className="h-5 w-5" aria-hidden="true" />
-            {pending ? "Enviando…" : "Enviar solicitud"}
-          </button>
-        </aside>
-      </div>
-
-      <Sheet open={phoneOpen} onOpenChange={setPhoneOpen}>
-        <SheetContent size="md">
-          <SheetHeader>
-            <span className="bg-pool-foam text-pool-blue mb-2 flex h-11 w-11 items-center justify-center rounded-xl">
-              <Phone className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <SheetTitle>¿Dónde puede contactar contigo Sol?</SheetTitle>
-            <SheetDescription>
-              Guardaremos este teléfono en tu perfil privado y lo usaremos para este pedido.
-            </SheetDescription>
-          </SheetHeader>
-          <SheetBody>
-            <label htmlFor="shop-contact-phone" className="text-pool-deep text-sm font-extrabold">
-              Teléfono de contacto
-            </label>
-            <Input
-              id="shop-contact-phone"
-              name="contact_phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={phone}
-              aria-invalid={Boolean(phone && !normalizeSpanishPhone(phone))}
-              aria-describedby="shop-contact-phone-help"
-              onChange={(event) => {
-                setPhone(event.target.value);
-                setError(null);
-              }}
-              placeholder="Ejemplo: 612 345 678"
-              className="mt-2"
-            />
-            <p
-              id="shop-contact-phone-help"
-              role={phone && !normalizeSpanishPhone(phone) ? "alert" : undefined}
-              className={`${phone && !normalizeSpanishPhone(phone) ? "text-goggle-red" : "text-ink-600"} mt-2 text-sm font-semibold`}
-            >
-              {phone && !normalizeSpanishPhone(phone)
-                ? "Escribe un teléfono válido de 9 cifras o con prefijo internacional."
-                : "Escribe 9 cifras o incluye el prefijo internacional."}
-            </p>
-            {error ? (
-              <p role="alert" className="text-goggle-red mt-2 text-sm font-semibold">
-                {error}
-              </p>
-            ) : null}
-          </SheetBody>
-          <SheetFooter>
-            <Button
+        <div className="border-pool-deep/65 rounded-xl border bg-blue-50 p-3">
+          <p className="font-extrabold">Sin pago ahora</p>
+          <p className="mt-1 text-sm font-semibold">
+            {requiresGuardian
+              ? "Tu familia lo revisará antes de que llegue a Sol."
+              : "El importe se incluirá en el cierre mensual del club."}
+          </p>
+        </div>
+        {!summary.ok ? (
+          <ShopError>
+            {summary.error}
+            <button
               type="button"
-              size="lg"
-              disabled={!normalizeSpanishPhone(phone)}
-              onClick={() => {
-                const normalized = normalizeSpanishPhone(phone);
-                if (!normalized) return;
-                setPhone(normalized);
-                setPhoneOpen(false);
-                submitCheckout(normalized);
-              }}
+              onClick={() => router.refresh()}
+              className={`${shopSecondary} mt-3 w-full`}
             >
-              Guardar teléfono y enviar
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
+              Actualizar carrito
+            </button>
+          </ShopError>
+        ) : null}
+        <button
+          type="button"
+          disabled={pending || !summary.ok}
+          className={`${shopPrimary} w-full`}
+          onClick={() => {
+            setError(null);
+            setConfirmation(true);
+          }}
+        >
+          Revisar y confirmar pedido
+        </button>
+        <Link href="/shop" className={`${shopSecondary} w-full`}>
+          Añadir más productos
+        </Link>
+      </section>
+      <ShopDecisionSheet
+        open={confirmation}
+        onOpenChange={setConfirmation}
+        title={requiresGuardian ? "¿Enviar a tu familia?" : "¿Confirmar este pedido?"}
+        icon="saved"
+        pending={pending}
+        error={error}
+        tall
+        stickyActions
+        description="Revisa el total y confirma el pedido. No se realiza ningún pago en la aplicación."
+        body={
+          <div className="text-pool-deep space-y-4">
+            <div className="border-pool-deep/65 rounded-xl border-2 bg-white p-4">
+              <p className="text-sm font-bold">
+                {summary.item_count} {summary.item_count === 1 ? "unidad" : "unidades"}
+              </p>
+              <div className="mt-1 flex items-center justify-between gap-3">
+                <span className="text-lg font-extrabold">Total</span>
+                <strong className="text-2xl tabular-nums">
+                  {summary.ok ? shopMoney(summary.total_cents!) : "—"}
+                </strong>
+              </div>
+            </div>
+            <p className="border-pool-deep/65 rounded-xl border bg-blue-50 p-3 text-base font-semibold">
+              {requiresGuardian
+                ? "Tu familia lo aprobará antes de enviarlo a Sol."
+                : "No pagas ahora. Se incluirá en el cierre mensual del club."}
+            </p>
+            {!requiresGuardian ? (
+              <div className="space-y-2">
+                <label htmlFor="shop-contact-phone" className="block font-extrabold">
+                  Teléfono para Sol
+                </label>
+                <input
+                  id="shop-contact-phone"
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  disabled={pending}
+                  value={phone}
+                  onChange={(event) => {
+                    setPhone(event.target.value);
+                    setError(null);
+                  }}
+                  placeholder="612 345 678"
+                  aria-invalid={Boolean(error && !normalizeSpanishPhone(phone))}
+                  className={shopControl}
+                />
+              </div>
+            ) : null}
+          </div>
+        }
+        actions={[
+          {
+            label: requiresGuardian ? "Enviar a mi familia" : "Confirmar pedido",
+            tone: "primary",
+            disabled: !summary.ok,
+            onClick: submit,
+          },
+          { label: "Volver al carrito", tone: "secondary", onClick: () => setConfirmation(false) },
+        ]}
+      />
     </>
   );
 }

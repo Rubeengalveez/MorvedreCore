@@ -1,30 +1,26 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  CalendarCheck2,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  Minus,
-  UsersRound,
-  X,
-} from "lucide-react";
+import { CalendarCheck2, Check, X } from "lucide-react";
 
 import { AttendanceHistoryCalendar } from "@/components/attendance/attendance-history-calendar";
-import { Avatar } from "@/components/ui/avatar";
+import { AttendanceHistoryControls } from "@/components/attendance/attendance-history-controls";
+import {
+  calendarBackHref,
+  calendarReturnParams,
+  calendarMonth,
+  calendarMonthKey,
+} from "@/lib/domain/calendar-presentation";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
 import {
   getMonthRange,
-  isMonthKey,
   monthKeyFromDate,
-  shiftMonthKey,
   summarizeAttendance,
 } from "@/lib/domain/attendance-history";
 import { cn } from "@/lib/utils/cn";
+import { notificationBackTarget } from "@/lib/domain/notifications";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getAttendanceHistory } from "@/server/queries/attendance";
 import { getCurrentSeason } from "@/server/queries/seasons";
@@ -37,12 +33,6 @@ export const metadata: Metadata = {
   title: "Historial de asistencia — Morvedre Core",
   description: "Consulta los entrenamientos a los que has asistido y tus ausencias.",
 };
-
-const monthFormatter = new Intl.DateTimeFormat("es-ES", {
-  month: "long",
-  year: "numeric",
-  timeZone: "Europe/Madrid",
-});
 
 const dayFormatter = new Intl.DateTimeFormat("es-ES", {
   weekday: "long",
@@ -60,7 +50,16 @@ const timeFormatter = new Intl.DateTimeFormat("es-ES", {
 export default async function AttendanceHistoryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ player?: string; month?: string }>;
+  searchParams: Promise<{
+    player?: string;
+    month?: string;
+    from?: string;
+    notificationId?: string;
+    calendarMonth?: string;
+    calendarPlayer?: string;
+    calendarTeam?: string;
+    calendarDay?: string;
+  }>;
 }) {
   const [ctx, season, params] = await Promise.all([
     getActiveProfileContext(),
@@ -69,6 +68,36 @@ export default async function AttendanceHistoryPage({
   ]);
   if (!ctx) redirect("/login");
   if (!season) redirect("/profile");
+  const profileOrigin =
+    params.from === "family" || params.from === "profile-activity" || params.from === "profile";
+  const notification = notificationBackTarget(params.from, params.notificationId);
+  const origin =
+    params.from === "calendar"
+      ? `&${calendarReturnParams(params.calendarMonth ?? params.month ?? monthKeyFromDate(), params.calendarPlayer ?? params.player ?? "", params.calendarTeam, params.calendarDay)}`
+      : notification
+        ? `&from=notification&notificationId=${params.notificationId}`
+        : profileOrigin
+          ? `&from=${params.from}`
+          : "";
+  const backHref =
+    (params.from === "calendar" ? calendarBackHref(params) : null) ??
+    notification?.href ??
+    (params.from === "family"
+      ? "/profile/family"
+      : params.from === "profile-activity"
+        ? "/profile/activity"
+        : params.from === "profile"
+          ? "/profile"
+          : "/calendar");
+  const backLabel =
+    notification?.label ??
+    (params.from === "family"
+      ? "Mi familia"
+      : params.from === "profile-activity"
+        ? "Mi actividad"
+        : params.from === "profile"
+          ? "Mi perfil"
+          : "Volver al calendario");
 
   const profiles = [ctx.ownProfile, ...ctx.linkedProfiles];
   const profilesWithTeams = await Promise.all(
@@ -87,7 +116,7 @@ export default async function AttendanceHistoryPage({
   if (candidates.length === 0) {
     return (
       <PageShell width="md" className="gap-4 pb-8">
-        <PageBackLink href={"/calendar" as Route}>Volver al calendario</PageBackLink>
+        <PageBackLink href={backHref as Route}>{backLabel}</PageBackLink>
         <EmptyState
           icon={<CalendarCheck2 className="h-7 w-7" aria-hidden="true" />}
           title="Todavía no hay asistencia"
@@ -97,15 +126,20 @@ export default async function AttendanceHistoryPage({
     );
   }
 
-  const showFamilySelector = childCandidates.length > 1;
-  const requestedProfile = childCandidates.find((profile) => profile.id === params.player);
-  const selectedProfiles = showFamilySelector
-    ? requestedProfile
-      ? [requestedProfile]
-      : childCandidates
-    : [childCandidates[0] ?? candidates[0]!];
+  const requestedProfile = candidates.find((profile) => profile.id === params.player);
+  const selectedProfiles =
+    params.player === "all"
+      ? candidates
+      : requestedProfile
+        ? [requestedProfile]
+        : params.from === "profile-activity" &&
+            candidates.some((profile) => profile.id === ctx.ownProfile.id)
+          ? [ctx.ownProfile]
+          : childCandidates.length
+            ? childCandidates
+            : [candidates[0]!];
   const selectedProfile = selectedProfiles.length === 1 ? selectedProfiles[0] : null;
-  const month = isMonthKey(params.month) ? params.month : monthKeyFromDate();
+  const month = calendarMonthKey(calendarMonth(params.month));
   const { from, to } = getMonthRange(month);
   const records = await getAttendanceHistory({
     seasonId: season.id,
@@ -115,13 +149,6 @@ export default async function AttendanceHistoryPage({
   });
   const summary = summarizeAttendance(records);
   const [year, monthNumber] = month.split("-").map(Number);
-  const monthDate = new Date(Date.UTC(year ?? 2000, (monthNumber ?? 1) - 1, 1, 12));
-  const previousMonth = shiftMonthKey(month, -1);
-  const nextMonth = shiftMonthKey(month, 1);
-  const playerQuery = `player=${selectedProfile?.id ?? "all"}`;
-  const selectedNames = selectedProfiles.map(
-    (profile) => profile.full_name.split(/\s+/)[0] ?? profile.full_name,
-  );
   const profileById = new Map(selectedProfiles.map((profile) => [profile.id, profile]));
   const recordsByDay = Array.from(
     records.reduce((groups, record) => {
@@ -135,94 +162,32 @@ export default async function AttendanceHistoryPage({
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      <PageBackLink href={"/calendar" as Route}>Volver al calendario</PageBackLink>
+      <PageBackLink href={backHref as Route}>{backLabel}</PageBackLink>
 
-      <PageHeader
-        eyebrow="Temporada actual"
-        title="Historial de asistencia"
-        description={`Días registrados de ${selectedNames.join(" y ")}.`}
-        icon={<CalendarCheck2 className="h-5 w-5" aria-hidden="true" />}
-        teamColor={selectedProfile?.team_color}
-      />
-
-      {showFamilySelector ? (
-        <nav
-          aria-label="Elegir jugador"
-          className="border-ink-200 bg-paper-card grid grid-cols-3 gap-2 rounded-2xl border p-2"
-        >
-          <Link
-            href={`/attendance/history?player=all&month=${month}` as Route}
-            aria-current={selectedProfile === null ? "page" : undefined}
-            className={cn(
-              "focus-visible:ring-pool-blue flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2 text-sm font-extrabold transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
-              selectedProfile === null
-                ? "bg-pool-deep text-paper shadow-elev-1"
-                : "bg-paper-sunk text-pool-deep hover:bg-pool-foam",
-            )}
-          >
-            <UsersRound className="h-5 w-5" aria-hidden="true" />
-            Todos
-          </Link>
-          {childCandidates.map((profile) => {
-            const selected = profile.id === selectedProfile?.id;
-            return (
-              <Link
-                key={profile.id}
-                href={`/attendance/history?player=${profile.id}&month=${month}` as Route}
-                aria-current={selected ? "page" : undefined}
-                aria-label={`Ver asistencia de ${profile.full_name}`}
-                className={cn(
-                  "focus-visible:ring-pool-blue flex min-h-12 min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-2 transition-[background-color,color,box-shadow] focus-visible:ring-2 focus-visible:outline-none motion-reduce:transition-none",
-                  selected
-                    ? "bg-pool-deep text-paper shadow-elev-1"
-                    : "bg-paper-sunk text-pool-deep hover:bg-pool-foam",
-                )}
-              >
-                <Avatar
-                  name={profile.full_name}
-                  src={profile.photo_url}
-                  size={28}
-                  teamColor={profile.team_color ?? undefined}
-                />
-                <span className="min-w-0 truncate text-sm font-extrabold">
-                  {profile.full_name.split(/\s+/)[0] ?? profile.full_name}
-                </span>
-              </Link>
-            );
-          })}
-        </nav>
-      ) : null}
-
-      <section aria-labelledby="attendance-month-heading" className="flex flex-col gap-3">
-        <div className="border-ink-200 bg-paper-card grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center gap-2 rounded-2xl border p-2">
-          <Link
-            href={`/attendance/history?${playerQuery}&month=${previousMonth}` as Route}
-            aria-label="Ver el mes anterior"
-            className="border-ink-200 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <ChevronLeft className="h-6 w-6" aria-hidden="true" />
-          </Link>
-          <h2
-            id="attendance-month-heading"
-            className="font-display text-pool-deep text-center text-lg font-extrabold capitalize"
-          >
-            {monthFormatter.format(monthDate)}
-          </h2>
-          <Link
-            href={`/attendance/history?${playerQuery}&month=${nextMonth}` as Route}
-            aria-label="Ver el mes siguiente"
-            className="border-ink-200 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <ChevronRight className="h-6 w-6" aria-hidden="true" />
-          </Link>
+      <header className="flex min-h-12 items-center gap-2.5 px-1">
+        <span className="bg-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white">
+          <CalendarCheck2 className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-pool-deep text-2xl font-extrabold">Asistencia</h1>
+          <p className="text-pool-deep text-sm font-bold">
+            <AdaptivePlayerName name={selectedProfile?.full_name ?? "Toda la familia"} />
+          </p>
         </div>
-
+      </header>
+      <AttendanceHistoryControls
+        month={month}
+        player={selectedProfile?.id ?? "all"}
+        people={candidates}
+        origin={origin}
+      />
+      <section aria-label="Asistencia del mes" className="flex flex-col gap-3">
         <div aria-label="Resumen del mes seleccionado" className="grid grid-cols-3 gap-2">
-          <SummaryCard value={summary.attended} label="Asistencias" tone="success" />
-          <SummaryCard value={summary.absent} label="Ausencias" tone="danger" />
+          <SummaryCard value={summary.attended} label="Asistió" tone="success" />
+          <SummaryCard value={summary.absent} label="No asistió" tone="danger" />
           <SummaryCard
             value={summary.percentage == null ? "—" : `${summary.percentage} %`}
-            label="% del mes"
+            label="Asistencia"
             tone="brand"
           />
         </div>
@@ -233,43 +198,23 @@ export default async function AttendanceHistoryPage({
           records={records}
           profiles={selectedProfiles}
         />
-
-        <div className="text-ink-700 flex flex-wrap gap-x-4 gap-y-2 px-1 text-sm font-semibold">
-          <Legend icon={<Check className="h-4 w-4" />} label="Asistió" tone="success" />
-          <Legend icon={<X className="h-4 w-4" />} label="No asistió" tone="danger" />
-          <Legend icon={<Minus className="h-4 w-4" />} label="Doble sesión mixta" tone="brand" />
-        </div>
       </section>
 
-      <div className="border-ink-300 bg-paper-card text-ink-900 shadow-elev-1 flex items-start gap-3 rounded-xl border p-3 text-sm leading-5">
-        <span className="bg-pool-deep text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
-          <Info className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <p>
-          Solo cuentan las listas guardadas por un entrenador. Un entrenamiento sin lista no se
-          muestra como ausencia.
-        </p>
-      </div>
-
-      <section aria-labelledby="attendance-detail-heading" className="flex flex-col gap-3">
-        <h2
-          id="attendance-detail-heading"
-          className="font-display text-pool-deep text-xl font-extrabold"
-        >
-          Detalle del mes
-        </h2>
+      <details className="border-pool-deep/65 rounded-xl border-2 bg-white p-3 open:pb-3">
+        <summary className="text-pool-deep focus-visible:outline-pool-blue min-h-12 cursor-pointer content-center rounded-lg text-base font-extrabold focus-visible:outline-2">
+          Detalle del mes · {records.length} registros
+        </summary>
         {records.length > 0 ? (
           <ol className="flex flex-col gap-2.5">
             {recordsByDay.map(([day, dayRecords]) => (
               <li key={day}>
-                <section className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-xl border">
-                  <h3 className="bg-pool-ice text-pool-deep border-ink-200 border-b px-3 py-2 text-sm leading-none font-extrabold first-letter:uppercase">
+                <section className="border-pool-deep/65 shadow-elev-1 overflow-hidden rounded-xl border-2 bg-white">
+                  <h3 className="bg-pool-deep px-3 py-3 text-base leading-tight font-extrabold text-white first-letter:uppercase">
                     {day}
                   </h3>
-                  <ol className="divide-ink-200 divide-y">
+                  <ol className="space-y-1">
                     {dayRecords.map((record) => {
-                      const profileName =
-                        profileById.get(record.player_id)?.full_name ?? "Jugador";
+                      const profileName = profileById.get(record.player_id)?.full_name ?? "Jugador";
                       return (
                         <li
                           key={`${record.session_id}-${record.player_id}`}
@@ -278,9 +223,11 @@ export default async function AttendanceHistoryPage({
                           <span
                             className={cn(
                               "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                              record.present
-                                ? "bg-emerald-50 text-success"
-                                : "bg-red-50 text-danger",
+                              record.unreviewed
+                                ? "bg-amber-50 text-amber-950"
+                                : record.present
+                                  ? "bg-emerald-50 text-green-800"
+                                  : "bg-red-50 text-red-800",
                             )}
                           >
                             {record.present ? (
@@ -289,15 +236,23 @@ export default async function AttendanceHistoryPage({
                               <X className="h-5 w-5" aria-hidden="true" />
                             )}
                             <span className="sr-only">
-                              {record.present ? "Asistió" : "Ausente"}
+                              {record.unreviewed
+                                ? "Sin revisar"
+                                : record.present
+                                  ? "Asistió"
+                                  : "Ausente"}
                             </span>
                           </span>
                           <div className="min-w-0">
-                            <p className="text-pool-deep truncate text-sm leading-tight font-extrabold">
+                            <p className="text-pool-deep truncate text-base leading-tight font-extrabold">
                               {selectedProfiles.length > 1 ? profileName : record.team_label}
                             </p>
-                            <p className="text-ink-600 mt-0.5 truncate text-xs leading-tight font-semibold">
-                              {selectedProfiles.length > 1 ? record.team_label : "Entrenamiento"}
+                            <p className="text-pool-deep mt-0.5 truncate text-sm leading-tight font-semibold">
+                              {record.unreviewed
+                                ? "Sin revisar · asistencia provisional"
+                                : selectedProfiles.length > 1
+                                  ? record.team_label
+                                  : "Entrenamiento"}
                               {!record.present && record.reason ? ` · ${record.reason}` : ""}
                             </p>
                           </div>
@@ -322,7 +277,7 @@ export default async function AttendanceHistoryPage({
             description="No hay entrenamientos con asistencia registrada en el mes seleccionado."
           />
         )}
-      </section>
+      </details>
     </PageShell>
   );
 }
@@ -339,49 +294,23 @@ function SummaryCard({
   return (
     <div
       className={cn(
-        "border-ink-300 bg-paper-card shadow-elev-1 flex min-h-20 flex-col items-center justify-center rounded-xl border border-t-4 px-2 py-3 text-center",
-        tone === "success" && "border-t-success",
-        tone === "danger" && "border-t-danger",
-        tone === "brand" && "border-t-pool-blue",
+        "border-pool-deep/65 shadow-elev-1 flex min-h-18 flex-col items-center justify-center rounded-xl border-2 bg-white px-2 py-3 text-center",
+        tone === "success" && "border-green-800 bg-green-50",
+        tone === "danger" && "border-red-800 bg-red-50",
+        tone === "brand" && "border-pool-deep/65 bg-blue-50",
       )}
     >
       <strong
         className={cn(
-          "font-mono text-xl leading-none font-extrabold tabular-nums",
-          tone === "success" && "text-success",
-          tone === "danger" && "text-danger",
+          "font-mono text-2xl leading-none font-extrabold tabular-nums",
+          tone === "success" && "text-green-800",
+          tone === "danger" && "text-red-800",
           tone === "brand" && "text-pool-blue",
         )}
       >
         {value}
       </strong>
-      <span className="text-ink-900 mt-2 text-xs leading-tight font-extrabold">{label}</span>
+      <span className="text-ink-900 mt-2 text-sm leading-tight font-extrabold">{label}</span>
     </div>
-  );
-}
-
-function Legend({
-  icon,
-  label,
-  tone,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  tone: "success" | "danger" | "brand";
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className={cn(
-          tone === "success" && "text-success",
-          tone === "danger" && "text-danger",
-          tone === "brand" && "text-pool-blue",
-        )}
-        aria-hidden="true"
-      >
-        {icon}
-      </span>
-      {label}
-    </span>
   );
 }

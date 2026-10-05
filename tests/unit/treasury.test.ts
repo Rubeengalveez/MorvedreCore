@@ -16,6 +16,25 @@ const profiles = [
 ];
 
 describe("treasury domain", () => {
+  it("incluye en octubre el pedido solicitado en septiembre y aprobado en octubre", () => {
+    const shopOrders = [
+      {
+        id: "late-approved",
+        requested_by: "p1",
+        total_cents: 3500,
+        status: "pending_admin",
+        requested_at: "2026-09-29T10:00:00Z",
+        approved_at: "2026-10-02T10:00:00Z",
+      },
+    ];
+    const input = { profiles, concepts: [], assignments: [], shopOrders };
+    expect(
+      buildPeriodClosure({ ...input, periodStart: "2026-09-01", periodEnd: "2026-09-30" }).lines,
+    ).toEqual([]);
+    expect(
+      buildPeriodClosure({ ...input, periodStart: "2026-10-01", periodEnd: "2026-10-31" }).lines,
+    ).toEqual([expect.objectContaining({ source_id: "late-approved", amount_cents: 3500 })]);
+  });
   it.each([
     ["2026-09-01", "2026-09-30", "2026-08-31T22:00:00.000Z", "2026-09-30T22:00:00.000Z"],
     ["2026-03-29", "2026-03-29", "2026-03-28T23:00:00.000Z", "2026-03-29T22:00:00.000Z"],

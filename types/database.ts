@@ -310,6 +310,7 @@ export type Database = {
       };
       historical_player_stats: {
         Row: {
+          ranking_totals: Json | null;
           archived_at: string;
           attendance_pct: number;
           category_code: string;
@@ -326,6 +327,7 @@ export type Database = {
           trainings_total: number;
         };
         Insert: {
+          ranking_totals?: Json | null;
           archived_at?: string;
           attendance_pct?: number;
           category_code: string;
@@ -342,6 +344,7 @@ export type Database = {
           trainings_total?: number;
         };
         Update: {
+          ranking_totals?: Json | null;
           archived_at?: string;
           attendance_pct?: number;
           category_code?: string;
@@ -1352,12 +1355,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      shop_email_deliveries: {
+        Row: {
+          event_key: string;
+          recipient: string;
+          status: string;
+          payload: Json | null;
+          claimed_at: string;
+          sent_at: string | null;
+        };
+        Insert: {
+          event_key: string;
+          recipient: string;
+          status?: string;
+          payload?: Json | null;
+          claimed_at?: string;
+          sent_at?: string | null;
+        };
+        Update: {
+          status?: string;
+          payload?: Json | null;
+          claimed_at?: string;
+          sent_at?: string | null;
+        };
+        Relationships: [];
+      };
       shop_order_items: {
         Row: {
           created_at: string;
           id: string;
           order_id: string;
           personalization: string | null;
+          product_title_snapshot: string | null;
+          product_image_snapshot: string | null;
           product_id: string;
           quantity: number;
           size: string | null;
@@ -1369,6 +1399,8 @@ export type Database = {
           id?: string;
           order_id: string;
           personalization?: string | null;
+          product_title_snapshot?: string | null;
+          product_image_snapshot?: string | null;
           product_id: string;
           quantity: number;
           size?: string | null;
@@ -1380,6 +1412,8 @@ export type Database = {
           id?: string;
           order_id?: string;
           personalization?: string | null;
+          product_title_snapshot?: string | null;
+          product_image_snapshot?: string | null;
           product_id?: string;
           quantity?: number;
           size?: string | null;
@@ -1409,6 +1443,7 @@ export type Database = {
           approved_at: string | null;
           approved_by: string | null;
           cancelled_at: string | null;
+          checkout_key: string | null;
           contact_phone_e164: string | null;
           currency: string;
           delivered_at: string | null;
@@ -1431,6 +1466,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           cancelled_at?: string | null;
+          checkout_key?: string | null;
           contact_phone_e164?: string | null;
           currency?: string;
           delivered_at?: string | null;
@@ -1453,6 +1489,7 @@ export type Database = {
           approved_at?: string | null;
           approved_by?: string | null;
           cancelled_at?: string | null;
+          checkout_key?: string | null;
           contact_phone_e164?: string | null;
           currency?: string;
           delivered_at?: string | null;
@@ -1566,7 +1603,6 @@ export type Database = {
           description: string;
           id: string;
           image_url: string | null;
-          max_per_order: number;
           personalization_enabled: boolean;
           personalization_label: string;
           personalization_max_length: number;
@@ -1584,7 +1620,6 @@ export type Database = {
           description: string;
           id?: string;
           image_url?: string | null;
-          max_per_order?: number;
           personalization_enabled?: boolean;
           personalization_label?: string;
           personalization_max_length?: number;
@@ -1602,7 +1637,6 @@ export type Database = {
           description?: string;
           id?: string;
           image_url?: string | null;
-          max_per_order?: number;
           personalization_enabled?: boolean;
           personalization_label?: string;
           personalization_max_length?: number;
@@ -1679,19 +1713,19 @@ export type Database = {
         Row: {
           team_id: string;
           player_id: string;
-          cap_number: number;
+          cap_number: number | null;
           source_team_id: string | null;
         };
         Insert: {
           team_id: string;
           player_id: string;
-          cap_number: number;
+          cap_number: number | null;
           source_team_id?: string | null;
         };
         Update: {
           team_id?: string;
           player_id?: string;
-          cap_number?: number;
+          cap_number?: number | null;
           source_team_id?: string | null;
         };
         Relationships: [
@@ -2117,6 +2151,10 @@ export type Database = {
       };
       training_blocks: {
         Row: {
+          schedule_slot_id: string | null;
+          series_id: string | null;
+          player_ids: string[] | null;
+          excluded_dates: string[];
           created_at: string;
           created_by: string | null;
           end_date: string;
@@ -2134,6 +2172,10 @@ export type Database = {
           weekdays: number[];
         };
         Insert: {
+          schedule_slot_id?: string | null;
+          series_id?: string | null;
+          player_ids?: string[] | null;
+          excluded_dates?: string[];
           created_at?: string;
           created_by?: string | null;
           end_date: string;
@@ -2151,6 +2193,10 @@ export type Database = {
           weekdays: number[];
         };
         Update: {
+          schedule_slot_id?: string | null;
+          series_id?: string | null;
+          player_ids?: string[] | null;
+          excluded_dates?: string[];
           created_at?: string;
           created_by?: string | null;
           end_date?: string;
@@ -2193,6 +2239,12 @@ export type Database = {
       };
       training_sessions: {
         Row: {
+          joint_id: string | null;
+          label: string | null;
+          kind: string;
+          player_ids: string[] | null;
+          original_scheduled_at: string | null;
+          is_exception: boolean;
           block_id: string | null;
           cancellation_reason: string | null;
           cancelled: boolean;
@@ -2210,6 +2262,12 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          joint_id?: string | null;
+          label?: string | null;
+          kind?: string;
+          player_ids?: string[] | null;
+          original_scheduled_at?: string | null;
+          is_exception?: boolean;
           block_id?: string | null;
           cancellation_reason?: string | null;
           cancelled?: boolean;
@@ -2227,6 +2285,12 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          joint_id?: string | null;
+          label?: string | null;
+          kind?: string;
+          player_ids?: string[] | null;
+          original_scheduled_at?: string | null;
+          is_exception?: boolean;
           block_id?: string | null;
           cancellation_reason?: string | null;
           cancelled?: boolean;
@@ -2675,9 +2739,29 @@ export type Database = {
       };
     };
     Functions: {
+      register_admin_player: { Args: { p_input: Json }; Returns: Json };
+      submit_shop_checkout: {
+        Args: {
+          p_requester: string;
+          p_checkout_key: string;
+          p_items: Json;
+          p_expected_total: number;
+          p_notes: string | null;
+          p_contact_phone: string | null;
+        };
+        Returns: Json;
+      };
       archive_expired_news: { Args: never; Returns: number };
+      replace_shop_product_gallery: {
+        Args: { p_product_id: string; p_images: Json };
+        Returns: undefined;
+      };
       replace_match_callup: {
         Args: { p_match_id: string; p_players: Json; p_save_template: boolean };
+        Returns: undefined;
+      };
+      save_team_default_caps: {
+        Args: { p_team_id: string; p_players: Json; p_expected: Json };
         Returns: undefined;
       };
       prepare_live_match_caps: {

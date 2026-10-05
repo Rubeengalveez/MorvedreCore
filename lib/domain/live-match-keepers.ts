@@ -1,4 +1,6 @@
 import { activeEvents, isGoal, type LiveSheet } from "./live-match";
+import { rosterRequirementError } from "./live-match-rules";
+import { emergencyKeeperCaps } from "./live-match-goalkeeper-role";
 
 export function keeperQuarters(sheet: LiveSheet, cap: number): number[] {
   const periods = new Set(
@@ -17,7 +19,10 @@ export function keeperQuarters(sheet: LiveSheet, cap: number): number[] {
 }
 
 export function correctStartingKeeper(sheet: LiveSheet, period: number, cap: number): LiveSheet {
-  if (![1, 13].includes(cap) || !sheet.players.some((p) => !p.retired && p.cap === cap))
+  if (
+    !([1, 13].includes(cap) || emergencyKeeperCaps(sheet, "us", period).includes(cap)) ||
+    !sheet.players.some((p) => !p.retired && p.cap === cap)
+  )
     throw new Error("Elige un portero con gorro 1 o 13.");
   if (period > sheet.period || period < 1) throw new Error("Revisa el cuarto del portero.");
   const stints = [...(sheet.keeperStints ?? [])];
@@ -80,7 +85,7 @@ function reviseKeeperStint(
   const stint = stints[index];
   if (
     !stint ||
-    ![1, 13].includes(cap) ||
+    !([1, 13].includes(cap) || emergencyKeeperCaps(sheet, "us", stint?.period).includes(cap)) ||
     !sheet.players.some((player) => !player.retired && player.cap === cap)
   )
     throw new Error("Revisa el historial del portero antes de corregir la sustitución.");
@@ -119,7 +124,16 @@ export function selectMatchKeeper(
   cap: number,
   mode: "start" | "change" | "correct",
 ): LiveSheet {
-  if (cap !== 1 && cap !== 13) throw new Error("Solo los gorros 1 y 13 pueden ser porteros.");
+  if (cap !== 1 && cap !== 13 && !emergencyKeeperCaps(sheet, "us").includes(cap))
+    throw new Error("Solo los gorros 1 y 13 pueden ser porteros.");
+  if (mode === "start") {
+    const own = rosterRequirementError(
+      sheet.category,
+      sheet.players.filter((p) => !p.retired).map((p) => p.cap),
+    );
+    const rival = rosterRequirementError(sheet.category, sheet.opponentCaps, "them");
+    if (own || rival) throw new Error(own || rival);
+  }
   if (sheet.phase === "ready" && mode !== "start") return { ...sheet, keeper: cap };
   const period = mode === "start" && sheet.phase === "break" ? sheet.period + 1 : sheet.period;
   const stints = [...(sheet.keeperStints ?? [])];

@@ -28,7 +28,7 @@ export default async function MatchCallupPage({
   let matchQuery = supabase
     .from("matches")
     .select(
-      "id, team_id, opponent, competition_type, is_home, scheduled_at, status, final_score_us, final_score_them, teams!matches_team_id_fkey(label)",
+      "id, team_id, opponent, competition_type, is_home, scheduled_at, status, final_score_us, final_score_them, teams!matches_team_id_fkey(label,category_code)",
     )
     .eq("id", id);
   if (scope) matchQuery = matchQuery.in("team_id", scope);
@@ -61,10 +61,7 @@ export default async function MatchCallupPage({
 
   const callups = callupsResult.data ?? [];
   const initial: CallupPick[] = callups
-    .filter(
-      (player) =>
-        (player.status === "called" || player.status === "confirmed") && player.cap_number !== null,
-    )
+    .filter((player) => player.status === "called" || player.status === "confirmed")
     .map((player) => ({ player_id: player.player_id, cap_number: player.cap_number }));
   const byId = new Map<string, CallupCandidate>(
     suggestions.map((player) => [
@@ -104,6 +101,7 @@ export default async function MatchCallupPage({
         key={id}
         matchId={id}
         teamLabel={teamLabel}
+        category={Array.isArray(teamJoin) ? teamJoin[0]?.category_code : teamJoin?.category_code}
         initial={initial}
         candidates={[...byId.values()]}
         template={(templateResult.data ?? []).map((player) => ({

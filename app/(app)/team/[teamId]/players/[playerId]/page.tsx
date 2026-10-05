@@ -1,11 +1,14 @@
 import type { Metadata, Route } from "next";
 import { notFound, redirect } from "next/navigation";
-import { ChartNoAxesColumn, Waves } from "lucide-react";
+import { Waves } from "lucide-react";
 
-import { Avatar } from "@/components/ui/avatar";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
+import { PlayerPhoto } from "@/components/team/player-photo";
+import { PlayerSeasonStats } from "@/components/team/player-season-stats";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { PageShell } from "@/components/ui/page-shell";
 import { getPlayerProfileBackTarget } from "@/lib/domain/player-profile-navigation";
+import { teamAdminOrigin } from "@/lib/domain/team-navigation-origin";
 import { validCapNumber } from "@/lib/domain/cap-number";
 import { formatSwimTime, getSwimProfileSummary } from "@/lib/domain/swim-times";
 import { createClient } from "@/lib/supabase/server";
@@ -27,13 +30,18 @@ export default async function TeamPlayerPage({
   searchParams,
 }: {
   params: Promise<{ teamId: string; playerId: string }>;
-  searchParams: Promise<{ from?: string; returnTo?: string }>;
+  searchParams: Promise<{
+    from?: string;
+    returnTo?: string;
+    teamFrom?: string;
+    teamAdminTab?: string;
+  }>;
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 
   const { teamId, playerId } = await params;
-  const { from, returnTo } = await searchParams;
+  const { from, returnTo, teamFrom, teamAdminTab } = await searchParams;
   const [team, roster] = await Promise.all([getTeamById(teamId), getTeamRoster(teamId)]);
   if (!team) notFound();
 
@@ -85,75 +93,60 @@ export default async function TeamPlayerPage({
   const swim = getSwimProfileSummary(swimEntries);
   const number = validCapNumber(player.squad_number ?? player.cap_number);
   const backTarget = getPlayerProfileBackTarget(from, team.id, returnTo, playerId);
+  const origin = teamAdminOrigin(team.id, teamFrom, teamAdminTab);
+  if (origin.context && from !== "profile" && from !== "rankings")
+    backTarget.href += `&${origin.context}`;
 
   return (
     <PageShell width="md" className="gap-3 pb-4">
       <PageBackLink href={backTarget.href as Route}>{backTarget.label}</PageBackLink>
 
       <header className="bg-pool-deep shadow-elev-2 relative overflow-hidden rounded-[1.75rem] text-white">
-        <span className="lane-pattern pointer-events-none absolute inset-0 opacity-15" aria-hidden="true" />
-        <span className="bg-pool-blue/20 pointer-events-none absolute -top-16 -right-12 h-44 w-44 rounded-full blur-3xl" aria-hidden="true" />
+        <span
+          className="lane-pattern pointer-events-none absolute inset-0 opacity-15"
+          aria-hidden="true"
+        />
+        <span
+          className="bg-pool-blue/20 pointer-events-none absolute -top-16 -right-12 h-44 w-44 rounded-full blur-3xl"
+          aria-hidden="true"
+        />
         <div className="relative flex items-center gap-4 p-4 sm:gap-5 sm:p-5">
           <div className="relative shrink-0">
-            <span aria-hidden="true" className="inline-flex rounded-full ring-4 ring-white/25">
-              <Avatar
-                src={player.photo_url}
-                name={player.full_name}
-                size={player.photo_url ? 128 : 104}
-                teamColor={team.color}
-                className="border-4 shadow-elev-2"
-              />
-            </span>
-            {number != null ? (
-              <span className="bg-ball-gold text-pool-deep absolute -right-2 -bottom-1 flex h-12 min-w-12 items-center justify-center rounded-2xl px-2 font-mono text-xl font-extrabold tabular-nums shadow-elev-2">
-                <span className="sr-only">Dorsal </span>
-                {number}
-              </span>
-            ) : null}
+            <PlayerPhoto src={player.photo_url} name={player.full_name} teamColor={team.color} />
           </div>
           <div className="min-w-0 flex-1 py-1">
-            <p className="text-ball-gold text-xs font-extrabold tracking-[0.1em] uppercase">
+            <p className="text-ball-gold text-sm font-extrabold tracking-[0.1em] uppercase">
               {team.label}
             </p>
-            <h1 className="font-display mt-2 text-lg leading-[1.12] font-extrabold tracking-tight break-words min-[380px]:text-[1.375rem] sm:text-2xl">
-              {player.full_name}
+            <h1 className="font-display mt-2 text-xl leading-tight font-extrabold sm:text-2xl">
+              <AdaptivePlayerName name={player.full_name} />
             </h1>
-            {player.birth_year != null ? (
-              <p className="mt-2 text-sm font-medium text-white/85">Nacido en {player.birth_year}</p>
-            ) : null}
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold">
+              {number != null ? (
+                <span className="bg-ball-gold text-pool-deep inline-flex items-center gap-1 rounded-lg border border-yellow-900 px-2 py-1">
+                  <span>Gorro</span>
+                  <strong>{number}</strong>
+                </span>
+              ) : null}
+              {player.birth_year != null ? <span>Nacido en {player.birth_year}</span> : null}
+            </div>
           </div>
         </div>
       </header>
 
-      <section aria-labelledby="player-season-heading">
-        <div className="flex items-center gap-2 px-1">
-          <ChartNoAxesColumn className="text-pool-blue h-5 w-5" aria-hidden="true" />
-          <h2 id="player-season-heading" className="font-display text-pool-deep text-xl font-extrabold">
-            Esta temporada
-          </h2>
-        </div>
-        <div className="bg-paper-card shadow-elev-1 mt-2 overflow-hidden rounded-2xl">
-          <div className="bg-pool-deep relative overflow-hidden">
-            <span className="lane-pattern pointer-events-none absolute inset-0 opacity-15" aria-hidden="true" />
-            <dl className="relative grid grid-cols-3 gap-2 p-2.5 text-white">
-              <PrimaryStat label="Expulsiones" value={snapshot?.exclusions ?? "—"} />
-              <PrimaryStat label="Goles" value={actaStats.goals} featured />
-              <PrimaryStat label="Asistencias" value={actaStats.assists} />
-            </dl>
-          </div>
-          {snapshot ? (
-            <dl className="grid grid-cols-2 gap-2 p-2.5">
-              <SecondaryStat label="Partidos" value={snapshot.matches_played} />
-              <SecondaryStat label="MVP" value={snapshot.mvp_count} />
-            </dl>
-          ) : null}
-        </div>
-      </section>
+      <PlayerSeasonStats
+        stats={actaStats}
+        exclusions={snapshot?.exclusions ?? actaStats.exclusions}
+        mvpCount={snapshot?.mvp_count ?? null}
+      />
 
       <section aria-labelledby="player-swim-heading">
         <div className="flex items-center gap-2 px-1">
           <Waves className="text-pool-blue h-5 w-5" aria-hidden="true" />
-          <h2 id="player-swim-heading" className="font-display text-pool-deep text-xl font-extrabold">
+          <h2
+            id="player-swim-heading"
+            className="font-display text-pool-deep text-xl font-extrabold"
+          >
             Tiempos de nado
           </h2>
         </div>
@@ -162,36 +155,28 @@ export default async function TeamPlayerPage({
           <SwimDistanceCard distance={100} latest={swim.latest100} best={swim.best100} />
         </div>
       </section>
-
     </PageShell>
   );
 }
 
-function PrimaryStat({ label, value, featured = false }: {
-  label: string;
-  value: string | number;
-  featured?: boolean;
-}) {
-  return (
-    <div className={`flex min-w-0 flex-col items-center justify-center rounded-xl px-0.5 py-2 text-center ${featured ? "bg-white/10" : ""}`}>
-      <dt className="order-2 mt-1 text-xs font-bold text-white/90 uppercase min-[360px]:text-[0.8125rem]">
-        {label}
-      </dt>
-      <dd className={`order-1 font-mono text-4xl leading-none font-extrabold tabular-nums ${featured ? "text-ball-gold" : "text-white"}`}>
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function SwimDistanceCard({ distance, latest, best }: {
+function SwimDistanceCard({
+  distance,
+  latest,
+  best,
+}: {
   distance: 50 | 100;
   latest: number | null;
   best: number | null;
 }) {
   return (
-    <article aria-labelledby={`swim-${distance}-heading`} className="bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl">
-      <h3 id={`swim-${distance}-heading`} className="font-display bg-pool-deep px-3 py-2 text-center text-lg font-extrabold text-white">
+    <article
+      aria-labelledby={`swim-${distance}-heading`}
+      className="border-pool-deep/65 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border-2"
+    >
+      <h3
+        id={`swim-${distance}-heading`}
+        className="font-display bg-pool-deep px-3 py-2 text-center text-lg font-extrabold text-white"
+      >
         {distance} metros
       </h3>
       <dl className="grid grid-cols-2 gap-2 px-3 py-2.5">
@@ -202,27 +187,23 @@ function SwimDistanceCard({ distance, latest, best }: {
   );
 }
 
-function SwimValue({ label, value, highlight = false }: { label: string; value: number | null; highlight?: boolean }) {
+function SwimValue({
+  label,
+  value,
+  highlight = false,
+}: {
+  label: string;
+  value: number | null;
+  highlight?: boolean;
+}) {
   return (
     <div className="flex min-w-0 flex-col items-center text-center">
       <dt className="text-ink-700 order-2 mt-0.5 text-sm font-bold">{label}</dt>
-      <dd className={`order-1 font-mono text-xl leading-tight font-extrabold whitespace-nowrap tabular-nums ${highlight ? "text-pool-blue" : "text-pool-deep"}`}>
+      <dd
+        className={`order-1 font-mono text-xl leading-tight font-extrabold whitespace-nowrap tabular-nums ${highlight ? "text-pool-blue" : "text-pool-deep"}`}
+      >
         {value == null ? "Sin marca" : formatSwimTime(value)}
       </dd>
-    </div>
-  );
-}
-
-function SecondaryStat({ label, value }: {
-  label: string;
-  value: number;
-}) {
-  return (
-    <div className="bg-pool-ice flex min-w-0 items-center justify-center gap-2 rounded-xl px-2 py-2">
-      <dt className="order-2 text-sm font-bold leading-tight text-ink-700">
-        {label}
-      </dt>
-      <dd className="text-pool-deep order-1 font-mono text-2xl leading-none font-extrabold tabular-nums">{value}</dd>
     </div>
   );
 }

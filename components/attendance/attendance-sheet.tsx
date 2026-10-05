@@ -3,16 +3,26 @@
 import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CalendarClock, Check, CheckCircle2, RefreshCw, UsersRound, X } from "lucide-react";
+import {
+  ArrowLeft,
+  CalendarClock,
+  Check,
+  CheckCircle2,
+  Loader2,
+  UsersRound,
+  X,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils/cn";
-import { PageBackLink } from "@/components/ui/page-back-link";
+import { trainingKindLabel } from "@/lib/domain/training-management";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
 import { markAttendance } from "@/server/actions/admin";
 import type { DashboardCoachSession } from "@/server/queries/dashboard";
 
 type AttendanceValue = boolean | null;
 type AttendanceValues = Record<string, AttendanceValue>;
-type SyncState = "saving" | "saved" | "error";
+type SyncState = "pending" | "saving" | "saved" | "error";
 
 const timeFormatter = new Intl.DateTimeFormat("es-ES", {
   timeZone: "Europe/Madrid",
@@ -59,9 +69,13 @@ function sameValues(current: AttendanceValues, saved: AttendanceValues): boolean
 export function AttendanceSheet({
   session,
   canEdit,
+  origin,
+  calendarHref,
 }: {
   session: DashboardCoachSession;
   canEdit: boolean;
+  origin?: "profile-activity" | "admin-trainings" | "dashboard" | "calendar";
+  calendarHref?: string;
 }) {
   const router = useRouter();
   const initialValues = useMemo(() => buildValues(session, canEdit), [canEdit, session]);
@@ -69,18 +83,25 @@ export function AttendanceSheet({
   const [values, setValues] = useState<AttendanceValues>(initialValues);
   const [savedValues, setSavedValues] = useState<AttendanceValues>(initialSavedValues);
   const [syncState, setSyncState] = useState<SyncState>(
-    sameValues(initialValues, initialSavedValues) ? "saved" : "saving",
+    sameValues(initialValues, initialSavedValues) ? "saved" : "pending",
   );
   const [error, setError] = useState<string | null>(null);
   const [isFinishing, setIsFinishing] = useState(false);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
   const requestVersionRef = useRef(0);
-  const initialSaveButtonRef = useRef<HTMLButtonElement>(null);
-  const initialSaveStartedRef = useRef(false);
+  const [leaveOpen, setLeaveOpen] = useState(false);
 
   const counts = countValues(values);
   const isDirty = !sameValues(values, savedValues);
   const sessionDay = dayKeyFormatter.format(new Date(session.scheduled_at));
+  const returnHref =
+    origin === "calendar"
+      ? (calendarHref ?? "/calendar")
+      : origin === "dashboard"
+        ? "/dashboard"
+        : origin === "admin-trainings"
+          ? `/admin/trainings?from=${sessionDay}`
+          : `/attendance?date=${sessionDay}${origin ? "&from=profile-activity" : ""}`;
 
   useEffect(() => {
     if (!isDirty) return;
@@ -122,14 +143,8 @@ export function AttendanceSheet({
       });
   }
 
-  useEffect(() => {
-    if (initialSaveStartedRef.current) return;
-    initialSaveStartedRef.current = true;
-    if (canEdit && isDirty) initialSaveButtonRef.current?.click();
-  }, [canEdit, isDirty]);
-
   function markPlayer(playerId: string, attendance: boolean) {
-    if (values[playerId] === attendance) return;
+    if (!canEdit || isFinishing || values[playerId] === attendance) return;
     const nextValues = { ...values, [playerId]: attendance };
     setValues(nextValues);
     queueSave(nextValues);
@@ -142,260 +157,241 @@ export function AttendanceSheet({
   async function finishAttendance() {
     setIsFinishing(true);
     try {
+      if (isDirty && syncState !== "saving") queueSave(values);
       await queueRef.current;
-      router.push(`/attendance?date=${sessionDay}` as Route);
+      router.push(returnHref as Route);
     } catch {
       setIsFinishing(false);
     }
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      {canEdit ? (
-        <button
-          ref={initialSaveButtonRef}
-          type="button"
-          hidden
-          tabIndex={-1}
-          aria-hidden="true"
-          onClick={() => queueSave(values)}
-        />
-      ) : null}
-      <PageBackLink href={`/attendance?date=${sessionDay}` as Route}>
-        Volver a entrenamientos
-      </PageBackLink>
-      <header className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border px-4 py-4">
-        <div className="flex items-start gap-3">
-          <span
-            className="mt-1 h-12 w-1.5 shrink-0 rounded-full"
-            style={{ backgroundColor: session.team_color }}
-            aria-hidden="true"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-              {dayFormatter.format(new Date(session.scheduled_at))} ·{" "}
-              {timeFormatter.format(new Date(session.scheduled_at))}
-            </p>
-            <h1 className="font-display text-pool-deep mt-1 text-2xl leading-tight font-extrabold">
-              {session.team_label}
-            </h1>
-            <p className="text-ink-600 mt-1 flex items-center gap-2 text-sm font-semibold">
-              <UsersRound className="h-4 w-4" aria-hidden="true" />
-              {session.roster_count} jugadores
-            </p>
-          </div>
+    <div className={cn("flex flex-col gap-3", canEdit && session.players.length > 0 && "pb-32")}>
+      <button
+        type="button"
+        disabled={isFinishing}
+        onClick={() => (isDirty ? setLeaveOpen(true) : router.push(returnHref as Route))}
+        className="text-pool-blue focus-visible:outline-pool-blue -ml-2 inline-flex min-h-12 w-fit items-center gap-2 rounded-xl px-2 text-sm font-extrabold focus-visible:outline-2 disabled:opacity-60"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        {origin === "calendar"
+          ? "Calendario"
+          : origin === "dashboard"
+            ? "Inicio"
+            : "Volver a entrenamientos"}
+      </button>
+      <header className="border-pool-deep bg-pool-deep overflow-hidden rounded-2xl border-2 px-4 py-3 text-white">
+        <p className="text-ball-gold mb-1 text-xs font-extrabold uppercase">Pasar lista</p>
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="flex min-w-0 items-center gap-2 text-xl leading-6 font-extrabold">
+            <span
+              className="h-3 w-3 shrink-0 rounded-full border border-white"
+              style={{ backgroundColor: session.team_color }}
+              aria-hidden="true"
+            />
+            {session.team_label}
+          </h1>
+          <span className="text-ball-gold shrink-0 text-xl font-extrabold tabular-nums">
+            {timeFormatter.format(new Date(session.scheduled_at))}
+          </span>
+        </div>
+        <div className="mt-2 flex items-center justify-between gap-2 text-sm font-semibold">
+          <span className="capitalize">{dayFormatter.format(new Date(session.scheduled_at))}</span>
+          <span className="shrink-0 rounded-lg border border-white/60 bg-white/10 px-2 py-0.5 text-xs">
+            {trainingKindLabel(session.kind ?? "water")}
+          </span>
         </div>
       </header>
-
       {session.players.length > 0 && !canEdit ? (
         <>
-          <section className="border-ink-300 bg-paper-sunk rounded-2xl border px-4 py-4">
-            <div className="flex items-start gap-3">
-              <span className="bg-ink-200 text-ink-600 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
-                <CalendarClock className="h-6 w-6" aria-hidden="true" />
-              </span>
-              <div>
-                <h2 className="text-pool-deep font-extrabold">Lista todavía no disponible</h2>
-                <p className="text-ink-600 mt-1 text-sm leading-5">
-                  Podrás pasar lista el día del entrenamiento. Hasta entonces puedes consultar la
-                  plantilla.
-                </p>
-              </div>
-            </div>
+          <section className="border-pool-deep/65 text-pool-deep flex items-center gap-3 rounded-xl border-2 bg-blue-50 p-3 text-sm font-semibold">
+            <CalendarClock className="h-5 w-5 shrink-0" aria-hidden="true" />
+            Podrás pasar lista el día del entrenamiento.
           </section>
+          <h2 className="text-pool-deep px-1 text-base font-extrabold">
+            Plantilla · {session.roster_count} jugadores
+          </h2>
           <ol
             className="flex flex-col gap-2"
             aria-label={`Plantilla prevista de ${session.team_label}`}
           >
-            {session.players.map((player, index) => (
+            {session.players.map((player) => (
               <li
                 key={player.id}
-                className="border-ink-200 bg-paper-sunk flex min-h-16 items-center gap-3 rounded-xl border px-3 py-2.5"
+                className="border-pool-deep/65 text-pool-deep flex min-h-16 items-center rounded-xl border-2 bg-white px-3 py-2 text-base font-bold"
               >
-                <span className="bg-ink-200 text-ink-600 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-mono text-sm font-extrabold tabular-nums">
-                  {index + 1}
-                </span>
-                <span className="text-ink-600 min-w-0 flex-1 text-base leading-tight font-extrabold">
-                  {player.full_name}
-                </span>
-                <span className="bg-ink-200 text-ink-600 rounded-lg px-2 py-1 text-xs font-extrabold">
-                  Pendiente
-                </span>
+                <AdaptivePlayerName name={player.full_name} />
               </li>
             ))}
           </ol>
         </>
       ) : session.players.length > 0 ? (
         <>
-          <section
-            aria-labelledby="attendance-summary-heading"
-            className="border-ink-200 bg-paper-card rounded-2xl border p-4"
-          >
-            <div className="flex items-center justify-between gap-3">
-              <h2 id="attendance-summary-heading" className="text-pool-deep font-extrabold">
-                {counts.absent === 0
-                  ? "Han venido todos"
-                  : `${counts.absent === 1 ? "Falta 1 jugador" : `Faltan ${counts.absent} jugadores`}`}
-              </h2>
-              <span className="text-ink-600 shrink-0 font-mono text-sm font-extrabold tabular-nums">
-                {counts.present}/{session.roster_count}
-              </span>
+          <div className="grid grid-cols-2 gap-2" aria-label="Asistencia seleccionada">
+            <div className="flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 border-green-800 bg-green-50 text-green-900">
+              <strong className="text-2xl font-extrabold tabular-nums">{counts.present}</strong>
+              <span className="text-sm font-bold">Han venido</span>
             </div>
-            <div className="bg-pool-foam mt-3 flex items-start gap-2.5 rounded-xl px-3 py-2.5">
-              <Check className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-              <p className="text-ink-700 text-sm leading-5 font-semibold">
-                Todos están marcados como «Ha venido». Si falta alguien, pulsa «No ha venido».
-              </p>
+            <div className="flex min-h-14 items-center justify-center gap-2 rounded-xl border-2 border-red-800 bg-red-50 text-red-900">
+              <strong className="text-2xl font-extrabold tabular-nums">{counts.absent}</strong>
+              <span className="text-sm font-bold">Han faltado</span>
             </div>
-          </section>
-
-          <ol className="flex flex-col gap-3" aria-label={`Jugadores de ${session.team_label}`}>
-            {session.players.map((player, index) => {
+          </div>
+          {syncState === "pending" && (
+            <p className="border-pool-deep/65 text-pool-deep rounded-xl border bg-blue-50 px-3 py-2.5 text-sm font-semibold">
+              Todos preparados en «Sí». Marca «No» si alguien ha faltado.
+            </p>
+          )}
+          <div className="text-pool-deep flex items-center justify-between gap-3 px-1">
+            <h2 className="text-base font-extrabold">
+              Jugadores <span className="text-sm">({session.roster_count})</span>
+            </h2>
+            <span className="w-[7.5rem] shrink-0 text-center text-sm font-extrabold">
+              ¿Ha venido?
+            </span>
+          </div>
+          <ol className="flex flex-col gap-2" aria-label={`Jugadores de ${session.team_label}`}>
+            {session.players.map((player) => {
               const attendance = values[player.id] ?? true;
               return (
                 <li
                   key={player.id}
                   className={cn(
-                    "rounded-2xl border-2 p-3 transition-[background-color,border-color] motion-reduce:transition-none",
-                    attendance ? "border-success bg-emerald-50" : "border-danger bg-red-50",
+                    "flex min-h-20 scroll-mt-24 scroll-mb-56 items-center gap-3 rounded-xl border-2 px-3 py-2 transition-colors motion-reduce:transition-none",
+                    attendance ? "border-green-800 bg-green-50" : "border-red-800 bg-red-50",
                   )}
                 >
-                  <div className="flex min-h-12 items-center gap-3 px-1">
-                    <span className="bg-pool-foam text-pool-blue flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-mono text-sm font-extrabold tabular-nums">
-                      {index + 1}
-                    </span>
-                    <p className="text-pool-deep min-w-0 flex-1 text-lg leading-tight font-extrabold">
-                      {player.full_name}
-                    </p>
-                  </div>
+                  <p className="text-pool-deep min-w-0 flex-1 text-base font-extrabold">
+                    <AdaptivePlayerName name={player.full_name} />
+                  </p>
                   <div
                     role="group"
                     aria-label={`Asistencia de ${player.full_name}`}
-                    className="mt-2 grid grid-cols-2 gap-2"
+                    className="grid w-[7.5rem] shrink-0 grid-cols-2 gap-2"
                   >
                     <button
                       type="button"
                       aria-pressed={attendance}
+                      aria-label={`Ha venido: ${player.full_name}`}
+                      disabled={isFinishing}
                       onClick={() => markPlayer(player.id, true)}
                       className={cn(
-                        "focus-visible:ring-success inline-flex min-h-14 touch-manipulation items-center justify-center gap-2 rounded-xl border-2 px-2 text-base font-extrabold transition-[background-color,border-color,color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
+                        "flex min-h-14 items-center justify-center gap-1 rounded-lg border-2 px-1 text-sm font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-800 disabled:opacity-60",
                         attendance
-                          ? "border-success bg-success text-paper"
-                          : "border-ink-300 bg-paper text-ink-700 hover:border-success hover:text-success",
+                          ? "border-green-800 bg-green-800 text-white"
+                          : "border-pool-deep/65 text-pool-deep bg-white",
                       )}
                     >
-                      <Check className="h-6 w-6" aria-hidden="true" />
-                      Ha venido
+                      <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      Sí
                     </button>
                     <button
                       type="button"
                       aria-pressed={!attendance}
+                      aria-label={`No ha venido: ${player.full_name}`}
+                      disabled={isFinishing}
                       onClick={() => markPlayer(player.id, false)}
                       className={cn(
-                        "focus-visible:ring-danger inline-flex min-h-14 touch-manipulation items-center justify-center gap-2 rounded-xl border-2 px-2 text-base font-extrabold transition-[background-color,border-color,color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none",
+                        "flex min-h-14 items-center justify-center gap-1 rounded-lg border-2 px-1 text-sm font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-800 disabled:opacity-60",
                         !attendance
-                          ? "border-danger bg-danger text-paper"
-                          : "border-ink-300 bg-paper text-ink-700 hover:border-danger hover:text-danger",
+                          ? "border-red-800 bg-red-800 text-white"
+                          : "border-pool-deep/65 text-pool-deep bg-white",
                       )}
                     >
-                      <X className="h-6 w-6" aria-hidden="true" />
-                      No ha venido
+                      <X className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      No
                     </button>
                   </div>
                 </li>
               );
             })}
           </ol>
-
-          <div
-            className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3"
-            aria-live="polite"
-          >
-            <p className="text-ink-600 px-1 pb-2 text-xs font-extrabold tracking-[0.08em] uppercase">
-              Resumen de asistencia
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="border-success bg-emerald-50 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
-                <span className="bg-success text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-                  <Check className="h-5 w-5" aria-hidden="true" />
+          <div className="fixed inset-x-0 bottom-[var(--bottom-nav-height)] z-20 px-4 pb-2 sm:px-6">
+            <div className="border-pool-deep/65 text-pool-deep shadow-elev-2 mx-auto flex max-w-2xl flex-col gap-2 rounded-2xl border-2 bg-white p-3">
+              <div
+                role="status"
+                className="flex items-center justify-between gap-2 text-sm font-bold"
+              >
+                <span
+                  className={
+                    syncState === "error"
+                      ? "text-red-900"
+                      : syncState === "saved"
+                        ? "text-green-900"
+                        : "text-pool-deep"
+                  }
+                >
+                  {syncState === "saved"
+                    ? "Lista guardada"
+                    : syncState === "saving"
+                      ? "Guardando…"
+                      : syncState === "error"
+                        ? "Sin guardar"
+                        : "Lista sin guardar"}
                 </span>
-                <span className="min-w-0">
-                  <strong className="text-success block font-mono text-2xl leading-none font-extrabold tabular-nums">
-                    {counts.present}
-                  </strong>
-                  <span className="text-ink-700 mt-1 block text-sm leading-tight font-bold">
-                    Han venido
-                  </span>
-                </span>
-              </div>
-              <div className="border-danger bg-red-50 flex min-h-20 items-center gap-2.5 rounded-xl border px-3 py-2.5">
-                <span className="bg-danger text-paper flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-                  <X className="h-5 w-5" aria-hidden="true" />
-                </span>
-                <span className="min-w-0">
-                  <strong className="text-danger block font-mono text-2xl leading-none font-extrabold tabular-nums">
-                    {counts.absent}
-                  </strong>
-                  <span className="text-ink-700 mt-1 block text-sm leading-tight font-bold">
-                    Han faltado
-                  </span>
+                <span className="shrink-0 tabular-nums">
+                  {counts.present} sí · {counts.absent} no
                 </span>
               </div>
-            </div>
-            {syncState !== "saved" ? (
-              <div className="border-ink-200 mt-3 border-t pt-3">
-                {syncState === "saving" ? (
-                  <p className="text-pool-blue flex items-center justify-center gap-2 font-extrabold">
-                    <span
-                      className="border-pool-blue h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none"
-                      aria-hidden="true"
-                    />
-                    Guardando cambios…
-                  </p>
+              {syncState === "error" && (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-red-800 bg-red-50 p-2 text-sm"
+                >
+                  <p className="font-extrabold text-red-900">No se han guardado los cambios</p>
+                  <p className="mt-1 font-semibold">{error}</p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={syncState === "error" ? retrySave : finishAttendance}
+                disabled={isFinishing}
+                className="border-pool-deep bg-pool-deep focus-visible:outline-pool-blue flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 px-3 text-base font-extrabold text-white focus-visible:outline-2 focus-visible:outline-offset-2 disabled:opacity-60"
+              >
+                {isFinishing ? (
+                  <Loader2
+                    className="h-5 w-5 animate-spin motion-reduce:animate-none"
+                    aria-hidden="true"
+                  />
                 ) : (
-                  <div role="alert" className="text-center">
-                    <p className="text-danger font-extrabold">No se han guardado los cambios</p>
-                    <p className="text-ink-600 mt-1 text-xs">{error}</p>
-                    <button
-                      type="button"
-                      onClick={retrySave}
-                      className="text-pool-blue focus-visible:ring-pool-blue mt-2 inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
-                    >
-                      <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                      Reintentar
-                    </button>
-                  </div>
+                  <CheckCircle2 className="h-5 w-5" aria-hidden="true" />
                 )}
-              </div>
-            ) : null}
+                {isFinishing
+                  ? "Guardando…"
+                  : syncState === "error"
+                    ? "Reintentar guardado"
+                    : "Guardar lista y volver"}
+              </button>
+            </div>
           </div>
-
-          <button
-            type="button"
-            onClick={finishAttendance}
-            disabled={isFinishing || syncState === "error"}
-            className="bg-pool-deep text-paper shadow-elev-1 hover:bg-pool-blue focus-visible:ring-pool-blue inline-flex min-h-16 w-full touch-manipulation items-center justify-center gap-2.5 rounded-xl px-5 text-lg font-extrabold transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-55 motion-reduce:transition-none"
-          >
-            {isFinishing ? (
-              <span
-                className="border-paper h-5 w-5 animate-spin rounded-full border-2 border-t-transparent motion-reduce:animate-none"
-                aria-hidden="true"
-              />
-            ) : (
-              <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
-            )}
-            {isFinishing ? "Guardando…" : "Aceptar y guardar cambios"}
-          </button>
         </>
       ) : (
-        <section className="border-ink-200 bg-paper-card rounded-2xl border px-4 py-10 text-center">
-          <UsersRound className="text-ink-400 mx-auto h-10 w-10" aria-hidden="true" />
-          <h2 className="text-pool-deep mt-3 text-lg font-extrabold">
-            Este equipo no tiene jugadores
-          </h2>
-          <p className="text-ink-600 mt-1 text-sm">Añade la plantilla antes de pasar lista.</p>
+        <section className="border-pool-deep/65 text-pool-deep rounded-2xl border-2 bg-white px-4 py-7 text-center">
+          <UsersRound className="text-pool-blue mx-auto h-10 w-10" aria-hidden="true" />
+          <h2 className="mt-3 text-lg font-extrabold">Este equipo no tiene jugadores</h2>
+          <p className="mt-2 text-sm font-semibold">Añade la plantilla antes de pasar lista.</p>
         </section>
       )}
+      <ActaGuardSheet
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        context="Asistencia"
+        title="¿Salir sin guardar la lista?"
+        summary="Hay asistencia pendiente de guardar"
+        description="Puedes guardar la lista antes de volver o seguir revisándola."
+        icon="warning"
+        pending={isFinishing || syncState === "saving"}
+        error={syncState === "error" ? error : undefined}
+        actions={[
+          { label: "Guardar y volver", tone: "primary", onClick: finishAttendance },
+          { label: "Seguir revisando", tone: "secondary", onClick: () => setLeaveOpen(false) },
+          {
+            label: "Salir sin guardar",
+            tone: "subtle",
+            onClick: () => router.push(returnHref as Route),
+          },
+        ]}
+      />
     </div>
   );
 }

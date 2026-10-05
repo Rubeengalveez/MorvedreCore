@@ -59,11 +59,10 @@ describe("FamilyOverviewPanel", () => {
       <FamilyOverviewPanel family={family(1)} pendingTreasuryCents={3500} />,
     );
 
-    expect(screen.getByText("1 menor vinculado")).toBeInTheDocument();
-    expect(screen.getByText("Lucía Torres")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Lucía Torres" })).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(1);
-    expect(screen.getByRole("link", { name: "Ver asistencia de Lucía" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver ficha de Lucía" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Asistencia" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ficha deportiva" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Revisar pedidos/ })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Cuotas familiares/ })).toBeInTheDocument();
   });
@@ -73,9 +72,8 @@ describe("FamilyOverviewPanel", () => {
       <FamilyOverviewPanel family={family(2)} pendingTreasuryCents={0} />,
     );
 
-    expect(screen.getByText("2 menores vinculados")).toBeInTheDocument();
-    expect(screen.getByText("Lucía Torres")).toBeInTheDocument();
-    expect(screen.getByText("Mateo Torres")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Lucía Torres" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Mateo Torres" })).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(2);
     expect(screen.queryByText("Asist. mes")).not.toBeInTheDocument();
   });
@@ -85,11 +83,8 @@ describe("FamilyOverviewPanel", () => {
       <FamilyOverviewPanel family={family(3)} pendingTreasuryCents={0} />,
     );
 
-    expect(screen.getByText("3 menores vinculados")).toBeInTheDocument();
-    expect(screen.getByText("Alba Torres")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Alba Torres" })).toBeInTheDocument();
     expect(container.querySelectorAll("article")).toHaveLength(3);
-    expect(
-      screen.getByText("Consulta a tus hijos desde la misma cuenta, sin cambiar de perfil."),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Gestiones familiares" })).toBeInTheDocument();
   });
 });

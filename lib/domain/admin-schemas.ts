@@ -1,4 +1,5 @@
-﻿import { z } from "zod";
+import { SHOP_PRODUCT_TYPES } from "./shop-catalog";
+import { z } from "zod";
 
 import { optionalMapsUrlSchema } from "@/lib/domain/maps";
 
@@ -188,16 +189,23 @@ export const updatePlayerSchema = z
       z
         .string()
         .regex(/^\+[1-9]\d{6,14}$/)
-        .nullable(),
+        .nullable()
+        .optional(),
     ),
-    email_contact: z.preprocess(emptyToNull, z.string().email("Email inválido.").nullable()),
-    photo_url: z.preprocess(emptyToNull, z.string().url("URL inválida.").nullable()),
-    team_color: z.preprocess(emptyToNull, hexColor.nullable()),
+    email_contact: z.preprocess(
+      emptyToNull,
+      z.string().email("Email inválido.").nullable().optional(),
+    ),
+    photo_url: z.preprocess(emptyToNull, z.string().url("URL inválida.").nullable().optional()),
+    team_color: z.preprocess(emptyToNull, hexColor.nullable().optional()),
     school_enrolled: z.boolean().optional(),
     school_payment_paid: z.boolean().optional(),
     license_active: z.boolean().optional(),
     is_active: z.boolean().optional(),
-    notes: z.preprocess(emptyToNull, z.string().max(2000, "Máximo 2000 caracteres.").nullable()),
+    notes: z.preprocess(
+      emptyToNull,
+      z.string().max(2000, "Máximo 2000 caracteres.").nullable().optional(),
+    ),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "No hay cambios para guardar.",
@@ -655,62 +663,59 @@ export const bulkUnvalidateMatchStatsSchema = z.object({
 });
 
 export const upsertShopProductSchema = z.object({
-  title: z.string().trim().min(3, "El t�tulo es demasiado corto.").max(80, "M�ximo 80 caracteres."),
+  title: z.string().trim().min(3, "El título es demasiado corto.").max(80, "Máximo 80 caracteres."),
   description: z
     .string()
     .trim()
-    .min(1, "La descripci�n no puede estar vac�a.")
-    .max(2000, "M�ximo 2000 caracteres."),
-  category: z
-    .string()
-    .trim()
-    .min(1, "La categor�a es obligatoria.")
-    .max(40, "M�ximo 40 caracteres."),
-  price_eur: z.number().min(0.01, "El precio debe ser mayor que 0.").max(1000, "M�ximo 1000�."),
-  image_url: z.string().url("URL inv�lida.").max(500).nullable().optional(),
+    .min(1, "La descripción no puede estar vacía.")
+    .max(2000, "Máximo 2000 caracteres."),
+  category: z.enum(SHOP_PRODUCT_TYPES, { error: "Elige un tipo de producto." }),
+  price_eur: z.number().min(0.01, "El precio debe ser mayor que 0.").max(1000, "Máximo 1000€."),
+  image_url: z.string().url("URL inválida.").max(500).nullable().optional(),
   sizes: z.array(z.string().trim().min(1).max(20)).max(20).optional(),
   available: z.boolean().default(true),
-  max_per_order: z.number().int().min(1).max(20).default(10),
   personalization_enabled: z.boolean().default(false),
   personalization_label: z.string().trim().min(1).max(40).default("Nombre"),
   personalization_max_length: z.number().int().min(1).max(60).default(30),
 });
 
 export const updateShopProductSchema = upsertShopProductSchema.safeExtend({
-  product_id: z.string().uuid("Producto inv�lido."),
+  product_id: z.string().uuid("Producto inválido."),
 });
 
 export const deleteShopProductSchema = z.object({
-  product_id: z.string().uuid("Producto inv�lido."),
+  product_id: z.string().uuid("Producto inválido."),
 });
 
 export const createShopOrderSchema = z.object({
+  checkout_key: z.string().uuid("Envío inválido."),
+  expected_total_cents: z.number().int().min(1).max(2147483647),
   contact_phone: z.string().trim().max(30).nullable().optional(),
   items: z
     .array(
       z.object({
-        product_id: z.string().uuid("Producto inv�lido."),
+        product_id: z.string().uuid("Producto inválido."),
         size: z.string().trim().max(20).nullable().optional(),
         personalization: z.string().trim().min(1).max(60).nullable().optional(),
-        quantity: z.number().int().min(1).max(20),
+        quantity: z.number().int().min(1),
       }),
     )
-    .min(1, "A�ade al menos un producto.")
-    .max(50, "M�ximo 50 productos por pedido."),
-  notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
+    .min(1, "Añade al menos un producto.")
+    .max(50, "Máximo 50 productos por pedido."),
+  notes: z.string().trim().max(500, "Máximo 500 caracteres.").nullable().optional(),
 });
 
 export const decideShopOrderSchema = z.object({
-  order_id: z.string().uuid("Pedido inv�lido."),
+  order_id: z.string().uuid("Pedido inválido."),
   decision: z.enum(["approve", "reject"]),
   contact_phone: z.string().trim().max(30).nullable().optional(),
-  parent_notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
+  parent_notes: z.string().trim().max(500, "Máximo 500 caracteres.").nullable().optional(),
 });
 
 export const updateShopOrderStatusSchema = z.object({
-  order_id: z.string().uuid("Pedido inv�lido."),
+  order_id: z.string().uuid("Pedido inválido."),
   status: z.enum(["pending_admin", "ordered", "received", "delivered", "cancelled"]),
-  admin_notes: z.string().trim().max(500, "M�ximo 500 caracteres.").nullable().optional(),
+  admin_notes: z.string().trim().max(500, "Máximo 500 caracteres.").nullable().optional(),
 });
 
 export const treasuryConceptKindSchema = z.enum([

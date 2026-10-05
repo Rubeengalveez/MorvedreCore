@@ -1,22 +1,36 @@
 "use client";
 
+import { useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { Route } from "next";
-import { useRouter } from "next/navigation";
-import { Edit3, EyeOff, Power, PowerOff, Search, UsersRound } from "lucide-react";
-import { useState, useTransition } from "react";
-
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Pencil,
+  Search,
+  SlidersHorizontal,
+  UserRound,
+  UserRoundCheck,
+  UserRoundMinus,
+} from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
+import { CategoryBadge } from "@/components/team/category-badge";
+import {
+  teamControl,
+  teamPrimary,
+  teamSecondary,
+  TeamEmpty,
+  TeamField,
+} from "@/components/team/team-ui";
+import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { playerListHref, type PlayerFilters } from "@/lib/domain/admin-players";
 import { cn } from "@/lib/utils/cn";
-import { validCapNumber } from "@/lib/domain/cap-number";
 import { setPlayerActive } from "@/server/actions/admin/players";
-
-import { PlayerFormSheet } from "./player-form-sheet";
+import { PlayerFormSheet, type PlayerTeam } from "./player-form-sheet";
 
 export interface PlayerRow {
   id: string;
@@ -33,307 +47,426 @@ export interface PlayerRow {
   is_active: boolean;
   currentTeam: string | null;
   categoryLabel: string;
+  category: CategoryCode | null;
 }
 
-type PlayersTableProps = {
+export function PlayersTable({
+  players,
+  teams,
+  total,
+  totalPages,
+  filters,
+  seasonYear,
+}: {
   players: PlayerRow[];
-  teams: Array<{ id: string; label: string }>;
+  teams: PlayerTeam[];
   total: number;
   totalPages: number;
-  filters: {
-    page: number;
-    query: string;
-    status: "active" | "inactive" | "all";
-    teamId: string;
-  };
-};
-
-function queryForPage(filters: PlayersTableProps["filters"], page: number): string {
-  const params = new URLSearchParams();
-  if (filters.query) params.set("query", filters.query);
-  if (filters.status !== "active") params.set("status", filters.status);
-  if (filters.teamId) params.set("team", filters.teamId);
-  if (page > 1) params.set("page", String(page));
-  const query = params.toString();
-  return query ? `/admin/players?${query}` : "/admin/players";
-}
-
-function playerMeta(player: PlayerRow): string {
-  return [player.categoryLabel, player.birth_year?.toString()].filter(Boolean).join(" · ");
-}
-
-export function PlayersTable({ players, teams, total, totalPages, filters }: PlayersTableProps) {
+  filters: PlayerFilters;
+  seasonYear: number;
+}) {
   const router = useRouter();
-  const [editingPlayer, setEditingPlayer] = useState<PlayerRow | null>(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
-  const firstResult = total === 0 ? 0 : (filters.page - 1) * 24 + 1;
-  const lastResult = Math.min(filters.page * 24, total);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [draft, setDraft] = useState(filters);
+  const [query, setQuery] = useState(filters.query);
+  const [editing, setEditing] = useState<PlayerRow | null>(null);
+  const [changing, setChanging] = useState<PlayerRow | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const busy = useRef(false);
+  const activeFilters =
+    Number(filters.status !== "active") +
+    Number(Boolean(filters.teamId)) +
+    Number(Boolean(filters.category));
 
-  function toggleActive(player: PlayerRow) {
-    setPendingId(player.id);
+  function navigate(next: PlayerFilters) {
+    startTransition(() => router.push(playerListHref(next) as Route));
+  }
+  async function changeStatus() {
+    if (!changing || busy.current) return;
+    busy.current = true;
+    setError(null);
     startTransition(async () => {
       try {
-        await setPlayerActive({ profile_id: player.id, active: !player.is_active });
+        await setPlayerActive({ profile_id: changing.id, active: !changing.is_active });
+        setChanging(null);
         router.refresh();
+      } catch (caught) {
+        setError(
+          caught instanceof Error
+            ? caught.message
+            : "No pudimos cambiar el estado. Vuelve a intentarlo.",
+        );
       } finally {
-        setPendingId(null);
+        busy.current = false;
       }
     });
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-3 sm:p-4">
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <div>
-            <h2 className="text-pool-deep font-extrabold">Plantilla</h2>
-            <p className="text-ink-600 text-sm">
-              Busca y gestiona sin cargar toda la base de jugadores.
-            </p>
-          </div>
-          <p className="text-pool-blue font-mono text-sm font-extrabold tabular-nums">
-            {total} {total === 1 ? "jugador" : "jugadores"}
-          </p>
+    <>
+      <form
+        role="search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          navigate({ ...filters, query: query.trim().slice(0, 100), page: 1 });
+        }}
+        className="flex gap-2"
+      >
+        <div className="relative min-w-0 flex-1">
+          <Search
+            aria-hidden="true"
+            className="text-pool-deep pointer-events-none absolute top-4 left-3 h-5 w-5"
+          />
+          <label className="sr-only" htmlFor="player-search">
+            Buscar jugadores por nombre, categoría o equipo
+          </label>
+          <input
+            id="player-search"
+            type="search"
+            maxLength={100}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className={`${teamControl} pr-14 pl-10`}
+            placeholder="Buscar…"
+          />
+          <button
+            type="submit"
+            disabled={pending}
+            aria-label="Buscar jugadores"
+            className="text-pool-blue focus-visible:outline-pool-blue absolute top-1 right-1 flex min-h-12 min-w-12 items-center justify-center rounded-lg focus-visible:outline-2"
+          >
+            {pending ? (
+              <Loader2 aria-hidden="true" className="h-5 w-5 motion-safe:animate-spin" />
+            ) : (
+              <ChevronRight aria-hidden="true" className="h-6 w-6" />
+            )}
+          </button>
         </div>
-        <form
-          action="/admin/players"
-          className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_11rem_11rem_auto]"
+        <button
+          type="button"
+          disabled={pending}
+          aria-haspopup="dialog"
+          onClick={() => {
+            setDraft(filters);
+            setFilterOpen(true);
+          }}
+          className={cn(
+            activeFilters ? teamPrimary : teamSecondary,
+            "shrink-0 whitespace-nowrap",
+            !activeFilters && "bg-pool-ice",
+          )}
         >
-          <div className="relative">
-            <Search
-              className="text-ink-500 pointer-events-none absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              type="search"
-              name="query"
-              defaultValue={filters.query}
-              placeholder="Buscar por nombre"
-              className="pl-10"
-            />
-          </div>
-          <Select name="team" defaultValue={filters.teamId} aria-label="Filtrar por equipo">
-            <option value="">Todos los equipos</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.label}
-              </option>
-            ))}
-          </Select>
-          <Select name="status" defaultValue={filters.status} aria-label="Filtrar por estado">
-            <option value="active">Activos</option>
-            <option value="inactive">Desactivados</option>
-            <option value="all">Todos</option>
-          </Select>
-          <Button type="submit" variant="secondary" className="w-full sm:w-auto">
-            Aplicar
-          </Button>
-        </form>
-        {filters.query || filters.teamId || filters.status !== "active" ? (
+          <SlidersHorizontal aria-hidden="true" className="h-5 w-5" />
+          <span>Filtros{activeFilters ? ` (${activeFilters})` : ""}</span>
+        </button>
+      </form>
+      <div
+        className="text-pool-deep flex flex-wrap items-center justify-between gap-2"
+        role="status"
+        aria-live="polite"
+      >
+        <span className="border-pool-deep/65 rounded-lg border bg-white px-3 py-2 text-base font-bold">
+          {pending ? (
+            "Actualizando la lista…"
+          ) : (
+            <>
+              {total} {total === 1 ? "jugador" : "jugadores"}
+              {filters.status === "active"
+                ? " activos"
+                : filters.status === "inactive"
+                  ? " desactivados"
+                  : ""}
+            </>
+          )}
+        </span>
+        {Boolean(filters.query || activeFilters) && (
           <Link
             href="/admin/players"
-            className="text-pool-blue hover:text-pool-deep focus-visible:ring-pool-blue mt-3 inline-flex min-h-10 items-center rounded-lg px-1 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none"
+            aria-label="Quitar filtros y búsqueda"
+            className={cn(teamSecondary, "bg-pool-ice whitespace-nowrap")}
           >
-            Limpiar filtros
+            Restablecer
           </Link>
-        ) : null}
-      </section>
-
-      {players.length === 0 ? (
-        <EmptyState
-          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
-          title="No hay jugadores con estos filtros"
-          description="Cambia los filtros o da de alta a un jugador para continuar."
+        )}
+      </div>
+      <div className="grid gap-3 md:grid-cols-2" aria-busy={pending}>
+        {players.map((player) => (
+          <PlayerDirectoryCard
+            key={player.id}
+            player={player}
+            onEdit={() => setEditing(player)}
+            onStatus={() => {
+              setError(null);
+              setChanging(player);
+            }}
+          />
+        ))}
+      </div>
+      {!players.length && (
+        <TeamEmpty
+          title="No hay jugadores en esta lista"
+          description={
+            filters.query || activeFilters
+              ? "Prueba con otro nombre o quita los filtros."
+              : "Registra el primer jugador con el botón Nuevo jugador."
+          }
         />
-      ) : (
-        <>
-          <ul className="grid grid-cols-1 gap-3 md:hidden">
-            {players.map((player) => (
-              <li key={player.id}>
-                <Card className={cn("p-3", !player.is_active && "opacity-70")}>
-                  <div className="flex items-center gap-3">
-                    <Avatar
-                      name={player.full_name}
-                      src={player.photo_url}
-                      size={48}
-                      teamColor="var(--pool-blue)"
-                    />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <h3 className="font-display text-pool-deep truncate text-base font-extrabold">
-                          {player.full_name}
-                        </h3>
-                        {!player.is_active ? (
-                          <EyeOff
-                            className="text-ink-500 h-4 w-4 shrink-0"
-                            aria-label="Desactivado"
-                          />
-                        ) : null}
-                      </div>
-                      <p className="text-ink-600 text-xs">{playerMeta(player)}</p>
-                      <p className="text-pool-blue mt-1 truncate text-xs font-bold">
-                        {player.currentTeam ?? "Sin equipo"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="border-ink-200 mt-3 grid grid-cols-2 gap-2 border-t pt-3">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="secondary"
-                      onClick={() => setEditingPlayer(player)}
-                    >
-                      <Edit3 className="h-4 w-4" aria-hidden="true" />
-                      Editar ficha
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={player.is_active ? "ghost" : "success"}
-                      className={player.is_active ? "text-goggle-red" : undefined}
-                      disabled={pendingId === player.id}
-                      onClick={() => toggleActive(player)}
-                    >
-                      {player.is_active ? (
-                        <PowerOff className="h-4 w-4" aria-hidden="true" />
-                      ) : (
-                        <Power className="h-4 w-4" aria-hidden="true" />
-                      )}
-                      {player.is_active ? "Desactivar" : "Activar"}
-                    </Button>
-                  </div>
-                </Card>
-              </li>
-            ))}
-          </ul>
-
-          <div className="border-ink-200 bg-paper-card shadow-elev-1 hidden overflow-hidden rounded-2xl border md:block">
-            <table className="w-full text-left">
-              <thead className="bg-pool-foam/70 text-pool-deep text-xs tracking-wide uppercase">
-                <tr>
-                  <th className="px-4 py-3 font-extrabold">Jugador</th>
-                  <th className="px-4 py-3 font-extrabold">Categoría</th>
-                  <th className="px-4 py-3 font-extrabold">Equipo actual</th>
-                  <th className="px-4 py-3 text-right font-extrabold">
-                    <span className="sr-only">Acciones</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {players.map((player) => (
-                  <tr
-                    key={player.id}
-                    className={cn(
-                      "border-ink-200 border-t",
-                      !player.is_active && "bg-ink-100/40 text-ink-600",
-                    )}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          name={player.full_name}
-                          src={player.photo_url}
-                          size={40}
-                          teamColor="var(--pool-blue)"
-                        />
-                        <div>
-                          <p className="font-display text-pool-deep font-extrabold">
-                            {player.full_name}
-                          </p>
-                          <p className="text-ink-600 text-xs">
-                            {validCapNumber(player.cap_number) != null ? `Gorro ${player.cap_number} · ` : ""}
-                            {player.birth_year ?? "Sin año"}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="text-ink-700 px-4 py-3 text-sm">{player.categoryLabel}</td>
-                    <td className="text-ink-700 px-4 py-3 text-sm">
-                      {player.currentTeam ?? "Sin equipo"}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-2">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          onClick={() => setEditingPlayer(player)}
-                        >
-                          <Edit3 className="h-4 w-4" aria-hidden="true" />
-                          Editar
-                        </Button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          className={player.is_active ? "text-goggle-red" : "text-success"}
-                          disabled={pendingId === player.id}
-                          onClick={() => toggleActive(player)}
-                          aria-label={
-                            player.is_active
-                              ? `Desactivar a ${player.full_name}`
-                              : `Activar a ${player.full_name}`
-                          }
-                        >
-                          {player.is_active ? (
-                            <PowerOff className="h-4 w-4" aria-hidden="true" />
-                          ) : (
-                            <Power className="h-4 w-4" aria-hidden="true" />
-                          )}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
       )}
-
-      {total > 0 ? (
+      {total > 0 && (
         <nav
           aria-label="Paginación de jugadores"
-          className="border-ink-200 bg-paper-card shadow-elev-1 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-3"
+          className="border-pool-deep/65 text-pool-deep rounded-xl border-2 bg-white p-3"
         >
-          <p className="text-ink-600 text-sm">
-            Mostrando {firstResult}–{lastResult} de {total}
-          </p>
-          <div className="flex gap-2">
-            <Button asChild variant="secondary" size="sm" disabled={filters.page <= 1}>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
+            {filters.page > 1 ? (
               <Link
-                href={queryForPage(filters, filters.page - 1) as Route}
-                aria-disabled={filters.page <= 1}
+                aria-label="Página anterior"
+                className={cn(teamSecondary, "gap-1 px-2 whitespace-nowrap")}
+                href={playerListHref(filters, filters.page - 1) as Route}
               >
+                <ChevronLeft
+                  aria-hidden="true"
+                  className="hidden h-5 w-5 shrink-0 min-[360px]:block"
+                />
                 Anterior
               </Link>
-            </Button>
-            <span className="text-pool-deep inline-flex min-h-12 items-center px-2 text-sm font-extrabold">
-              Página {filters.page} de {totalPages}
+            ) : (
+              <button disabled className={cn(teamSecondary, "gap-1 px-2 whitespace-nowrap")}>
+                <ChevronLeft
+                  aria-hidden="true"
+                  className="hidden h-5 w-5 shrink-0 min-[360px]:block"
+                />
+                Anterior
+              </button>
+            )}
+            <span className="text-center font-extrabold whitespace-nowrap tabular-nums">
+              {filters.page} / {totalPages}
             </span>
-            <Button asChild variant="secondary" size="sm" disabled={filters.page >= totalPages}>
+            {filters.page < totalPages ? (
               <Link
-                href={queryForPage(filters, filters.page + 1) as Route}
-                aria-disabled={filters.page >= totalPages}
+                aria-label="Página siguiente"
+                className={cn(teamSecondary, "gap-1 px-2 whitespace-nowrap")}
+                href={playerListHref(filters, filters.page + 1) as Route}
               >
                 Siguiente
+                <ChevronRight
+                  aria-hidden="true"
+                  className="hidden h-5 w-5 shrink-0 min-[360px]:block"
+                />
               </Link>
-            </Button>
+            ) : (
+              <button disabled className={cn(teamSecondary, "gap-1 px-2 whitespace-nowrap")}>
+                Siguiente
+                <ChevronRight
+                  aria-hidden="true"
+                  className="hidden h-5 w-5 shrink-0 min-[360px]:block"
+                />
+              </button>
+            )}
           </div>
+          <p className="mt-2 text-center text-sm font-semibold">
+            {(filters.page - 1) * 24 + 1}–{Math.min(filters.page * 24, total)} de {total} jugadores
+          </p>
         </nav>
-      ) : null}
-
-      {editingPlayer ? (
+      )}
+      <ActaGuardSheet
+        open={filterOpen}
+        onOpenChange={setFilterOpen}
+        context="Jugadores"
+        title="Filtrar jugadores"
+        icon="saved"
+        body={
+          <div className="space-y-4">
+            <TeamField label="Estado" htmlFor="player-filter-status">
+              <select
+                id="player-filter-status"
+                value={draft.status}
+                onChange={(event) =>
+                  setDraft({ ...draft, status: event.target.value as PlayerFilters["status"] })
+                }
+                className={teamControl}
+              >
+                <option value="active">Activos</option>
+                <option value="inactive">Desactivados</option>
+                <option value="all">Todos</option>
+              </select>
+            </TeamField>
+            <TeamField label="Categoría por edad" htmlFor="player-filter-category">
+              <select
+                id="player-filter-category"
+                value={draft.category}
+                onChange={(event) => setDraft({ ...draft, category: event.target.value })}
+                className={teamControl}
+              >
+                <option value="">Todas las categorías</option>
+                {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </TeamField>
+            <TeamField label="Equipo" htmlFor="player-filter-team">
+              <select
+                id="player-filter-team"
+                value={draft.teamId}
+                onChange={(event) => setDraft({ ...draft, teamId: event.target.value })}
+                className={teamControl}
+              >
+                <option value="">Todos los equipos</option>
+                <option value="unassigned">Sin equipo</option>
+                {teams.map((team) => (
+                  <option key={team.id} value={team.id}>
+                    {team.label}
+                  </option>
+                ))}
+              </select>
+            </TeamField>
+          </div>
+        }
+        actions={[
+          {
+            label: "Aplicar filtros",
+            tone: "primary",
+            onClick: () => {
+              navigate({ ...draft, query: filters.query, page: 1 });
+              setFilterOpen(false);
+            },
+          },
+          {
+            label: "Restablecer filtros",
+            tone: "subtle",
+            onClick: () => setDraft({ ...draft, teamId: "", category: "", status: "active" }),
+          },
+        ]}
+      />
+      {editing && (
         <PlayerFormSheet
-          key={editingPlayer.id}
-          player={editingPlayer}
+          key={editing.id}
+          player={editing}
+          teams={teams}
+          seasonYear={seasonYear}
           open
-          onOpenChange={(open) => {
-            if (!open) setEditingPlayer(null);
-          }}
+          onOpenChange={(open) => !open && setEditing(null)}
         />
-      ) : null}
-    </div>
+      )}
+      <ActaGuardSheet
+        open={Boolean(changing)}
+        onOpenChange={(open) => !open && setChanging(null)}
+        context="Estado del jugador"
+        title={changing?.is_active ? "¿Desactivar jugador?" : "¿Activar jugador?"}
+        icon="warning"
+        summary={changing?.full_name}
+        description={
+          changing?.is_active
+            ? "Dejará de aparecer entre los jugadores activos. Conservamos su ficha, pedidos y estadísticas. Puedes activarlo de nuevo."
+            : "Volverá a aparecer entre los jugadores activos."
+        }
+        pending={pending}
+        error={error}
+        actions={[
+          {
+            label: changing?.is_active ? "Desactivar jugador" : "Activar jugador",
+            tone: changing?.is_active ? "danger" : "primary",
+            onClick: changeStatus,
+          },
+          { label: "Cancelar", tone: "secondary", onClick: () => setChanging(null) },
+        ]}
+      />
+    </>
+  );
+}
+
+function PlayerDirectoryCard({
+  player,
+  onEdit,
+  onStatus,
+}: {
+  player: PlayerRow;
+  onEdit: () => void;
+  onStatus: () => void;
+}) {
+  return (
+    <article
+      className={`border-pool-deep/65 text-pool-deep overflow-hidden rounded-2xl border-2 ${player.is_active ? "bg-white" : "bg-slate-100"}`}
+    >
+      <button
+        type="button"
+        onClick={onEdit}
+        aria-label={`Editar ficha de ${player.full_name}`}
+        className="focus-visible:outline-pool-blue w-full space-y-3 p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-[-4px]"
+      >
+        <span className="flex items-center gap-3">
+          <Avatar
+            src={player.photo_url}
+            name={player.full_name}
+            size={52}
+            teamColor="var(--pool-deep)"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block text-lg leading-snug font-extrabold">
+              <AdaptivePlayerName name={player.full_name} />
+            </span>
+            <span className="mt-1 block space-y-1 text-sm leading-snug font-semibold">
+              {player.currentTeam
+                ? player.currentTeam.split(" · ").map((team) => (
+                    <span key={team} title={team} className="block truncate">
+                      Equipo · {team}
+                    </span>
+                  ))
+                : "Sin equipo asignado"}
+            </span>
+          </span>
+          <ChevronRight aria-hidden="true" className="text-pool-blue mt-1 h-5 w-5 shrink-0" />
+        </span>
+        <span className="flex items-center justify-between gap-2 whitespace-nowrap">
+          <CategoryBadge category={player.category} label={player.categoryLabel} />
+          <span className="text-sm font-semibold">
+            {player.birth_year ? `Nacido en ${player.birth_year}` : "Sin año"}
+          </span>
+        </span>
+      </button>
+      <div className="grid grid-cols-2 gap-2 px-4 pb-4">
+        <button
+          type="button"
+          onClick={onEdit}
+          aria-label={`Editar a ${player.full_name}`}
+          className={cn(teamSecondary, "bg-pool-ice gap-1 px-1 whitespace-nowrap min-[360px]:px-2")}
+        >
+          <Pencil aria-hidden="true" className="h-4 w-4 shrink-0" />
+          Editar
+        </button>
+        <button
+          type="button"
+          onClick={onStatus}
+          aria-label={`${player.is_active ? "Desactivar" : "Activar"} a ${player.full_name}`}
+          className={cn(
+            teamSecondary,
+            "min-w-12 gap-1 px-1 whitespace-nowrap min-[360px]:px-2",
+            player.is_active ? "bg-slate-100" : "bg-emerald-50",
+          )}
+        >
+          {player.is_active ? (
+            <UserRoundMinus
+              aria-hidden="true"
+              className="hidden h-4 w-4 shrink-0 min-[360px]:block"
+            />
+          ) : (
+            <UserRoundCheck
+              aria-hidden="true"
+              className="hidden h-4 w-4 shrink-0 min-[360px]:block"
+            />
+          )}
+          <span>{player.is_active ? "Desactivar" : "Activar"}</span>
+        </button>
+      </div>
+      {!player.is_active && (
+        <p className="px-4 pb-3 text-sm font-bold">
+          <UserRound aria-hidden="true" className="mr-1 inline h-4 w-4" />
+          Jugador desactivado
+        </p>
+      )}
+    </article>
   );
 }

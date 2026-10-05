@@ -27,13 +27,13 @@ export async function getSwimCoachTeamIds(profileId: string): Promise<string[]> 
       .from("user_roles")
       .select("scope_team_id")
       .eq("profile_id", profileId)
-      .eq("role", "coach")
+      .in("role", ["coach", "delegate"])
       .not("scope_team_id", "is", null),
     supabase
       .from("team_staff")
       .select("team_id")
       .eq("profile_id", profileId)
-      .in("role", ["head_coach", "assistant_coach"]),
+      .in("role", ["head_coach", "assistant_coach", "delegate"]),
   ]);
   if (roleResult.error || staffResult.error) return [];
   const teamIds = new Set<string>();
@@ -67,8 +67,7 @@ export async function getSwimTimeEntries(filters?: {
   } catch (error) {
     if (
       error instanceof Error &&
-      (error.message.includes("public.swim_time_entries") ||
-        error.message.includes("schema cache"))
+      (error.message.includes("public.swim_time_entries") || error.message.includes("schema cache"))
     ) {
       console.warn(
         "[swim-times] La tabla public.swim_time_entries no está disponible en Supabase. Aplica la migración 20260914120358_swim_times.sql en el SQL Editor.",
@@ -140,11 +139,7 @@ export async function getPlayerSwimHistory(playerId: string) {
       .select("id, full_name, photo_url, birth_year")
       .eq("id", playerId)
       .maybeSingle(),
-    supabase
-      .from("team_rosters")
-      .select("team_id")
-      .eq("player_id", playerId)
-      .is("left_at", null),
+    supabase.from("team_rosters").select("team_id").eq("player_id", playerId).is("left_at", null),
     getSwimTimeEntries({ playerId, includeVoided: true }),
   ]);
   if (profileResult.error || !profileResult.data) return null;

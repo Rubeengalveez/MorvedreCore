@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { KeyRound } from "lucide-react";
 
 import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { ChangePasswordForm } from "@/components/auth/change-password-form";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -38,6 +39,7 @@ export default async function ChangePasswordPage() {
 
   return (
     <PageShell width="sm" className="gap-5 pb-8" lang="es">
+      {!isActivation && <PageBackLink href="/profile/settings">Mi cuenta</PageBackLink>}
       <PageHeader
         eyebrow={isActivation ? "Último paso" : "Seguridad de la cuenta"}
         title={isActivation ? "Activa tu cuenta" : "Cambiar contraseña"}
@@ -48,8 +50,8 @@ export default async function ChangePasswordPage() {
         }
         icon={<KeyRound className="h-6 w-6" aria-hidden="true" />}
       />
-      <div className="border-ink-200 bg-paper-card shadow-elev-1 w-full rounded-2xl border p-4 sm:p-5">
-        <ChangePasswordForm />
+      <div className="border-pool-deep/65 bg-paper-card w-full rounded-2xl border-2 p-4 sm:p-5">
+        <ChangePasswordForm returnTo={isActivation ? "/dashboard" : "/profile/settings"} />
       </div>
     </PageShell>
   );

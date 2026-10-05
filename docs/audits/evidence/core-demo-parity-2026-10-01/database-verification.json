@@ -1,0 +1,39 @@
+{
+  "migrationResult": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"success\":true}"
+      }
+    ],
+    "isError": false
+  },
+  "rpcComparison": "La función save_live_match_sheet cambia únicamente el predicado que valida el gorro del portero.",
+  "permissions": [
+    {
+      "signature": "live_match_emergency_keeper_caps(jsonb,text)",
+      "securityDefiner": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "signature": "save_live_match_sheet(uuid,uuid,uuid,integer,uuid,jsonb,boolean)",
+      "securityDefiner": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}"
+    },
+    {
+      "signature": "save_live_match_sheet(uuid,uuid,uuid,integer,uuid,jsonb,boolean,boolean)",
+      "securityDefiner": false,
+      "config": [
+        "search_path=\"\""
+      ],
+      "acl": "{postgres=X/postgres,service_role=X/postgres}"
+    }
+  ],
+  "assertions": 15
+}

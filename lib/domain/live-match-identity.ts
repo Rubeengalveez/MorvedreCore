@@ -1,4 +1,5 @@
 import { sheetSchema, type LiveSheet } from "./live-match";
+import { emergencyKeeperCaps } from "./live-match-goalkeeper-role";
 
 export function identifyLiveSheet(sheet: LiveSheet, previous?: LiveSheet): LiveSheet {
   const byCap = new Map(sheet.players.map((player) => [player.cap, player.id]));
@@ -8,7 +9,9 @@ export function identifyLiveSheet(sheet: LiveSheet, previous?: LiveSheet): LiveS
     ...sheet,
     version: sheet.version === 4 ? 4 : 3,
     keeper:
-      sheet.keeper === 1 || sheet.keeper === 13
+      sheet.keeper === 1 ||
+      sheet.keeper === 13 ||
+      (sheet.keeper !== null && emergencyKeeperCaps(sheet, "us").includes(sheet.keeper))
         ? sheet.keeper
         : (sheet.players.find(
             (player) => !player.retired && (player.cap === 1 || player.cap === 13),

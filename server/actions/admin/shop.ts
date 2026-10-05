@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { sendEmail } from "@/lib/email/resend";
-import { insertNotificationsWithPush } from "./notification-dispatch";
+import { notifyShopOrder } from "@/server/shop-email";
+import { scheduleNotificationPush } from "@/server/notification-push";
 import { requirePermission, requireSessionProfile } from "./_helpers";
 import {
   createShopOrderSchema,
@@ -21,7 +21,6 @@ import {
   isMissingShopPersonalizationSchema,
   parseProduct,
   resolveShopContactPhone,
-  summarizeCart,
   type ShopOrderStatus,
 } from "@/lib/domain/shop";
 import { validateImageFile } from "@/lib/uploads/images";
@@ -41,7 +40,7 @@ async function uploadShopImage(
 ): Promise<{ url: string; path: string }> {
   const admin = createAdminClient();
   const image = await validateImageFile(file);
-  const path = `shop/${productId}/${Date.now()}-${index}.${image.extension}`;
+  const path = `shop/${productId}/${crypto.randomUUID()}-${index}.${image.extension}`;
   const { error } = await admin.storage
     .from("shop-images")
     .upload(path, file, { contentType: image.contentType, upsert: true });
@@ -50,51 +49,100 @@ async function uploadShopImage(
   return { url: pub.publicUrl, path };
 }
 
+type GalleryEntry = { imageId: string } | { fileIndex: number };
+const gallerySchema = z
+  .array(
+    z.union([
+      z.object({ imageId: z.string().regex(/^(?:[a-f0-9-]{36}|legacy-[a-f0-9-]{36})$/i) }).strict(),
+      z.object({ fileIndex: z.number().int().min(0).max(7) }).strict(),
+    ]),
+  )
+  .max(8);
+
 async function replaceProductImages(input: {
   productId: string;
   title: string;
   files: File[];
   coverIndex: number;
+  galleryOrder?: GalleryEntry[];
 }): Promise<string | null> {
-  if (input.files.length === 0) return null;
   const admin = createAdminClient();
-  const coverIndex = Math.max(0, Math.min(input.coverIndex, input.files.length - 1));
-  await (
-    admin as unknown as {
-      from: (table: "shop_product_images") => {
-        delete: () => { eq: (column: string, value: string) => Promise<{ error: Error | null }> };
-        insert: (rows: unknown[]) => Promise<{ error: Error | null }>;
-      };
-    }
-  )
+  const order = gallerySchema.parse(
+    input.galleryOrder ?? input.files.map((_, fileIndex) => ({ fileIndex })),
+  );
+  if (input.files.length > 8) throw new Error("Elige como máximo 8 fotos.");
+  for (const file of input.files) await validateImageFile(file);
+  const { data: previous, error: previousError } = await admin
     .from("shop_product_images")
-    .delete()
+    .select("id,url,storage_path")
     .eq("product_id", input.productId);
-
-  const uploaded = [];
-  for (const [index, file] of input.files.entries()) {
-    uploaded.push(await uploadShopImage(input.productId, file, index));
+  if (previousError) throw new Error("No pudimos comprobar las fotos actuales.");
+  const existing = new Map((previous ?? []).map((image) => [image.id, image]));
+  if (order.some((entry) => "imageId" in entry && entry.imageId === `legacy-${input.productId}`)) {
+    const { data: product, error } = await admin
+      .from("shop_products")
+      .select("image_url")
+      .eq("id", input.productId)
+      .single();
+    if (error || !product?.image_url || existing.size)
+      throw new Error("Las fotos han cambiado. Vuelve a abrir el producto.");
+    existing.set(`legacy-${input.productId}`, {
+      id: `legacy-${input.productId}`,
+      url: product.image_url,
+      storage_path: null,
+    });
   }
-
-  const rows = uploaded.map((image, index) => ({
-    product_id: input.productId,
-    url: image.url,
-    storage_path: image.path,
-    alt: input.title,
-    sort_order: index,
-    is_cover: index === coverIndex,
-  }));
-  const { error } = await (
-    admin as unknown as {
-      from: (table: "shop_product_images") => {
-        insert: (rows: unknown[]) => Promise<{ error: Error | null }>;
-      };
-    }
+  const keys = order.map((entry) =>
+    "imageId" in entry ? entry.imageId : `file-${entry.fileIndex}`,
+  );
+  if (
+    new Set(keys).size !== keys.length ||
+    order.filter((entry) => "fileIndex" in entry).length !== input.files.length ||
+    order.some((entry) =>
+      "imageId" in entry ? !existing.has(entry.imageId) : !input.files[entry.fileIndex],
+    )
   )
-    .from("shop_product_images")
-    .insert(rows);
-  if (error) throw new Error("No pudimos guardar la galeria: " + error.message);
-  return uploaded[coverIndex]?.url ?? uploaded[0]?.url ?? null;
+    throw new Error("Las fotos han cambiado. Vuelve a abrir el producto.");
+  const uploaded: Array<{ url: string; path: string }> = [];
+  let rows: Array<{
+    url: string;
+    storage_path: string | null;
+    alt: string;
+    sort_order: number;
+    is_cover: boolean;
+  }> = [];
+  try {
+    for (const [index, file] of input.files.entries())
+      uploaded.push(await uploadShopImage(input.productId, file, index));
+    rows = order.map((entry, index) => {
+      const image =
+        "imageId" in entry
+          ? existing.get(entry.imageId)!
+          : { url: uploaded[entry.fileIndex].url, storage_path: uploaded[entry.fileIndex].path };
+      return {
+        url: image.url,
+        storage_path: image.storage_path,
+        alt: input.title,
+        sort_order: index,
+        is_cover: index === 0,
+      };
+    });
+    const { error } = await admin.rpc("replace_shop_product_gallery", {
+      p_product_id: input.productId,
+      p_images: rows,
+    });
+    if (error) throw new Error("No pudimos guardar las fotos. Las anteriores se conservan.");
+  } catch (error) {
+    if (uploaded.length)
+      await admin.storage.from("shop-images").remove(uploaded.map((image) => image.path));
+    throw error;
+  }
+  const kept = new Set(rows.map((image) => image.storage_path));
+  const removed = (previous ?? []).flatMap((image) =>
+    image.storage_path && !kept.has(image.storage_path) ? [image.storage_path] : [],
+  );
+  if (removed.length) await admin.storage.from("shop-images").remove(removed);
+  return rows[0]?.url ?? null;
 }
 
 export async function createShopProduct(input: {
@@ -105,17 +153,18 @@ export async function createShopProduct(input: {
   image_url?: string | null;
   sizes?: string[];
   available?: boolean;
-  max_per_order?: number;
   personalization_enabled?: boolean;
   personalization_label?: string;
   personalization_max_length?: number;
   imageFile?: File | null;
   imageFiles?: File[] | null;
   coverImageIndex?: number;
+  galleryOrder?: GalleryEntry[];
 }): Promise<{ id: string }> {
   await requirePermission("manage_shop");
   const parsed = upsertShopProductSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
+  if (input.galleryOrder !== undefined) gallerySchema.parse(input.galleryOrder);
   const product = parseProduct(parsed.data);
   if (!product.ok) throw new Error(product.error ?? "Datos inválidos.");
 
@@ -131,7 +180,6 @@ export async function createShopProduct(input: {
     image_url: product.value!.image_url,
     sizes: product.value!.sizes,
     available: product.value!.available,
-    max_per_order: product.value!.max_per_order,
     created_by: me.id,
   };
   let createResult = await admin
@@ -157,19 +205,22 @@ export async function createShopProduct(input: {
     : input.imageFile
       ? [input.imageFile]
       : [];
-  if (files.length > 0) {
-    const coverUrl = await replaceProductImages({
-      productId: created.id,
-      title: product.value!.title,
-      files,
-      coverIndex: input.coverImageIndex ?? 0,
-    });
-    if (coverUrl) {
-      await admin.from("shop_products").update({ image_url: coverUrl }).eq("id", created.id);
+  if (files.length > 0 || input.galleryOrder !== undefined) {
+    try {
+      await replaceProductImages({
+        productId: created.id,
+        title: product.value!.title,
+        files,
+        coverIndex: input.coverImageIndex ?? 0,
+        galleryOrder: input.galleryOrder,
+      });
+    } catch (error) {
+      await admin.from("shop_products").delete().eq("id", created.id);
+      throw error;
     }
   }
-
   revalidatePath("/shop");
+  scheduleNotificationPush();
   revalidatePath("/admin/shop");
   revalidatePath("/dashboard");
   return { id: created.id };
@@ -184,17 +235,18 @@ export async function updateShopProduct(input: {
   image_url?: string | null;
   sizes?: string[];
   available?: boolean;
-  max_per_order?: number;
   personalization_enabled?: boolean;
   personalization_label?: string;
   personalization_max_length?: number;
   imageFile?: File | null;
   imageFiles?: File[] | null;
   coverImageIndex?: number;
+  galleryOrder?: GalleryEntry[];
 }): Promise<void> {
   await requirePermission("manage_shop");
   const parsed = updateShopProductSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
+  if (input.galleryOrder !== undefined) gallerySchema.parse(input.galleryOrder);
   const product = parseProduct(parsed.data);
   if (!product.ok) throw new Error(product.error ?? "Datos inválidos.");
 
@@ -205,12 +257,13 @@ export async function updateShopProduct(input: {
     : input.imageFile
       ? [input.imageFile]
       : [];
-  if (files.length > 0) {
+  if (files.length > 0 || input.galleryOrder !== undefined) {
     imageUrl = await replaceProductImages({
       productId: input.product_id,
       title: product.value!.title,
       files,
       coverIndex: input.coverImageIndex ?? 0,
+      galleryOrder: input.galleryOrder,
     });
   }
 
@@ -223,7 +276,6 @@ export async function updateShopProduct(input: {
     image_url: imageUrl,
     sizes: product.value!.sizes,
     available: product.value!.available,
-    max_per_order: product.value!.max_per_order,
   };
   let updateResult = await admin
     .from("shop_products")
@@ -242,6 +294,7 @@ export async function updateShopProduct(input: {
   }
   revalidatePath("/shop");
   revalidatePath(`/shop/${input.product_id}`);
+  scheduleNotificationPush();
   revalidatePath("/admin/shop");
 }
 
@@ -256,14 +309,19 @@ export async function deleteShopProduct(input: { product_id: string }): Promise<
     .select("id", { count: "exact", head: true })
     .eq("product_id", parsed.data.product_id);
   if (orderItemsError) {
-    throw new Error("No pudimos comprobar si el producto tiene pedidos: " + orderItemsError.message);
+    throw new Error(
+      "No pudimos comprobar si el producto tiene pedidos: " + orderItemsError.message,
+    );
   }
   if ((count ?? 0) > 0) {
-    throw new Error("Este producto ya tiene pedidos. Ocúltalo del catálogo en lugar de eliminarlo.");
+    throw new Error(
+      "Este producto ya tiene pedidos. Ocúltalo del catálogo en lugar de eliminarlo.",
+    );
   }
   const { error } = await admin.from("shop_products").delete().eq("id", input.product_id);
   if (error) throw new Error("No pudimos eliminar el producto: " + error.message);
   revalidatePath("/shop");
+  scheduleNotificationPush();
   revalidatePath("/admin/shop");
 }
 
@@ -274,6 +332,8 @@ export async function setShopProductAvailability(input: {
   await requirePermission("manage_shop");
   const parsed = deleteShopProductSchema.safeParse({ product_id: input.product_id });
   if (!parsed.success) throw new Error(toError(parsed.error));
+  if (typeof input.available !== "boolean")
+    throw new Error("Elige si el producto está publicado u oculto.");
 
   const admin = createAdminClient();
   const { error } = await admin
@@ -282,6 +342,7 @@ export async function setShopProductAvailability(input: {
     .eq("id", parsed.data.product_id);
   if (error) throw new Error("No pudimos actualizar la visibilidad: " + error.message);
   revalidatePath("/shop");
+  scheduleNotificationPush();
   revalidatePath("/admin/shop");
 }
 
@@ -318,13 +379,15 @@ export async function updateShopOrderStatus(input: {
   const now = new Date().toISOString();
   const updates: Record<string, unknown> = {
     status: parsed.data.status,
-    admin_notes: parsed.data.admin_notes ?? null,
     managed_by: me.id,
     updated_at: now,
   };
+  if (parsed.data.admin_notes !== undefined) updates.admin_notes = parsed.data.admin_notes;
   if (parsed.data.status === "ordered") updates.ordered_at = now;
   if (parsed.data.status === "received") updates.received_at = now;
   if (parsed.data.status === "delivered") updates.delivered_at = now;
+  if (currentOrder.status === "delivered" && parsed.data.status === "pending_admin")
+    updates.delivered_at = null;
   if (parsed.data.status === "cancelled") updates.cancelled_at = now;
 
   const { data: updatedOrder, error } = await admin
@@ -338,12 +401,15 @@ export async function updateShopOrderStatus(input: {
   if (!updatedOrder) {
     throw new Error("El pedido ha cambiado mientras lo gestionabas. Actualiza la página.");
   }
+  scheduleNotificationPush();
   revalidatePath("/admin/shop");
   revalidatePath(`/shop/orders/${parsed.data.order_id}`);
   revalidatePath("/dashboard");
 }
 
 export async function createShopOrder(input: {
+  checkout_key: string;
+  expected_total_cents: number;
   items: Array<{
     product_id: string;
     size: string | null;
@@ -352,224 +418,47 @@ export async function createShopOrder(input: {
   }>;
   notes?: string | null;
   contact_phone?: string | null;
-}): Promise<{ id: string }> {
+}): Promise<{ id: string; order_reference: string }> {
   const me = await requireSessionProfile();
   const parsed = createShopOrderSchema.safeParse(input);
   if (!parsed.success) throw new Error(toError(parsed.error));
-
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const productIds = Array.from(new Set(parsed.data.items.map((i) => i.product_id)));
-  let supportsPersonalization = true;
-  const currentProductResult = await supabase
-    .from("shop_products")
-    .select(
-      "id, price_cents, available, max_per_order, title, sizes, personalization_enabled, personalization_max_length",
-    )
-    .in("id", productIds);
-  let productRows = currentProductResult.data as unknown as Array<Record<string, unknown>> | null;
-  let productError = currentProductResult.error;
-  if (isMissingShopPersonalizationSchema(productError)) {
-    supportsPersonalization = false;
-    const legacyProductResult = await supabase
-      .from("shop_products")
-      .select("id, price_cents, available, max_per_order, title, sizes")
-      .in("id", productIds);
-    productRows = legacyProductResult.data as unknown as Array<Record<string, unknown>> | null;
-    productError = legacyProductResult.error;
-  }
-  if (productError) {
-    throw new Error("No pudimos cargar los productos: " + productError.message);
-  }
-  const products = (productRows ?? []).map((row) => ({
-    id: String(row.id),
-    title: String(row.title),
-    price_cents: Number(row.price_cents),
-    available: Boolean(row.available),
-    max_per_order: Number(row.max_per_order),
-    sizes: Array.isArray(row.sizes) ? row.sizes.map(String) : [],
-    personalization_enabled:
-      "personalization_enabled" in row && Boolean(row.personalization_enabled),
-    personalization_max_length:
-      "personalization_max_length" in row && typeof row.personalization_max_length === "number"
-        ? row.personalization_max_length
-        : 30,
-  }));
-  if (!products || products.length !== productIds.length) {
-    throw new Error("Uno o más productos no existen.");
-  }
-
-  const cart = summarizeCart(
-    parsed.data.items.map((i) => ({
-      product_id: i.product_id,
-      size: i.size ?? null,
-      personalization: supportsPersonalization ? (i.personalization ?? null) : null,
-      quantity: i.quantity,
-    })),
-    products,
-  );
-  if (!cart.ok) throw new Error(cart.error ?? "Carrito inválido.");
-
   const admin = createAdminClient();
-  const { data: requester, error: requesterError } = await admin
-    .from("profiles")
-    .select("phone_e164, birth_year")
-    .eq("id", me.id)
-    .maybeSingle();
-  if (requesterError || !requester) {
-    throw new Error("No pudimos comprobar tus datos de contacto.");
-  }
-  const needsGuardian = requiresGuardianApproval(requester.birth_year);
-  const contactPhone = resolveShopContactPhone({
-    storedPhone: requester.phone_e164,
-    submittedPhone: normalizeSpanishPhone(parsed.data.contact_phone ?? ""),
-    deferToGuardian: needsGuardian,
+  const { data, error } = await admin.rpc("submit_shop_checkout", {
+    p_requester: me.id,
+    p_checkout_key: parsed.data.checkout_key,
+    p_items: parsed.data.items.map((item) => ({
+      ...item,
+      size: item.size ?? null,
+      personalization: item.personalization ?? null,
+    })),
+    p_expected_total: parsed.data.expected_total_cents,
+    p_notes: parsed.data.notes ?? null,
+    p_contact_phone: normalizeSpanishPhone(parsed.data.contact_phone ?? ""),
   });
-  if (!needsGuardian) {
-    if (!contactPhone) {
-      throw new Error("Añade un teléfono de contacto válido para enviar el pedido.");
-    }
-    if (!requester.phone_e164) {
-      const { error: phoneError } = await admin
-        .from("profiles")
-        .update({ phone_e164: contactPhone })
-        .eq("id", me.id);
-      if (phoneError) throw new Error("No pudimos guardar tu teléfono de contacto.");
-    }
-  }
-  if (needsGuardian) {
-    const { count: guardianCount } = await admin
-      .from("parent_child_links")
-      .select("parent_profile_id", { count: "exact", head: true })
-      .eq("child_profile_id", me.id);
-    if ((guardianCount ?? 0) === 0) {
-      throw new Error(
-        "Necesitas tener un tutor vinculado antes de enviar un pedido. Pide ayuda a un administrador.",
-      );
+  if (error) throw new Error(error.message || "No pudimos guardar el pedido.");
+  const result = z
+    .object({ id: z.string().uuid(), order_reference: z.string(), created: z.boolean() })
+    .parse(data);
+  if (result.created) {
+    try {
+      const { data: order } = await admin
+        .from("shop_orders")
+        .select("status")
+        .eq("id", result.id)
+        .single();
+      if (order?.status !== "pending_parent") await notifyShopOrder(result.id);
+    } catch {
+      console.error("El pedido está guardado, pero no se pudo completar su aviso.");
     }
   }
-  const { data: order, error: oErr } = await admin
-    .from("shop_orders")
-    .insert({
-      requested_by: me.id,
-      status: needsGuardian ? "pending_parent" : "pending_admin",
-      guardian_approval_required: needsGuardian,
-      total_cents: cart.total_cents!,
-      currency: "EUR",
-      notes: parsed.data.notes ?? null,
-      contact_phone_e164: contactPhone,
-    })
-    .select("id, order_reference")
-    .single();
-  if (oErr) throw new Error("No pudimos crear el pedido: " + oErr.message);
-
-  const items = cart.lines!.map((line) => ({
-    order_id: order.id,
-    product_id: line.product_id,
-    size: line.size,
-    personalization: line.personalization,
-    quantity: line.quantity,
-    unit_price_cents: line.unit_price_cents,
-    subtotal_cents: line.subtotal_cents,
-  }));
-  let itemsResult = await admin.from("shop_order_items").insert(items as never);
-  if (isMissingShopPersonalizationSchema(itemsResult.error)) {
-    itemsResult = await admin
-      .from("shop_order_items")
-      .insert(items.map(({ personalization: _personalization, ...item }) => item) as never);
-  }
-  if (itemsResult.error) {
-    await admin.from("shop_orders").delete().eq("id", order.id);
-    throw new Error("No pudimos guardar los productos del pedido: " + itemsResult.error.message);
-  }
-
-  if (needsGuardian) {
-    await notifyParentsOfOrder(order.id, order.order_reference, me.id, products);
-  } else {
-    await notifyShopManagerOfOrder(
-      order.id,
-      order.order_reference,
-      me.id,
-      contactPhone!,
-      cart.lines!,
-      products,
-    );
-  }
-
   revalidatePath("/shop");
   revalidatePath("/shop/orders");
-  revalidatePath(`/shop/orders/${order.id}`);
+  revalidatePath("/shop/parents/pending");
+  scheduleNotificationPush();
+  revalidatePath("/admin/shop");
+  revalidatePath("/shop/orders/" + result.id);
   revalidatePath("/dashboard");
-  return { id: order.id };
-}
-
-async function notifyShopManagerOfOrder(
-  orderId: string,
-  orderReference: string,
-  requesterId: string,
-  contactPhone: string,
-  lines: Array<{
-    product_id: string;
-    size: string | null;
-    personalization: string | null;
-    quantity: number;
-  }>,
-  products: Array<{ id: string; title: string }>,
-): Promise<void> {
-  const admin = createAdminClient();
-  const { data: requester } = await admin
-    .from("profiles")
-    .select("full_name")
-    .eq("id", requesterId)
-    .maybeSingle();
-  const productById = new Map(products.map((product) => [product.id, product.title]));
-  const detail = lines
-    .map((line) => {
-      const options = [
-        line.size ? `talla ${line.size}` : null,
-        line.personalization ? `personalización: ${line.personalization}` : null,
-      ].filter(Boolean);
-      return `- ${line.quantity} × ${productById.get(line.product_id) ?? "Producto"}${options.length > 0 ? ` (${options.join(", ")})` : ""}`;
-    })
-    .join("\n");
-
-  const { data: managerPermissions } = await admin
-    .from("profile_permissions")
-    .select("profile_id")
-    .eq("permission", "manage_shop");
-  const managerIds = Array.from(new Set((managerPermissions ?? []).map((row) => row.profile_id)));
-  const { data: managers } = managerIds.length
-    ? await admin.from("profiles").select("email_contact").in("id", managerIds)
-    : { data: [] as Array<{ email_contact: string | null }> };
-  const recipients = Array.from(
-    new Set(
-      [
-        ...(managers ?? []).map((manager) => manager.email_contact).filter(Boolean),
-        process.env.SHOP_MANAGER_EMAIL,
-        process.env.ADMIN_EMAIL,
-        "galvillo9@gmail.com",
-      ].filter((email): email is string => Boolean(email)),
-    ),
-  );
-
-  await Promise.all(
-    recipients.map((to) =>
-      sendEmail({
-        to,
-        subject: `Nuevo pedido ${orderReference} · ${requester?.full_name ?? "Socio/a"}`,
-        text: `Nueva solicitud de material en Morvedre Core.
-
-Solicitante: ${requester?.full_name ?? requesterId}
-Teléfono: ${contactPhone}
-Pedido: ${orderReference}
-
-${detail}
-
-Puedes gestionarlo desde /admin/shop.
-`,
-      }),
-    ),
-  );
+  return { id: result.id, order_reference: result.order_reference };
 }
 
 export async function decideShopOrder(input: {
@@ -658,57 +547,18 @@ export async function decideShopOrder(input: {
   if (!updatedOrder) throw new Error("Este pedido ya lo ha decidido otra persona de la familia.");
 
   if (parsed.data.decision === "approve") {
-    const { data: itemRows } = await admin
-      .from("shop_order_items")
-      .select("product_id, size, personalization, quantity")
-      .eq("order_id", parsed.data.order_id);
-    const productIds = Array.from(new Set((itemRows ?? []).map((item) => item.product_id)));
-    const { data: productRows } = productIds.length
-      ? await admin.from("shop_products").select("id, title").in("id", productIds)
-      : { data: [] as Array<{ id: string; title: string }> };
-    await notifyShopManagerOfOrder(
-      parsed.data.order_id,
-      order.order_reference,
-      order.requested_by,
-      approverPhone!,
-      (itemRows ?? []).map((item) => ({
-        product_id: item.product_id,
-        size: item.size,
-        personalization: item.personalization,
-        quantity: item.quantity,
-      })),
-      productRows ?? [],
-    );
+    try {
+      await notifyShopOrder(parsed.data.order_id);
+    } catch {
+      console.error("El pedido está aprobado, pero no se pudo completar su aviso.");
+    }
   }
 
   revalidatePath(`/shop/orders/${parsed.data.order_id}`);
   revalidatePath("/shop/parents/pending");
+  revalidatePath("/shop/orders");
   revalidatePath("/profile");
+  scheduleNotificationPush();
   revalidatePath("/admin/shop");
 }
 
-async function notifyParentsOfOrder(
-  orderId: string,
-  orderReference: string,
-  childId: string,
-  products: Array<{ id: string; title: string }>,
-): Promise<void> {
-  const { createClient } = await import("@/lib/supabase/server");
-  const supabase = await createClient();
-  const { data: links } = await supabase
-    .from("parent_child_links")
-    .select("parent_profile_id")
-    .eq("child_profile_id", childId);
-  if (!links || links.length === 0) return;
-
-  const productTitles = products.map((p) => p.title).join(", ");
-  const rows = links.map((l) => ({
-    recipient_id: l.parent_profile_id,
-    kind: "news_pinned" as const,
-    title: `Pedido ${orderReference} por revisar`,
-    body: `Tu hijo/a quiere comprar: ${productTitles}`,
-    href: `/shop/orders/${orderId}`,
-    related_match_id: null,
-  }));
-  await insertNotificationsWithPush(rows);
-}

@@ -397,6 +397,11 @@
   border: 0;
 }
 
+.guardHeader {
+  background: #062048;
+  color: #ffffff;
+}
+
 .panel[data-state="open"] {
   animation: panelSlideUp 0.26s cubic-bezier(0.16, 1, 0.3, 1);
 }

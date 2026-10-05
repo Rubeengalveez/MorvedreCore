@@ -1,74 +1,101 @@
 "use client";
-
-import { CheckCheck, Loader2 } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
-
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils/cn";
+import { CheckCheck } from "lucide-react";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/server/actions/admin/notifications";
 
-export function NotificationCardAction({
-  id,
-  href,
-  className,
-  children,
-}: {
-  id: string;
-  href: string | null;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  const router = useRouter();
+export function MarkAllNotificationsButton() {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
   return (
-    <button
-      type="button"
-      disabled={pending}
-      onClick={() => {
-        startTransition(async () => {
-          await markNotificationRead(id);
-          if (href) router.push(href as never);
-          else router.refresh();
-        });
-      }}
-      className={cn(
-        "focus-visible:ring-pool-blue w-full touch-manipulation text-left transition-[border-color,background-color,box-shadow,transform,opacity] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.995] disabled:opacity-70 motion-reduce:transition-none",
-        className,
-      )}
-    >
-      {children}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="border-pool-deep/65 text-pool-deep inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 bg-white px-3 font-bold"
+      >
+        <CheckCheck className="h-5 w-5" aria-hidden="true" />
+        Marcar todas como leídas
+      </button>
+      <ActaGuardSheet
+        open={open}
+        onOpenChange={setOpen}
+        context="NOTIFICACIONES"
+        title="¿Marcar todos los avisos como leídos?"
+        summary="Se conservarán en Todas."
+        description="También se marcarán los avisos de otras páginas del buzón."
+        icon="saved"
+        pending={pending}
+        error={error}
+        actions={[
+          {
+            label: "Marcar como leídas",
+            tone: "primary",
+            onClick: () =>
+              startTransition(async () => {
+                try {
+                  await markAllNotificationsRead();
+                  setOpen(false);
+                  router.refresh();
+                } catch {
+                  setError("No pudimos guardar el cambio. Vuelve a intentarlo.");
+                }
+              }),
+          },
+          { label: "Volver", tone: "secondary", onClick: () => setOpen(false) },
+        ]}
+      />
+    </>
   );
 }
 
-export function MarkAllNotificationsButton({ disabled }: { disabled: boolean }) {
-  const router = useRouter();
+export function NotificationReadOnOpen({ id, unread }: { id: string; unread: boolean }) {
+  const [error, setError] = useState(false);
   const [pending, startTransition] = useTransition();
-  return (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      disabled={disabled || pending}
-      aria-label="Marcar todas las notificaciones como leídas"
-      className="w-full min-[420px]:w-auto"
-      onClick={() => {
-        startTransition(async () => {
-          await markAllNotificationsRead();
-          router.refresh();
-        });
-      }}
+  const attempted = useRef(false);
+  const router = useRouter();
+  const mark = () =>
+    startTransition(async () => {
+      try {
+        await markNotificationRead(id);
+        setError(false);
+        router.refresh();
+      } catch {
+        setError(true);
+      }
+    });
+  useEffect(() => {
+    if (!unread || attempted.current) return;
+    attempted.current = true;
+    startTransition(async () => {
+      try {
+        await markNotificationRead(id);
+        router.refresh();
+      } catch {
+        setError(true);
+      }
+    });
+  }, [id, unread, router]);
+  return error ? (
+    <div
+      role="alert"
+      className="rounded-xl border-2 border-red-800 bg-red-50 p-3 font-semibold text-red-900"
     >
-      {pending ? (
-        <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-      ) : (
-        <CheckCheck className="h-4 w-4" aria-hidden="true" />
-      )}
-      Marcar todo leído
-    </Button>
-  );
+      <p>No pudimos marcar este aviso como leído.</p>
+      <button
+        type="button"
+        onClick={mark}
+        disabled={pending}
+        className="mt-2 min-h-12 rounded-xl border-2 border-red-800 bg-white px-3 font-bold"
+      >
+        {pending ? "Guardando…" : "Volver a intentar"}
+      </button>
+    </div>
+  ) : null;
 }

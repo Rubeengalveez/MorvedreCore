@@ -1,31 +1,25 @@
+import { calendarBackHref, calendarReturnParams } from "@/lib/domain/calendar-presentation";
 import type { Metadata, Route } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import {
-  CalendarRange,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
-  Info,
-  UsersRound,
-  X,
-} from "lucide-react";
+import { CalendarRange, ChevronLeft, ChevronRight, ClipboardCheck, Info } from "lucide-react";
 
-import { Avatar } from "@/components/ui/avatar";
+import { AttendanceSummaryPlayers } from "@/components/attendance/attendance-summary-players";
+import { AttendanceSummaryCategory } from "@/components/attendance/attendance-summary-category";
 import { AttendanceSectionNav } from "@/components/attendance/attendance-section-nav";
 import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader, PageShell } from "@/components/ui/page-shell";
+import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
 import { getAttendanceDayKey } from "@/lib/domain/attendance";
 import {
   getAttendancePeriodRange,
   isDateKey,
   shiftAttendancePeriod,
+  summarizeAttendance,
   type AttendancePeriod,
-  type AttendanceTeamReport,
 } from "@/lib/domain/attendance-history";
 import { cn } from "@/lib/utils/cn";
+import { deduplicateAttendanceOccurrences } from "@/lib/domain/attendance-occurrences";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCoachAttendanceReport } from "@/server/queries/attendance";
 import { getAttendanceTeams, getDashboardAudience } from "@/server/queries/dashboard";
@@ -62,7 +56,16 @@ function periodLabel(period: AttendancePeriod, from: string, to: string): string
 export default async function AttendanceSummaryPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; date?: string; team?: string }>;
+  searchParams: Promise<{
+    period?: string;
+    date?: string;
+    team?: string;
+    from?: string;
+    calendarMonth?: string;
+    calendarPlayer?: string;
+    calendarTeam?: string;
+    calendarDay?: string;
+  }>;
 }) {
   const [ctx, season, params] = await Promise.all([
     getActiveProfileContext(),
@@ -75,9 +78,31 @@ export default async function AttendanceSummaryPage({
   const audience = await getDashboardAudience(ctx.ownProfile.id, season.id);
   if (!audience.can_manage_attendance) redirect("/dashboard");
 
+  const calendarContext =
+    params.from === "calendar"
+      ? calendarReturnParams(
+          params.calendarMonth ?? "",
+          params.calendarPlayer ?? "",
+          params.calendarTeam,
+          params.calendarDay,
+        ).replace("from=calendar&", "")
+      : "";
+  const originName =
+    params.from === "calendar"
+      ? "calendar"
+      : params.from === "dashboard"
+        ? "dashboard"
+        : params.from === "profile-activity"
+          ? "profile-activity"
+          : undefined;
+  const origin = originName
+    ? `&from=${originName}${calendarContext ? `&${calendarContext}` : ""}`
+    : "";
   const period: AttendancePeriod = params.period === "week" ? "week" : "month";
   const today = getAttendanceDayKey(new Date());
-  const anchor = isDateKey(params.date) ? params.date : today;
+  const requestedDate =
+    params.date ?? (params.from === "calendar" ? params.calendarDay : undefined);
+  const anchor = isDateKey(requestedDate) ? requestedDate : today;
   const range = getAttendancePeriodRange(anchor, period);
   const allTeams = await getAttendanceTeams(season.id);
   const selectedTeamId = allTeams.some((team) => team.id === params.team) ? params.team! : "all";
@@ -92,30 +117,67 @@ export default async function AttendanceSummaryPage({
   const nextAnchor = shiftAttendancePeriod(anchor, period, 1);
   const queryTeam = selectedTeamId === "all" ? "" : `&team=${selectedTeamId}`;
   const visibleReports = reports.filter(
-    (report) => report.session_count > 0 || report.players.some((player) => player.total > 0),
+    (report) => report.session_count > 0 || report.players.length > 0,
   );
-  const attended = visibleReports.reduce((sum, report) => sum + report.attended, 0);
-  const absent = visibleReports.reduce((sum, report) => sum + report.absent, 0);
+  const overview = summarizeAttendance(
+    deduplicateAttendanceOccurrences(
+      visibleReports
+        .flatMap((report) => report.players.flatMap((player) => player.records))
+        .filter((record) => {
+          const day = getAttendanceDayKey(record.scheduled_at);
+          return day >= range.from && day <= range.to;
+        })
+        .map((record) => ({
+          ...record,
+          joint_id: record.joint_id ?? null,
+          unreviewed: record.unreviewed ?? false,
+        })),
+    ),
+  );
+  const attended = overview.attended;
+  const absent = overview.absent;
   const total = attended + absent;
   const reviewed = visibleReports.reduce((sum, report) => sum + report.reviewed_session_count, 0);
   const sessions = visibleReports.reduce((sum, report) => sum + report.session_count, 0);
 
   return (
     <PageShell width="lg" className="gap-4 pb-8">
-      <PageBackLink href={"/attendance" as Route}>Volver a pasar lista</PageBackLink>
+      <PageBackLink
+        href={
+          params.from === "calendar"
+            ? (calendarBackHref(params) as Route)
+            : params.from === "dashboard"
+              ? "/dashboard"
+              : params.from === "profile-activity"
+                ? "/profile/activity"
+                : "/attendance"
+        }
+      >
+        {params.from === "calendar"
+          ? "Calendario"
+          : params.from === "dashboard"
+            ? "Inicio"
+            : params.from === "profile-activity"
+              ? "Mi actividad"
+              : "Volver a pasar lista"}
+      </PageBackLink>
 
-      <PageHeader
-        eyebrow="Todas las categorías"
-        title="Resumen de asistencia"
-        description="Revisa la semana o el mes sin mezclar equipos."
-        icon={<CalendarRange className="h-5 w-5" aria-hidden="true" />}
+      <header className="flex min-h-12 items-center gap-2.5">
+        <span className="bg-pool-deep flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white">
+          <CalendarRange className="h-5 w-5" aria-hidden="true" />
+        </span>
+        <h1 className="text-pool-deep text-2xl font-extrabold">Resumen de asistencia</h1>
+      </header>
+
+      <AttendanceSectionNav
+        current="summary"
+        origin={originName}
+        calendarContext={calendarContext}
       />
-
-      <AttendanceSectionNav current="summary" />
 
       <section
         aria-label="Periodo del resumen"
-        className="border-ink-200 bg-paper-card rounded-2xl border p-3"
+        className="border-pool-deep/65 bg-paper-card rounded-2xl border p-3"
       >
         <nav
           aria-label="Elegir periodo"
@@ -124,11 +186,13 @@ export default async function AttendanceSummaryPage({
           {(["week", "month"] as const).map((value) => (
             <Link
               key={value}
-              href={`/attendance/summary?period=${value}&date=${anchor}${queryTeam}` as Route}
+              href={
+                `/attendance/summary?period=${value}&date=${anchor}${queryTeam}${origin}` as Route
+              }
               aria-current={period === value ? "page" : undefined}
               className={cn(
                 "focus-visible:ring-pool-blue flex min-h-12 touch-manipulation items-center justify-center rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none",
-                period === value ? "bg-pool-deep text-paper shadow-elev-1" : "text-ink-700",
+                period === value ? "bg-pool-deep text-paper shadow-elev-1" : "text-pool-deep",
               )}
             >
               {value === "week" ? "Semana" : "Mes"}
@@ -139,10 +203,10 @@ export default async function AttendanceSummaryPage({
         <div className="mt-3 grid grid-cols-[3rem_minmax(0,1fr)_3rem] items-center gap-2">
           <Link
             href={
-              `/attendance/summary?period=${period}&date=${previousAnchor}${queryTeam}` as Route
+              `/attendance/summary?period=${period}&date=${previousAnchor}${queryTeam}${origin}` as Route
             }
             aria-label={`Ver ${period === "week" ? "la semana" : "el mes"} anterior`}
-            className="border-ink-200 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
+            className="border-pool-deep/65 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden="true" />
           </Link>
@@ -150,42 +214,21 @@ export default async function AttendanceSummaryPage({
             {periodLabel(period, range.from, range.to)}
           </h2>
           <Link
-            href={`/attendance/summary?period=${period}&date=${nextAnchor}${queryTeam}` as Route}
+            href={
+              `/attendance/summary?period=${period}&date=${nextAnchor}${queryTeam}${origin}` as Route
+            }
             aria-label={`Ver ${period === "week" ? "la semana" : "el mes"} siguiente`}
-            className="border-ink-200 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
+            className="border-pool-deep/65 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue flex h-12 w-12 items-center justify-center rounded-xl border focus-visible:ring-2 focus-visible:outline-none"
           >
             <ChevronRight className="h-6 w-6" aria-hidden="true" />
           </Link>
         </div>
 
-        <form action="/attendance/summary" method="get" className="mt-3">
-          <input type="hidden" name="period" value={period} />
-          <input type="hidden" name="date" value={anchor} />
-          <label htmlFor="attendance-team" className="text-pool-deep text-sm font-extrabold">
-            Categoría
-          </label>
-          <div className="mt-2 flex gap-2">
-            <select
-              id="attendance-team"
-              name="team"
-              defaultValue={selectedTeamId}
-              className="border-ink-300 bg-paper text-pool-deep focus-visible:ring-pool-blue min-h-12 min-w-0 flex-1 rounded-xl border px-3 text-base font-semibold focus-visible:ring-2 focus-visible:outline-none"
-            >
-              <option value="all">Todas las categorías</option>
-              {allTeams.map((team) => (
-                <option key={team.id} value={team.id}>
-                  {team.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue min-h-12 shrink-0 rounded-xl px-4 text-sm font-extrabold focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-            >
-              Ver
-            </button>
-          </div>
-        </form>
+        <AttendanceSummaryCategory
+          teams={allTeams.map((team) => ({ id: team.id, label: team.label }))}
+          selectedTeamId={selectedTeamId}
+          baseHref={`/attendance/summary?period=${period}&date=${anchor}${origin}`}
+        />
       </section>
 
       <section aria-label="Resumen general" className="grid grid-cols-2 gap-2 sm:grid-cols-4">
@@ -199,20 +242,20 @@ export default async function AttendanceSummaryPage({
         <Metric value={absent} label="Ausencias" tone="danger" />
       </section>
 
-      <div className="border-pool-blue bg-pool-ice text-ink-700 flex gap-3 rounded-xl border p-3 text-sm leading-5">
+      <div className="border-pool-blue bg-pool-ice text-pool-deep flex gap-3 rounded-xl border p-3 text-sm leading-5">
         <Info className="text-pool-blue mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <p>
-          Los porcentajes solo usan listas guardadas. Las sesiones todavía sin revisar aparecen en
-          «Listas revisadas», pero no cuentan como faltas.
+          Sin revisar cuenta como asistencia provisional. Solo se cuenta una falta cuando el
+          entrenador la marca.
         </p>
       </div>
 
       {visibleReports.length > 0 ? (
-        <div className="flex flex-col gap-4">
-          {visibleReports.map((report) => (
-            <TeamReport key={report.id} report={report} />
-          ))}
-        </div>
+        <AttendanceSummaryPlayers
+          reports={visibleReports}
+          initialMonth={anchor.slice(0, 7)}
+          calendarMonths={Array.from(new Set([range.from.slice(0, 7), range.to.slice(0, 7)]))}
+        />
       ) : (
         <EmptyState
           icon={<ClipboardCheck className="h-7 w-7" aria-hidden="true" />}
@@ -234,107 +277,18 @@ function Metric({
   tone: "brand" | "success" | "danger";
 }) {
   return (
-    <div className="border-ink-200 bg-paper-card flex min-h-20 flex-col justify-center rounded-xl border px-3 py-3">
+    <div className="border-pool-deep/65 bg-paper-card flex min-h-20 flex-col items-center justify-center rounded-xl border-2 px-3 py-3 text-center">
       <strong
         className={cn(
           "font-mono text-xl leading-none font-extrabold tabular-nums",
           tone === "brand" && "text-pool-blue",
-          tone === "success" && "text-success",
-          tone === "danger" && "text-danger",
+          tone === "success" && "text-green-800",
+          tone === "danger" && "text-red-800",
         )}
       >
         {value}
       </strong>
-      <span className="text-ink-700 mt-2 text-xs leading-tight font-extrabold">{label}</span>
+      <span className="text-pool-deep mt-2 text-xs leading-tight font-extrabold">{label}</span>
     </div>
-  );
-}
-
-function TeamReport({ report }: { report: AttendanceTeamReport }) {
-  return (
-    <section
-      aria-labelledby={`team-attendance-${report.id}`}
-      className="border-ink-200 bg-paper-card shadow-elev-1 overflow-hidden rounded-2xl border"
-    >
-      <header className="flex items-center gap-3 px-4 py-4">
-        <span
-          className="h-12 w-1.5 shrink-0 rounded-full"
-          style={{ backgroundColor: report.color }}
-          aria-hidden="true"
-        />
-        <div className="min-w-0 flex-1">
-          <h2
-            id={`team-attendance-${report.id}`}
-            className="font-display text-pool-deep text-xl font-extrabold"
-          >
-            {report.label}
-          </h2>
-          <p className="text-ink-600 mt-1 text-sm font-semibold">
-            {report.reviewed_session_count}/{report.session_count} listas revisadas
-          </p>
-        </div>
-        <span className="bg-pool-foam text-pool-blue rounded-xl px-3 py-2 font-mono text-base font-extrabold tabular-nums">
-          {report.percentage == null ? "—" : `${report.percentage} %`}
-        </span>
-      </header>
-
-      {report.players.length > 0 ? (
-        <ul className="divide-ink-200 border-ink-200 divide-y border-t">
-          {report.players.map((player) => (
-            <li key={player.id} className="px-3 py-3 sm:px-4">
-              <div className="flex items-center gap-3">
-                <Avatar
-                  name={player.full_name}
-                  src={player.photo_url}
-                  size={44}
-                  teamColor={report.color}
-                />
-                <div className="min-w-0 flex-1">
-                  <p className="text-pool-deep truncate text-base font-extrabold">
-                    {player.full_name}
-                  </p>
-                  <p className="text-ink-600 mt-0.5 text-sm font-semibold">
-                    {player.total > 0
-                      ? `${player.attended} de ${player.total} entrenamientos`
-                      : "Sin listas registradas"}
-                  </p>
-                </div>
-                <span
-                  className={cn(
-                    "min-w-14 rounded-lg px-2 py-1.5 text-center font-mono text-sm font-extrabold tabular-nums",
-                    player.percentage == null && "bg-ink-100 text-ink-600",
-                    player.percentage != null &&
-                      player.percentage >= 80 &&
-                      "border border-success bg-emerald-50 text-success",
-                    player.percentage != null &&
-                      player.percentage < 80 &&
-                      "border border-danger bg-red-50 text-danger",
-                  )}
-                >
-                  {player.percentage == null ? "—" : `${player.percentage} %`}
-                </span>
-              </div>
-              {player.total > 0 ? (
-                <div className="mt-2 grid grid-cols-2 gap-2 pl-14">
-                  <span className="border-success bg-emerald-50 text-success inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2 text-sm font-extrabold">
-                    <Check className="h-4 w-4" aria-hidden="true" />
-                    {player.attended} asistencias
-                  </span>
-                  <span className="border-danger bg-red-50 text-danger inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2 text-sm font-extrabold">
-                    <X className="h-4 w-4" aria-hidden="true" />
-                    {player.absent} ausencias
-                  </span>
-                </div>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <div className="border-ink-200 text-ink-600 flex items-center gap-2 border-t px-4 py-5 text-sm">
-          <UsersRound className="h-5 w-5" aria-hidden="true" />
-          No hay jugadores en la plantilla de este periodo.
-        </div>
-      )}
-    </section>
   );
 }

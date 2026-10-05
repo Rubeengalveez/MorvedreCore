@@ -17,9 +17,29 @@ export function matchRules(category?: string) {
     fieldPlayers: category === "infantil" ? 6 : 5,
     exclusionLimit: category === "benjamin" || category === "escuela" ? 4 : 3,
     singleKeeper: category === "alevin" || category === "infantil",
-    compulsoryReplacement: category === "infantil",
+    compulsoryReplacement: youth,
     periods: youth ? 6 : 4,
+    minimumPlayers:
+      category === "infantil" ? 9 : ["benjamin", "alevin"].includes(category ?? "") ? 8 : 1,
   };
+}
+
+export function rosterRequirementError(
+  category: string | undefined,
+  caps: (number | null)[],
+  side: "us" | "them" = "us",
+) {
+  const team = side === "us" ? "Morvedre" : "Rival";
+  const minimum = matchRules(category).minimumPlayers;
+  const label =
+    category === "benjamin" ? "Benjamín" : category === "alevin" ? "Alevín" : "Infantil";
+  if (caps.length < minimum)
+    return minimum > 1
+      ? `${team}: mínimo ${minimum} jugadores convocados en ${label}.`
+      : `${team}: añade al menos un jugador.`;
+  if (!caps.some((cap) => cap === 1 || cap === 13))
+    return `${team}: necesitas un portero con gorro 1 o 13.`;
+  return "";
 }
 
 export function exclusionLimit(sheet: { category?: string }) {
@@ -67,6 +87,7 @@ export const lineupDraftSchema = z.object({
   mode: z.enum(["start", "correct"]),
   step: z.enum(["us", "them"]),
   baseMutation: z.string(),
+  baseDraftRevision: z.number().int().nonnegative().optional(),
   fixedKeepers: z.object({ us: participant.nullable(), them: participant.nullable() }).optional(),
   incident: z.boolean().optional(),
   us: z.object({ keeper: participant.nullable(), field: z.array(participant).max(6) }),

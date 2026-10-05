@@ -1,12 +1,25 @@
+"use client";
+import { useState } from "react";
 import type { Route } from "next";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Search } from "lucide-react";
 
 import { EmptyTeamState } from "@/components/team/empty-team-state";
 import { TeamStaffList } from "@/components/team/team-staff-list";
+import { CategoryBadge } from "@/components/team/category-badge";
 import { Avatar } from "@/components/ui/avatar";
-import { CATEGORY_LABELS, safeInferCategory, type CategoryCode } from "@/lib/domain/categories";
+import {
+  CATEGORY_COLORS,
+  CATEGORY_SURFACE_COLORS,
+  safeInferCategory,
+  type CategoryCode,
+} from "@/lib/domain/categories";
 import type { getTeamStaff } from "@/server/queries/teams";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
+import { matchesTeamSearch, splitTeamRoster } from "@/lib/domain/team-presentation";
+import { TeamEmpty, teamControl } from "@/components/team/team-ui";
+import { validCapNumber } from "@/lib/domain/cap-number";
+import { teamNestedOrigin } from "@/lib/domain/team-navigation-origin";
 
 interface RosterPlayer {
   player_id: string;
@@ -17,28 +30,14 @@ interface RosterPlayer {
   squad_number: number | null;
 }
 
-const COMPETITIVE_CATEGORIES: readonly CategoryCode[] = [
-  "benjamin",
-  "alevin",
-  "infantil",
-  "cadete",
-  "juvenil",
-  "absoluto",
-];
-
-function isValidReinforcement(playerCategory: CategoryCode | null, teamCategory: CategoryCode) {
-  if (!playerCategory || playerCategory === "escuela" || teamCategory === "escuela") return false;
-  const playerIndex = COMPETITIVE_CATEGORIES.indexOf(playerCategory);
-  const teamIndex = COMPETITIVE_CATEGORIES.indexOf(teamCategory);
-  return teamIndex - playerIndex === 1;
-}
-
 export interface TeamPlayersTabProps {
   teamId: string;
   roster: RosterPlayer[];
   teamColor: string;
   teamCategory: CategoryCode;
   categoryYear: number;
+  context?: string;
+  categoryColors?: Partial<Record<CategoryCode, string>>;
   staff: Awaited<ReturnType<typeof getTeamStaff>>;
 }
 
@@ -49,44 +48,52 @@ export function TeamPlayersTab({
   teamCategory,
   categoryYear,
   staff,
+  categoryColors = {},
+  context,
 }: TeamPlayersTabProps) {
-  const ownCategory = roster.filter((player) => {
-    if (teamCategory === "escuela") return true;
-    return (
-      player.birth_year == null ||
-      safeInferCategory(player.birth_year, categoryYear) === teamCategory
-    );
-  });
-  const reinforcements = roster.filter(
-    (player) =>
-      player.birth_year != null &&
-      isValidReinforcement(safeInferCategory(player.birth_year, categoryYear), teamCategory),
-  );
+  const [query, setQuery] = useState("");
+  const visible = roster.filter((player) => matchesTeamSearch(player.full_name, query));
+  const { own: ownCategory, reinforcements } = splitTeamRoster(visible, teamCategory, categoryYear);
 
   return (
     <div className="flex flex-col gap-7">
-      {staff.length > 0 ? <TeamStaffList staff={staff} teamColor={teamColor} /> : null}
-
       <section aria-labelledby="team-roster-heading">
-        <div className="mb-3 flex items-end justify-between gap-3 px-1">
+        <div className="bg-pool-deep border-pool-deep mb-3 flex items-center justify-between gap-3 rounded-xl border-2 px-4 py-3 text-white">
           <div>
-            <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-              Equipo
-            </p>
-            <h2
-              id="team-roster-heading"
-              className="font-display text-pool-deep text-xl font-extrabold"
-            >
+            <h2 id="team-roster-heading" className="text-xl font-extrabold">
               Plantilla
             </h2>
           </div>
-          <span className="text-ink-500 text-sm font-semibold tabular-nums">{roster.length}</span>
+          <span className="border-pool-deep/65 text-pool-deep rounded-lg border bg-white px-2.5 py-1 text-sm font-bold tabular-nums">
+            {query ? `${visible.length} de ${roster.length}` : roster.length}
+          </span>
         </div>
 
+        {roster.length > 0 ? (
+          <label className="relative mb-4 block">
+            <span className="sr-only">Buscar jugador en la plantilla</span>
+            <Search
+              className="text-pool-deep pointer-events-none absolute top-4 left-3 h-5 w-5"
+              aria-hidden="true"
+            />
+            <input
+              type="search"
+              placeholder="Buscar jugador…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className={`${teamControl} pl-10`}
+            />
+          </label>
+        ) : null}
         {roster.length === 0 ? (
           <EmptyTeamState
             title="Aún no hay plantilla"
             description="Los jugadores aparecerán aquí cuando se incorporen al equipo."
+          />
+        ) : visible.length === 0 ? (
+          <TeamEmpty
+            title="No encontramos a ese jugador"
+            description="Prueba otro nombre o borra la búsqueda."
           />
         ) : (
           <div className="flex flex-col gap-5">
@@ -95,14 +102,16 @@ export function TeamPlayersTab({
               teamId={teamId}
               teamColor={teamColor}
               categoryYear={categoryYear}
+              categoryColors={categoryColors}
+              context={context}
             />
             {reinforcements.length > 0 ? (
               <section aria-labelledby="reinforcements-heading">
-                <div className="mb-2 px-1">
-                  <h3 id="reinforcements-heading" className="text-pool-deep text-sm font-extrabold">
+                <div className="border-pool-deep/65 mb-3 rounded-xl border-2 bg-blue-50 p-3">
+                  <h3 id="reinforcements-heading" className="text-pool-deep text-lg font-extrabold">
                     Refuerzos de categorías inferiores
                   </h3>
-                  <p className="text-ink-500 mt-0.5 text-xs">
+                  <p className="mt-1 text-sm font-medium text-slate-700">
                     Pueden jugar con este equipo, pero pertenecen a su categoría de origen.
                   </p>
                 </div>
@@ -111,6 +120,8 @@ export function TeamPlayersTab({
                   teamId={teamId}
                   teamColor={teamColor}
                   categoryYear={categoryYear}
+                  categoryColors={categoryColors}
+                  context={context}
                   showCategory
                 />
               </section>
@@ -118,6 +129,7 @@ export function TeamPlayersTab({
           </div>
         )}
       </section>
+      {staff.length > 0 ? <TeamStaffList staff={staff} teamColor={teamColor} /> : null}
     </div>
   );
 }
@@ -128,45 +140,63 @@ function PlayerList({
   teamColor,
   categoryYear,
   showCategory = false,
+  categoryColors,
+  context,
 }: {
   players: RosterPlayer[];
   teamId: string;
   teamColor: string;
   categoryYear: number;
   showCategory?: boolean;
+  context?: string;
+  categoryColors: Partial<Record<CategoryCode, string>>;
 }) {
   return (
-    <ul className="border-ink-200 bg-paper-card divide-ink-200 divide-y overflow-hidden rounded-2xl border shadow-sm">
+    <ul className="space-y-2">
       {players.map((player) => {
         const category =
           player.birth_year == null ? null : safeInferCategory(player.birth_year, categoryYear);
+        const originColor =
+          showCategory && category
+            ? (categoryColors[category] ?? CATEGORY_COLORS[category])
+            : teamColor;
         return (
           <li key={player.player_id}>
             <Link
-              href={`/team/${teamId}/players/${player.player_id}` as Route}
-              className="group hover:bg-pool-foam/45 focus-visible:ring-pool-blue flex min-h-[72px] touch-manipulation items-center gap-3 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
+              href={
+                `/team/${teamId}/players/${player.player_id}${context ? `?${teamNestedOrigin(context)}` : ""}` as Route
+              }
+              className="group border-pool-deep/65 focus-visible:ring-pool-blue flex min-h-[80px] touch-manipulation items-center gap-3 rounded-xl border-2 bg-white px-3 py-3 transition-colors hover:bg-blue-50 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
             >
               <Avatar
                 src={player.photo_url}
                 name={player.full_name}
                 size={48}
-                teamColor={teamColor}
-                className="border-ink-200"
+                teamColor={originColor}
+                style={
+                  category
+                    ? { backgroundColor: CATEGORY_SURFACE_COLORS[category], color: "#0A2E5C" }
+                    : undefined
+                }
+                className="border-pool-deep/65"
               />
               <div className="min-w-0 flex-1">
-                <p className="font-display text-pool-deep truncate text-base font-extrabold">
-                  {player.full_name}
+                <p className="font-display text-pool-deep text-base font-extrabold">
+                  <AdaptivePlayerName name={player.full_name} />
                 </p>
                 {showCategory && category ? (
-                  <p className="text-pool-blue mt-0.5 text-xs font-bold">
-                    {CATEGORY_LABELS[category]}
-                  </p>
+                  <div className="mt-1">
+                    <CategoryBadge category={category} color={originColor} />
+                  </div>
                 ) : null}
               </div>
-              <ChevronRight
-                className="text-ink-400 group-hover:text-pool-blue h-5 w-5 shrink-0 transition-colors"
-                aria-hidden="true"
-              />
+              {validCapNumber(player.squad_number ?? player.cap_number) != null ? (
+                <span className="border-pool-deep bg-pool-deep rounded-lg border px-2.5 py-2 text-base font-extrabold text-white">
+                  <span className="sr-only">Gorro </span>
+                  {validCapNumber(player.squad_number ?? player.cap_number)}
+                </span>
+              ) : null}
+              <ChevronRight className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
             </Link>
           </li>
         );

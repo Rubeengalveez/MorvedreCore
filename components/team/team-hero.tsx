@@ -1,91 +1,59 @@
-import { MapPin, UsersRound, UserRoundCog } from "lucide-react";
-
-import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
+import { UsersRound, MapPin } from "lucide-react";
 import type { Team } from "@/server/queries/teams";
-
+import { teamCategoryLabel, matchesTeamSearch } from "@/lib/domain/team-presentation";
+import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
 export interface TeamHeroProps {
   team: Team;
-  seasonLabel?: string | null;
   homePool?: string | null;
   playerCount?: number;
-  staffCount?: number;
+  staff?: Array<{ role: string; full_name: string }>;
 }
-
-const GENDER_LABELS: Record<string, string> = {
-  male: "Masculino",
-  female: "Femenino",
-  mixed: "Mixto",
-};
-
-export function TeamHero({
-  team,
-  seasonLabel,
-  homePool,
-  playerCount = 0,
-  staffCount = 0,
-}: TeamHeroProps) {
-  const categoryLabel = CATEGORY_LABELS[team.category_code as CategoryCode] ?? team.category_code;
-  const meta = [categoryLabel, GENDER_LABELS[team.gender] ?? team.gender, seasonLabel].filter(
-    (item): item is string => Boolean(item),
-  );
-
+export function TeamHero({ team, homePool, playerCount = 0, staff = [] }: TeamHeroProps) {
+  const coach = staff
+    .filter((member) => member.role === "head_coach")
+    .map((member) => member.full_name)
+    .join(", ");
+  const delegate = staff
+    .filter((member) => member.role === "delegate")
+    .map((member) => member.full_name)
+    .join(", ");
   return (
-    <header className="border-ink-200 bg-paper-card shadow-elev-1 relative overflow-hidden rounded-2xl border">
-      <span
-        aria-hidden="true"
-        className="absolute inset-y-3 left-0 w-1 rounded-r-full"
-        style={{ backgroundColor: team.color }}
-      />
-
-      <div className="flex items-start gap-3 px-4 py-4 pl-5">
-        <span className="bg-pool-deep text-paper flex h-11 w-11 shrink-0 items-center justify-center rounded-xl shadow-sm">
-          <UsersRound className="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="text-pool-blue flex flex-wrap items-center gap-x-1.5 text-xs font-extrabold tracking-[0.07em] uppercase">
-            {meta.map((item, index) => (
-              <span key={item} className="inline-flex items-center gap-1.5">
-                {index > 0 ? (
-                  <span className="text-ink-300" aria-hidden="true">
-                    ·
-                  </span>
-                ) : null}
-                {item}
-              </span>
-            ))}
-          </div>
-          <h1 className="font-display text-pool-deep mt-1 text-2xl leading-tight font-extrabold tracking-tight text-balance">
-            {team.label}
-          </h1>
-          {homePool ? (
-            <p className="text-ink-600 mt-1.5 flex min-w-0 items-center gap-1.5 text-sm">
-              <MapPin className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
-              <span className="truncate">{homePool}</span>
-            </p>
-          ) : null}
+    <header className="border-pool-deep/65 text-pool-deep overflow-hidden rounded-2xl border-2 bg-white">
+      <div className="bg-pool-deep px-4 py-3 text-white">
+        <div className="flex items-center gap-3">
+          <UsersRound className="h-6 w-6 shrink-0" aria-hidden="true" />
+          <h1 className="min-w-0 flex-1 text-2xl leading-tight font-extrabold">{team.label}</h1>
+          <span className="inline-flex shrink-0 items-center gap-1.5 text-2xl leading-none font-extrabold tabular-nums">
+            <span className="sr-only">Jugadores: </span>
+            {playerCount}
+            <UsersRound className="h-5 w-5" aria-hidden="true" />
+          </span>
         </div>
+        {!matchesTeamSearch(team.label, teamCategoryLabel(team.category_code)) ? (
+          <p className="mt-1 text-sm font-semibold text-white">
+            {teamCategoryLabel(team.category_code)}
+          </p>
+        ) : null}
       </div>
-
-      <dl className="border-ink-200 bg-paper-sunk/55 divide-ink-200 grid grid-cols-2 divide-x border-t">
-        <div className="flex min-w-0 items-center gap-2.5 px-3.5 py-3 sm:px-5">
-          <UsersRound className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
-          <div className="min-w-0">
-            <dt className="text-ink-500 text-xs font-bold">Plantilla</dt>
-            <dd className="text-pool-deep text-sm font-extrabold tabular-nums">
-              {playerCount} {playerCount === 1 ? "jugador" : "jugadores"}
+      <dl className="space-y-2 px-4 py-3 text-sm">
+        {[
+          ["Entrenador", coach],
+          ["Delegado", delegate],
+        ].map(([label, name]) => (
+          <div key={label} className="flex items-center gap-3">
+            <dt className="w-20 shrink-0 font-semibold">{label}</dt>
+            <dd className="min-w-0 flex-1 font-bold">
+              <AdaptivePlayerName name={name || "Sin asignar"} />
             </dd>
           </div>
-        </div>
-        <div className="flex min-w-0 items-center gap-2.5 px-3.5 py-3 sm:px-5">
-          <UserRoundCog className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
-          <div className="min-w-0">
-            <dt className="text-ink-500 text-xs font-bold">Técnicos</dt>
-            <dd className="text-pool-deep text-sm font-extrabold tabular-nums">
-              {staffCount} {staffCount === 1 ? "persona" : "personas"}
-            </dd>
-          </div>
-        </div>
+        ))}
       </dl>
+      {homePool ? (
+        <p className="flex items-center gap-2 px-4 pb-3 text-sm font-semibold">
+          <MapPin className="h-4 w-4 shrink-0" aria-hidden="true" />
+          {homePool}
+        </p>
+      ) : null}
     </header>
   );
 }

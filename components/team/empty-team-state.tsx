@@ -14,7 +14,7 @@ export function EmptyTeamState({ title, description, pictogram, className }: Emp
   return (
     <div
       className={cn(
-        "border-ink-300 bg-paper flex flex-col items-center gap-4 rounded-md border border-dashed px-6 py-12 text-center",
+        "border-ink-300 bg-paper flex flex-col items-center gap-4 rounded-md border-2 border-solid px-6 py-12 text-center",
         className,
       )}
     >

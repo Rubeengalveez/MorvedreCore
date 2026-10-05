@@ -1,266 +1,319 @@
 "use client";
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import Link from "next/link";
-import type { Route } from "next";
-import { useActionState, useEffect, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { z } from "zod";
-
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { updateProfile, type UpdateProfileState } from "@/server/actions/profile";
-import type { Tables } from "@/types/database";
+import { ArrowLeft, LockKeyhole, Save } from "lucide-react";
 import { AvatarEditor } from "@/components/profile/avatar-editor";
-import { normalizeSpanishPhone, toSpanishPhoneDigits } from "@/lib/domain/phone";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
+import { CapNumberOptions } from "@/components/matches/cap-number-picker";
+import {
+  ShopSection,
+  ShopField,
+  shopControl,
+  shopPrimary,
+  shopSecondary,
+} from "@/components/shop/shop-ui";
+import {
+  selfProfileSchema,
+  selfProfilePayload,
+  type SelfProfileValues,
+  type EditableSelfProfile,
+} from "@/lib/domain/self-profile";
+import { updateProfile } from "@/server/actions/profile";
+import { useProfileBackGuard } from "@/components/profile/use-profile-back-guard";
 
-const yearPattern = /^\d{4}$/;
-const dorsalPattern = /^\d{1,2}$/;
-const phonePattern = /^\d{9}$/;
-
-const profileFormSchema = z.object({
-  full_name: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
-  birth_year: z
-    .string()
-    .trim()
-    .optional()
-    .refine(
-      (v) => !v || (yearPattern.test(v) && Number(v) >= 1900 && Number(v) <= 2100),
-      "Año entre 1900 y 2100.",
-    ),
-  cap_number: z
-    .string()
-    .trim()
-    .optional()
-    .refine(
-      (v) => !v || (dorsalPattern.test(v) && Number(v) >= 1 && Number(v) <= 14),
-      "Gorro entre 1 y 14.",
-    ),
-  phone_e164: z
-    .string()
-    .trim()
-    .optional()
-    .refine((v) => !v || phonePattern.test(v), "Escribe exactamente 9 dígitos."),
-});
-
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
-
-function SubmitButton() {
-  const { pending } = useFormStatus();
-  return (
-    <Button type="submit" size="lg" className="w-full" disabled={pending}>
-      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
-      {pending ? "Guardando..." : "Guardar"}
-    </Button>
-  );
-}
-
-export interface ProfileFormProps {
-  profile: Tables<"profiles">;
+export function ProfileForm({
+  profile,
+  isPlayer,
+  loginEmail = null,
+}: {
+  profile: EditableSelfProfile;
   isPlayer: boolean;
-}
-
-export function ProfileForm({ profile, isPlayer }: ProfileFormProps) {
+  loginEmail?: string | null;
+}) {
   const router = useRouter();
-  const [state, formAction] = useActionState<UpdateProfileState, FormData>(updateProfile, null);
-  const [, startTransition] = useTransition();
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const initial: SelfProfileValues = {
+    full_name: profile.full_name,
+    phone_e164: profile.phone_e164 ?? "",
+    email_contact: profile.email_contact ?? "",
+    cap_number: profile.cap_number,
+  };
+  const [values, setValues] = useState(initial);
+  const [file, setFile] = useState<File | null>(null);
   const [removePhoto, setRemovePhoto] = useState(false);
-
+  const [stage, setStage] = useState<"edit" | "review" | "discard">("edit");
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const busy = useRef(false);
+  const destination = useRef("/profile");
+  const form = useRef<HTMLFormElement>(null);
+  const dirty =
+    JSON.stringify(selfProfilePayload(values)) !== JSON.stringify(selfProfilePayload(initial)) ||
+    Boolean(file) ||
+    removePhoto;
+  const exit = useProfileBackGuard(() => leave());
   useEffect(() => {
-    if (!state?.ok) return;
-    const timeout = window.setTimeout(() => router.push("/profile"), 800);
-    return () => window.clearTimeout(timeout);
-  }, [router, state?.ok]);
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues: {
-      full_name: profile.full_name,
-      birth_year: profile.birth_year?.toString() ?? "",
-      cap_number: isPlayer && profile.cap_number != null && profile.cap_number >= 1 && profile.cap_number <= 14 ? String(profile.cap_number) : "",
-      phone_e164: toSpanishPhoneDigits(profile.phone_e164),
-    },
-  });
-  const watchedFullName = useWatch({ control: form.control, name: "full_name" });
-
-  const onSubmit = form.handleSubmit((values) => {
-    const fd = new FormData();
-    fd.append("full_name", values.full_name);
-    fd.append("birth_year", values.birth_year ?? "");
-    if (isPlayer) {
-      fd.append("cap_number", values.cap_number ?? "");
+    if (!dirty) return;
+    const protect = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", protect);
+    const navigate = (event: MouseEvent) => {
+      const link = (event.target as Element)?.closest("a[href]");
+      if (
+        !link ||
+        event.defaultPrevented ||
+        event.button ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        link.getAttribute("target") === "_blank"
+      )
+        return;
+      const url = new URL(link.getAttribute("href")!, window.location.href);
+      if (
+        url.origin !== window.location.origin ||
+        (url.pathname === window.location.pathname && url.hash)
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (busy.current) return;
+      destination.current = `${url.pathname}${url.search}${url.hash}`;
+      setStage("discard");
+    };
+    document.addEventListener("click", navigate, true);
+    return () => {
+      window.removeEventListener("beforeunload", protect);
+      document.removeEventListener("click", navigate, true);
+    };
+  }, [dirty]);
+  function leave() {
+    destination.current = "/profile";
+    if (dirty) setStage("discard");
+    else exit("/profile");
+  }
+  function review() {
+    if (!dirty || busy.current) return;
+    const result = selfProfileSchema.safeParse(values);
+    if (!result.success) {
+      const fields = Object.fromEntries(
+        result.error.issues.map((issue) => [String(issue.path[0]), issue.message]),
+      );
+      setErrors(fields);
+      const name = String(result.error.issues[0]?.path[0]);
+      form.current?.querySelector<HTMLInputElement>(`[name="${name}"]`)?.focus();
+      return;
     }
-    fd.append("phone_e164", normalizeSpanishPhone(values.phone_e164 ?? "") ?? "");
-    if (avatarFile) fd.append("avatar_file", avatarFile);
-    fd.append("remove_photo", String(removePhoto));
-    startTransition(() => {
-      formAction(fd);
-    });
-  });
-
-  return (
-    <Form {...form}>
-      <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
-        {state?.ok ? (
-          <Alert variant="success" title="Cambios guardados">
-            Tus datos se han actualizado correctamente.
-          </Alert>
-        ) : null}
-        {state?.error ? (
-          <Alert variant="danger" title="No pudimos guardar">
-            {state.error}
-          </Alert>
-        ) : null}
-
-        <FormField
-          control={form.control}
-          name="full_name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel htmlFor="full_name">Nombre completo</FormLabel>
-              <FormControl>
-                <Input
-                  id="full_name"
-                  autoComplete="name"
-                  placeholder="Tu nombre"
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
+    setErrors({});
+    setError(null);
+    setStage("review");
+  }
+  async function save() {
+    if (busy.current) return;
+    busy.current = true;
+    setPending(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      const payload = selfProfilePayload(values);
+      for (const [key, value] of Object.entries(payload))
+        if (isPlayer || key !== "cap_number") fd.set(key, value == null ? "" : String(value));
+      fd.set("updated_at", profile.updated_at);
+      fd.set("remove_photo", String(removePhoto));
+      if (file) fd.set("avatar_file", file);
+      const result = await updateProfile(null, fd);
+      if (!result?.ok) {
+        setError(result?.error ?? "No pudimos guardar. Vuelve a intentarlo.");
+        return;
+      }
+      exit("/profile");
+      router.refresh();
+    } catch {
+      setError("No pudimos guardar. Comprueba tu conexión y vuelve a intentarlo.");
+    } finally {
+      busy.current = false;
+      setPending(false);
+    }
+  }
+  function input(name: "full_name" | "phone_e164" | "email_contact", label: string, type = "text") {
+    return (
+      <ShopField label={label} htmlFor={name}>
+        <input
+          id={name}
+          name={name}
+          type={type}
+          value={values[name]}
+          autoComplete={name === "full_name" ? "name" : name === "phone_e164" ? "tel" : "email"}
+          onChange={(event) => {
+            setValues((v) => ({ ...v, [name]: event.target.value }));
+            setErrors((e) => ({ ...e, [name]: "" }));
+          }}
+          className={shopControl}
+          aria-invalid={Boolean(errors[name])}
+          aria-describedby={errors[name] ? `${name}-error` : undefined}
         />
-
-        <section id="photo" className="scroll-mt-[calc(var(--top-bar-height)+1rem)]">
+        {errors[name] && (
+          <p id={`${name}-error`} role="alert" className="font-semibold text-red-900">
+            {errors[name]}
+          </p>
+        )}
+      </ShopField>
+    );
+  }
+  const next = selfProfilePayload(values),
+    before = selfProfilePayload(initial);
+  const labels: Record<keyof typeof next, string> = {
+    full_name: "Nombre",
+    phone_e164: "Teléfono",
+    email_contact: "Correo de contacto",
+    cap_number: "Gorro preferido",
+  };
+  return (
+    <>
+      <button
+        type="button"
+        onClick={leave}
+        disabled={pending}
+        data-page-back
+        className="text-pool-blue focus-visible:outline-pool-blue -mb-2 -ml-2 inline-flex min-h-12 w-fit items-center gap-2 rounded-xl px-2 font-extrabold focus-visible:outline-2"
+      >
+        <ArrowLeft aria-hidden="true" className="h-5 w-5" />
+        Mi perfil
+      </button>
+      <h1 className="text-pool-deep text-3xl font-extrabold">Mis datos</h1>
+      <form
+        ref={form}
+        onSubmit={(event) => {
+          event.preventDefault();
+          review();
+        }}
+        noValidate
+        className="space-y-3"
+      >
+        <ShopSection title="Datos personales">
+          {input("full_name", "Nombre completo")}
+          <div className="border-pool-deep/65 rounded-xl border bg-blue-50 px-3 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-pool-deep font-bold">Año de nacimiento</span>
+              <span className="text-pool-deep text-lg font-extrabold">
+                {profile.birth_year ?? "Sin registrar"}
+              </span>
+            </div>
+          </div>
+        </ShopSection>
+        <div id="photo" className="scroll-mt-28">
           <AvatarEditor
-            name={watchedFullName || profile.full_name}
+            name={values.full_name || profile.full_name}
             currentUrl={profile.photo_url}
             teamColor={profile.team_color ?? "var(--pool-blue)"}
-            onChange={(file, removeCurrent) => {
-              setAvatarFile(file);
-              setRemovePhoto(removeCurrent);
+            onChange={(photo, remove) => {
+              setFile(photo);
+              setRemovePhoto(remove);
             }}
           />
-        </section>
-
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-          <FormField
-            control={form.control}
-            name="birth_year"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel htmlFor="birth_year">Año de nacimiento</FormLabel>
-                <FormControl>
-                  <Input
-                    id="birth_year"
-                    type="number"
-                    inputMode="numeric"
-                    min={1900}
-                    max={2100}
-                    placeholder="2009"
-                    value={field.value ?? ""}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    name={field.name}
-                    ref={field.ref}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          {isPlayer ? (
-            <FormField
-              control={form.control}
-              name="cap_number"
-              render={({ field }) => (
-                <FormItem id="cap_number" className="scroll-mt-[calc(var(--top-bar-height)+1rem)]">
-                  <FormLabel htmlFor="cap_number_input">Número de gorro preferido</FormLabel>
-                  <FormControl>
-                    <Input
-                      id="cap_number_input"
-                      type="number"
-                      inputMode="numeric"
-                      min={1}
-                      max={14}
-                      placeholder="7"
-                      value={field.value ?? ""}
-                      onChange={field.onChange}
-                      onBlur={field.onBlur}
-                      name={field.name}
-                      ref={field.ref}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Lo usaremos como primera opción en las convocatorias.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          ) : null}
         </div>
-
-        <FormField
-          control={form.control}
-          name="phone_e164"
-          render={({ field }) => (
-            <FormItem id="phone_e164" className="scroll-mt-[calc(var(--top-bar-height)+1rem)]">
-              <FormLabel htmlFor="phone_e164_input">Teléfono de contacto</FormLabel>
-              <FormControl>
-                <Input
-                  id="phone_e164_input"
-                  type="tel"
-                  inputMode="numeric"
-                  autoComplete="tel-national"
-                  pattern="[0-9]{9}"
-                  minLength={9}
-                  maxLength={9}
-                  placeholder="612345678"
-                  value={field.value ?? ""}
-                  onChange={(event) => field.onChange(toSpanishPhoneDigits(event.target.value))}
-                  onBlur={field.onBlur}
-                  name={field.name}
-                  ref={field.ref}
-                />
-              </FormControl>
-              <FormDescription>
-                Recomendado para que la encargada de tienda pueda localizarte si haces un pedido.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex flex-col gap-3">
-          <SubmitButton />
-          <Link
-            href={"/profile" as Route}
-            className="text-pool-blue text-center text-sm font-semibold hover:underline focus-visible:underline focus-visible:outline-none"
+        <ShopSection title="Contacto privado">
+          {input("phone_e164", "Teléfono", "tel")}
+          {input("email_contact", "Correo de contacto", "email")}
+          <p className="text-pool-deep flex items-center gap-2 text-sm font-medium">
+            <LockKeyhole className="h-4 w-4 shrink-0" aria-hidden="true" />
+            Tu contacto no aparece en la ficha pública.
+          </p>
+        </ShopSection>
+        {isPlayer && (
+          <ShopSection title="Gorro preferido">
+            <div id="cap_number" className="scroll-mt-28">
+              <CapNumberOptions
+                value={values.cap_number}
+                occupied={new Set()}
+                unavailable={new Set()}
+                onChange={(cap) => setValues((v) => ({ ...v, cap_number: cap }))}
+              />
+            </div>
+            <p className="text-pool-deep text-sm font-medium">
+              El entrenador o delegado asigna el gorro de cada partido.
+            </p>
+          </ShopSection>
+        )}
+        {loginEmail && (
+          <div className="border-pool-deep/65 text-pool-deep rounded-xl border-2 bg-white p-4">
+            <h2 className="font-extrabold">Correo para entrar</h2>
+            <p className="mt-1 font-medium break-all">{loginEmail}</p>
+          </div>
+        )}
+        <div className="grid gap-2">
+          <button type="submit" className={`${shopPrimary} w-full`} disabled={!dirty || pending}>
+            <Save aria-hidden="true" className="h-5 w-5" />
+            Revisar y guardar
+          </button>
+          <button
+            type="button"
+            className={`${shopSecondary} w-full`}
+            onClick={leave}
+            disabled={pending}
           >
-            Volver a mi perfil
-          </Link>
+            Cancelar
+          </button>
         </div>
       </form>
-    </Form>
+      <ActaGuardSheet
+        open={stage === "review"}
+        onOpenChange={(open) => !open && setStage("edit")}
+        context="MIS DATOS"
+        title="¿Guardar estos cambios?"
+        tall
+        icon="saved"
+        pending={pending}
+        error={error}
+        body={
+          <dl className="space-y-2">
+            {Object.entries(next)
+              .filter(([key, value]) => value !== before[key as keyof typeof next])
+              .map(([key, value]) => (
+                <div key={key} className="border-pool-deep/65 rounded-xl border-2 bg-white p-3">
+                  <dt className="text-pool-blue text-sm font-bold">
+                    {labels[key as keyof typeof next]}
+                  </dt>
+                  <dd className="text-pool-deep mt-1 font-extrabold break-words">
+                    {value ?? (key === "cap_number" ? "Sin gorro" : "Sin registrar")}
+                  </dd>
+                </div>
+              ))}
+            {(file || removePhoto) && (
+              <div className="border-pool-deep/65 rounded-xl border-2 bg-white p-3">
+                <dt className="text-pool-blue text-sm font-bold">Foto</dt>
+                <dd className="text-pool-deep font-extrabold">
+                  {file ? "Nueva foto" : "Quitar foto actual"}
+                </dd>
+              </div>
+            )}
+          </dl>
+        }
+        actions={[
+          { label: "Guardar cambios", tone: "primary", onClick: save },
+          { label: "Volver a editar", tone: "secondary", onClick: () => setStage("edit") },
+        ]}
+      />
+      <ActaGuardSheet
+        open={stage === "discard"}
+        onOpenChange={(open) => !open && setStage("edit")}
+        context="MIS DATOS"
+        title="¿Salir sin guardar?"
+        summary="Tienes cambios pendientes"
+        description="Si sales ahora, estos cambios no se guardarán."
+        icon="warning"
+        actions={[
+          { label: "Seguir editando", tone: "primary", onClick: () => setStage("edit") },
+          {
+            label: "Salir sin guardar",
+            tone: "subtle",
+            onClick: () => exit(destination.current),
+          },
+        ]}
+      />
+    </>
   );
 }

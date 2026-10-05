@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, CircleAlert, Moon, Play } from "lucide-react";
 import { ActaGuardSheet } from "./acta-guard-sheet";
 import { ActaFlowSheet } from "./acta-flow-sheet";
@@ -8,8 +8,13 @@ import { ActaPlayerName } from "./acta-player-name";
 import { ActaQuarterMarks } from "./acta-quarter-marks";
 import {
   participants,
+  keeperOptions,
+  fieldPlayersNeeded,
+  soleKeeper,
   lineupFor,
   lineupIssues,
+  lineupEligibilityIssues,
+  expelledBeforePeriod,
   lineupSelectionMessage,
   playedPeriods,
   rotationAdvice,
@@ -39,7 +44,7 @@ export function ActaLineupSheet({
   request: LineupRequest;
   onClose: () => void;
   onSaved: (sheet: LiveSheet) => void;
-  change: (sheet: LiveSheet) => Promise<boolean>;
+  change: (sheet: LiveSheet, draftRevision?: number) => Promise<boolean>;
   saveDraft: (draft: LineupDraft) => Promise<boolean>;
   busy: boolean;
 }) {
@@ -48,37 +53,61 @@ export function ActaLineupSheet({
   const initial = (side: Side) => {
     const lineup = lineupFor(sheet, side, request.period);
     return {
-      keeper: lineup?.keeper ?? sheet.participation?.fixedKeepers[side] ?? null,
+      keeper:
+        lineup?.keeper ??
+        participants(sheet, side).find(
+          (p) =>
+            p.key === soleKeeper(sheet, side) &&
+            !expelledBeforePeriod(sheet, side, p.cap, request.period),
+        )?.key ??
+        null,
       field: lineup?.field ?? [],
     };
   };
-  const [draft, setDraft] = useState<LineupDraft>(() =>
-    saved &&
-    saved.baseMutation === record.mutation &&
-    saved.period === request.period &&
-    saved.mode === request.mode
-      ? saved
-      : {
-          period: request.period,
-          mode: request.mode,
-          step: request.side ?? "us",
-          baseMutation: record.mutation,
-          us: initial("us"),
-          them: initial("them"),
-        },
-  );
+  const [draft, setDraft] = useState<LineupDraft>(() => {
+    const next =
+      saved &&
+      saved.baseMutation === record.mutation &&
+      saved.period === request.period &&
+      saved.mode === request.mode
+        ? { ...saved }
+        : {
+            period: request.period,
+            mode: request.mode,
+            step: request.side ?? "us",
+            baseMutation: record.mutation,
+            us: initial("us"),
+            them: initial("them"),
+          };
+    for (const side of ["us", "them"] as const) {
+      const eligible = new Set(
+        participants(sheet, side)
+          .filter((p) => !expelledBeforePeriod(sheet, side, p.cap, request.period))
+          .map((p) => p.key),
+      );
+      next[side] = {
+        keeper: next[side].keeper && eligible.has(next[side].keeper) ? next[side].keeper : null,
+        field: next[side].field.filter((key) => eligible.has(key)),
+      };
+    }
+    return next;
+  });
   const draftRef = useRef(draft);
+  const draftRevision = useRef(record.draftRevision ?? 0);
+  const [conflict, setConflict] = useState(false);
   const saving = useRef(false);
   const draftQueue = useRef(Promise.resolve(true));
   const [confirming, setConfirming] = useState(false);
   const [warningTeam, setWarningTeam] = useState<Side>("us");
   const [error, setError] = useState("");
-  const [fixed, setFixed] = useState(draft.fixedKeepers ?? sheet.participation!.fixedKeepers);
   const side = draft.step;
   const selection = draft[side];
   const options = participants(sheet, side).sort((a, b) => a.cap - b.cap);
-  const keepers = options.filter((p) => p.cap === 1 || p.cap === 13);
-  const rules = matchRules(sheet.category);
+  const keepers = keeperOptions(sheet, side, request.period);
+  const rules = {
+    ...matchRules(sheet.category),
+    fieldPlayers: fieldPlayersNeeded(sheet, side, request.period),
+  };
   const lineups: PeriodLineup[] = ["us", "them"].map((which) => ({
     period: request.period,
     side: which as Side,
@@ -103,12 +132,7 @@ export function ActaLineupSheet({
       }));
     return [
       ...unavailable,
-      ...rotationAdvice(
-        { ...sheet, participation: { ...sheet.participation!, fixedKeepers: fixed } },
-        lineup.side,
-        request.period,
-        lineup,
-      )
+      ...rotationAdvice(sheet, lineup.side, request.period, lineup)
         .filter(
           (a) =>
             a.kind === "missing" ||
@@ -119,6 +143,7 @@ export function ActaLineupSheet({
     ];
   });
   const structures = lineups.flatMap((l) => lineupIssues(sheet, l));
+  const eligibility = lineups.flatMap((l) => lineupEligibilityIssues(sheet, l));
   const own = lineups.find((l) => l.side === "us")!;
   const previousKeeper = sheet.keeperStints?.find((stint) => stint.period === request.period)?.cap;
   const keeperChanged =
@@ -140,16 +165,44 @@ export function ActaLineupSheet({
       ? "Al corregir el portero, sus paradas y goles recibidos de ese tramo pasarán al portero elegido."
       : "";
   const advice = rotationAdvice(sheet, side, request.period);
-  const canComplete = lineups.every((l) => Boolean(l.keeper)) && structures.length === 0;
+  const canComplete =
+    lineups.every((l) => Boolean(l.keeper)) &&
+    structures.length === 0 &&
+    eligibility.length === 0 &&
+    !conflict;
+  useEffect(() => {
+    if ((record.draftRevision ?? 0) > draftRevision.current) {
+      setConflict(true);
+      setError(
+        "La selección ha cambiado en otra pestaña. Cierra esta lista y vuelve a abrirla para revisar los jugadores.",
+      );
+    }
+  }, [record.draftRevision]);
   async function update(next: LineupDraft) {
     draftRef.current = next;
     setDraft(next);
     setError("");
-    draftQueue.current = draftQueue.current.catch(() => false).then(() => saveDraft(next));
+    draftQueue.current = draftQueue.current
+      .catch(() => false)
+      .then(async () => {
+        const expected = draftRevision.current;
+        draftRevision.current = expected + 1;
+        const saved = await saveDraft({ ...next, baseDraftRevision: expected });
+        if (!saved) {
+          draftRevision.current = expected;
+          setConflict(true);
+        }
+        return saved;
+      });
     if (!(await draftQueue.current))
-      setError("No se ha guardado la selección en este móvil. Vuelve a intentarlo.");
+      setError(
+        "No se ha guardado esta selección. Cierra la lista y vuelve a abrirla para revisar los jugadores guardados.",
+      );
   }
   function select(key: string, keeper: boolean) {
+    if (conflict) return;
+    const participant = options.find((p) => p.key === key);
+    if (participant && expelledBeforePeriod(sheet, side, participant.cap, request.period)) return;
     const latest = draftRef.current;
     const chosen = latest[side];
     if (!keeper && !chosen.field.includes(key) && chosen.field.length >= rules.fieldPlayers) {
@@ -159,7 +212,7 @@ export function ActaLineupSheet({
     void update({
       ...latest,
       [side]: keeper
-        ? { ...chosen, keeper: key }
+        ? { ...chosen, keeper: key, field: chosen.field.filter((p) => p !== key) }
         : {
             ...chosen,
             field: chosen.field.includes(key)
@@ -174,19 +227,17 @@ export function ActaLineupSheet({
     try {
       if (!(await draftQueue.current))
         throw new Error("Vuelve a elegir los jugadores para guardar la selección.");
-      const prepared = {
-        ...sheet,
-        participation: { ...sheet.participation!, fixedKeepers: fixed },
-      };
       const next = saveLineups(
-        prepared,
+        sheet,
         lineups,
         request.mode,
         warnings.length || structures.length
           ? "Incidencia revisada con el entrenador o árbitro"
           : undefined,
       );
-      if (await change(next)) onSaved(next);
+      if (conflict)
+        throw new Error("Cierra esta lista y vuelve a abrirla para revisar la selección actual.");
+      if (await change(next, draftRevision.current)) onSaved(next);
       else
         setError("No se ha guardado la selección. Revisa el aviso del acta y vuelve a intentarlo.");
     } catch (e) {
@@ -344,12 +395,11 @@ export function ActaLineupSheet({
         ]}
       />
     );
-  const activeAdvice = advice.filter((a) => a.kind !== "missing" && fixed[side] !== a.key);
+  const activeAdvice = advice.filter((a) => a.kind !== "missing");
   function playerButton(p: (typeof options)[number], keeper: boolean) {
     const selected = keeper ? selection.keeper === p.key : selection.field.includes(p.key);
     const hint = activeAdvice.find((a) => a.key === p.key);
-    const totals = playerTotals(sheet, side, p.cap);
-    const out = totals.red || totals.exclusions >= rules.exclusionLimit;
+    const out = expelledBeforePeriod(sheet, side, p.cap, request.period);
     const history = playedPeriods(sheet, side, p.key, request.period);
     const warning = out
       ? "Expulsado"
@@ -363,10 +413,11 @@ export function ActaLineupSheet({
         key={p.key}
         data-acta-lineup-player={side}
         type="button"
-        aria-label={side === "us" ? `${p.cap} ${p.name}` : String(p.cap)}
+        aria-label={`${side === "us" ? `${p.cap} ${p.name}` : String(p.cap)}${out ? " · Expulsado" : ""}`}
         aria-pressed={selected}
+        disabled={out || conflict}
         onClick={() => select(p.key, keeper)}
-        className={`flex ${side === "them" ? "h-[4.5rem]" : "h-16"} min-w-0 items-center gap-2 rounded-xl border-2 px-2 text-left transition-colors motion-reduce:transition-none ${out || hint?.kind === "rest" ? "text-pool-deep border-red-800 bg-red-50" : hint?.kind === "play" ? "text-pool-deep border-emerald-800 bg-emerald-50" : selected ? "border-pool-blue text-pool-deep bg-blue-50" : "border-pool-deep/70 text-pool-deep bg-white"}`}
+        className={`flex ${side === "them" ? "h-[4.5rem]" : "h-16"} min-w-0 items-center gap-2 rounded-xl border-2 px-2 text-left transition-colors disabled:cursor-not-allowed motion-reduce:transition-none ${out ? "border-slate-500 bg-slate-100 text-slate-700" : hint?.kind === "rest" ? "text-pool-deep border-red-800 bg-red-50" : hint?.kind === "play" ? "text-pool-deep border-emerald-800 bg-emerald-50" : selected ? "border-pool-blue text-pool-deep bg-blue-50" : "border-pool-deep/70 text-pool-deep bg-white"}`}
       >
         <strong
           className={`relative grid shrink-0 place-items-center rounded-lg border text-xl font-extrabold ${side === "us" ? "h-8 w-8" : "h-10 w-10"} ${selected ? "border-pool-deep bg-pool-deep text-white" : "text-pool-deep border-slate-500 bg-slate-200"}`}
@@ -415,6 +466,11 @@ export function ActaLineupSheet({
     );
   }
   function advance() {
+    if (conflict) return;
+    if (eligibility.length) {
+      setError(eligibility[0]);
+      return;
+    }
     if (side === "us" && (request.mode === "start" || !draft.them.keeper)) {
       if (!selection.keeper || selection.field.length !== rules.fieldPlayers) {
         setError(
@@ -456,15 +512,23 @@ export function ActaLineupSheet({
           {request.mode === "start" && (
             <div data-acta-lineup-steps className="grid grid-cols-2 gap-2 text-base font-bold">
               {(["us", "them"] as const).map((team) => (
-                <span
+                <button
                   key={team}
-                  className={`flex min-h-11 items-center gap-2 rounded-lg border px-3 py-2 ${side === team ? "border-pool-deep bg-pool-deep text-white" : "border-slate-500 bg-slate-100 text-slate-700"}`}
+                  type="button"
+                  aria-pressed={side === team}
+                  disabled={busy || conflict}
+                  onClick={() => {
+                    if (side === team) return;
+                    if (team === "us") void update({ ...draftRef.current, step: "us" });
+                    else advance();
+                  }}
+                  className={`flex min-h-12 items-center gap-2 rounded-lg border px-3 py-2 text-left transition-colors disabled:opacity-50 motion-reduce:transition-none ${side === team ? "border-pool-deep bg-pool-deep text-white" : "border-slate-500 bg-slate-100 text-slate-700 active:bg-slate-200"}`}
                 >
                   {team === "us" ? "1. Morvedre" : "2. Rival"}
                   {side === team && (
                     <Check size={18} aria-hidden="true" className="ml-auto shrink-0" />
                   )}
-                </span>
+                </button>
               ))}
             </div>
           )}
@@ -538,21 +602,6 @@ export function ActaLineupSheet({
           >
             {keepers.map((p) => playerButton(p, true))}
           </div>
-          {rules.singleKeeper && keepers.length === 1 && request.period === 1 && (
-            <label className="flex min-h-12 items-center gap-3 rounded-lg bg-blue-50 px-3 text-sm font-semibold">
-              <input
-                type="checkbox"
-                className="accent-pool-deep h-5 w-5 shrink-0"
-                checked={fixed[side] === keepers[0].key}
-                onChange={(e) => {
-                  const next = { ...fixed, [side]: e.target.checked ? keepers[0].key : null };
-                  setFixed(next);
-                  void update({ ...draftRef.current, fixedKeepers: next });
-                }}
-              />
-              Único portero para los cuatro cuartos
-            </label>
-          )}
         </section>
         <section aria-label="Jugadores de campo" className="space-y-2">
           <div className="flex items-center justify-between gap-2 text-base font-extrabold">
@@ -565,7 +614,9 @@ export function ActaLineupSheet({
             data-acta-lineup-grid={side}
             className={side === "us" ? "grid gap-1.5" : "grid grid-cols-2 gap-2"}
           >
-            {options.filter((p) => ![1, 13].includes(p.cap)).map((p) => playerButton(p, false))}
+            {options
+              .filter((p) => ![1, 13].includes(p.cap) && p.key !== selection.keeper)
+              .map((p) => playerButton(p, false))}
           </div>
         </section>
       </div>

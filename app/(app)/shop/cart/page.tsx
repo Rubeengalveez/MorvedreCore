@@ -1,38 +1,32 @@
 import { redirect } from "next/navigation";
-import { ShoppingBag } from "lucide-react";
-
 import { getActiveProfileContext, getOwnProfilePhone } from "@/server/queries/active-profile";
 import { getShopProducts } from "@/server/queries/shop";
-import { PageHeader, PageShell } from "@/components/ui/page-shell";
-import { PageBackLink } from "@/components/ui/page-back-link";
+import { PageShell } from "@/components/ui/page-shell";
+import { ShopNavigation } from "@/components/shop/shop-navigation";
+import { ShopContact } from "@/components/shop/shop-contact";
 import { CartClient } from "../_components/cart-client";
 import { requiresGuardianApproval } from "@/lib/domain/family";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
 export const metadata = { title: "Carrito — Morvedre Core" };
-
 export default async function CartPage() {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
-  const [products, initialPhone] = await Promise.all([getShopProducts(), getOwnProfilePhone()]);
-
+  const [products, phone] = await Promise.all([
+    getShopProducts({ availableOnly: true }),
+    getOwnProfilePhone(),
+  ]);
   return (
-    <PageShell width="lg" className="gap-4 pb-8">
-      <PageBackLink href="/shop">Seguir comprando</PageBackLink>
-      <PageHeader
-        eyebrow="Tienda Morvedre"
-        title="Tu carrito"
-        description="Revisa los productos que has elegido antes de enviar la solicitud. No pagarás en la app."
-        icon={<ShoppingBag className="h-5 w-5" aria-hidden="true" />}
-      />
+    <PageShell width="md" className="gap-4 pb-8">
+      <h1 className="text-pool-deep text-3xl font-extrabold">Tu carrito</h1>
+      <ShopNavigation profileId={ctx.ownProfile.id} active="cart" />
       <CartClient
         profileId={ctx.ownProfile.id}
         products={products}
-        initialPhone={initialPhone}
+        initialPhone={phone}
         requiresGuardian={requiresGuardianApproval(ctx.ownProfile.birth_year)}
       />
+      <ShopContact message="Hola Sol, tengo una duda sobre mi carrito de la tienda de Morvedre Core." />
     </PageShell>
   );
 }

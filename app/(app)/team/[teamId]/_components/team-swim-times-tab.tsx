@@ -1,12 +1,14 @@
 import type { Route } from "next";
 import Link from "next/link";
-import { ChevronRight, Plus, Timer, Waves } from "lucide-react";
+import { ChevronRight, Plus, Timer } from "lucide-react";
 
+import { TeamEmpty, TeamSection, teamPrimary } from "@/components/team/team-ui";
 import { Avatar } from "@/components/ui/avatar";
 import { AdaptivePlayerName } from "@/components/ui/adaptive-player-name";
 import { validCapNumber } from "@/lib/domain/cap-number";
 import { formatSwimTime } from "@/lib/domain/swim-times";
 import { getSwimTimeEntries } from "@/server/queries/swim-times";
+import { teamNestedOrigin } from "@/lib/domain/team-navigation-origin";
 
 interface RosterPlayer {
   player_id: string;
@@ -19,6 +21,7 @@ interface RosterPlayer {
 
 export interface TeamSwimTimesTabProps {
   teamId: string;
+  context?: string;
   teamLabel: string;
   teamColor: string;
   isCoach: boolean;
@@ -27,12 +30,14 @@ export interface TeamSwimTimesTabProps {
 
 export async function TeamSwimTimesTab({
   teamId,
-  teamLabel,
+  context = "",
   teamColor,
   isCoach,
   roster,
 }: TeamSwimTimesTabProps) {
   const entries = await getSwimTimeEntries({ teamId });
+  const historyParams = new URLSearchParams({ from: "team", teamId });
+  for (const [key, value] of teamNestedOrigin(context)) historyParams.set(key, value);
 
   const latestByPlayer = new Map<
     string,
@@ -64,103 +69,90 @@ export async function TeamSwimTimesTab({
     <div className="flex flex-col gap-5">
       {isCoach ? (
         <Link
-          href={`/team/${teamId}/swim-times` as Route}
-          className="bg-pool-deep text-paper hover:bg-pool-blue flex min-h-16 touch-manipulation items-center justify-between gap-3 rounded-2xl p-4 font-extrabold shadow-md transition-all active:scale-[0.98]"
+          href={`/team/${teamId}/swim-times${context ? `?${context}` : ""}` as Route}
+          className={`${teamPrimary} justify-between p-4`}
         >
-          <div className="flex items-center gap-3">
-            <span className="bg-pool-foam/20 text-paper flex h-12 w-12 shrink-0 items-center justify-center rounded-xl">
-              <Timer className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <div>
-              <span className="block text-base sm:text-lg">Añadir tiempos de nado</span>
-              <span className="text-paper/80 block text-xs sm:text-sm font-semibold">
-                Tiempos de 50 m o 100 m para {teamLabel}
-              </span>
-            </div>
-          </div>
-          <span className="bg-paper text-pool-deep flex h-9 w-9 shrink-0 items-center justify-center rounded-xl font-bold">
-            <Plus className="h-5 w-5" aria-hidden="true" />
+          <span className="flex items-center gap-3">
+            <Timer className="h-6 w-6 shrink-0" aria-hidden="true" />
+            Añadir tiempos de nado
           </span>
+          <Plus className="h-5 w-5 shrink-0" aria-hidden="true" />
         </Link>
       ) : null}
-
       {playersWithTimes.length === 0 ? (
-        <div className="border-ink-200 bg-paper-card text-ink-500 flex min-h-36 flex-col items-center justify-center rounded-2xl border border-dashed px-5 text-center text-sm">
-          <Waves className="mb-2 h-7 w-7 text-ink-400" aria-hidden="true" />
-          <p className="font-bold text-ink-700 text-base">Sin tiempos registrados aún</p>
-          <p className="mt-1 text-ink-500 max-w-xs">
-            {isCoach
-              ? "Usa el botón de arriba para registrar las primeras marcas del equipo."
-              : "El entrenador aún no ha registrado controles de natación para este equipo."}
-          </p>
-        </div>
+        <TeamEmpty
+          title="Sin tiempos registrados"
+          description={
+            isCoach
+              ? "Añade el primer control de nado del equipo."
+              : "Aquí aparecerán los controles de nado del equipo."
+          }
+        />
       ) : (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center justify-between px-1">
-            <h3 className="text-pool-deep font-extrabold text-sm uppercase tracking-wider">
-              Tiempos del equipo ({playersWithTimes.length})
-            </h3>
-          </div>
-
-          <div className="border-ink-200 bg-paper-card divide-ink-200 flex flex-col divide-y rounded-2xl border shadow-sm">
+        <TeamSection title="Últimos tiempos">
+          <div className="space-y-3">
             {playersWithTimes.map((player) => {
               const data = latestByPlayer.get(player.player_id);
               const number = validCapNumber(player.squad_number ?? player.cap_number);
               return (
                 <Link
                   key={player.player_id}
-                  href={`/players/${player.player_id}/swim-times?from=team&teamId=${teamId}` as Route}
-                  className="hover:bg-pool-foam/30 flex min-h-16 items-center justify-between gap-3 p-3.5 transition-colors"
+                  href={`/players/${player.player_id}/swim-times?${historyParams}` as Route}
+                  className="border-pool-deep/65 text-pool-deep focus-visible:outline-pool-blue block rounded-xl border-2 bg-white p-3 focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <div className="flex items-center gap-3">
                     <Avatar
                       src={player.photo_url}
                       name={player.full_name}
-                      size={44}
+                      size={48}
                       teamColor={teamColor}
                     />
                     <div className="min-w-0 flex-1">
-                      <span className="text-ink-900 block font-extrabold text-base">
+                      <span className="block text-base font-extrabold">
                         <AdaptivePlayerName name={player.full_name} />
                       </span>
-                      <p className="text-ink-500 text-xs font-semibold">
-                        {number != null ? `Gorro #${number}` : "Sin gorro"}
-                      </p>
+                      <span className="text-sm font-medium">
+                        {number != null ? `Gorro ${number}` : "Sin gorro"}
+                      </span>
                     </div>
+                    <ChevronRight className="text-pool-blue h-5 w-5 shrink-0" aria-hidden="true" />
                   </div>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="flex flex-col items-end gap-0.5 text-right">
-                      {data?.time50 != null ? (
-                        <span className="text-pool-deep font-black text-sm sm:text-base tabular-nums">
-                          50m: <span className="text-ink-900">{formatSwimTime(data.time50)}</span>
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    {[
+                      { distance: 50, value: data?.time50 },
+                      { distance: 100, value: data?.time100 },
+                    ].map(({ distance, value }) => (
+                      <span
+                        key={distance}
+                        className="border-pool-deep/65 rounded-lg border bg-blue-50 p-2 text-center text-sm font-bold tabular-nums"
+                      >
+                        {distance} m{" "}
+                        <span className="ml-1 font-extrabold">
+                          {value != null ? formatSwimTime(value) : "Sin marca"}
                         </span>
-                      ) : null}
-                      {data?.time100 != null ? (
-                        <span className="text-pool-deep font-black text-sm sm:text-base tabular-nums">
-                          100m: <span className="text-ink-900">{formatSwimTime(data.time100)}</span>
-                        </span>
-                      ) : null}
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-ink-400" aria-hidden="true" />
+                      </span>
+                    ))}
                   </div>
                 </Link>
               );
             })}
           </div>
-
-          {playersWithoutTimes.length > 0 ? (
-            <div className="mt-2 px-1">
-              <p className="text-ink-500 text-xs font-bold">
-                Sin tiempos registrados ({playersWithoutTimes.length}):{" "}
-                <span className="font-normal">
-                  {playersWithoutTimes.map((p) => p.full_name).join(", ")}
-                </span>
-              </p>
-            </div>
-          ) : null}
-        </div>
+        </TeamSection>
       )}
+      {playersWithoutTimes.length > 0 && playersWithTimes.length > 0 ? (
+        <details className="border-pool-deep/65 text-pool-deep overflow-hidden rounded-2xl border-2 bg-white">
+          <summary className="min-h-14 cursor-pointer p-4 text-base font-extrabold">
+            Sin tiempos · {playersWithoutTimes.length}
+          </summary>
+          <ul className="space-y-2 px-4 pb-4">
+            {playersWithoutTimes.map((player) => (
+              <li key={player.player_id} className="rounded-lg bg-blue-50 px-3 py-2 font-semibold">
+                <AdaptivePlayerName name={player.full_name} />
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
     </div>
   );
 }

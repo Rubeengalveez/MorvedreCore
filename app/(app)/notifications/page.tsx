@@ -1,406 +1,177 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import type { Route } from "next";
 import { redirect } from "next/navigation";
-import {
-  Bell,
-  Check,
-  Calendar,
-  Trophy,
-  Volleyball,
-  Megaphone,
-  UserCheck,
-  UserX,
-  XCircle,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-
-import { Avatar } from "@/components/ui/avatar";
-import { Card } from "@/components/ui/card";
-import { StatusBadge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
-import { PageHeader, PageShell } from "@/components/ui/page-shell";
-import { PushSettings } from "@/components/push/push-settings";
-import { createClient } from "@/lib/supabase/server";
-import { timeAgo } from "@/lib/domain/calendar";
-import { cn } from "@/lib/utils/cn";
+import { Bell, ChevronLeft, ChevronRight } from "lucide-react";
+import { PageShell } from "@/components/ui/page-shell";
+import { PageBackLink } from "@/components/ui/page-back-link";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
+import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import {
-  getNotificationsForProfile,
+  getNotificationInbox,
+  getNotificationPreferences,
   getUnreadNotificationsCount,
-  type NotificationItem,
 } from "@/server/queries/notifications";
-import {
-  MarkAllNotificationsButton,
-  NotificationCardAction,
-} from "./_components/notification-actions";
+import { notificationPresentation } from "@/lib/domain/notifications";
+import { timeAgo } from "@/lib/domain/calendar";
+import { NotificationPreferencesButton } from "./_components/notification-preferences";
+import { MarkAllNotificationsButton } from "./_components/notification-actions";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-export const metadata: Metadata = {
-  title: "Notificaciones — Morvedre Core",
-  description: "Tus avisos y notificaciones del club.",
-};
-
-const CLOCK_FORMATTER = new Intl.DateTimeFormat("es-ES", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
-const DAY_FORMATTER = new Intl.DateTimeFormat("es-ES", {
-  weekday: "long",
-  day: "numeric",
-  month: "short",
-});
-const NOTIFICATIONS_PER_PAGE = 20;
-
-const KIND_META: Record<
-  string,
-  { label: string; Icon: typeof Calendar; color: string; tone: string }
-> = {
-  convocatoria: {
-    label: "Convocatoria",
-    Icon: Trophy,
-    color: "var(--action)",
-    tone: "border-brand-action/30 bg-brand-action/5",
-  },
-  match_reminder: {
-    label: "Recordatorio",
-    Icon: Calendar,
-    color: "var(--pool-blue)",
-    tone: "border-pool-blue bg-blue-50",
-  },
-  training_cancelled: {
-    label: "Entreno cancelado",
-    Icon: XCircle,
-    color: "var(--danger)",
-    tone: "border-danger bg-red-50",
-  },
-  training_absence: {
-    label: "Ausencia",
-    Icon: UserX,
-    color: "var(--danger)",
-    tone: "border-danger bg-red-50",
-  },
-  training_attendance_corrected: {
-    label: "Corrección",
-    Icon: UserCheck,
-    color: "var(--success)",
-    tone: "border-success bg-emerald-50",
-  },
-  news_pinned: {
-    label: "Noticia",
-    Icon: Megaphone,
-    color: "var(--pool-teal)",
-    tone: "border-pool-teal bg-cyan-50",
-  },
-  access_request: {
-    label: "Solicitud de acceso",
-    Icon: UserCheck,
-    color: "var(--pool-blue)",
-    tone: "border-pool-blue bg-blue-50",
-  },
-  result_published: {
-    label: "Resultado",
-    Icon: Trophy,
-    color: "var(--success)",
-    tone: "border-success bg-emerald-50",
-  },
-  monthly_close: {
-    label: "Cierre mensual",
-    Icon: Volleyball,
-    color: "var(--ink-600)",
-    tone: "border-ink-300 bg-paper",
-  },
-};
-
-interface MatchContext {
-  id: string;
-  opponent: string;
-  scheduled_at: string;
-  team_label: string;
-  team_color: string;
-}
-
-async function loadContextForNotifications(
-  items: NotificationItem[],
-): Promise<{ matchById: Map<string, MatchContext>; photoByProfile: Map<string, string | null> }> {
-  const matchById = new Map<string, MatchContext>();
-  const photoByProfile = new Map<string, string | null>();
-  if (items.length === 0) return { matchById, photoByProfile };
-
-  const supabase = await createClient();
-  const matchIds = Array.from(
-    new Set(items.map((i) => i.related_match_id).filter((v): v is string => v != null)),
-  );
-
-  if (matchIds.length > 0) {
-    const { data } = await supabase
-      .from("matches")
-      .select("id, opponent, scheduled_at, teams!matches_team_id_fkey(label, color)")
-      .in("id", matchIds);
-    for (const m of (data ?? []) as Array<{
-      id: string;
-      opponent: string;
-      scheduled_at: string;
-      teams: unknown;
-    }>) {
-      const team = Array.isArray(m.teams) ? m.teams[0] : m.teams;
-      const teamObj = team as { label?: string; color?: string } | null;
-      matchById.set(m.id, {
-        id: m.id,
-        opponent: m.opponent,
-        scheduled_at: m.scheduled_at,
-        team_label: teamObj?.label ?? "",
-        team_color: teamObj?.color ?? "var(--pool-blue)",
-      });
-    }
-  }
-
-  const profileIds = Array.from(
-    new Set(
-      items
-        .flatMap((item) => [item.recipient_id, item.related_profile_id])
-        .filter((value): value is string => value != null),
-    ),
-  );
-  if (profileIds.length > 0) {
-    const { data } = await supabase.from("profiles").select("id, photo_url").in("id", profileIds);
-    for (const p of (data ?? []) as Array<{ id: string; photo_url: string | null }>) {
-      photoByProfile.set(p.id, p.photo_url);
-    }
-  }
-
-  return { matchById, photoByProfile };
-}
+export const metadata = { title: "Notificaciones — Morvedre Core" };
 
 export default async function NotificationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string; page?: string }>;
+  searchParams: Promise<{ view?: string; page?: string; from?: string }>;
 }) {
-  const ctx = await getActiveProfileContext();
-  if (!ctx) redirect("/login");
-
-  const params = await searchParams;
-  const [items, unread] = await Promise.all([
-    getNotificationsForProfile(ctx.activeProfile.id, 100).catch(() => [] as NotificationItem[]),
-    getUnreadNotificationsCount(ctx.activeProfile.id).catch(() => 0),
+  const [ctx, params, access] = await Promise.all([
+    getActiveProfileContext(),
+    searchParams,
+    getRenderAdminAccess(),
   ]);
-
-  const view = params.view === "unread" ? "unread" : "all";
-  const visibleItems = view === "unread" ? items.filter((item) => item.read_at == null) : items;
-  const totalPages = Math.max(1, Math.ceil(visibleItems.length / NOTIFICATIONS_PER_PAGE));
-  const requestedPage = Number.parseInt(params.page ?? "1", 10);
-  const page = Math.min(
-    Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1,
-    totalPages,
-  );
-  const pageItems = visibleItems.slice(
-    (page - 1) * NOTIFICATIONS_PER_PAGE,
-    page * NOTIFICATIONS_PER_PAGE,
-  );
-  const { matchById, photoByProfile } = await loadContextForNotifications(pageItems);
-
+  if (!ctx?.ownProfile.is_active) redirect("/login");
+  const view = params.view === "all" ? "all" : "unread";
+  const requestedPage = /^\d{1,6}$/.test(params.page ?? "") ? Math.max(1, Number(params.page)) : 1;
+  const [inbox, unread, preferences] = await Promise.all([
+    getNotificationInbox(ctx.ownProfile.id, view, requestedPage),
+    getUnreadNotificationsCount(ctx.ownProfile.id),
+    getNotificationPreferences(ctx.ownProfile.id),
+  ]);
+  const origin = params.from === "profile" ? "&from=profile" : "";
+  const path = (nextView: string, page = 1) =>
+    `/notifications?view=${nextView}&page=${page}${origin}`;
   return (
-    <PageShell width="md" className="gap-5 pb-8">
-      <PageHeader
-        eyebrow="Buzón"
-        title="Notificaciones"
-        description={`${unread > 0 ? `${unread} sin leer` : "Estás al día"} · ${items.length}${items.length === 100 ? "+" : ""} avisos recientes`}
-        icon={<Bell className="h-5 w-5" aria-hidden="true" />}
-        action={<MarkAllNotificationsButton disabled={unread === 0} />}
-      />
-
-      <PushSettings key={ctx.ownProfile.id} publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
-
-      <nav
-        aria-label="Filtrar notificaciones"
-        className="border-ink-200 bg-paper-card grid grid-cols-2 rounded-xl border p-1"
-      >
-        <Link
-          href={"/notifications?view=all" as Route}
-          aria-current={view === "all" ? "page" : undefined}
-          className={cn(
-            "focus-visible:ring-pool-blue flex min-h-12 touch-manipulation items-center justify-center rounded-xl text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
-            view === "all" ? "bg-pool-deep text-paper" : "text-ink-600",
-          )}
-        >
-          Todas
-        </Link>
-        <Link
-          href={"/notifications?view=unread" as Route}
-          aria-current={view === "unread" ? "page" : undefined}
-          className={cn(
-            "focus-visible:ring-pool-blue flex min-h-12 touch-manipulation items-center justify-center rounded-xl text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
-            view === "unread" ? "bg-pool-deep text-paper" : "text-ink-600",
-          )}
-        >
-          Sin leer ({unread})
-        </Link>
-      </nav>
-
-      {visibleItems.length === 0 ? (
-        <EmptyState
-          icon={<Check className="h-6 w-6" aria-hidden="true" />}
-          title="Estás al día"
-          description="Las convocatorias, cancelaciones y avisos importantes aparecerán aquí."
+    <PageShell width="md" className="gap-3 pb-5">
+      <PageBackLink href={origin ? "/profile" : "/dashboard"}>
+        {origin ? "Mi perfil" : "Inicio"}
+      </PageBackLink>
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-pool-deep text-2xl font-extrabold">Notificaciones</h1>
+        <NotificationPreferencesButton
+          initial={preferences}
+          admin={access.isAdmin}
+          publicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
         />
+      </div>
+      <nav aria-label="Ver notificaciones" className="grid grid-cols-2 gap-2">
+        {[
+          { id: "unread", label: "Sin leer", count: unread },
+          { id: "all", label: "Todas", count: view === "all" ? inbox.total : null },
+        ].map((tab) => (
+          <Link
+            key={tab.id}
+            href={path(tab.id) as Route}
+            replace
+            aria-current={view === tab.id ? "page" : undefined}
+            className={`border-pool-deep/70 focus-visible:outline-pool-blue flex min-h-14 min-w-0 items-center justify-center gap-2 rounded-xl border-2 px-3 font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 ${view === tab.id ? "bg-pool-deep text-white" : "text-pool-deep bg-white"}`}
+          >
+            <span className="whitespace-nowrap">{tab.label}</span>
+            {tab.count !== null && (
+              <span
+                className={`shrink-0 rounded-md px-2 py-1 text-sm tabular-nums ${view === tab.id ? "bg-white/15" : "bg-blue-100"}`}
+              >
+                {tab.count}
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+      {unread > 0 && <MarkAllNotificationsButton />}
+      {inbox.items.length ? (
+        <ol className="flex flex-col gap-2.5">
+          {inbox.items.map((item) => {
+            const meta = notificationPresentation(item.kind, item.href);
+            return (
+              <li key={item.id}>
+                <Link
+                  href={
+                    `/notifications/${item.id}?view=${view}&page=${inbox.page}${origin}` as Route
+                  }
+                  className={`border-pool-deep/65 text-pool-deep focus-visible:outline-pool-blue block rounded-2xl border-2 p-4 focus-visible:outline-2 focus-visible:outline-offset-2 active:bg-blue-100 ${item.read_at ? "bg-white" : "bg-blue-50"}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={`rounded-md border px-2 py-1 text-sm font-bold ${meta.attention ? "border-red-800 bg-red-50 text-red-900" : "border-pool-deep/65 bg-white"}`}
+                    >
+                      {meta.label}
+                    </span>
+                    {!item.read_at && (
+                      <span className="text-pool-blue flex shrink-0 items-center gap-1.5 text-sm font-bold">
+                        <span aria-hidden="true" className="bg-pool-blue h-2 w-2 rounded-full" />
+                        Sin leer
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="mt-3 text-lg leading-snug font-extrabold">{item.title}</h2>
+                  {item.body && (
+                    <p className="mt-1 line-clamp-2 text-base leading-snug font-medium">
+                      {item.body}
+                    </p>
+                  )}
+                  <div className="mt-3 flex items-center justify-between gap-3 text-sm font-semibold">
+                    <time dateTime={item.created_at}>{timeAgo(item.created_at)}</time>
+                    <span className="text-pool-blue inline-flex items-center gap-1">
+                      Ver aviso <ChevronRight className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
+        </ol>
       ) : (
-        <ul className="flex flex-col gap-2">
-          {pageItems.map((n) => (
-            <NotificationRow
-              key={n.id}
-              item={n}
-              match={n.related_match_id ? (matchById.get(n.related_match_id) ?? null) : null}
-              photoUrl={photoByProfile.get(n.related_profile_id ?? n.recipient_id) ?? null}
-            />
-          ))}
-        </ul>
+        <section className="border-pool-deep/65 text-pool-deep rounded-2xl border-2 bg-white p-6 text-center">
+          <Bell className="text-pool-blue mx-auto h-9 w-9" aria-hidden="true" />
+          <h2 className="mt-3 text-xl font-extrabold">
+            {view === "unread" ? "Estás al día" : "Todavía no hay avisos"}
+          </h2>
+          <p className="mt-2 font-medium">
+            {view === "unread"
+              ? "No tienes notificaciones sin leer."
+              : "Los avisos del club aparecerán aquí."}
+          </p>
+          {view === "unread" && (
+            <Link
+              href={path("all") as Route}
+              className="border-pool-deep/65 mt-4 inline-flex min-h-12 items-center justify-center rounded-xl border-2 bg-blue-50 px-4 font-bold"
+            >
+              Ver todas
+            </Link>
+          )}
+        </section>
       )}
-
-      {visibleItems.length > NOTIFICATIONS_PER_PAGE ? (
+      {inbox.pages > 1 && (
         <nav
           aria-label="Páginas de notificaciones"
-          className="border-ink-200 bg-paper-card shadow-elev-1 flex items-center justify-between gap-3 rounded-xl border p-2"
+          className="flex items-center justify-between gap-2"
         >
-          {page > 1 ? (
+          {inbox.page > 1 ? (
             <Link
-              href={`/notifications?view=${view}&page=${page - 1}` as Route}
-              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-1 rounded-xl border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
+              href={path(view, inbox.page - 1) as Route}
+              className="border-pool-deep/65 text-pool-deep inline-flex min-h-12 items-center gap-1 rounded-xl border-2 bg-white px-3 font-bold"
             >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
               Anterior
             </Link>
           ) : (
-            <span aria-hidden="true" className="w-[6.5rem]" />
+            <span />
           )}
-          <span className="text-ink-700 text-center text-sm font-bold">
-            Página <span className="text-pool-deep font-extrabold">{page}</span> de {totalPages}
+          <span className="text-pool-deep font-bold tabular-nums">
+            {inbox.page} / {inbox.pages}
           </span>
-          {page < totalPages ? (
+          {inbox.page < inbox.pages ? (
             <Link
-              href={`/notifications?view=${view}&page=${page + 1}` as Route}
-              className="border-ink-300 text-pool-blue hover:bg-pool-foam focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center gap-1 rounded-xl border px-3 text-sm font-extrabold transition-[background-color,transform] focus-visible:ring-2 focus-visible:outline-none active:scale-[0.97] motion-reduce:transition-none"
+              href={path(view, inbox.page + 1) as Route}
+              className="border-pool-deep/65 text-pool-deep inline-flex min-h-12 items-center gap-1 rounded-xl border-2 bg-white px-3 font-bold"
             >
               Siguiente
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
+              <ChevronRight className="h-5 w-5" aria-hidden="true" />
             </Link>
           ) : (
-            <span aria-hidden="true" className="w-[6.5rem]" />
+            <span />
           )}
         </nav>
-      ) : null}
+      )}
     </PageShell>
-  );
-}
-
-function formatClock(iso: string): string {
-  return CLOCK_FORMATTER.format(new Date(iso));
-}
-
-function formatDayShort(iso: string): string {
-  const d = new Date(iso);
-  return DAY_FORMATTER.format(d);
-}
-
-function getBadgeVariant(kind: string): "brand" | "danger" | "success" | "info" | "neutral" {
-  if (kind === "convocatoria") return "brand";
-  if (kind === "training_cancelled" || kind === "training_absence") return "danger";
-  if (kind === "training_attendance_corrected" || kind === "result_published") return "success";
-  if (kind === "news_pinned" || kind === "match_reminder" || kind === "access_request") return "info";
-  return "neutral";
-}
-
-function NotificationRow({
-  item,
-  match,
-  photoUrl,
-}: {
-  item: NotificationItem;
-  match: MatchContext | null;
-  photoUrl: string | null;
-}) {
-  const meta = KIND_META[item.kind] ?? {
-    label: item.kind,
-    Icon: Megaphone,
-    color: "var(--ink-600)",
-    tone: "border-ink-300 bg-paper",
-  };
-  const Icon = meta.Icon;
-  const isUnread = item.read_at == null;
-
-  return (
-    <li className="content-auto">
-      <Card
-        asChild
-        accentColor={meta.color}
-        className={cn("transition-shadow", isUnread ? "bg-pool-ice" : "bg-paper-card")}
-      >
-        <NotificationCardAction
-          id={item.id}
-          href={item.href}
-          className="flex items-start gap-3 p-4"
-        >
-          <span
-            aria-hidden="true"
-            className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
-            style={{
-              backgroundColor: `color-mix(in oklab, ${meta.color} 15%, var(--paper))`,
-            }}
-          >
-            <Icon className="h-4 w-4" style={{ color: meta.color }} />
-          </span>
-          <div className="flex flex-1 flex-col gap-1">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-display text-pool-deep text-base font-bold">{item.title}</span>
-              <StatusBadge variant={getBadgeVariant(item.kind)} size="sm">
-                {meta.label}
-              </StatusBadge>
-            </div>
-            {item.kind === "convocatoria" && match ? (
-              <div
-                className="border-ink-300 bg-paper flex items-center gap-2 rounded-xl border p-2"
-                style={{ borderLeftWidth: "3px", borderLeftColor: match.team_color }}
-              >
-                <Avatar src={photoUrl} name={item.title} size={28} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-pool-deep line-clamp-1 text-sm font-semibold">
-                    vs {match.opponent}
-                  </p>
-                  <p className="text-ink-600 text-sm font-semibold">
-                    {formatDayShort(match.scheduled_at)} · {formatClock(match.scheduled_at)}
-                  </p>
-                </div>
-                <span className="bg-pool-blue text-paper inline-flex min-h-12 items-center rounded-xl px-3 text-sm font-extrabold">
-                  Responder
-                </span>
-              </div>
-            ) : item.kind === "match_reminder" && match ? (
-              <p className="text-ink-900 text-sm">
-                Mañana tienes partido contra <span className="font-semibold">{match.opponent}</span>{" "}
-                a las <span className="font-mono">{formatClock(match.scheduled_at)}</span>.
-              </p>
-            ) : item.kind === "training_cancelled" ? (
-              <p className="text-ink-900 text-sm">
-                El entreno de hoy se canceló. {item.body ? `Motivo: ${item.body}` : null}
-              </p>
-            ) : item.body ? (
-              <p className="text-ink-900 text-sm whitespace-pre-line">{item.body}</p>
-            ) : null}
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-ink-600 text-sm">{timeAgo(item.created_at)}</span>
-              {item.href ? (
-                <span className="text-pool-blue inline-flex items-center gap-0.5 text-xs font-semibold">
-                  Abrir
-                  <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-                </span>
-              ) : null}
-            </div>
-          </div>
-        </NotificationCardAction>
-      </Card>
-    </li>
   );
 }

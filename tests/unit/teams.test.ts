@@ -8,11 +8,11 @@ import {
 } from "@/lib/domain/categories";
 
 const CURRENT_YEAR = 2026;
-const BENJAMIN_BIRTH = 2015;
-const ALEVIN_BIRTH = 2013;
-const INFANTIL_BIRTH = 2011;
-const CADETE_BIRTH = 2009;
-const JUVENIL_BIRTH = 2007;
+const BENJAMIN_BIRTH = 2017;
+const ALEVIN_BIRTH = 2015;
+const INFANTIL_BIRTH = 2013;
+const CADETE_BIRTH = 2011;
+const JUVENIL_BIRTH = 2009;
 const ABSOLUTO_BIRTH = 2001;
 
 const ALL_CATEGORIES: readonly CategoryCode[] = [

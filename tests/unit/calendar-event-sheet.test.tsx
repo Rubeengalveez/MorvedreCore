@@ -41,7 +41,7 @@ describe("calendar event sheet cards", () => {
   it("groups the training schedule without repeating it and exposes a real attendance link", () => {
     render(<TrainingRow training={training} isCoach />);
 
-    expect(screen.getByRole("heading", { name: "Sesión de agua y táctica" })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Viernes" })).toBeVisible();
     expect(screen.getAllByText("19:00–20:30")).toHaveLength(1);
     expect(screen.getByText("90 min")).toBeVisible();
     expect(screen.getByText(training.location!)).toBeVisible();
@@ -71,12 +71,12 @@ describe("calendar event sheet cards", () => {
     render(<MatchRow match={match} isCoach />);
 
     expect(screen.getByRole("heading", { name: "CN Terrassa contra Morvedre" })).toBeVisible();
-    expect(screen.getByText(/Partido · Torneo/)).toBeVisible();
+    expect(screen.getByText(/Torneo/)).toBeVisible();
     expect(screen.getByText("Piscina CN Terrassa")).toBeVisible();
     expect(
       screen.getByRole("link", { name: "Abrir Piscina CN Terrassa en el mapa" }),
     ).toHaveAttribute("href", match.maps_url);
-    expect(screen.getByRole("link", { name: "Ver convocatoria completa" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Ver partido" })).toHaveAttribute(
       "href",
       `/matches/${match.id}`,
     );

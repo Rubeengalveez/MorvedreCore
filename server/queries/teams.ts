@@ -135,12 +135,9 @@ export async function getTeamRoster(
   }
 
   result.sort((a, b) => {
-    if (a.squad_number != null && b.squad_number != null) {
-      return a.squad_number - b.squad_number;
-    }
-    if (a.squad_number != null) return -1;
-    if (b.squad_number != null) return 1;
-    return a.full_name.localeCompare(b.full_name, "es");
+    const aCap = a.squad_number ?? a.cap_number;
+    const bCap = b.squad_number ?? b.cap_number;
+    return (aCap ?? 999) - (bCap ?? 999) || a.full_name.localeCompare(b.full_name, "es");
   });
 
   return result;
@@ -334,7 +331,7 @@ export async function getAllTeamsInSeason(seasonId: string): Promise<TeamListIte
     .order("label", { ascending: true });
 
   if (teamError || !teamRows) {
-    return [];
+    throw new Error("No pudimos cargar los equipos.");
   }
 
   const teamIds = (teamRows as Array<{ id: string }>).map((t) => t.id);
@@ -511,7 +508,7 @@ export async function getTeamMatches(
     .eq("team_id", teamId)
     .order("scheduled_at", { ascending: false })
     .limit(limit);
-  if (error) return [];
+  if (error) throw new Error("No pudimos cargar los partidos del equipo.");
   return (data ?? []) as Array<{
     id: string;
     opponent: string;

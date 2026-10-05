@@ -22,8 +22,13 @@ import {
   type MatchEvent,
   type Side,
 } from "@/lib/domain/live-match";
-import { exclusionLimit, type Participation } from "@/lib/domain/live-match-rules";
+import {
+  exclusionLimit,
+  rosterRequirementError,
+  type Participation,
+} from "@/lib/domain/live-match-rules";
 import { validCapNumber } from "@/lib/domain/cap-number";
+import { orderedScore } from "@/lib/domain/live-match-score";
 
 import { useLiveMatch } from "./use-live-match";
 import { useActaDialogFocus } from "./use-acta-dialog-focus";
@@ -51,7 +56,6 @@ import {
   controlsParticipation,
   editOpponentCaps,
   eligibleForAction,
-  mustRestFifth,
   outstandingReplacement,
   participantIsPlaying,
   participants,
@@ -114,7 +118,6 @@ export function LiveMatchClient() {
     side: Side;
     cap: number;
     origin: "team" | "board";
-    resting?: boolean;
   } | null>(null);
   const [gateResume, setGateResume] = useState<{
     side: Side;
@@ -124,12 +127,13 @@ export function LiveMatchClient() {
   const [opponentRosterOpen, setOpponentRosterOpen] = useState(false);
   const [opponentRoster, setOpponentRoster] = useState<number[]>([]);
   const [opponentRosterError, setOpponentRosterError] = useState("");
+  const [rosterStartError, setRosterStartError] = useState<{ side: Side; message: string } | null>(
+    null,
+  );
   const [startAfterRoster, setStartAfterRoster] = useState(false);
   const [replacementCorrection, setReplacementCorrection] = useState<
     Participation["changes"][number] | null
   >(null);
-  const [dismissedReplacement, setDismissedReplacement] = useState("");
-  const [restNoticePeriod, setRestNoticePeriod] = useState(0);
   const [keeperParticipationOpen, setKeeperParticipationOpen] = useState(false);
   const backActionRef = useRef<() => void>(() => {});
   const leaveActa = useActaBackGuard(() => backActionRef.current(), Boolean(record));
@@ -258,17 +262,7 @@ export function LiveMatchClient() {
   const playing = enabled && s.phase === "playing";
   const orderedPlayers = s.players.filter((p) => !p.retired).sort((a, b) => a.cap - b.cap);
   const replacement = outstandingReplacement(s);
-  const replacementOpen = Boolean(
-    replacementCorrection || (replacement && replacement.eventId !== dismissedReplacement),
-  );
-  const fifthRest =
-    s.period === 5
-      ? (["us", "them"] as const).flatMap((which) =>
-          participants(s, which)
-            .filter((p) => mustRestFifth(s, which).includes(p.key))
-            .map((p) => `${which === "us" ? "Morvedre" : "Rival"} · ${p.name}`),
-        )
-      : [];
+  const replacementOpen = Boolean(replacementCorrection || replacement);
   const fourthAdvice =
     controlsParticipation(s, 4) && s.phase === "break" && s.period === 3
       ? (["us", "them"] as const).flatMap((which) =>
@@ -384,16 +378,8 @@ export function LiveMatchClient() {
     origin: "team" | "board" = "team",
     confirmed = false,
   ) {
-    if (
-      !confirmed &&
-      !editing &&
-      ((controlsParticipation(s) && !participantIsPlaying(s, which, n)) ||
-        (s.period === 5 &&
-          mustRestFifth(s, which).includes(
-            which === "us" ? (s.players.find((p) => p.cap === n)?.id ?? "") : String(n),
-          )))
-    ) {
-      setPlayerGate({ side: which, cap: n, origin, resting: s.period === 5 });
+    if (!confirmed && !editing && controlsParticipation(s) && !participantIsPlaying(s, which, n)) {
+      setPlayerGate({ side: which, cap: n, origin });
       setPanel(null);
       return;
     }
@@ -529,12 +515,8 @@ export function LiveMatchClient() {
       return;
     }
     if (replacementOpen) {
+      if (replacement) return;
       setReplacementCorrection(null);
-      setDismissedReplacement(replacement?.eventId ?? "");
-      return;
-    }
-    if (fifthRest.length > 0 && restNoticePeriod !== s.period && !s.pending) {
-      setRestNoticePeriod(s.period);
       return;
     }
     if (lineupRequest) {
@@ -554,6 +536,10 @@ export function LiveMatchClient() {
       setOpponentRosterOpen(false);
       return;
     }
+    if (rosterStartError) {
+      setRosterStartError(null);
+      return;
+    }
     if (s.pending) {
       void dismissPanel();
       return;
@@ -571,9 +557,9 @@ export function LiveMatchClient() {
       participationReview ||
       playerGate ||
       opponentRosterOpen ||
+      rosterStartError ||
       keeperParticipationOpen ||
-      replacementOpen ||
-      (fifthRest.length > 0 && restNoticePeriod !== s.period && !s.pending)
+      replacementOpen
     ) {
       requestExit();
       return;
@@ -843,6 +829,17 @@ export function LiveMatchClient() {
   }
 
   function startQuarter() {
+    for (const which of ["us", "them"] as const) {
+      const requirement = rosterRequirementError(
+        s.category,
+        participants(s, which).map((p) => p.cap),
+        which,
+      );
+      if (requirement) {
+        setRosterStartError({ side: which, message: requirement });
+        return;
+      }
+    }
     const period = s.phase === "ready" ? 1 : s.period + 1;
     if (controlsParticipation(s, period)) {
       setPanel(null);
@@ -1222,7 +1219,7 @@ export function LiveMatchClient() {
                   : "Acta"
                 : `Cuarto ${s.period}`;
 
-  const isKeeperCap = side === "us" && (cap === 1 || cap === 13);
+  const isKeeperCap = side === "us" && (cap === 1 || cap === 13 || cap === s.keeper);
   const showPlayerBanner =
     cap !== null &&
     ["actions", "goal", "shot", "sanction", "miss-correction"].includes(activePanel);
@@ -1324,20 +1321,6 @@ export function LiveMatchClient() {
               </button>
             </div>
           )}
-          {replacement && !s.pending && !closed && (
-            <div className="relative z-20 flex flex-wrap gap-2 px-3 py-2">
-              {replacement && (
-                <button
-                  type="button"
-                  onClick={() => setDismissedReplacement("")}
-                  className="min-h-12 rounded-xl border-2 border-red-800 bg-white px-3 text-sm font-bold text-red-800"
-                >
-                  Falta registrar un sustituto
-                </button>
-              )}
-            </div>
-          )}
-
           {s.phase === "break" && fourthAdvice.length === 0 && (
             <div
               className="m-3 rounded-2xl border-2 border-[#87add0] bg-[#e7f1fa] p-4 text-center text-[#062048]"
@@ -1405,9 +1388,13 @@ export function LiveMatchClient() {
                         aria-label="Quitar un jugador rival"
                         className="min-h-12 rounded-lg border border-slate-400 bg-white text-2xl font-bold"
                         disabled={!enabled || s.opponentCaps.length <= 5}
-                        onClick={() =>
-                          void change({ ...s, opponentCaps: s.opponentCaps.slice(0, -1) })
-                        }
+                        onClick={() => {
+                          const next = s.opponentCaps.slice(0, -1);
+                          const requirement = rosterRequirementError(s.category, next, "them");
+                          if (requirement)
+                            setRosterStartError({ side: "them", message: requirement });
+                          else void change({ ...s, opponentCaps: next });
+                        }}
                       >
                         −
                       </button>
@@ -1931,7 +1918,7 @@ export function LiveMatchClient() {
                         <div
                           className={`${styles.actionGrid} ${side === "them" ? styles.rivalActionGrid : ""}`}
                         >
-                          {side === "us" && (cap === 1 || cap === 13) && (
+                          {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
                             <>
                               {button("Parada", () => void add("save"), styles.actionSave)}
                               {button(
@@ -1966,7 +1953,7 @@ export function LiveMatchClient() {
                             button("Tarjeta roja", () => void add("red"), styles.actionSanctionRed)}
                         </div>
 
-                        {side === "us" && (cap === 1 || cap === 13) && (
+                        {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
                           <button
                             className="my-2 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-bold text-slate-700 active:bg-slate-100"
                             disabled={!enabled}
@@ -2603,7 +2590,10 @@ export function LiveMatchClient() {
                     )}
                     <div className={styles.playerList}>
                       {orderedPlayers
-                        .filter((player) => player.cap === 1 || player.cap === 13)
+                        .filter(
+                          (player) =>
+                            player.cap === 1 || player.cap === 13 || player.cap === s.keeper,
+                        )
                         .map((player) => {
                           const totals = playerTotals(s, "us", player.cap);
                           const out = totals.red || totals.exclusions >= exclusionLimit(s);
@@ -2760,8 +2750,8 @@ export function LiveMatchClient() {
                         {record.homeAway === "away" ? "Rival" : "Morvedre"}
                       </span>
                       <strong className="font-mono text-4xl font-extrabold">
-                        {score(s, record.homeAway === "away" ? "them" : "us")}–
-                        {score(s, record.homeAway === "away" ? "us" : "them")}
+                        {orderedScore(s, record.homeAway).home}–
+                        {orderedScore(s, record.homeAway).away}
                       </strong>
                       <span className="text-sm font-bold">
                         {record.homeAway === "away" ? "Morvedre" : "Rival"}
@@ -2783,7 +2773,7 @@ export function LiveMatchClient() {
                           </span>
                           <strong className="font-mono text-lg tabular-nums">
                             {index + 1 <= s.period
-                              ? `${score(s, "us", index + 1)}–${score(s, "them", index + 1)}`
+                              ? `${orderedScore(s, record.homeAway, index + 1).home}–${orderedScore(s, record.homeAway, index + 1).away}`
                               : "—"}
                           </strong>
                         </div>
@@ -2793,8 +2783,8 @@ export function LiveMatchClient() {
                     <p className="my-2.5 text-center text-base">
                       Este cuarto:{" "}
                       <strong>
-                        {score(s, record.homeAway === "away" ? "them" : "us", s.period)}–
-                        {score(s, record.homeAway === "away" ? "us" : "them", s.period)}
+                        {orderedScore(s, record.homeAway, s.period).home}–
+                        {orderedScore(s, record.homeAway, s.period).away}
                       </strong>
                     </p>
 
@@ -3294,7 +3284,7 @@ export function LiveMatchClient() {
             key={`${record.matchId}:${lineupRequest.period}:${lineupRequest.mode}:${lineupRequest.side ?? "us"}`}
             record={record}
             request={lineupRequest}
-            change={change}
+            change={(next, expectedDraftRevision) => change(next, { expectedDraftRevision })}
             saveDraft={saveLineupDraft}
             busy={busy}
             onClose={() => {
@@ -3343,7 +3333,6 @@ export function LiveMatchClient() {
             busy={busy}
             onClose={() => {
               setReplacementCorrection(null);
-              setDismissedReplacement(replacement?.eventId ?? "");
               if (panel === "keeper") setPanel(null);
             }}
           />
@@ -3352,30 +3341,23 @@ export function LiveMatchClient() {
           open={Boolean(playerGate)}
           onOpenChange={(open) => !open && setPlayerGate(null)}
           context="Comprobar quién juega"
-          title={playerGate?.resting ? "Debe descansar este cuarto" : "¿Está jugando este cuarto?"}
+          title="¿Está jugando este cuarto?"
           icon="warning"
           summary={
             playerGate
               ? `${playerGate.side === "us" ? "Morvedre" : "Rival"} · ${playerGate.cap}${playerGate.side === "us" ? ` · ${s.players.find((p) => p.cap === playerGate.cap)?.name ?? ""}` : ""}`
               : ""
           }
-          description={
-            playerGate?.resting
-              ? "Tiene un descanso obligatorio en el quinto. Avísalo al entrenador o al árbitro antes de anotar."
-              : "No figura entre los que juegan. Si está en el agua, revisa la selección del cuarto."
-          }
+          description="No figura entre los que juegan. Si está en el agua, revisa la selección del cuarto."
           actions={[
             {
-              label: playerGate?.resting
-                ? "Está jugando · continuar con aviso"
-                : "Sí, revisar jugadores",
+              label: "Sí, revisar jugadores",
               tone: "primary",
               onClick: () => {
                 if (!playerGate) return;
                 const gate = playerGate;
                 setPlayerGate(null);
-                if (gate.resting) openPlayer(gate.side, gate.cap, gate.origin, true);
-                else {
+                {
                   setGateResume(gate);
                   setLineupRequest({
                     period: s.period,
@@ -3395,6 +3377,38 @@ export function LiveMatchClient() {
                 if (playerGate) setSide(playerGate.side);
               },
             },
+          ]}
+        />
+        <ActaGuardSheet
+          open={Boolean(rosterStartError)}
+          onOpenChange={(open) => !open && setRosterStartError(null)}
+          context="Antes de empezar"
+          title="Revisa la convocatoria"
+          icon="warning"
+          body={
+            <p className="border-pool-deep text-pool-deep rounded-xl border-2 bg-amber-100 p-3 text-base font-bold">
+              {rosterStartError?.message}
+            </p>
+          }
+          actions={[
+            {
+              label:
+                rosterStartError?.side === "us" ? "Editar convocatoria" : "Elegir gorros del rival",
+              tone: "primary",
+              onClick: () => {
+                const which = rosterStartError?.side;
+                setRosterStartError(null);
+                if (which === "us")
+                  leaveActa(`/acta/convocatoria?match=${record.matchId}&from=acta`);
+                else {
+                  setOpponentRoster([...s.opponentCaps]);
+                  setOpponentRosterError("");
+                  setStartAfterRoster(true);
+                  setOpponentRosterOpen(true);
+                }
+              },
+            },
+            { label: "Volver", tone: "secondary", onClick: () => setRosterStartError(null) },
           ]}
         />
         <ActaSelectionSheet
@@ -3417,10 +3431,19 @@ export function LiveMatchClient() {
                     key={n}
                     aria-pressed={opponentRoster.includes(n)}
                     onClick={() => {
+                      const removing = opponentRoster.includes(n);
+                      const next = removing
+                        ? opponentRoster.filter((cap) => cap !== n)
+                        : [...opponentRoster, n];
+                      const requirement = removing
+                        ? rosterRequirementError(s.category, next, "them")
+                        : "";
+                      if (requirement) {
+                        setOpponentRosterError(requirement);
+                        return;
+                      }
                       setOpponentRosterError("");
-                      setOpponentRoster((numbers) =>
-                        numbers.includes(n) ? numbers.filter((cap) => cap !== n) : [...numbers, n],
-                      );
+                      setOpponentRoster(next);
                     }}
                     className={`border-pool-deep min-h-14 rounded-xl border-2 text-lg font-extrabold ${opponentRoster.includes(n) ? "bg-pool-deep text-white" : "text-pool-deep bg-white"}`}
                   >
@@ -3437,11 +3460,9 @@ export function LiveMatchClient() {
             </div>
           }
           error={
-            opponentRoster.length === 0
-              ? "Elige los gorros del rival."
-              : !opponentRoster.some((n) => n === 1 || n === 13)
-                ? "Marca el gorro 1 o 13 del portero rival."
-                : opponentRosterError || undefined
+            opponentRosterError ||
+            rosterRequirementError(s.category, opponentRoster, "them") ||
+            undefined
           }
           actions={[
             {
@@ -3473,18 +3494,6 @@ export function LiveMatchClient() {
                 }
               },
             },
-          ]}
-        />
-        <ActaGuardSheet
-          open={fifthRest.length > 0 && restNoticePeriod !== s.period && !s.pending}
-          onOpenChange={(open) => !open && setRestNoticePeriod(s.period)}
-          context="Cuarto 5"
-          title="Descanso obligatorio"
-          icon="warning"
-          summary={fifthRest.join(" · ")}
-          description="Han participado en los cuatro primeros cuartos por una sustitución obligatoria. Deben descansar todo el quinto. Avísalo al entrenador."
-          actions={[
-            { label: "Entendido", tone: "primary", onClick: () => setRestNoticePeriod(s.period) },
           ]}
         />
         <ActaGuardSheet
@@ -3543,7 +3552,7 @@ export function LiveMatchClient() {
               tone: "danger",
               onClick: () => {
                 setExitOpen(false);
-                leaveActa(`/matches/${record.matchId}`);
+                leaveActa(new URLSearchParams(window.location.search).get("from") === "dashboard" ? "/dashboard" : `/matches/${record.matchId}`);
               },
             },
           ]}

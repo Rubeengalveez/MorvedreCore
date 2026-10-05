@@ -1,23 +1,15 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { Plus, UsersRound } from "lucide-react";
 
-import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
-import { CATEGORY_LABELS, type CategoryCode, type TeamGender } from "@/lib/domain/categories";
+import { AdminPageShell } from "@/components/admin/admin-page";
+
+import { CATEGORY_LABELS, type CategoryCode } from "@/lib/domain/categories";
 import { createClient } from "@/lib/supabase/server";
 import type { Season, Team } from "@/server/actions/admin";
 
 import { TeamFormSheet } from "./_components/team-form-sheet";
 import { TeamsGrid, type TeamCardData } from "./_components/teams-grid";
-
-const GENDER_LABELS: Record<TeamGender, string> = {
-  male: "Masculino",
-  female: "Femenino",
-  mixed: "Mixto",
-};
+import { TeamHeading, TeamEmpty, teamPrimary } from "@/components/team/team-ui";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -48,8 +40,8 @@ async function loadData(): Promise<LoadResult> {
   const [
     { data: seasonsData, error: seasonsError },
     { data: teamsData, error: teamsError },
-    { data: staffData },
-    { data: rostersData },
+    { data: staffData, error: staffError },
+    { data: rostersData, error: rostersError },
   ] = await Promise.all([
     supabase
       .from("seasons")
@@ -66,14 +58,14 @@ async function loadData(): Promise<LoadResult> {
     supabase.from("team_rosters").select("team_id, player_id").is("left_at", null),
   ]);
 
-  const firstError = seasonsError ?? teamsError;
+  const firstError = seasonsError ?? teamsError ?? staffError ?? rostersError;
   if (firstError) {
     return {
       ok: false,
       seasons: (seasonsData ?? []) as Season[],
       currentSeasonId: null,
       teamsBySeason: new Map(),
-      error: firstError.message,
+      error: "No pudimos cargar los equipos. Comprueba tu conexión y vuelve a intentarlo.",
     };
   }
 
@@ -107,7 +99,6 @@ async function loadData(): Promise<LoadResult> {
       playerCount: playerCountByTeam.get(t.id) ?? 0,
       coachName: coachByTeam.get(t.id) ?? null,
       categoryLabel: CATEGORY_LABELS[t.category_code as CategoryCode] ?? t.category_code,
-      genderLabel: GENDER_LABELS[t.gender as TeamGender] ?? t.gender,
     };
     const list = teamsBySeason.get(t.season_id) ?? [];
     list.push(card);
@@ -121,7 +112,7 @@ async function loadData(): Promise<LoadResult> {
   return {
     ok: true,
     seasons,
-    currentSeasonId: currentSeason?.id ?? seasons[0]?.id ?? null,
+    currentSeasonId: currentSeason?.id ?? null,
     teamsBySeason,
     error: null,
   };
@@ -129,61 +120,34 @@ async function loadData(): Promise<LoadResult> {
 
 export default async function TeamsPage() {
   const { seasons, currentSeasonId, teamsBySeason, error } = await loadData();
+  if (error) throw new Error(error);
 
-  if (seasons.length === 0) {
+  if (!currentSeasonId) {
     return (
       <AdminPageShell>
-        <AdminPageHeader
-          eyebrow="Estructura del club"
-          title="Equipos"
-          description="Configura los equipos y asigna sus plantillas."
-          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+        <TeamHeading title="Gestionar equipos" />
+        <TeamEmpty
+          title="Activa la temporada actual"
+          description="Necesitas una temporada actual para crear equipos."
         />
-        <EmptyState
-          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
-          title="Primero crea una temporada"
-          description="Los equipos pertenecen siempre a una temporada activa."
-          action={
-            <Button asChild size="md">
-              <Link href={"/admin/seasons" as Route}>Ir a Temporadas</Link>
-            </Button>
-          }
-        />
+        <Link href={"/admin/seasons" as Route} className={teamPrimary}>
+          Ir a Temporadas
+        </Link>
       </AdminPageShell>
     );
   }
 
   return (
     <AdminPageShell>
-      <AdminPageHeader
-        eyebrow="Estructura del club"
-        title="Equipos"
-        description="Configura los equipos y asigna sus plantillas."
-        icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
-        action={
-          <TeamFormSheet
-            seasons={seasons}
-            defaultSeasonId={currentSeasonId ?? seasons[0]!.id}
-            trigger={
-              <Button size="md" className="w-full shrink-0 sm:w-auto">
-                <Plus className="h-5 w-5" aria-hidden="true" />
-                Nuevo equipo
-              </Button>
-            }
-          />
-        }
+      <TeamHeading
+        title="Gestionar equipos"
+        action={<TeamFormSheet defaultSeasonId={currentSeasonId} />}
       />
-
-      {error ? (
-        <Alert variant="danger" title="No pudimos cargar los equipos">
-          {error}
-        </Alert>
-      ) : null}
 
       <TeamsGrid
         seasons={seasons}
         teamsBySeason={teamsBySeason}
-        defaultSeasonId={currentSeasonId ?? seasons[0]!.id}
+        defaultSeasonId={currentSeasonId}
       />
     </AdminPageShell>
   );

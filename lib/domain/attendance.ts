@@ -11,6 +11,31 @@ export interface AttendanceResult {
   unmarked_count: number;
 }
 
+export function countAttendanceOccurrences(
+  rows: Array<{
+    player_id: string;
+    present: boolean;
+    session_id: string;
+    joint_id: string | null;
+    scheduled_at: string;
+  }>,
+): Map<string, { attended: number; total: number }> {
+  const occurrences = new Map<string, (typeof rows)[number]>();
+  for (const row of rows) {
+    const key = `${row.player_id}/${row.joint_id ?? row.session_id}/${row.scheduled_at}`;
+    const previous = occurrences.get(key);
+    occurrences.set(key, { ...row, present: row.present || Boolean(previous?.present) });
+  }
+  const counts = new Map<string, { attended: number; total: number }>();
+  for (const row of occurrences.values()) {
+    const count = counts.get(row.player_id) ?? { attended: 0, total: 0 };
+    count.total += 1;
+    if (row.present) count.attended += 1;
+    counts.set(row.player_id, count);
+  }
+  return counts;
+}
+
 const attendanceDayFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: "Europe/Madrid",
   year: "numeric",

@@ -1,17 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useId, useState } from "react";
 import Link from "next/link";
 import type { Route } from "next";
-import { Calendar, MapPin, Pencil, UsersRound } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import {
+  CalendarDays,
+  ChevronRight,
+  MapPin,
+  Pencil,
+  Search,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 
-import { Card } from "@/components/ui/card";
-import { StatusBadge } from "@/components/ui/badge";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { isSafeMapsUrl } from "@/lib/domain/maps";
-import { formatLongDate, formatShortDate, formatTime } from "@/lib/utils/format";
+import {
+  matchCompetitionLabels,
+  matchListTab,
+  matchStatusLabels,
+  normalizeMatchSearch,
+  type MatchListTab,
+} from "@/lib/domain/admin-matches";
 import type { Team } from "@/server/actions/admin";
+import { matchActionClass, matchSecondaryClass, matchControlClass } from "./match-editor-fields";
 
 export interface MatchRow {
   id: string;
@@ -34,209 +48,412 @@ export interface MatchesListProps {
   teams: Array<Team & { season_label: string }>;
   matches: MatchRow[];
   defaultTeamId: string | null;
+  editableTeamIds?: string[];
 }
 
-const COMPETITION_LABELS: Record<string, string> = {
-  league: "Liga",
-  cup: "Copa",
-  tournament: "Torneo",
-  friendly: "Amistoso",
+const states: { id: MatchListTab; label: string }[] = [
+  { id: "upcoming", label: "Por jugar" },
+  { id: "played", label: "Jugados" },
+  { id: "cancelled", label: "Cancelados" },
+];
+const matchDate = new Intl.DateTimeFormat("es-ES", {
+  weekday: "short",
+  day: "numeric",
+  month: "short",
+  timeZone: "Europe/Madrid",
+});
+const matchTime = new Intl.DateTimeFormat("es-ES", {
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Europe/Madrid",
+});
+const monthDate = new Intl.DateTimeFormat("es-ES", {
+  month: "long",
+  year: "numeric",
+  timeZone: "Europe/Madrid",
+});
+const statusClass: Record<string, string> = {
+  scheduled: "border-pool-deep/50 bg-blue-50 text-pool-deep",
+  in_progress: "border-pool-deep bg-ball-gold text-pool-deep",
+  played: "border-emerald-800 bg-emerald-50 text-emerald-900",
+  cancelled: "border-red-800 bg-red-50 text-red-900",
+  postponed: "border-amber-800 bg-amber-50 text-amber-900",
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  scheduled: "Programado",
-  in_progress: "En juego",
-  played: "Jugado",
-  cancelled: "Cancelado",
-  postponed: "Aplazado",
-};
-
-const STATUS_BADGE_VARIANT: Record<string, "info" | "warning" | "success" | "danger" | "neutral"> =
-  {
-    scheduled: "info",
-    in_progress: "warning",
-    played: "success",
-    cancelled: "danger",
-    postponed: "neutral",
-  };
-
-type StatusFilter = "all" | "scheduled" | "played" | "cancelled";
-
-function scoreLabel(m: MatchRow): string {
-  if (m.final_score_us == null || m.final_score_them == null) return "—";
-  return `${m.final_score_us} - ${m.final_score_them}`;
-}
-
-export function MatchesList({ teams, matches, defaultTeamId }: MatchesListProps) {
-  const [teamFilter, setTeamFilter] = useState<string>(defaultTeamId ?? "");
-  const [competitionFilter, setCompetitionFilter] = useState<string>("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-
-  const filtered = useMemo(() => {
-    return matches.filter((m) => {
-      if (teamFilter && m.team_id !== teamFilter) return false;
-      if (competitionFilter && m.competition_type !== competitionFilter) {
-        return false;
-      }
-      if (statusFilter === "all") return true;
-      if (statusFilter === "scheduled") {
-        return m.status === "scheduled" || m.status === "in_progress" || m.status === "postponed";
-      }
-      if (statusFilter === "played") return m.status === "played";
-      if (statusFilter === "cancelled") return m.status === "cancelled";
-      return true;
-    });
-  }, [matches, teamFilter, competitionFilter, statusFilter]);
-
-  const sorted = useMemo(
-    () => [...filtered].sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at)),
-    [filtered],
-  );
-
+function MatchManagementCard({
+  match,
+  editable,
+  returnTo,
+}: {
+  match: MatchRow;
+  editable: boolean;
+  returnTo: string;
+}) {
+  const date = new Date(match.scheduled_at);
+  const home = match.is_home ? "Morvedre" : match.opponent;
+  const away = match.is_home ? match.opponent : "Morvedre";
+  const scored = match.final_score_us !== null && match.final_score_them !== null;
+  const scoreHome = match.is_home ? match.final_score_us : match.final_score_them;
+  const scoreAway = match.is_home ? match.final_score_them : match.final_score_us;
+  const venue = match.location || match.pool_name;
+  const played = match.status === "played";
+  const cancelled = match.status === "cancelled";
   return (
-    <div className="flex flex-col gap-4">
-      <section className="border-ink-200 bg-paper-card shadow-elev-1 grid grid-cols-1 gap-3 rounded-2xl border p-3 sm:grid-cols-3">
-        <div className="flex flex-col gap-2">
-          <label htmlFor="match-team-filter" className="text-pool-deep text-sm font-extrabold">
-            Equipo actual
-          </label>
-          <Select
-            id="match-team-filter"
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-          >
-            <option value="">Todos los equipos</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>
-                {team.label}
-              </option>
-            ))}
-          </Select>
-          <p className="text-ink-500 text-xs font-semibold">Solo temporada actual.</p>
+    <article
+      className="border-pool-deep/65 text-pool-deep overflow-hidden rounded-2xl border-2 bg-white shadow-sm"
+      aria-label={`${match.team_label} contra ${match.opponent}`}
+    >
+      <header className="bg-pool-deep flex items-center justify-between gap-2 px-4 py-3 text-white">
+        <time dateTime={match.scheduled_at} className="min-w-0 text-sm font-bold capitalize">
+          {matchDate.format(date)}{" "}
+          <span className="whitespace-nowrap">· {matchTime.format(date)}</span>
+        </time>
+        <span
+          className={`shrink-0 rounded-lg border px-2 py-1 text-sm font-extrabold ${statusClass[match.status] ?? statusClass.scheduled}`}
+        >
+          {matchStatusLabels[match.status as keyof typeof matchStatusLabels] ?? "Programado"}
+        </span>
+      </header>
+      <div className="grid gap-3 p-4">
+        <div className="flex items-center justify-between gap-2 text-sm font-bold">
+          <span className="border-pool-deep/55 rounded-lg border bg-blue-50 px-2 py-1">
+            {match.team_label}
+          </span>
+          <span>
+            {matchCompetitionLabels[
+              match.competition_type as keyof typeof matchCompetitionLabels
+            ] ?? match.competition_type}
+          </span>
         </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="match-comp-filter" className="text-pool-deep text-sm font-extrabold">
-            Competición
-          </label>
-          <Select
-            id="match-comp-filter"
-            value={competitionFilter}
-            onChange={(e) => setCompetitionFilter(e.target.value)}
-          >
-            <option value="">Todas</option>
-            {Object.entries(COMPETITION_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </Select>
+        <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-x-3 gap-y-1 text-center">
+          <div className="min-w-0">
+            <p
+              aria-label={`Local: ${home}`}
+              className="text-base leading-snug font-extrabold break-words"
+            >
+              {home}
+            </p>
+          </div>
+          <span aria-hidden="true" className="self-center text-sm font-bold text-slate-500">
+            {scored ? "" : "vs"}
+          </span>
+          <div className="min-w-0">
+            <p
+              aria-label={`Visitante: ${away}`}
+              className="text-base leading-snug font-extrabold break-words"
+            >
+              {away}
+            </p>
+          </div>
+          {scored && (
+            <>
+              <p
+                aria-label={`Goles local: ${scoreHome}`}
+                className="col-start-1 row-start-2 text-3xl font-extrabold tabular-nums"
+              >
+                {scoreHome}
+              </p>
+              <span
+                aria-hidden="true"
+                className="col-start-2 row-start-2 self-center text-slate-500"
+              >
+                –
+              </span>
+              <p
+                aria-label={`Goles visitante: ${scoreAway}`}
+                className="col-start-3 row-start-2 text-3xl font-extrabold tabular-nums"
+              >
+                {scoreAway}
+              </p>
+            </>
+          )}
         </div>
-        <div className="flex flex-col gap-2">
-          <label htmlFor="match-status-filter" className="text-pool-deep text-sm font-extrabold">
+        {venue &&
+          (isSafeMapsUrl(match.maps_url) ? (
+            <a
+              href={match.maps_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Abrir ${venue} en Google Maps`}
+              className="border-pool-deep/55 focus-visible:outline-pool-blue flex min-h-12 items-center gap-2 rounded-xl border bg-slate-50 px-3 py-2 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <MapPin className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span className="min-w-0 break-words">{venue}</span>
+              <ChevronRight className="ml-auto h-5 w-5 shrink-0" aria-hidden="true" />
+            </a>
+          ) : (
+            <p className="border-pool-deep/55 flex min-h-12 items-center gap-2 rounded-xl border bg-slate-100 px-3 py-2 text-sm font-semibold">
+              <MapPin className="h-5 w-5 shrink-0" aria-hidden="true" />
+              <span className="break-words">{venue}</span>
+            </p>
+          ))}
+        <div className="flex items-stretch gap-2">
+          <Link
+            href={
+              played || cancelled
+                ? (`/matches/${match.id}` as Route)
+                : (`/admin/matches/${match.id}?from=admin` as Route)
+            }
+            className={`${matchActionClass} min-h-12 flex-1 py-2`}
+            aria-label={`${played || cancelled ? "Ver partido" : "Convocatoria"}: ${match.team_label} contra ${match.opponent}`}
+          >
+            <span>{played || cancelled ? "Ver partido" : "Convocatoria"}</span>
+            <ChevronRight className="ml-auto h-5 w-5" aria-hidden="true" />
+          </Link>
+          {editable && (
+            <Link
+              href={
+                `/admin/matches/${match.id}/editar?${new URLSearchParams({ from: "admin", returnTo })}` as Route
+              }
+              className={`${matchSecondaryClass} min-w-12 px-3`}
+              aria-label={`Editar partido: ${match.team_label} contra ${match.opponent}`}
+            >
+              <Pencil className="h-5 w-5" aria-hidden="true" />
+              <span className="sr-only min-[360px]:not-sr-only">Editar</span>
+            </Link>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+export function MatchesList({ teams, matches, editableTeamIds = [] }: MatchesListProps) {
+  const params = useSearchParams();
+  const requested = params.get("tab");
+  const active = states.find((state) => state.id === requested)?.id ?? "all";
+  const team = params.get("team") ?? "";
+  const competition = params.get("competition") ?? "";
+  const query = params.get("q") ?? "";
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [limit, setLimit] = useState(12);
+  const id = useId();
+  const filterCount = Number(active !== "all") + Number(!!team) + Number(!!competition);
+  function filter(key: string, value: string) {
+    const url = new URL(window.location.href);
+    if (value) url.searchParams.set(key, value);
+    else url.searchParams.delete(key);
+    window.history.replaceState(null, "", url);
+    setLimit(12);
+  }
+  function clearFilters(includeSearch = false) {
+    const url = new URL(window.location.href);
+    ["tab", "team", "competition", ...(includeSearch ? ["q"] : [])].forEach((key) =>
+      url.searchParams.delete(key),
+    );
+    window.history.replaceState(null, "", url);
+    setLimit(12);
+  }
+  const terms = normalizeMatchSearch(query).split(/\s+/).filter(Boolean);
+  const sorted = matches
+    .filter((match) => {
+      const searchable = normalizeMatchSearch(
+        [
+          "Morvedre",
+          match.opponent,
+          match.team_label,
+          teams.find((item) => item.id === match.team_id)?.category_code ?? "",
+          matchCompetitionLabels[match.competition_type as keyof typeof matchCompetitionLabels] ??
+            "",
+          matchStatusLabels[match.status as keyof typeof matchStatusLabels] ?? "",
+          match.location ?? match.pool_name ?? "",
+        ].join(" "),
+      );
+      return (
+        (!team || match.team_id === team) &&
+        (!competition || match.competition_type === competition) &&
+        (active === "all" || matchListTab(match.status) === active) &&
+        terms.every((term) => searchable.includes(term))
+      );
+    })
+    .sort((a, b) =>
+      active === "upcoming"
+        ? Number(b.status === "in_progress") - Number(a.status === "in_progress") ||
+          a.scheduled_at.localeCompare(b.scheduled_at)
+        : b.scheduled_at.localeCompare(a.scheduled_at),
+    );
+  const grouped = new Map<string, MatchRow[]>();
+  sorted.slice(0, limit).forEach((match) => {
+    const month = monthDate.format(new Date(match.scheduled_at));
+    grouped.set(month, [...(grouped.get(month) ?? []), match]);
+  });
+  return (
+    <section className="grid gap-4" aria-label="Gestión de partidos">
+      <div className="flex items-start gap-2">
+        <div className="relative min-w-0 flex-1">
+          <label htmlFor={`${id}-search`} className="sr-only">
+            Buscar partidos
+          </label>
+          <Search
+            className="pointer-events-none absolute top-4 left-3 h-5 w-5 text-slate-600"
+            aria-hidden="true"
+          />
+          <Input
+            id={`${id}-search`}
+            type="search"
+            maxLength={100}
+            placeholder="Rival, categoría…"
+            value={query}
+            onChange={(event) => filter("q", event.target.value)}
+            className={`${matchControlClass} pr-12 pl-10 [&::-webkit-search-cancel-button]:appearance-none`}
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label="Borrar búsqueda"
+              onClick={() => filter("q", "")}
+              className="text-pool-deep focus-visible:outline-pool-blue absolute top-1 right-0 flex h-12 w-12 items-center justify-center rounded-xl focus-visible:outline-2"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
+        </div>
+        <button
+          type="button"
+          aria-expanded={filtersOpen}
+          aria-controls={`${id}-filters`}
+          aria-label={filterCount ? `Filtros: ${filterCount} activos` : "Filtros"}
+          onClick={() => setFiltersOpen(!filtersOpen)}
+          className={`focus-visible:outline-pool-blue flex min-h-14 shrink-0 items-center justify-center gap-2 rounded-xl border-2 px-3 text-base font-extrabold focus-visible:outline-2 focus-visible:outline-offset-2 ${filterCount ? "border-pool-deep bg-pool-deep text-white" : filtersOpen ? "border-pool-deep text-pool-deep bg-blue-100" : "border-pool-deep/60 text-pool-deep bg-white"}`}
+        >
+          <SlidersHorizontal className="h-5 w-5" aria-hidden="true" />
+          Filtros
+          {filterCount > 0 && (
+            <span
+              aria-hidden="true"
+              className="bg-ball-gold text-pool-deep flex h-6 min-w-6 items-center justify-center rounded-md px-1 text-sm"
+            >
+              {filterCount}
+            </span>
+          )}
+        </button>
+      </div>
+      <div
+        id={`${id}-filters`}
+        hidden={!filtersOpen}
+        className="border-pool-deep/60 grid gap-3 rounded-2xl border-2 bg-white p-4"
+      >
+        <h2 className="text-pool-deep text-lg font-extrabold">Filtrar partidos</h2>
+        <div>
+          <label htmlFor={`${id}-status`} className="text-pool-deep mb-1.5 block text-sm font-bold">
             Estado
           </label>
           <Select
-            id="match-status-filter"
-            value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}
+            id={`${id}-status`}
+            value={active}
+            onChange={(event) =>
+              filter("tab", event.target.value === "all" ? "" : event.target.value)
+            }
+            className={matchControlClass}
           >
-            <option value="all">Todos</option>
-            <option value="scheduled">Por jugar</option>
-            <option value="played">Jugados</option>
-            <option value="cancelled">Cancelados</option>
+            <option value="all">Todos los partidos</option>
+            {states.map((state) => (
+              <option key={state.id} value={state.id}>
+                {state.label}
+              </option>
+            ))}
           </Select>
         </div>
-      </section>
-
-      {sorted.length === 0 ? (
-        <EmptyState
-          icon={<Calendar className="h-6 w-6" aria-hidden="true" />}
-          title="Calendario vacío"
-          description="No hay partidos con estos filtros. Cuando el club programe uno, aparecerá aquí."
-        />
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {sorted.map((m) => {
-            const safeMaps = isSafeMapsUrl(m.maps_url);
-            const statusVariant = STATUS_BADGE_VARIANT[m.status] ?? "neutral";
-            return (
-              <li key={m.id}>
-                <Card variant="interactive" accentColor={m.team_color} className="group relative">
-                  <div className="flex flex-col gap-2 p-4">
-                    <div className="text-ink-600 flex flex-wrap items-center gap-2 text-xs">
-                      <span className="text-pool-deep font-mono font-semibold">
-                        {formatLongDate(m.scheduled_at).split(",")[0]}
-                      </span>
-                      <span>·</span>
-                      <span className="font-mono font-semibold">{formatTime(m.scheduled_at)}</span>
-                      <div className="ml-auto">
-                        <StatusBadge variant={statusVariant} size="sm">
-                          {STATUS_LABELS[m.status] ?? m.status}
-                        </StatusBadge>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="font-display text-pool-deep text-xl leading-tight font-extrabold">
-                        <Link
-                          href={`/admin/matches/${m.id}?from=admin` as Route}
-                          className="focus-visible:ring-pool-blue before:absolute before:inset-0 before:rounded-2xl before:content-[''] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                        >
-                          {m.is_home
-                            ? `${m.team_label} vs ${m.opponent}`
-                            : `${m.opponent} vs ${m.team_label}`}
-                        </Link>
-                      </h3>
-                      {m.status === "played" ? (
-                        <span className="text-pool-deep font-mono text-lg font-extrabold">
-                          {scoreLabel(m)}
-                        </span>
-                      ) : null}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <StatusBadge variant="neutral" size="sm">
-                        {COMPETITION_LABELS[m.competition_type] ?? m.competition_type}
-                      </StatusBadge>
-                      <StatusBadge variant={m.is_home ? "brand" : "neutral"} size="sm">
-                        {m.is_home ? "Local" : "Visitante"}
-                      </StatusBadge>
-                      {m.location ? (
-                        <span className="text-ink-600 text-xs">{m.location}</span>
-                      ) : null}
-                      {safeMaps ? (
-                        <a
-                          href={m.maps_url ?? "#"}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          aria-label={`Abrir ${m.location ?? "la ubicación"} en Google Maps`}
-                          className="text-pool-blue hover:text-pool-deep bg-pool-foam relative z-10 inline-flex h-6 items-center gap-1 rounded-full px-2 text-xs font-extrabold transition-colors"
-                        >
-                          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
-                          Mapa
-                        </a>
-                      ) : null}
-                    </div>
-                    <div className="relative z-10 flex flex-wrap gap-2 pt-1">
-                      <Link
-                        href={`/admin/matches/${m.id}?from=admin` as Route}
-                        className="bg-pool-deep text-paper focus-visible:outline-pool-blue inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm font-extrabold focus-visible:outline-2"
-                      >
-                        <UsersRound className="h-4 w-4" aria-hidden="true" /> Convocatoria
-                      </Link>
-                      <Link
-                        href={`/admin/matches/${m.id}/editar?from=admin` as Route}
-                        className="border-pool-blue/40 bg-paper-card text-pool-deep focus-visible:outline-pool-blue inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 px-3 text-sm font-extrabold focus-visible:outline-2"
-                      >
-                        <Pencil className="h-4 w-4" aria-hidden="true" /> Editar partido
-                      </Link>
-                    </div>
-                    <p className="sr-only">{formatShortDate(m.scheduled_at)}</p>
-                  </div>
-                </Card>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+        <div>
+          <label htmlFor={`${id}-team`} className="text-pool-deep mb-1.5 block text-sm font-bold">
+            Equipo
+          </label>
+          <Select
+            id={`${id}-team`}
+            value={team}
+            onChange={(event) => filter("team", event.target.value)}
+            className={matchControlClass}
+          >
+            <option value="">Todos los equipos</option>
+            {teams.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        <div>
+          <label
+            htmlFor={`${id}-competition`}
+            className="text-pool-deep mb-1.5 block text-sm font-bold"
+          >
+            Competición
+          </label>
+          <Select
+            id={`${id}-competition`}
+            value={competition}
+            onChange={(event) => filter("competition", event.target.value)}
+            className={matchControlClass}
+          >
+            <option value="">Todas las competiciones</option>
+            {Object.entries(matchCompetitionLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </Select>
+        </div>
+        {filterCount > 0 && (
+          <button
+            type="button"
+            className={`${matchSecondaryClass} w-full`}
+            onClick={() => clearFilters()}
+          >
+            Quitar filtros
+          </button>
+        )}
+      </div>
+      <p className="sr-only" role="status">
+        {sorted.length} {sorted.length === 1 ? "partido encontrado" : "partidos encontrados"}
+      </p>
+      <div className="grid gap-4" aria-label="Partidos encontrados">
+        {sorted.length === 0 ? (
+          <div className="border-pool-deep/60 grid justify-items-center gap-3 rounded-2xl border-2 bg-white px-5 py-7 text-center">
+            <CalendarDays className="text-pool-blue h-8 w-8" aria-hidden="true" />
+            <h2 className="text-pool-deep text-xl font-extrabold">No encontramos partidos</h2>
+            <p className="text-base text-slate-700">
+              {query || filterCount
+                ? "Prueba con otra búsqueda o cambia los filtros."
+                : "Añade el próximo encuentro con Nuevo partido."}
+            </p>
+            {(query || filterCount > 0) && (
+              <button
+                type="button"
+                className={matchSecondaryClass}
+                onClick={() => clearFilters(true)}
+              >
+                Mostrar todos los partidos
+              </button>
+            )}
+          </div>
+        ) : (
+          Array.from(grouped, ([month, rows]) => (
+            <section key={month} className="grid gap-3">
+              <h2 className="text-pool-deep text-base font-extrabold capitalize">{month}</h2>
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {rows.map((match) => (
+                  <li key={match.id}>
+                    <MatchManagementCard
+                      match={match}
+                      editable={editableTeamIds.includes(match.team_id)}
+                      returnTo={`/admin/matches${params.size ? `?${params}` : ""}`}
+                    />
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))
+        )}
+        {sorted.length > limit && (
+          <button
+            type="button"
+            className={`${matchSecondaryClass} w-full`}
+            onClick={() => setLimit(limit + 12)}
+          >
+            Ver más partidos · {sorted.length - limit} pendientes de mostrar
+          </button>
+        )}
+      </div>
+    </section>
   );
 }

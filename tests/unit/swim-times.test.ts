@@ -73,12 +73,17 @@ describe("parseSwimTime", () => {
 
 describe("getSwimProfileSummary", () => {
   it("separa la marca más reciente de la mejor en cada distancia", () => {
-    expect(getSwimProfileSummary([
-      entry({ id: "old", test_date: "2026-01-10", time_50_cs: 3500, time_100_cs: 7800 }),
-      entry({ id: "new", test_date: "2026-09-10", time_50_cs: 3700, time_100_cs: null }),
-    ])).toEqual({ latest50: 3700, best50: 3500, latest100: 7800, best100: 7800 });
+    expect(
+      getSwimProfileSummary([
+        entry({ id: "old", test_date: "2026-01-10", time_50_cs: 3500, time_100_cs: 7800 }),
+        entry({ id: "new", test_date: "2026-09-10", time_50_cs: 3700, time_100_cs: null }),
+      ]),
+    ).toEqual({ latest50: 3700, best50: 3500, latest100: 7800, best100: 7800 });
     expect(getSwimProfileSummary([])).toEqual({
-      latest50: null, best50: null, latest100: null, best100: null,
+      latest50: null,
+      best50: null,
+      latest100: null,
+      best100: null,
     });
   });
 });
@@ -209,8 +214,8 @@ describe("computeSwimLegends", () => {
   });
 
   it("calcula la categoría en la temporada de la medición", () => {
-    const juvenileThenAdult = entry({ birth_year: 2008, season_end_year: 2027 });
-    const adultLater = entry({ birth_year: 2008, season_end_year: 2028 });
+    const juvenileThenAdult = entry({ birth_year: 2009, season_end_year: 2027 });
+    const adultLater = entry({ birth_year: 2009, season_end_year: 2028 });
     expect(categoryForSwimEntry(juvenileThenAdult)).toBe("juvenil");
     expect(categoryForSwimEntry(adultLater)).toBe("absoluto");
   });

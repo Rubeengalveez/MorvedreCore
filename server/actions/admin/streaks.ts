@@ -42,6 +42,7 @@ interface MatchStatLite {
 }
 
 interface TrainingSessionLite {
+  player_ids?: string[] | null;
   id: string;
   team_id: string;
   scheduled_at: string;
@@ -100,7 +101,7 @@ async function loadSeasonData(seasonId: string, client?: SupabaseClient): Promis
       supabase
         .from("training_sessions")
         .select(
-          "id, team_id, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id)",
+          "id, team_id, player_ids, scheduled_at, cancelled, teams!training_sessions_team_id_fkey(season_id)",
         )
         .eq("teams.season_id", seasonId),
       supabase
@@ -379,7 +380,11 @@ async function recomputeStreaksForMatchInternal(match: MatchRowLite): Promise<vo
       "player",
       pid,
       "train_consec",
-      trainConsecEvents(teamSessions, playerAtt, nowIso),
+      trainConsecEvents(
+        teamSessions.filter((session) => !session.player_ids || session.player_ids.includes(pid)),
+        playerAtt,
+        nowIso,
+      ),
       nowIso,
       admin,
     );
@@ -437,7 +442,7 @@ export async function recomputeTrainingStreaksForSession(sessionId: string): Pro
       playerId,
       "train_consec",
       trainConsecEvents(
-        sessions,
+        sessions.filter((s) => !s.player_ids || s.player_ids.includes(playerId)),
         data.attendance.filter((entry) => entry.player_id === playerId),
         nowIso,
       ),

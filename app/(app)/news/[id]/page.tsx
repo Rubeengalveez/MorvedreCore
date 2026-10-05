@@ -1,3 +1,5 @@
+import type { Route } from "next";
+import { notificationBackTarget } from "@/lib/domain/notifications";
 import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 
@@ -24,7 +26,15 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   return { title: `${post.title} — Morvedre Core` };
 }
 
-export default async function NewsDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function NewsDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string; notificationId?: string }>;
+}) {
+  const origin = await searchParams;
+  const notification = notificationBackTarget(origin.from, origin.notificationId);
   const { id } = await params;
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
@@ -40,10 +50,16 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
 
   return (
     <PageShell width="md" className="gap-4 pb-8">
-      <PageBackLink href="/news">Todas las noticias</PageBackLink>
-      <article className="bg-paper-card shadow-elev-2 border-ink-200 overflow-hidden rounded-[1.5rem] border">
-        <div className="bg-pool-deep h-2" aria-hidden="true" />
-        <header className="bg-pool-ice/60 border-ink-200 relative overflow-hidden border-b p-5 sm:p-8">
+      <PageBackLink
+        href={
+          (notification?.href ?? (origin.from === "dashboard" ? "/dashboard" : "/news")) as Route
+        }
+      >
+        {notification?.label ?? (origin.from === "dashboard" ? "Inicio" : "Todas las noticias")}
+      </PageBackLink>
+      <article className="border-pool-deep/65 overflow-hidden rounded-[1.5rem] border bg-paper-card shadow-elev-2">
+        <div className="h-2 bg-pool-deep" aria-hidden="true" />
+        <header className="bg-pool-ice/60 border-pool-deep/65 relative overflow-hidden p-5 sm:p-8">
           <span
             className="lane-pattern pointer-events-none absolute inset-0 opacity-15"
             aria-hidden="true"
@@ -55,10 +71,10 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
               publishedAt={post.published_at}
               pinned={post.pinned}
             />
-            <h1 className="font-display text-pool-deep mt-5 text-3xl leading-[1.12] font-extrabold tracking-tight text-balance break-words sm:text-4xl">
+            <h1 className="mt-5 text-balance break-words font-display text-3xl font-extrabold leading-[1.12] tracking-tight text-pool-deep sm:text-4xl">
               {post.title}
             </h1>
-            <div className="text-ink-700 mt-5 flex items-center gap-2.5 text-sm font-semibold">
+            <div className="mt-5 flex items-center gap-2.5 text-sm font-semibold text-ink-700">
               <Avatar
                 src={post.author_photo_url}
                 name={post.author_name}
@@ -71,7 +87,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
         </header>
 
         {post.image_url ? (
-          <div className="bg-pool-foam relative aspect-[16/9] overflow-hidden">
+          <div className="relative aspect-[16/9] overflow-hidden bg-pool-foam">
             <Image
               src={post.image_url}
               alt=""
@@ -82,10 +98,10 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ id:
           </div>
         ) : null}
 
-        <div className="px-5 pt-6 pb-7 sm:px-8 sm:pt-8 sm:pb-9">
+        <div className="px-5 pb-7 pt-6 sm:px-8 sm:pb-9 sm:pt-8">
           <Markdown className="text-base leading-7">{post.body_md}</Markdown>
           <div className="mt-8">
-            <p className="font-display text-pool-deep mb-2 text-sm font-extrabold">Tu reacción</p>
+            <p className="mb-2 font-display text-sm font-extrabold text-pool-deep">Tu reacción</p>
             <NewsReactions
               postId={post.id}
               reactions={post.reactions}

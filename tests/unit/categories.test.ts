@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ageIndex,
+  calendarSeasonStartYear,
   inferCategory,
   CATEGORY_LABELS,
   CATEGORY_COLORS,
@@ -30,48 +31,35 @@ describe("ageIndex", () => {
 });
 
 describe("inferCategory", () => {
-  it("returns benjamin when age is 11 or less", () => {
-    expect(inferCategory(2015, 2026)).toBe("benjamin");
-    expect(inferCategory(2026, 2026)).toBe("benjamin");
-  });
-
-  it("returns alevin for ages 12 and 13", () => {
-    expect(inferCategory(2014, 2026)).toBe("alevin");
-    expect(inferCategory(2013, 2026)).toBe("alevin");
-  });
-
-  it("returns infantil for ages 14 and 15", () => {
-    expect(inferCategory(2012, 2026)).toBe("infantil");
-    expect(inferCategory(2011, 2026)).toBe("infantil");
-  });
-
-  it("returns cadete for ages 16 and 17", () => {
-    expect(inferCategory(2010, 2026)).toBe("cadete");
-    expect(inferCategory(2009, 2026)).toBe("cadete");
-  });
-
-  it("returns juvenil for ages 18 and 19", () => {
-    expect(inferCategory(2008, 2026)).toBe("juvenil");
-    expect(inferCategory(2007, 2026)).toBe("juvenil");
-  });
-
-  it("returns absoluto for ages 20 and above", () => {
-    expect(inferCategory(2006, 2026)).toBe("absoluto");
-    expect(inferCategory(2001, 2026)).toBe("absoluto");
-  });
-
-  it("treats the boundary correctly: age 11 is benjamin, age 12 is alevin", () => {
-    expect(inferCategory(2015, 2026)).toBe("benjamin");
-    expect(inferCategory(2014, 2026)).toBe("alevin");
-  });
-
-  it("throws when birthYear is in the future", () => {
+  it.each([
+    [2016, "benjamin"],
+    [2015, "alevin"],
+    [2014, "alevin"],
+    [2013, "infantil"],
+    [2012, "infantil"],
+    [2011, "cadete"],
+    [2010, "cadete"],
+    [2009, "juvenil"],
+    [2008, "juvenil"],
+    [2007, "absoluto"],
+    [1950, "absoluto"],
+  ] as const)(
+    "clasifica %i en %s durante 2025/2026 y desplaza la siguiente temporada",
+    (birth, category) => {
+      expect(inferCategory(birth, 2025)).toBe(category);
+      expect(inferCategory(birth + 1, 2026)).toBe(category);
+    },
+  );
+  it("rechaza años futuros", () => {
     expect(() => inferCategory(2027, 2026)).toThrow();
   });
+});
 
-  it("keeps adult players in the absolute category regardless of age", () => {
-    expect(inferCategory(1990, 2026)).toBe("absoluto");
-    expect(inferCategory(1950, 2026)).toBe("absoluto");
+describe("calendarSeasonStartYear", () => {
+  it("mantiene la temporada hasta agosto y cambia en septiembre", () => {
+    expect(calendarSeasonStartYear(new Date(2026, 0, 1))).toBe(2025);
+    expect(calendarSeasonStartYear(new Date(2026, 7, 31))).toBe(2025);
+    expect(calendarSeasonStartYear(new Date(2026, 8, 1))).toBe(2026);
   });
 });
 

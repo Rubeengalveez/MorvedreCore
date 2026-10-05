@@ -41,7 +41,9 @@ export type SwimTimeActionResult =
 async function requireSwimCoach(profileId: string, teamId: string): Promise<void> {
   const coachTeamIds = await getSwimCoachTeamIds(profileId);
   if (!coachTeamIds.includes(teamId)) {
-    throw new Error("Solo los entrenadores de este equipo pueden gestionar tiempos de nado.");
+    throw new Error(
+      "Solo el entrenador o delegado de este equipo puede gestionar tiempos de nado.",
+    );
   }
 }
 
@@ -76,6 +78,7 @@ async function resolveEntryContext(teamId: string, playerId: string, testDate: s
 
 function revalidateSwimTimePaths(teamId: string, playerId: string): void {
   revalidatePath(`/team/${teamId}/swim-times`);
+  revalidatePath(`/team/${teamId}`);
   revalidatePath(`/team/${teamId}/players/${playerId}`);
   revalidatePath(`/players/${playerId}/swim-times`);
   revalidatePath("/rankings");
@@ -112,7 +115,9 @@ export async function createSwimTime(
       .maybeSingle();
     if (existing.error) {
       if (existing.error.message?.includes("public.swim_time_entries")) {
-        throw new Error("Falta aplicar la migración de tiempos de nado en la base de datos de Supabase.");
+        throw new Error(
+          "Falta aplicar la migración de tiempos de nado en la base de datos de Supabase.",
+        );
       }
       throw new Error("No pudimos comprobar el guardado anterior.");
     }
@@ -144,7 +149,9 @@ export async function createSwimTime(
       .single();
     if (error || !data) {
       if (error?.message?.includes("public.swim_time_entries")) {
-        throw new Error("Falta aplicar la migración de tiempos de nado en la base de datos de Supabase.");
+        throw new Error(
+          "Falta aplicar la migración de tiempos de nado en la base de datos de Supabase.",
+        );
       }
       throw new Error("No pudimos guardar los tiempos. Inténtalo de nuevo.");
     }

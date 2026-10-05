@@ -1,5 +1,6 @@
 import { ArrowLeft, ListChecks, Share2 } from "lucide-react";
-import { finalScore, score, type LiveRecord, type Side } from "@/lib/domain/live-match";
+import { finalScore, score, type LiveRecord } from "@/lib/domain/live-match";
+import { orderedScore } from "@/lib/domain/live-match-score";
 
 export function ActaScoreboard({
   record,
@@ -15,8 +16,7 @@ export function ActaScoreboard({
   onParticipation?: () => void;
 }) {
   const s = record.sheet;
-  const left: Side = record.homeAway === "away" ? "them" : "us";
-  const right: Side = left === "us" ? "them" : "us";
+  const { homeSide: left, awaySide: right } = orderedScore(s, record.homeAway);
   const compactStatus = status.startsWith("Sin conexión")
     ? "Sin conexión"
     : status.includes("Enviando")

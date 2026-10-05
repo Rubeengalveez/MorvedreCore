@@ -17,7 +17,9 @@ test.describe("Accesos por rol para la demo", () => {
   test("administración abre el centro de mando", async ({ page }) => {
     await login(page, "admin.demo@morvedre-core.test");
     await page.goto("/admin");
-    await expect(page.getByText("Centro de mando")).toBeVisible();
+    await expect(
+      page.getByRole("navigation", { name: "Funciones de administración" }),
+    ).toBeVisible();
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Administración");
   });
 

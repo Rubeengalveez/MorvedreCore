@@ -2,13 +2,74 @@ import { sheetSchema, type LiveRecord } from "@/lib/domain/live-match";
 import { identifyLiveSheet } from "@/lib/domain/live-match-identity";
 import { generateUuid } from "@/lib/utils/uuid";
 import { lineupDraftSchema, type LineupDraft } from "@/lib/domain/live-match-rules";
+import { z } from "zod";
 
 export type StoredMatch = LiveRecord & {
   lineupDraft?: LineupDraft;
+  draftRevision?: number;
   rosterEdit?: boolean;
   flight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number; rosterEdit?: boolean };
   takeoverFlight?: { sheet: LiveRecord["sheet"]; mutation: string; revision: number };
 };
+const pendingFlightSchema = z.object({
+  sheet: sheetSchema,
+  mutation: z.string().min(1),
+  revision: z.number().int().nonnegative(),
+  rosterEdit: z.boolean().optional(),
+});
+const storedMetadataSchema = z
+  .object({
+    matchId: z.string().uuid(),
+    viewer: z.string().min(1),
+    owner: z.string(),
+    device: z.string(),
+    canEdit: z.boolean(),
+    revision: z.number().int().nonnegative(),
+    mutation: z.string(),
+    dirty: z.boolean(),
+    team: z.string().min(1),
+    opponent: z.string().min(1),
+    date: z.string().refine((value) => Number.isFinite(Date.parse(value))),
+    homeAway: z.enum(["home", "away", "neutral"]).optional(),
+    competition: z.string().optional(),
+    venue: z.string().nullable().optional(),
+    callupCandidates: z
+      .array(
+        z.object({
+          player_id: z.string().uuid(),
+          full_name: z.string(),
+          cap_number: z.number().int().min(1).max(14).nullable(),
+          has_conflict: z.boolean(),
+          is_current_team: z.boolean(),
+        }),
+      )
+      .optional(),
+    callupTemplate: z
+      .array(
+        z.object({
+          player_id: z.string().uuid(),
+          cap_number: z.number().int().min(1).max(14).nullable(),
+        }),
+      )
+      .optional(),
+    draftRevision: z.number().int().nonnegative().optional(),
+    rosterEdit: z.boolean().optional(),
+    flight: pendingFlightSchema.optional(),
+    takeoverFlight: pendingFlightSchema.optional(),
+  })
+  .passthrough();
+export function parseStoredMatch(value: unknown): StoredMatch | undefined {
+  const metadata = storedMetadataSchema.safeParse(value);
+  if (!metadata.success) return undefined;
+  const sheet = sheetSchema.safeParse(metadata.data.sheet);
+  if (!sheet.success) return undefined;
+  const draft = lineupDraftSchema.safeParse(metadata.data.lineupDraft);
+  return {
+    ...metadata.data,
+    sheet: identifyLiveSheet(sheet.data),
+    lineupDraft: draft.success ? draft.data : undefined,
+  } as StoredMatch;
+}
 const DB = "morvedre-live-acta-v1";
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -28,17 +89,12 @@ export async function readLocalMatch(id: string): Promise<StoredMatch | undefine
       const request = tx.objectStore("matches").get(id);
       request.onsuccess = () => {
         if (!request.result) return resolve(undefined);
-        const parsed = sheetSchema.safeParse(request.result.sheet);
-        if (!parsed.success)
+        const parsed = parseStoredMatch(request.result);
+        if (!parsed || parsed.matchId !== id)
           return reject(
             new Error("El acta local no se puede leer. No borres los datos de este navegador."),
           );
-        const draft = lineupDraftSchema.safeParse(request.result.lineupDraft);
-        resolve({
-          ...request.result,
-          sheet: identifyLiveSheet(parsed.data),
-          lineupDraft: draft.success ? draft.data : undefined,
-        });
+        resolve(parsed);
       };
       request.onerror = () => reject(request.error);
     });
@@ -46,17 +102,37 @@ export async function readLocalMatch(id: string): Promise<StoredMatch | undefine
     db.close();
   }
 }
-export async function writeLocalMatch(record: StoredMatch) {
+export async function writeLocalMatch(
+  record: StoredMatch,
+  expected?: { mutation: string; draftRevision: number },
+) {
   const db = await open();
   try {
     await new Promise<void>((resolve, reject) => {
       const tx = db.transaction("matches", "readwrite");
-      tx.objectStore("matches").put(record);
+      const store = tx.objectStore("matches");
+      let conflict = false;
+      if (expected) {
+        const request = store.get(record.matchId);
+        request.onsuccess = () => {
+          const previous = request.result as StoredMatch | undefined;
+          if (
+            !previous ||
+            previous.mutation !== expected.mutation ||
+            (previous.draftRevision ?? 0) !== expected.draftRevision
+          ) {
+            conflict = true;
+            tx.abort();
+          } else store.put(record);
+        };
+      } else store.put(record);
       tx.oncomplete = () => resolve();
       tx.onabort = tx.onerror = () =>
         reject(
           new Error(
-            "No se ha registrado la acción: el móvil no pudo guardarla. Libera espacio y vuelve a intentarlo.",
+            conflict
+              ? "La selección ha cambiado en otra pestaña. Cierra la lista y vuelve a abrirla antes de guardar."
+              : "No se ha registrado la acción: el móvil no pudo guardarla. Libera espacio y vuelve a intentarlo.",
           ),
         );
     });
@@ -85,8 +161,8 @@ export async function readPendingLocalMatches(
         );
         resolve(
           records.flatMap((record) => {
-            const parsed = sheetSchema.safeParse(record.sheet);
-            return parsed.success ? [{ ...record, sheet: identifyLiveSheet(parsed.data) }] : [];
+            const parsed = parseStoredMatch(record);
+            return parsed ? [parsed] : [];
           }),
         );
       };

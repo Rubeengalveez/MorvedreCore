@@ -22,10 +22,10 @@ function categoryIndex(category: CategoryCode): number {
 export function canRosterPlayer(
   playerBirthYear: number,
   teamCategory: CategoryCode,
-  currentYear: number,
+  seasonStartYear: number,
 ): boolean {
   if (teamCategory === "escuela") return true;
-  const playerCategory = inferCategory(playerBirthYear, currentYear);
+  const playerCategory = inferCategory(playerBirthYear, seasonStartYear);
   const playerIdx = categoryIndex(playerCategory);
   const teamIdx = categoryIndex(teamCategory);
   return teamIdx >= playerIdx && teamIdx - playerIdx <= 1;

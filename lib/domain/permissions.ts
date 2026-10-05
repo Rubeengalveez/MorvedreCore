@@ -59,7 +59,10 @@ export function deriveAdminCapabilities(input: {
   }
   for (const staff of input.staff) {
     if (staff.role === "delegate") delegateTeamIds.add(staff.team_id);
-    if (staff.role === "delegate") matchStaffTeamIds.add(staff.team_id);
+    if (staff.role === "head_coach" || staff.role === "assistant_coach")
+      coachTeamIds.add(staff.team_id);
+    if (["head_coach", "assistant_coach", "delegate"].includes(staff.role))
+      matchStaffTeamIds.add(staff.team_id);
   }
   return {
     isAdmin: input.isAdmin,
@@ -71,7 +74,7 @@ export function deriveAdminCapabilities(input: {
 }
 
 export function canUseLiveMatch(access: AdminCapabilities, teamId: string): boolean {
-  return access.delegateTeamIds?.has(teamId) === true;
+  return access.matchStaffTeamIds.has(teamId);
 }
 
 export function hasGlobalPermission(
@@ -87,9 +90,7 @@ export function getTeamScope(
 ): string[] | null {
   const permission = capability === "trainings" ? "manage_trainings" : "manage_matches";
   if (hasGlobalPermission(access, permission)) return null;
-  return Array.from(
-    capability === "match_operations" ? access.matchStaffTeamIds : access.coachTeamIds,
-  );
+  return Array.from(access.matchStaffTeamIds);
 }
 
 export function canManageTeam(

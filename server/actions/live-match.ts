@@ -9,8 +9,10 @@ import { getAdminAccess } from "@/server/actions/admin/_helpers";
 import { canUseLiveMatch } from "@/lib/domain/permissions";
 import { defaultPeriods, sheetSchema, type LiveRecord } from "@/lib/domain/live-match";
 import type { Json } from "@/types/database";
+import { scheduleNotificationPush } from "@/server/notification-push";
 import { revalidatePath } from "next/cache";
 import { prepareParticipation } from "@/lib/domain/live-match-participation";
+import { rosterRequirementError } from "@/lib/domain/live-match-rules";
 import { suggestCallupForMatch } from "@/server/actions/admin/matches";
 
 export type ActaPreparation = {
@@ -239,6 +241,11 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
   }
   if (data.rosterEdit && !alreadySaved) {
     const active = data.sheet.players.filter((player) => !player.retired);
+    const requirement = rosterRequirementError(
+      match.teams?.category_code,
+      active.map((p) => p.cap),
+    );
+    if (requirement) throw new Error(requirement);
     if (
       active.length < 1 ||
       active.length > 14 ||
@@ -268,6 +275,31 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
     )
       throw new Error("Hay un jugador que ya no está disponible. Tus cambios siguen en el móvil.");
     canonical = identifyLiveSheet(data.sheet);
+  }
+  if (!alreadySaved && canonical.phase !== "finished") {
+    const priorSheet = previous.data?.document as {
+      phase?: string;
+      opponentCaps?: number[];
+    } | null;
+    const starting = canonical.phase === "playing" && priorSheet?.phase !== "playing";
+    if (starting) {
+      const own = rosterRequirementError(
+        match.teams?.category_code,
+        canonical.players.filter((p) => !p.retired).map((p) => p.cap),
+      );
+      if (own) throw new Error(own);
+    }
+    if (
+      starting ||
+      JSON.stringify(priorSheet?.opponentCaps ?? []) !== JSON.stringify(canonical.opponentCaps)
+    ) {
+      const rival = rosterRequirementError(
+        match.teams?.category_code,
+        canonical.opponentCaps,
+        "them",
+      );
+      if (rival) throw new Error(rival);
+    }
   }
   const { data: revision, error: saveError } = await createAdminClient().rpc(
     "save_live_match_sheet",
@@ -308,7 +340,8 @@ async function syncLiveMatchImpl(input: z.input<typeof saveSchema>) {
       seasonMatch.season_id,
     );
   }
-  revalidatePath(`/matches/${data.matchId}`);
+  scheduleNotificationPush();
+    revalidatePath(`/matches/${data.matchId}`);
   revalidatePath(`/admin/matches/${data.matchId}`);
   return { revision, owner: me.id, sheet: canonical };
 }
@@ -359,13 +392,14 @@ export async function prepareLiveMatch(input: {
       .eq("id", data.matchId)
       .single();
     if (error || !match || !canUseLiveMatch(access, match.team_id))
-      throw new Error("Solo el delegado de este equipo puede preparar el acta.");
+      throw new Error("Solo el entrenador o delegado de este equipo puede preparar el acta.");
     const { error: saveError } = await createAdminClient().rpc("prepare_live_match_caps", {
       p_match: data.matchId,
       p_actor: access.profile.id,
       p_players: data.players,
     });
     if (saveError) throw new Error(saveError.message);
+    scheduleNotificationPush();
     revalidatePath(`/matches/${data.matchId}`);
     return { ok: true as const };
   } catch (error) {

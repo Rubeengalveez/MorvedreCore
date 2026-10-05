@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { Pencil, Trash2, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ConfirmActionSheet } from "@/components/ui/confirm-action-sheet";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import { Input } from "@/components/ui/input";
 import {
   formatSwimTime,
@@ -25,7 +25,7 @@ export function SwimHistoryList({
   const editable = new Set(editableTeamIds);
   if (entries.length === 0) {
     return (
-      <div className="border-ink-200 bg-paper-card text-ink-600 rounded-2xl border border-dashed p-7 text-center">
+      <div className="border-pool-deep/65 bg-paper-card text-pool-deep rounded-2xl border border-solid p-7 text-center">
         Todavía no hay tiempos registrados.
       </div>
     );
@@ -68,7 +68,10 @@ function HistoryEntry({
   const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  const busy = useRef(false);
+
   function save() {
+    if (busy.current) return;
     const parsed50 = time50.trim() ? parseSwimTime(time50, 50) : null;
     const parsed100 = time100.trim() ? parseSwimTime(time100, 100) : null;
     if ((!parsed50 && !parsed100) || (parsed50 && !parsed50.ok) || (parsed100 && !parsed100.ok)) {
@@ -83,28 +86,37 @@ function HistoryEntry({
     }
     const time50Cs = parsed50?.ok ? parsed50.centiseconds : null;
     const time100Cs = parsed100?.ok ? parsed100.centiseconds : null;
+    busy.current = true;
     startTransition(async () => {
-      const result = await updateSwimTime({
-        entryId: entry.id,
-        revision: entry.revision,
-        testDate: date,
-        time50Cs,
-        time100Cs,
-      });
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const result = await updateSwimTime({
+          entryId: entry.id,
+          revision: entry.revision,
+          testDate: date,
+          time50Cs,
+          time100Cs,
+        });
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        onChange({
+          ...entry,
+          revision: result.revision,
+          test_date: date,
+          time_50_cs: time50Cs,
+          time_100_cs: time100Cs,
+        });
+        setEditing(false);
+        setError("");
+        setWarningAccepted(false);
+      } catch {
+        setError(
+          "No pudimos confirmar el cambio. Actualiza el historial antes de intentarlo de nuevo.",
+        );
+      } finally {
+        busy.current = false;
       }
-      onChange({
-        ...entry,
-        revision: result.revision,
-        test_date: date,
-        time_50_cs: time50Cs,
-        time_100_cs: time100Cs,
-      });
-      setEditing(false);
-      setError("");
-      setWarningAccepted(false);
     });
   }
 
@@ -114,41 +126,62 @@ function HistoryEntry({
   }
 
   function confirmVoidEntry() {
+    if (busy.current) return;
+    busy.current = true;
     startTransition(async () => {
-      const result = await voidSwimTime({ entryId: entry.id, revision: entry.revision });
-      if (!result.ok) {
-        setError(result.error);
-        return;
+      try {
+        const result = await voidSwimTime({ entryId: entry.id, revision: entry.revision });
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+        setVoidConfirmOpen(false);
+        onVoid();
+      } catch {
+        setError(
+          "No pudimos confirmar la anulación. Actualiza el historial antes de intentarlo de nuevo.",
+        );
+      } finally {
+        busy.current = false;
       }
-      setVoidConfirmOpen(false);
-      onVoid();
     });
   }
 
   return (
-    <article className="border-ink-200 bg-paper-card overflow-hidden rounded-2xl border shadow-sm">
-      <ConfirmActionSheet
+    <article className="border-pool-deep/65 bg-paper-card overflow-hidden rounded-2xl border-2 shadow-sm">
+      <ActaGuardSheet
         open={voidConfirmOpen}
         onOpenChange={setVoidConfirmOpen}
-        title="Anular anotación"
-        description="Dejará de aparecer en el perfil y los rankings."
-        confirmLabel="Sí, anular anotación"
-        isPending={pending}
+        context="TIEMPOS DE NADO"
+        title="¿Anular esta anotación?"
+        summary={formatDate(entry.test_date)}
+        description="Dejará de aparecer en la ficha y los rankings."
+        icon="warning"
+        pending={pending}
         error={error}
-        onConfirm={confirmVoidEntry}
+        actions={[
+          {
+            label: "Mantener anotación",
+            tone: "primary",
+            onClick: () => setVoidConfirmOpen(false),
+          },
+          { label: "Anular anotación", tone: "danger", onClick: confirmVoidEntry },
+        ]}
       />
       <div className="flex items-start justify-between gap-3 px-4 py-3">
         <div>
           <time dateTime={entry.test_date} className="text-pool-deep font-extrabold">
             {formatDate(entry.test_date)}
           </time>
-          <p className="text-ink-600 mt-1 text-sm">{entry.season_label}</p>
+          <p className="text-pool-deep mt-1 text-sm">{entry.season_label}</p>
         </div>
         {canEdit ? (
           <Button
             type="button"
             size="icon"
             variant="ghost"
+            disabled={pending}
+            className="border-pool-deep/65 text-pool-blue border-2 bg-blue-50"
             onClick={() => setEditing((value) => !value)}
             aria-label={editing ? "Cerrar corrección" : "Corregir anotación"}
           >
@@ -160,17 +193,18 @@ function HistoryEntry({
           </Button>
         ) : null}
       </div>
-      <dl className="border-ink-200 bg-paper-sunk/50 grid grid-cols-2 border-t">
+      <dl className="grid grid-cols-2 gap-2 px-3 pb-3">
         <TimeValue label="50 m" value={entry.time_50_cs} />
         <TimeValue label="100 m" value={entry.time_100_cs} />
       </dl>
       {editing ? (
-        <div className="border-ink-200 flex flex-col gap-3 border-t p-4">
+        <div className="border-pool-deep/65 flex flex-col gap-3 p-4">
           <div className="grid gap-3 min-[390px]:grid-cols-2">
             <label className="text-pool-deep text-sm font-extrabold">
               50 m
               <Input
-                className="mt-1.5"
+                className="border-pool-deep/65 mt-1.5 bg-white"
+                disabled={pending}
                 inputMode="decimal"
                 value={time50}
                 onChange={(event) => {
@@ -182,7 +216,8 @@ function HistoryEntry({
             <label className="text-pool-deep text-sm font-extrabold">
               100 m
               <Input
-                className="mt-1.5"
+                className="border-pool-deep/65 mt-1.5 bg-white"
+                disabled={pending}
                 inputMode="decimal"
                 value={time100}
                 onChange={(event) => {
@@ -194,7 +229,8 @@ function HistoryEntry({
             <label className="text-pool-deep text-sm font-extrabold">
               Fecha
               <Input
-                className="mt-1.5"
+                className="border-pool-deep/65 mt-1.5 bg-white"
+                disabled={pending}
                 type="date"
                 value={date}
                 max={madridToday()}
@@ -203,7 +239,7 @@ function HistoryEntry({
             </label>
           </div>
           {error ? (
-            <p role="alert" className="text-goggle-red text-sm font-bold">
+            <p role="alert" className="text-sm font-bold text-red-900">
               {error}
             </p>
           ) : null}
@@ -222,10 +258,7 @@ function HistoryEntry({
           </div>
         </div>
       ) : error ? (
-        <p
-          role="alert"
-          className="text-goggle-red border-ink-200 border-t px-4 py-3 text-sm font-bold"
-        >
+        <p role="alert" className="border-pool-deep/65 px-4 py-3 text-sm font-bold text-red-900">
           {error}
         </p>
       ) : null}
@@ -235,8 +268,8 @@ function HistoryEntry({
 
 function TimeValue({ label, value }: { label: string; value: number | null }) {
   return (
-    <div className="first:border-r-ink-200 px-4 py-3 text-center first:border-r">
-      <dt className="text-ink-500 text-xs font-extrabold uppercase">{label}</dt>
+    <div className="border-pool-deep/65 rounded-xl border bg-blue-50 px-3 py-3 text-center">
+      <dt className="text-sm font-extrabold text-slate-700 uppercase">{label}</dt>
       <dd className="text-pool-deep mt-1 font-mono text-xl font-extrabold tabular-nums">
         {value ? formatSwimTime(value) : "—"}
       </dd>

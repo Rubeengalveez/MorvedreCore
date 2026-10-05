@@ -1,5 +1,7 @@
 "use server";
 
+import { z } from "zod";
+import { NOTIFICATION_TOPICS } from "@/lib/domain/notifications";
 import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
@@ -25,12 +27,12 @@ async function loadCurrentUserProfile(): Promise<{ id: string }> {
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("id")
+    .select("id, is_active")
     .eq("auth_user_id", user.id)
     .maybeSingle();
 
   throwIfError(profileError, "No pudimos verificar tu identidad.");
-  if (!profile) {
+  if (!profile?.is_active) {
     throw new Error("Tu perfil no está configurado.");
   }
 
@@ -38,17 +40,20 @@ async function loadCurrentUserProfile(): Promise<{ id: string }> {
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
+  const id = z.uuid().parse(notificationId);
   const me = await loadCurrentUserProfile();
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("notifications")
     .update({ read_at: new Date().toISOString() })
-    .eq("id", notificationId)
-    .eq("recipient_id", me.id);
+    .eq("id", id)
+    .eq("recipient_id", me.id)
+    .is("read_at", null);
 
   throwIfError(error, "No pudimos marcar la notificación como leída.");
 
+  revalidatePath("/notifications");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
 }
@@ -65,6 +70,7 @@ export async function markAllNotificationsRead(): Promise<void> {
 
   throwIfError(error, "No pudimos marcar las notificaciones como leídas.");
 
+  revalidatePath("/notifications");
   revalidatePath("/dashboard");
   revalidatePath("/calendar");
 }
@@ -81,4 +87,25 @@ export async function getUnreadCount(): Promise<number> {
 
   throwIfError(error, "No pudimos contar las notificaciones.");
   return count ?? 0;
+}
+
+export async function setNotificationPreference(input: {
+  topic: string;
+  enabled: boolean;
+}): Promise<void> {
+  const schema = z.object({
+    topic: z.enum(NOTIFICATION_TOPICS.map((topic) => topic.id)),
+    enabled: z.boolean(),
+  });
+  const parsed = schema.parse(input);
+  const me = await loadCurrentUserProfile();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("profile_notification_prefs")
+    .upsert(
+      { profile_id: me.id, notification_type: parsed.topic, enabled: parsed.enabled },
+      { onConflict: "profile_id,notification_type" },
+    );
+  throwIfError(error, "No pudimos guardar esta preferencia. Vuelve a intentarlo.");
+  revalidatePath("/notifications");
 }

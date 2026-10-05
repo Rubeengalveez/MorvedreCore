@@ -1,23 +1,18 @@
 import type { Metadata, Route } from "next";
-import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import {
-  CalendarDays,
-  ChevronRight,
-  ExternalLink,
-  MapPin,
-  Timer,
-  UserRoundCog,
-} from "lucide-react";
+import { CalendarDays } from "lucide-react";
 
 import { PageShell } from "@/components/ui/page-shell";
 import { PageBackLink } from "@/components/ui/page-back-link";
+import { TeamMatches } from "@/components/team/team-matches";
+import { TeamMatchCard } from "@/components/team/team-match-card";
 import { TeamHero } from "@/components/team/team-hero";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
-import { getCurrentSeason } from "@/server/queries/seasons";
+import { createClient } from "@/lib/supabase/server";
+import { teamAdminOrigin } from "@/lib/domain/team-navigation-origin";
+import { TeamNav } from "@/components/team/team-ui";
+import { teamSeasonYear } from "@/lib/domain/team-presentation";
 import { getTeamById, getTeamMatches, getTeamRoster, getTeamStaff } from "@/server/queries/teams";
-import { cn } from "@/lib/utils/cn";
-import { isSafeMapsUrl } from "@/lib/domain/maps";
 import type { CategoryCode } from "@/lib/domain/categories";
 import { getSwimCoachTeamIds } from "@/server/queries/swim-times";
 
@@ -61,27 +56,53 @@ export default async function TeamDetailPage({
   searchParams,
 }: {
   params: Promise<{ teamId: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{
+    tab?: string;
+    list?: string;
+    count?: string;
+    from?: string;
+    adminTab?: string;
+  }>;
 }) {
   const ctx = await getActiveProfileContext();
   if (!ctx) redirect("/login");
 
   const { teamId } = await params;
-  const { tab } = await searchParams;
+  const { tab, list, count, from, adminTab } = await searchParams;
   const activeTab = parseTab(tab);
+  const origin = teamAdminOrigin(teamId, from, adminTab);
   const team = await getTeamById(teamId);
   if (!team) notFound();
 
-  const [season, roster, staff, matches, swimCoachTeamIds] = await Promise.all([
-    getCurrentSeason(),
+  const supabase = await createClient();
+  const [
+    { data: season, error: seasonError },
+    roster,
+    staff,
+    matches,
+    swimCoachTeamIds,
+    categoryTeams,
+  ] = await Promise.all([
+    supabase
+      .from("seasons")
+      .select("label,start_date,end_date")
+      .eq("id", team.season_id)
+      .maybeSingle(),
     getTeamRoster(team.id),
     getTeamStaff(team.id),
-    getTeamMatches(team.id, 30),
+    getTeamMatches(team.id, 1000),
     getSwimCoachTeamIds(ctx.ownProfile.id),
+    supabase
+      .from("teams")
+      .select("category_code,color")
+      .eq("season_id", team.season_id)
+      .order("label"),
   ]);
+  if (seasonError || categoryTeams.error || !season)
+    throw new Error("No pudimos cargar la temporada del equipo.");
 
   const upcoming = matches
-    .filter((match) => match.status !== "played")
+    .filter((match) => match.status !== "played" && match.status !== "cancelled")
     .sort((a, b) => a.scheduled_at.localeCompare(b.scheduled_at));
   const played = matches
     .filter((match) => match.status === "played")
@@ -93,55 +114,57 @@ export default async function TeamDetailPage({
   return (
     <PageShell width="md" className="gap-4 pb-8">
       <div className="flex flex-col gap-2">
-        <PageBackLink href="/team">Todos los equipos</PageBackLink>
+        <PageBackLink href={origin.href as Route}>{origin.label}</PageBackLink>
 
-        <TeamHero
-          team={team}
-          seasonLabel={season?.label ?? null}
-          homePool={team.home_pool}
-          playerCount={roster.length}
-          staffCount={staff.length}
-        />
+        <TeamHero team={team} homePool={team.home_pool} playerCount={roster.length} staff={staff} />
       </div>
 
-      <TeamSectionNav active={activeTab} basePath={basePath} />
+      <TeamSectionNav active={activeTab} basePath={basePath} context={origin.context} />
 
       <div>
         {activeTab === "principal" ? (
           <TeamOverview
-            teamLabel={team.label}
-            teamColor={team.color}
-            staff={staff}
+            teamId={team.id}
             nextMatch={nextMatch}
             lastMatch={lastMatch}
+            context={origin.context}
           />
         ) : null}
 
         {activeTab === "jugadores" ? (
           <TeamPlayersTab
             teamId={team.id}
+            context={origin.context}
             roster={roster}
             teamColor={team.color}
             teamCategory={team.category_code as CategoryCode}
-            categoryYear={
-              season ? new Date(season.end_date).getFullYear() : new Date().getFullYear()
-            }
+            categoryYear={teamSeasonYear(season.start_date)}
             staff={staff}
+            categoryColors={Object.fromEntries(
+              (categoryTeams.data ?? []).map((t) => [t.category_code, t.color]),
+            )}
           />
         ) : null}
 
         {activeTab === "partidos" ? (
-          <TeamMatchesTab
-            teamLabel={team.label}
-            teamColor={team.color}
+          <TeamMatches
+            teamId={team.id}
+            context={origin.context}
+            initialList={list}
             upcoming={upcoming}
             played={played}
+            initialCount={
+              Number.isInteger(Number(count)) && Number(count) > 5 && Number(count) <= 1000
+                ? Number(count)
+                : 5
+            }
           />
         ) : null}
 
         {activeTab === "tiempos" ? (
           <TeamSwimTimesTab
             teamId={team.id}
+            context={origin.context}
             teamLabel={team.label}
             teamColor={team.color}
             isCoach={swimCoachTeamIds.includes(team.id)}
@@ -153,352 +176,65 @@ export default async function TeamDetailPage({
   );
 }
 
-function TeamSectionNav({ active, basePath }: { active: TeamTabId; basePath: Route }) {
+function TeamSectionNav({
+  active,
+  basePath,
+  context,
+}: {
+  active: TeamTabId;
+  basePath: Route;
+  context: string;
+}) {
   return (
-    <nav
-      aria-label="Secciones del equipo"
-      className="border-ink-200 bg-paper-card grid grid-cols-4 gap-1 rounded-2xl border p-1.5 shadow-sm"
-    >
-      {TEAM_TABS.map((tab) => {
-        const isActive = tab.id === active;
-        const href = tab.id === "principal" ? basePath : (`${basePath}?tab=${tab.id}` as Route);
-        return (
-          <Link
-            key={tab.id}
-            href={href}
-            aria-current={isActive ? "page" : undefined}
-            className={cn(
-              "focus-visible:ring-pool-blue inline-flex min-h-12 touch-manipulation items-center justify-center rounded-xl px-2 text-sm font-extrabold transition-[background-color,color,transform] duration-200 focus-visible:ring-2 focus-visible:outline-none active:scale-[0.98] motion-reduce:transition-none",
-              isActive
-                ? "bg-pool-deep text-paper"
-                : "text-ink-500 hover:bg-pool-foam hover:text-pool-deep",
-            )}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <TeamNav
+      label="Secciones del equipo"
+      items={TEAM_TABS.map((tab) => ({
+        label: tab.label,
+        active: tab.id === active,
+        href: `${basePath}?${new URLSearchParams({ ...(tab.id === "principal" ? {} : { tab: tab.id }), ...Object.fromEntries(new URLSearchParams(context)) })}`,
+      }))}
+    />
   );
 }
 
 function TeamOverview({
-  teamLabel,
-  teamColor,
-  staff,
+  teamId,
   nextMatch,
   lastMatch,
+  context,
 }: {
-  teamLabel: string;
-  teamColor: string;
-  staff: Awaited<ReturnType<typeof getTeamStaff>>;
+  teamId: string;
   nextMatch: TeamMatch | null;
   lastMatch: TeamMatch | null;
+  context: string;
 }) {
-  const leadStaff = staff.find((member) => member.role === "head_coach") ?? staff[0] ?? null;
-
   return (
-    <div className="flex flex-col gap-6">
+    <div className="space-y-5">
       <section aria-labelledby="team-agenda-heading">
-        <SectionHeading eyebrow="Agenda" title="Lo próximo" id="team-agenda-heading" />
+        <SectionHeading eyebrow="Agenda" title="Por jugar" id="team-agenda-heading" />
         <div className="mt-3">
           {nextMatch ? (
-            <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={[nextMatch]} />
+            <TeamMatchCard match={nextMatch} teamId={teamId} tab="principal" context={context} />
           ) : (
             <EmptyPanel icon={CalendarDays} text="No hay partidos programados." />
           )}
         </div>
       </section>
-
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <section aria-labelledby="team-last-result-heading">
-          <SectionHeading
-            eyebrow="Competición"
-            title="Último resultado"
-            id="team-last-result-heading"
-          />
-          <div className="mt-3">
-            {lastMatch ? (
-              <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={[lastMatch]} />
-            ) : (
-              <EmptyPanel icon={CalendarDays} text="Todavía no hay resultados." />
-            )}
-          </div>
-        </section>
-
-        <section aria-labelledby="team-lead-heading">
-          <SectionHeading
-            eyebrow="Referencia"
-            title="Responsable del equipo"
-            id="team-lead-heading"
-          />
-          <div className="border-ink-200 bg-paper-card mt-3 flex min-h-[112px] items-center gap-4 rounded-2xl border px-4 py-4 shadow-sm">
-            <span className="bg-pool-foam text-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl">
-              <UserRoundCog className="h-6 w-6" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
-              <p className="font-display text-pool-deep truncate text-base font-extrabold">
-                {leadStaff?.full_name ?? "Sin asignar"}
-              </p>
-              <p className="text-ink-500 mt-1 text-sm">
-                {leadStaff ? staffRoleLabel(leadStaff.role) : "El cuerpo técnico aparecerá aquí."}
-              </p>
-            </div>
-          </div>
-        </section>
-      </div>
-    </div>
-  );
-}
-
-function TeamMatchesTab({
-  teamLabel,
-  teamColor,
-  upcoming,
-  played,
-}: {
-  teamLabel: string;
-  teamColor: string;
-  upcoming: TeamMatch[];
-  played: TeamMatch[];
-}) {
-  return (
-    <div className="flex flex-col gap-6">
-      <section aria-labelledby="upcoming-matches-heading">
-        <SectionHeading
-          eyebrow="Agenda"
-          title="Próximos partidos"
-          id="upcoming-matches-heading"
-          count={upcoming.length}
-        />
-        <div className="mt-3">
-          {upcoming.length > 0 ? (
-            <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={upcoming} />
-          ) : (
-            <EmptyPanel icon={CalendarDays} text="No hay partidos programados." />
-          )}
-        </div>
-      </section>
-
-      <section aria-labelledby="played-matches-heading">
+      <section aria-labelledby="team-last-result-heading">
         <SectionHeading
           eyebrow="Historial"
-          title="Resultados"
-          id="played-matches-heading"
-          count={played.length}
+          title="Último resultado"
+          id="team-last-result-heading"
         />
         <div className="mt-3">
-          {played.length > 0 ? (
-            <MatchLedger teamLabel={teamLabel} teamColor={teamColor} matches={played} />
+          {lastMatch ? (
+            <TeamMatchCard match={lastMatch} teamId={teamId} tab="principal" context={context} />
           ) : (
             <EmptyPanel icon={CalendarDays} text="Todavía no hay resultados." />
           )}
         </div>
       </section>
     </div>
-  );
-}
-
-function MatchLedger({
-  teamLabel,
-  teamColor,
-  matches,
-}: {
-  teamLabel: string;
-  teamColor: string;
-  matches: TeamMatch[];
-}) {
-  return (
-    <ul className="flex flex-col gap-2.5">
-      {matches.map((match) => (
-        <li key={match.id}>
-          <MatchLedgerRow match={match} teamLabel={teamLabel} teamColor={teamColor} />
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function MatchLedgerRow({
-  match,
-  teamLabel,
-  teamColor,
-}: {
-  match: TeamMatch;
-  teamLabel: string;
-  teamColor: string;
-}) {
-  const isPlayed = match.status === "played";
-  const localTeam = match.is_home ? teamLabel : match.opponent;
-  const visitorTeam = match.is_home ? match.opponent : teamLabel;
-  const localScore = match.is_home ? match.final_score_us : match.final_score_them;
-  const visitorScore = match.is_home ? match.final_score_them : match.final_score_us;
-  const outcome = matchOutcome(match.final_score_us, match.final_score_them);
-  const date = new Date(match.scheduled_at);
-  const dateLabel = new Intl.DateTimeFormat("es-ES", {
-    weekday: "short",
-    day: "numeric",
-    month: "long",
-  }).format(date);
-  const displayDate = `${dateLabel.charAt(0).toUpperCase()}${dateLabel.slice(1)}`;
-  const time = new Intl.DateTimeFormat("es-ES", { hour: "2-digit", minute: "2-digit" }).format(
-    date,
-  );
-  const location = match.location;
-  const hasMaps = isSafeMapsUrl(match.maps_url);
-  const locationText = location ?? (match.is_home ? "Partido en casa" : "Partido como visitante");
-
-  return (
-    <article className="group border-ink-200 bg-paper-card hover:border-pool-blue/35 hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-[border-color,box-shadow] duration-200 motion-reduce:transition-none">
-      <span
-        aria-hidden="true"
-        className="absolute inset-y-3 left-0 z-10 w-1 rounded-r-full"
-        style={{ backgroundColor: teamColor }}
-      />
-      <Link
-        href={`/matches/${match.id}` as Route}
-        className="focus-visible:ring-pool-blue block touch-manipulation px-4 py-3.5 pl-5 focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-      >
-        <div className="flex min-h-8 items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <time className="text-pool-deep text-sm font-extrabold" dateTime={match.scheduled_at}>
-              {displayDate}
-            </time>
-            <span className="bg-pool-foam text-pool-blue inline-flex min-h-6 items-center rounded-full px-2 text-xs font-extrabold">
-              {competitionLabel(match.competition_type)}
-            </span>
-          </div>
-          {isPlayed && outcome ? (
-            <OutcomeLabel outcome={outcome} />
-          ) : (
-            <span className="bg-pool-deep text-paper inline-flex min-h-8 shrink-0 items-center rounded-lg px-2.5 font-mono text-sm font-extrabold tabular-nums">
-              {time}
-            </span>
-          )}
-        </div>
-
-        <div className="mt-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2.5">
-          <MatchTeam
-            label={localTeam}
-            venue="Local"
-            isOwn={match.is_home}
-            align="left"
-            color={teamColor}
-          />
-          {isPlayed ? (
-            <div
-              className="bg-pool-deep text-paper flex min-h-11 min-w-[4.5rem] items-center justify-center rounded-xl px-2 font-mono text-xl font-extrabold tabular-nums"
-              aria-label={`Resultado ${localScore ?? "sin anotar"} a ${visitorScore ?? "sin anotar"}`}
-            >
-              {localScore ?? "–"}
-              <span className="text-paper/55 px-1" aria-hidden="true">
-                :
-              </span>
-              {visitorScore ?? "–"}
-            </div>
-          ) : (
-            <span className="bg-paper-sunk text-ink-500 inline-flex h-9 min-w-9 items-center justify-center rounded-full px-2 text-xs font-extrabold uppercase">
-              vs
-            </span>
-          )}
-          <MatchTeam
-            label={visitorTeam}
-            venue="Visitante"
-            isOwn={!match.is_home}
-            align="right"
-            color={teamColor}
-          />
-        </div>
-      </Link>
-
-      <div className="border-ink-200 bg-paper-sunk/45 text-ink-600 flex min-h-12 min-w-0 items-center border-t text-sm">
-        {hasMaps ? (
-          <a
-            href={match.maps_url ?? "#"}
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label={`Abrir ${locationText} en Google Maps`}
-            className="focus-visible:ring-pool-blue hover:text-pool-blue flex min-h-12 min-w-0 flex-1 touch-manipulation items-center gap-2 px-4 py-3 transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-          >
-            <MapPin className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="truncate font-bold underline decoration-1 underline-offset-4">
-              {locationText}
-            </span>
-            <ExternalLink
-              className="ml-auto h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
-              aria-hidden="true"
-            />
-          </a>
-        ) : (
-          <div className="flex min-h-12 min-w-0 flex-1 items-center gap-2 px-4 py-3">
-            <MapPin className="text-pool-blue h-4 w-4 shrink-0" aria-hidden="true" />
-            <span className="truncate font-semibold">{locationText}</span>
-          </div>
-        )}
-        <Link
-          href={`/matches/${match.id}` as Route}
-          aria-label="Ver detalle del partido"
-          className="focus-visible:ring-pool-blue border-ink-200 hover:bg-pool-foam hover:text-pool-blue flex h-12 w-12 shrink-0 touch-manipulation items-center justify-center border-l transition-colors focus-visible:ring-2 focus-visible:outline-none focus-visible:ring-inset"
-        >
-          <ChevronRight className="h-5 w-5" aria-hidden="true" />
-        </Link>
-      </div>
-    </article>
-  );
-}
-
-function MatchTeam({
-  label,
-  venue,
-  isOwn,
-  align,
-  color,
-}: {
-  label: string;
-  venue: "Local" | "Visitante";
-  isOwn: boolean;
-  align: "left" | "right";
-  color: string;
-}) {
-  return (
-    <div
-      className={cn(
-        "flex min-w-0 flex-col",
-        align === "right" ? "items-end text-right" : "items-start text-left",
-      )}
-    >
-      <span className="text-ink-500 text-xs font-extrabold tracking-wide uppercase">{venue}</span>
-      <p
-        className={cn(
-          "mt-0.5 line-clamp-2 text-sm leading-tight",
-          isOwn ? "text-pool-deep font-extrabold" : "text-ink-700 font-bold",
-        )}
-      >
-        {isOwn ? (
-          <span
-            aria-hidden="true"
-            className="mr-1.5 inline-block h-2 w-2 rounded-full"
-            style={{ backgroundColor: color }}
-          />
-        ) : null}
-        {label}
-      </p>
-    </div>
-  );
-}
-
-function OutcomeLabel({ outcome }: { outcome: "win" | "draw" | "loss" }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex min-h-7 items-center rounded-full px-2.5 text-xs font-extrabold tracking-wide uppercase",
-        outcome === "win" && "bg-success/12 text-success",
-        outcome === "draw" && "bg-ink-100 text-ink-600",
-        outcome === "loss" && "bg-goggle-red/10 text-goggle-red",
-      )}
-    >
-      {outcome === "win" ? "Victoria" : outcome === "loss" ? "Derrota" : "Empate"}
-    </span>
   );
 }
 
@@ -514,17 +250,15 @@ function SectionHeading({
   count?: number;
 }) {
   return (
-    <div className="flex items-end justify-between gap-3 px-1">
+    <div className="border-pool-deep/65 bg-pool-deep flex items-end justify-between gap-3 rounded-xl border-2 px-4 py-3 text-white">
       <div>
-        <p className="text-pool-blue text-xs font-extrabold tracking-[0.12em] uppercase">
-          {eyebrow}
-        </p>
-        <h2 id={id} className="font-display text-pool-deep text-xl font-extrabold">
+        <p className="sr-only">{eyebrow}</p>
+        <h2 id={id} className="font-display text-xl font-extrabold text-white">
           {title}
         </h2>
       </div>
       {count != null ? (
-        <span className="border-ink-200 bg-paper-card text-ink-600 inline-flex min-h-7 min-w-7 items-center justify-center rounded-full border px-2 text-sm font-extrabold tabular-nums">
+        <span className="border-pool-deep/65 bg-paper-card text-pool-deep inline-flex min-h-7 min-w-7 items-center justify-center rounded-full border px-2 text-sm font-extrabold tabular-nums">
           {count}
         </span>
       ) : null}
@@ -534,31 +268,9 @@ function SectionHeading({
 
 function EmptyPanel({ icon: Icon, text }: { icon: typeof CalendarDays; text: string }) {
   return (
-    <div className="border-ink-200 bg-paper-card text-ink-500 flex min-h-28 flex-col items-center justify-center rounded-2xl border border-dashed px-5 text-center text-sm">
+    <div className="border-pool-deep/65 bg-paper-card flex min-h-28 flex-col items-center justify-center rounded-2xl border-2 px-5 text-center text-sm text-slate-700">
       <Icon className="mb-2 h-5 w-5" aria-hidden="true" />
       {text}
     </div>
   );
-}
-
-function competitionLabel(type: string | null | undefined): string {
-  if (type === "tournament") return "Torneo";
-  if (type === "friendly") return "Amistoso";
-  if (type === "cup") return "Copa";
-  return "Liga";
-}
-
-function matchOutcome(us: number | null, them: number | null): "win" | "draw" | "loss" | null {
-  if (us == null || them == null) return null;
-  if (us > them) return "win";
-  if (us < them) return "loss";
-  return "draw";
-}
-
-function staffRoleLabel(role: string): string {
-  if (role === "head_coach") return "Entrenador principal";
-  if (role === "assistant_coach") return "Entrenador asistente";
-  if (role === "delegate") return "Delegado";
-  if (role === "physical_trainer") return "Preparador físico";
-  return role;
 }

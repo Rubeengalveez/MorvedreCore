@@ -19,6 +19,7 @@ import {
 } from "@/lib/domain/stats";
 import { type CategoryCode } from "@/lib/domain/categories";
 import { safeInferCategory } from "@/lib/domain/categories";
+import { getSeasonCategoryYear } from "@/server/queries/seasons";
 
 import { requireAdmin } from "./_helpers";
 
@@ -63,7 +64,7 @@ async function loadAllRows<T>(
 
 async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<typeof createClient>>) {
   const supabase = client || (await createClient());
-  const [players, teams, matches, callups, stats, sessions, attendance, rosters] =
+  const [players, teams, matches, callups, stats, sessions, attendance, rosters, categoryYear] =
     await Promise.all([
       loadAllRows((from, to) =>
         supabase
@@ -102,7 +103,9 @@ async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<type
       loadAllRows((from, to) =>
         supabase
           .from("training_sessions")
-          .select("id, team_id, cancelled, scheduled_at, teams!inner(season_id)")
+          .select(
+            "id, team_id, joint_id, player_ids, cancelled, scheduled_at, teams!inner(season_id)",
+          )
           .eq("teams.season_id", seasonId)
           .range(from, to),
       ),
@@ -121,9 +124,11 @@ async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<type
           .is("left_at", null)
           .range(from, to),
       ),
+      getSeasonCategoryYear(seasonId, supabase),
     ]);
 
   return {
+    categoryYear,
     players: (players ?? []) as unknown as PlayerRow[],
     teams: (teams ?? []) as unknown as TeamRow[],
     matches: (matches ?? []) as unknown as Array<{
@@ -142,6 +147,8 @@ async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<type
       team_id: string;
       cancelled: boolean;
       scheduled_at: string;
+      joint_id: string | null;
+      player_ids: string[] | null;
     }>,
     attendance: (attendance ?? []) as unknown as Array<{
       session_id: string;
@@ -155,13 +162,9 @@ async function loadSeasonData(seasonId: string, client?: Awaited<ReturnType<type
   };
 }
 
-function currentYear(): number {
-  return new Date().getFullYear();
-}
-
-function inferPlayerCategory(birthYear: number | null): CategoryCode {
+function inferPlayerCategory(birthYear: number | null, categoryYear: number): CategoryCode {
   if (birthYear == null) return "cadete";
-  return safeInferCategory(birthYear, currentYear()) ?? "cadete";
+  return safeInferCategory(birthYear, categoryYear) ?? "cadete";
 }
 
 interface ComputedSnapshot {
@@ -190,6 +193,7 @@ function buildSnapshotsForPlayer(
   sessionLites: TrainingSessionLite[],
   attendanceLites: TrainingAttendanceLite[],
   trainingTeamIds: string[],
+  categoryYear: number,
 ): ComputedSnapshot[] {
   const stats = computePlayerStats(
     player.id,
@@ -204,7 +208,7 @@ function buildSnapshotsForPlayer(
   );
 
   const seasonLabel = "all";
-  const categoryLabel = inferPlayerCategory(player.birth_year);
+  const categoryLabel = inferPlayerCategory(player.birth_year, categoryYear);
   const teamLabel = primaryTeam ? primaryTeam.id : "none";
 
   const base: Omit<ComputedSnapshot, "scope" | "scope_key"> = {
@@ -242,7 +246,7 @@ function buildPlayerSnapshots(
     .filter((roster) => roster.player_id === playerId)
     .map((roster) => data.teams.find((team) => team.id === roster.team_id))
     .filter((team): team is TeamRow => Boolean(team));
-  const playerCategory = inferPlayerCategory(player.birth_year);
+  const playerCategory = inferPlayerCategory(player.birth_year, data.categoryYear);
   const ownCategoryTeams = rosterTeams.filter(
     (team) => team.category_code === playerCategory || team.category_code === "escuela",
   );
@@ -279,6 +283,8 @@ function buildPlayerSnapshots(
     team_id: session.team_id,
     cancelled: session.cancelled,
     scheduled_at: session.scheduled_at,
+    joint_id: session.joint_id,
+    player_ids: session.player_ids,
   }));
   const attendanceLites: TrainingAttendanceLite[] = data.attendance
     .filter((attendance) => attendance.player_id === playerId)
@@ -298,6 +304,7 @@ function buildPlayerSnapshots(
     sessionLites,
     attendanceLites,
     ownCategoryTeams.map((team) => team.id),
+    data.categoryYear,
   );
 }
 

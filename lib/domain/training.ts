@@ -1,4 +1,4 @@
-export type TrainingKind = "water" | "dry" | "physical" | "technical" | "mixed";
+export type TrainingKind = "water" | "dry" | "meeting" | "physical" | "technical" | "mixed";
 
 export interface TrainingBlock {
   id: string;
@@ -97,7 +97,7 @@ function timeZoneOffsetMs(value: Date): number {
   return representedAsUtc - value.getTime();
 }
 
-function combineDateAndTime(date: Date, time: string): Date {
+export function combineDateAndTime(date: Date, time: string): Date {
   const t = parseTime(time);
   const wallClockAsUtc = Date.UTC(
     date.getUTCFullYear(),

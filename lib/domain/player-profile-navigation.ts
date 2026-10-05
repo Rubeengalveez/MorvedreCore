@@ -12,6 +12,12 @@ export function getPlayerProfileBackTarget(
   returnTo?: string,
   playerId?: string,
 ) {
+  if (source === "family" || source === "profile-activity") {
+    return {
+      href: source === "family" ? "/profile/family" : "/profile/activity",
+      label: source === "family" ? "Mi familia" : "Mi actividad",
+    };
+  }
   if (source === "profile") {
     return {
       href: "/profile",
@@ -28,7 +34,8 @@ export function getPlayerProfileBackTarget(
         url.origin !== "https://morvedre.local" ||
         url.pathname !== "/rankings" ||
         url.hash !== `#ranking-player-${playerId}`
-      ) return fallback;
+      )
+        return fallback;
       return { href: `${url.pathname}${url.search}${url.hash}`, label: "Volver a Rankings" };
     } catch {
       return fallback;

@@ -1,10 +1,10 @@
 # Acta durante el partido
 
-Abre el partido desde el calendario. Si eres el delegado asignado a ese equipo, pulsa **Abrir acta** para anotar jugada a jugada. Puedes volver al mismo partido sin pasar por administración.
+Abre el partido desde el calendario. Si eres el entrenador o delegado asignado a ese equipo, pulsa **Abrir acta** para anotar jugada a jugada. Puedes volver al mismo partido sin pasar por administración.
 
 Si la convocatoria tiene gorros repetidos o sin asignar, verás **Revisa los gorros**, con los jugadores ya cargados. Los números ocupados no se pueden seleccionar. Corrige los números señalados y pulsa **Guardar gorros y abrir acta**. Si hay más de 14 convocados, elige en esa misma pantalla los 14 que disputan el partido. Si no hay ninguno, la pantalla te indica que pidas al entrenador que prepare la convocatoria.
 
-El acta en directo está reservada al delegado de ese equipo, incluso para consultar un acta cerrada. Tener rol de entrenador, administrador o permiso de gestionar partidos no sustituye esa asignación. Las estadísticas habituales del partido continúan visibles según los permisos de la aplicación.
+El acta en directo está reservada al entrenador o delegado asignado a ese equipo, incluso para consultar un acta cerrada. Tener rol de administrador o permiso global de gestionar partidos no sustituye esa asignación. Las estadísticas habituales del partido continúan visibles según los permisos de la aplicación.
 
 ## Antes de empezar
 
@@ -20,11 +20,13 @@ En Infantil, Alevín, Benjamín y Escuela, al empezar cada cuarto del 1 al 4:
 
 Las filas conservan su tamaño: en el extremo de cada equipo aparecen solo los cuartos jugados, en gris, y el actual en azul si está jugando. En la selección de jugadores, las marcas van junto al nombre o a la derecha del gorro rival; una luna indica que no está seleccionado o descansó. Los cuartos anteriores sin datos aparecen como **?**, sin dar por hecho un descanso. Al terminar el tercero aparece un resumen de quién debe jugar o descansar, separado entre Morvedre y Rival; en la selección del cuarto las fichas lo indican. Si una selección incumple la rotación, revisa con el entrenador o el árbitro. Puedes registrar lo ocurrido confirmando el aviso.
 
-Si atribuyes una acción a alguien que no seleccionaste, la app pregunta si está jugando y te lleva a revisar la alineación. Los asistentes y lanzadores de penalti se eligen entre quienes están en el agua. Los gorros 1 y 13 siempre son porteros. La excepción de portero único debe marcarse expresamente en Alevín/Infantil.
+Si atribuyes una acción a alguien que no seleccionaste, la app pregunta si está jugando y te lleva a revisar la alineación. Los asistentes y lanzadores de penalti se eligen entre quienes están en el agua. Si solo queda un portero disponible, puede jugar sin descanso obligatorio ni activar ninguna opción. Los gorros 1 y 13 son los porteros habituales; si se expulsa al único disponible, puedes elegir a un jugador de campo para ocupar la portería.
 
-Durante los cuatro primeros cuartos, pulsa **Cuartos** en la cabecera para consultar la participación sin desplazar la tabla. También puedes entrar desde **Corregir → Revisar participación**. La tabla está ordenada por gorro. Cambia entre Morvedre y Rival y toca el cuarto que necesites corregir. También puedes corregir o anular una sustitución registrada. En Infantil, una sanción definitiva pide quién entra; ambos jugadores cuentan como participantes. Si el sustituto juega los cuatro primeros, se avisa de que debe descansar el quinto. Una expulsión temporal no añade un sustituto.
+Durante los cuatro primeros cuartos, pulsa **Quién jugó** en la cabecera para consultar la participación sin desplazar la tabla. También puedes entrar desde **Corregir → Revisar participación**. La tabla está ordenada por gorro. Cambia entre Morvedre y Rival y toca el cuarto que necesites corregir. También puedes corregir o anular una sustitución registrada. En Infantil, una sanción definitiva pide quién entra; ambos jugadores cuentan como participantes. Si hay candidatos, elige y confirma la sustitución antes de continuar. Si no queda ninguno, el equipo juega con uno menos y no se abre un selector vacío. Una expulsión temporal no añade un sustituto.
 
-Desde el quinto desaparecen las marcas, el acceso de cabecera y la selección de campo. No se muestra un aviso de cierre de rotación; se conserva el descanso excepcional si procede. Puedes consultar los primeros cuatro desde **Corregir → Revisar participación**, y quedan incluidos en el PDF. Los cuartos sin datos se muestran con un punto en la tabla y con **?** en el PDF; no significan descanso.
+Desde el quinto desaparecen las marcas, el acceso de cabecera y la selección de campo. No hay descanso obligatorio en el quinto por haber jugado los cuatro anteriores, ni aparece un aviso de cierre de rotación. Las expulsiones definitivas siguen vigentes. Puedes consultar los primeros cuatro desde **Corregir → Revisar participación**; los cuartos sin datos se muestran con un punto y no significan descanso. El PDF termina con el relato cuarto a cuarto y la tanda de penaltis, si existe, sin un anexo de participación.
+
+Al preparar el partido hacen falta al menos 8 convocados en Benjamín y Alevín, o 9 en Infantil, en ambos equipos. Debe estar inscrito un portero con gorro 1 o 13. Las expulsiones durante el partido no obligan a añadir jugadores nuevos a la convocatoria. Al elegir quién empieza cada cuarto puedes tocar **1. Morvedre** o **2. Rival** para cambiar de equipo; lo que has seleccionado se conserva.
 
 ## Durante el juego
 

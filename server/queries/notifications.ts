@@ -1,3 +1,4 @@
+import { notificationTarget, notificationPreferences } from "@/lib/domain/notifications";
 import { createClient } from "@/lib/supabase/server";
 
 export interface NotificationItem {
@@ -12,24 +13,6 @@ export interface NotificationItem {
   related_profile_id: string | null;
   related_training_session_id: string | null;
   created_at: string;
-}
-
-function safeNotificationHref(item: NotificationItem): string | null {
-  if (item.related_match_id) return `/matches/${item.related_match_id}`;
-  if (item.kind === "training_cancelled") return "/calendar";
-  if (!item.href?.startsWith("/")) return null;
-  if (item.href.startsWith("/admin/matches/")) {
-    return item.related_match_id ? `/matches/${item.related_match_id}` : "/calendar";
-  }
-  const allowed = [
-    "/news/",
-    "/matches/",
-    "/shop/orders/",
-    "/attendance/history",
-    "/calendar",
-    "/notifications",
-  ];
-  return allowed.some((prefix) => item.href?.startsWith(prefix)) ? item.href : null;
 }
 
 export async function getNotificationsForProfile(
@@ -51,7 +34,7 @@ export async function getNotificationsForProfile(
   }
   return ((data ?? []) as NotificationItem[]).map((item) => ({
     ...item,
-    href: safeNotificationHref(item),
+    href: notificationTarget(item),
   }));
 }
 
@@ -67,4 +50,62 @@ export async function getUnreadNotificationsCount(recipientId: string): Promise<
     throw new Error("No pudimos contar las notificaciones.");
   }
   return count ?? 0;
+}
+
+export async function getNotificationInbox(
+  recipientId: string,
+  view: "all" | "unread",
+  page: number,
+) {
+  const supabase = await createClient();
+  const size = 20;
+  const base = () =>
+    supabase.from("notifications").select("*", { count: "exact" }).eq("recipient_id", recipientId);
+  const countQuery = base();
+  const countResult = await (view === "unread" ? countQuery.is("read_at", null) : countQuery).limit(
+    0,
+  );
+  if (countResult.error) throw new Error("No pudimos cargar tus avisos.");
+  const total = countResult.count ?? 0;
+  const pages = Math.max(1, Math.ceil(total / size));
+  const current = Math.min(Math.max(1, page), pages);
+  const query = base();
+  const result = await (view === "unread" ? query.is("read_at", null) : query)
+    .order("created_at", { ascending: false })
+    .order("id")
+    .range((current - 1) * size, current * size - 1);
+  if (result.error) throw new Error("No pudimos cargar tus avisos.");
+  return {
+    items: ((result.data ?? []) as NotificationItem[]).map((item) => ({
+      ...item,
+      href: notificationTarget(item),
+    })),
+    total,
+    pages,
+    page: current,
+  };
+}
+
+export async function getNotificationForProfile(recipientId: string, id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("*")
+    .eq("id", id)
+    .eq("recipient_id", recipientId)
+    .maybeSingle();
+  if (error) throw new Error("No pudimos cargar este aviso.");
+  return data
+    ? ({ ...data, href: notificationTarget(data as NotificationItem) } as NotificationItem)
+    : null;
+}
+
+export async function getNotificationPreferences(profileId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profile_notification_prefs")
+    .select("notification_type, enabled")
+    .eq("profile_id", profileId);
+  if (error) throw new Error("No pudimos cargar tus preferencias.");
+  return notificationPreferences(data ?? []);
 }

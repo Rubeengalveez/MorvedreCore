@@ -1,3 +1,8 @@
+import {
+  isAllowedPushEndpoint,
+  pushRequestIsSameOrigin,
+  validPushKey,
+} from "@/lib/domain/push-subscription";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -7,16 +12,25 @@ import { getActiveProfileContext } from "@/server/queries/active-profile";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  endpoint: z.string().url(),
+  endpoint: z.string().url().max(4096).refine(isAllowedPushEndpoint),
   keys: z.object({
-    p256dh: z.string().min(10),
-    auth: z.string().min(8),
+    p256dh: z
+      .string()
+      .max(100)
+      .refine((value) => validPushKey(value, 65)),
+    auth: z
+      .string()
+      .max(30)
+      .refine((value) => validPushKey(value, 16)),
   }),
 });
 
 export async function POST(request: Request) {
+  if (!pushRequestIsSameOrigin(request))
+    return NextResponse.json({ error: "No autorizado" }, { status: 403 });
   const ctx = await getActiveProfileContext();
-  if (!ctx) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (!ctx?.ownProfile.is_active)
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const parsed = schema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) {
@@ -48,6 +62,10 @@ export async function POST(request: Request) {
       { onConflict: "endpoint" },
     );
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error)
+    return NextResponse.json(
+      { error: "No pudimos guardar los avisos de este dispositivo." },
+      { status: 500 },
+    );
   return NextResponse.json({ ok: true });
 }

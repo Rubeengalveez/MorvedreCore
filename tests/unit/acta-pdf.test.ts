@@ -120,39 +120,61 @@ function testRecord(sheet = testSheet()): LiveRecord {
 }
 
 describe("createActaPdf", () => {
-  it("incluye la tabla de participación de ambos equipos sin inventar cuartos sin datos", async () => {
-    const sheet = testSheet();
-    sheet.version = 4;
-    sheet.category = "infantil";
-    sheet.participation = {
-      rulesVersion: 1,
-      enabled: true,
-      opponentConfirmed: true,
-      fixedKeepers: { us: null, them: null },
-      lineups: [
-        {
-          period: 1,
-          side: "us",
-          keeper: sheet.players[0].id,
-          field: [sheet.players[1].id],
-          incident: "Faltan jugadores",
-        },
-        {
-          period: 1,
-          side: "them",
-          keeper: String(sheet.opponentCaps[0]),
-          field: sheet.opponentCaps.slice(1).map(String),
-          incident: "Faltan jugadores",
-        },
-      ],
-      changes: [],
-    };
-    const pdfFile = createActaPdf(testRecord(sheet));
-    const text = Buffer.from(await pdfFile.arrayBuffer()).toString("latin1");
-    expect(text).toContain("Participaci");
-    expect(text).toContain("Cuartos 1");
-    expect(text).toContain("(?)");
-  });
+  it.each(["benjamin", "alevin", "infantil"] as const)(
+    "omite el apéndice de participación en %s y conserva cuartos y penaltis",
+    async (category) => {
+      const sheet = testSheet();
+      sheet.version = 4;
+      sheet.category = category;
+      sheet.participation = {
+        rulesVersion: 1,
+        enabled: true,
+        opponentConfirmed: true,
+        fixedKeepers: { us: null, them: null },
+        lineups: [
+          {
+            period: 1,
+            side: "us",
+            keeper: sheet.players[0].id,
+            field: [sheet.players[1].id],
+            incident: "Faltan jugadores",
+          },
+          {
+            period: 1,
+            side: "them",
+            keeper: String(sheet.opponentCaps[0]),
+            field: sheet.opponentCaps.slice(1).map(String),
+            incident: "Faltan jugadores",
+          },
+        ],
+        changes: [],
+      };
+      const pdfFile = createActaPdf(testRecord(sheet));
+      const text = Buffer.from(await pdfFile.arrayBuffer()).toString("latin1");
+      const withoutParticipation = Buffer.from(
+        await createActaPdf(testRecord({ ...sheet, participation: undefined })).arrayBuffer(),
+      ).toString("latin1");
+      expect(text.match(/\/MediaBox/g)?.length).toBe(
+        withoutParticipation.match(/\/MediaBox/g)?.length,
+      );
+      expect(text).not.toContain("Participaci");
+      expect(text).not.toContain("Cuartos 1");
+      expect(text).toContain("El partido, cuarto a cuarto");
+      const withShootout = Buffer.from(
+        await createActaPdf(
+          testRecord({
+            ...sheet,
+            shootout: {
+              firstSide: "us",
+              shots: [{ id: "shot-1", side: "us", cap: 4, keeper: null, outcome: "goal" }],
+            },
+          }),
+        ).arrayBuffer(),
+      ).toString("latin1");
+      expect(withShootout).toContain("TANDA DE PENALTIS");
+      expect(withShootout).not.toContain("Participaci");
+    },
+  );
   it("continúa la tanda en la tabla de los cuartos y muestra el total sin el texto antiguo", async () => {
     const base = testSheet();
     const regular = createActaPdf(testRecord(base));

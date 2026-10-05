@@ -1,378 +1,287 @@
 "use client";
 
-import { type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronRight, X, Clock3 } from "lucide-react";
 import type { Route } from "next";
-
-import { CalendarMarker } from "./calendar-key";
-import { Gorro } from "@/components/brand/pictograms";
-import { Button } from "@/components/ui/button";
+import { Clock3, ChevronRight, Check, X, Minus } from "lucide-react";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import { MapLocationLink } from "@/components/ui/map-location-link";
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import {
   formatLongDate,
   formatTimeOfDay,
   formatTimeRangeFromDuration,
 } from "@/lib/domain/calendar";
-import type { CalendarEventDay } from "@/server/queries/calendar";
+import type { CalendarEventDay, CalendarTraining, CalendarMatch } from "@/server/queries/calendar";
 import { cn } from "@/lib/utils/cn";
+import { CalendarMarker } from "./calendar-key";
 
 export interface EventSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   iso: string | null;
   day: CalendarEventDay | null;
-  isCoach: boolean;
-  isAdmin: boolean;
+  returnParams?: string;
+  isCoach?: boolean;
+  isAdmin?: boolean;
 }
-
-const COMPETITION_LABELS: Record<string, string> = {
+const labels: Record<string, string> = {
   league: "Liga",
   cup: "Copa",
   tournament: "Torneo",
   friendly: "Amistoso",
 };
-
-function EventCardHeader({ teamLabel, children }: { teamLabel: string; children: ReactNode }) {
+const action =
+  "bg-pool-deep border-pool-deep focus-visible:outline-pool-blue flex min-h-12 items-center justify-between gap-2 rounded-xl border-2 px-3 text-sm font-extrabold text-white focus-visible:outline-2 focus-visible:outline-offset-2";
+function TeamLabel({ label, color }: { label: string; color: string }) {
   return (
-    <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
-      <span className="text-pool-blue min-w-0 pt-1 text-base leading-tight font-black tracking-[0.08em] uppercase">
-        {teamLabel}
-      </span>
-      <div className="flex min-w-0 flex-wrap justify-end gap-1.5">{children}</div>
-    </div>
-  );
-}
-
-function EventBadge({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex min-h-8 items-center gap-1.5 rounded-lg border px-2.5 text-xs leading-tight font-black tracking-[0.05em] uppercase",
-        className,
-      )}
-    >
-      {children}
+    <span className="border-pool-deep/65 text-pool-deep inline-flex max-w-full items-center gap-2 rounded-lg border bg-white px-2 py-1 text-sm font-extrabold">
+      <span
+        className="h-3 w-3 shrink-0 rounded-full border border-slate-700"
+        style={{ backgroundColor: color }}
+        aria-hidden="true"
+      />
+      {label}
     </span>
   );
 }
-
-function EventMetaRow({ icon, children }: { icon: ReactNode; children: ReactNode }) {
+export function EventSheet({ open, onOpenChange, iso, day, returnParams }: EventSheetProps) {
+  const events = [
+    ...(day?.trainings ?? []).map((training) => ({ kind: "training" as const, event: training })),
+    ...(day?.matches ?? []).map((match) => ({ kind: "match" as const, event: match })),
+  ].sort((a, b) => a.event.scheduled_at.localeCompare(b.event.scheduled_at));
   return (
-    <div className="text-ink-600 flex min-w-0 items-start gap-2 text-sm leading-5 font-semibold">
-      <span className="text-ink-400 mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center">
-        {icon}
-      </span>
-      <div className="min-w-0 flex-1">{children}</div>
-    </div>
+    <ActaGuardSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      context="Calendario"
+      title={iso ? formatLongDate(`${iso}T12:00:00`) : "Actividades del día"}
+      description="Horarios, categorías y asistencia de las actividades de este día."
+      icon="saved"
+      tall
+      actions={[]}
+      body={
+        events.length ? (
+          <ul className="flex flex-col gap-3">
+            {events.map(({ kind, event }) => (
+              <li key={`${kind}/${event.id}`}>
+                {kind === "training" ? (
+                  <TrainingRow training={event as CalendarTraining} returnParams={returnParams} />
+                ) : (
+                  <MatchRow match={event as CalendarMatch} returnParams={returnParams} />
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="border-pool-deep/65 text-pool-deep rounded-xl border-2 bg-white p-5 text-center font-semibold">
+            No hay entrenamientos ni partidos este día.
+          </div>
+        )
+      }
+    />
   );
 }
-
-export function EventSheet({ open, onOpenChange, iso, day, isCoach, isAdmin }: EventSheetProps) {
-  const dateLabel = iso ? formatLongDate(`${iso}T12:00:00`) : "";
-
+export function TrainingRow({
+  training,
+  isCoach = false,
+  returnParams,
+  compact = false,
+}: {
+  training: CalendarTraining;
+  isCoach?: boolean;
+  returnParams?: string;
+  compact?: boolean;
+}) {
+  const kind =
+    training.training_kind === "dry" || training.training_kind === "physical"
+      ? "Físico / seco"
+      : training.training_kind === "meeting"
+        ? "Reunión"
+        : "Agua";
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent size="lg" className="gap-0">
-        <SheetHeader>
-          <SheetTitle>{dateLabel || "Eventos"}</SheetTitle>
-          <SheetDescription>
-            {day && day.trainings.length + day.matches.length > 0
-              ? `${day.trainings.length + day.matches.length} eventos`
-              : "No hay eventos programados."}
-          </SheetDescription>
-        </SheetHeader>
-        <SheetBody className="pt-3 pb-[max(2rem,env(safe-area-inset-bottom))]">
-          {day && (day.trainings.length > 0 || day.matches.length > 0) ? (
-            <ul className="flex flex-col gap-3 pb-4">
-              {day.trainings.map((t) => (
-                <li key={t.id}>
-                  <TrainingRow training={t} isCoach={isCoach || isAdmin} />
-                </li>
-              ))}
-              {day.matches.map((m) => (
-                <li key={m.id}>
-                  <MatchRow match={m} isCoach={isCoach || isAdmin} />
+    <article
+      className={cn(
+        "border-pool-deep/65 flex flex-col gap-3 rounded-xl border-2 bg-white p-3",
+        compact && "p-2.5",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-pool-deep inline-flex items-center gap-2 text-sm font-extrabold">
+          <CalendarMarker kind="training" />
+          Entrenamiento
+        </span>
+        <span className="border-pool-deep/65 text-pool-deep rounded-lg border bg-blue-50 px-2 py-1 text-sm font-bold">
+          {kind}
+        </span>
+      </div>
+      <TeamLabel label={training.team_label} color={training.team_color} />
+      <h3 className="text-pool-deep text-base leading-snug font-extrabold">
+        {training.block_label || `Entrenamiento de ${kind.toLowerCase()}`}
+      </h3>
+      <div className="border-pool-deep/65 text-pool-deep flex items-center gap-2 rounded-xl border bg-blue-50 px-3 py-2.5">
+        <Clock3 className="h-5 w-5 shrink-0" aria-hidden="true" />
+        <time dateTime={training.scheduled_at} className="text-lg font-extrabold tabular-nums">
+          {formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes)}
+        </time>
+        <span className="ml-auto text-sm font-semibold whitespace-nowrap">
+          {training.duration_minutes} min
+        </span>
+      </div>
+      {(training.location || training.maps_url) && (
+        <MapLocationLink
+          name={training.location}
+          mapsUrl={training.maps_url}
+          className="border-pool-deep/65 border-2"
+        />
+      )}
+      {training.cancelled ? (
+        <div className="rounded-xl border-2 border-red-800 bg-red-50 p-3 text-sm font-bold text-red-900">
+          <span>Cancelado.</span> {training.cancellation_reason || "Sin motivo especificado"}
+        </div>
+      ) : (
+        <>
+          {!!training.attendance?.length && (
+            <ul aria-label="Asistencia registrada" className="flex flex-col gap-2">
+              {training.attendance.map((person) => (
+                <li
+                  key={person.player_id}
+                  className={cn(
+                    "flex items-center gap-2 rounded-xl border px-2.5 py-2 text-sm",
+                    person.present === true
+                      ? "border-green-800 bg-green-50 text-green-900"
+                      : person.present === false
+                        ? "border-red-800 bg-red-50 text-red-900"
+                        : training.upcoming
+                          ? "border-slate-500 bg-slate-50 text-slate-800"
+                          : "border-amber-800 bg-amber-50 text-amber-950",
+                  )}
+                >
+                  <span aria-hidden="true">
+                    {person.present === true ? (
+                      <Check className="h-4 w-4" />
+                    ) : person.present === false ? (
+                      <X className="h-4 w-4" />
+                    ) : (
+                      <Minus className="h-4 w-4" />
+                    )}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-extrabold">{person.name}</p>
+                    <p className="font-semibold">
+                      {person.present === true
+                        ? "Asistió"
+                        : person.present === false
+                          ? `No asistió${person.reason ? ` · ${person.reason}` : ""}`
+                          : training.upcoming
+                            ? "Entrenamiento pendiente"
+                            : "Sin revisar · asistencia provisional"}
+                    </p>
+                  </div>
                 </li>
               ))}
             </ul>
-          ) : (
-            <div className="border-ink-300 bg-paper-sunk rounded-2xl border border-dashed p-5 text-center">
-              <p className="text-ink-700 text-sm font-semibold">
-                Nada en el calendario este día. Aprovéchalo para descansar.
-              </p>
-            </div>
           )}
-        </SheetBody>
-      </SheetContent>
-    </Sheet>
-  );
-}
-
-export function TrainingRow({
-  training,
-  isCoach,
-  compact = false,
-}: {
-  training: NonNullable<CalendarEventDay["trainings"][number]>;
-  isCoach: boolean;
-  compact?: boolean;
-}) {
-  const timeRange = formatTimeRangeFromDuration(training.scheduled_at, training.duration_minutes);
-
-  return (
-    <article className="border-pool-blue/20 bg-pool-ice hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
-      <span
-        aria-hidden="true"
-        className="absolute top-0 bottom-0 left-0 w-1.5"
-        style={{ backgroundColor: training.team_color }}
-      />
-
-      <div
-        className={cn(
-          "flex flex-col",
-          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-3.5 py-4 pr-4 pl-5 sm:p-4 sm:pl-5",
-        )}
-      >
-        {compact ? (
-          <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-            <span className="text-pool-blue min-w-0 truncate text-base font-black tracking-[0.08em] uppercase">
-              {training.team_label}
-            </span>
-            <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep min-h-7 shrink-0 px-2 text-xs">
-              <CalendarMarker kind="training" /> Entrenamiento
-            </EventBadge>
-          </div>
-        ) : (
-          <EventCardHeader teamLabel={training.team_label}>
-            <EventBadge className="border-pool-blue/15 bg-pool-foam text-pool-deep">
-              <CalendarMarker kind="training" /> Entrenamiento
-            </EventBadge>
-          </EventCardHeader>
-        )}
-
-        <div className="border-ink-200/70 bg-paper-card min-w-0 rounded-xl border px-3 py-3">
-          <h3
-            className={cn(
-              "text-pool-deep leading-tight font-extrabold text-pretty",
-              compact ? "text-base" : "text-lg",
-              training.cancelled && "text-ink-500",
-            )}
-          >
-            {training.cancelled ? "Sesión de entrenamiento" : "Sesión de agua y táctica"}
-          </h3>
-
-          <div className={compact ? "mt-2" : "mt-2.5"}>
-            <EventMetaRow icon={<Clock3 className="h-4 w-4" aria-hidden="true" />}>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                <time className="text-pool-deep font-mono text-base font-black tracking-tight tabular-nums">
-                  {timeRange}
-                </time>
-                <span className="bg-ink-100 text-ink-600 rounded-md px-2 py-0.5 text-xs font-extrabold tabular-nums">
-                  {training.duration_minutes} min
-                </span>
-              </div>
-            </EventMetaRow>
-          </div>
-        </div>
-
-        {training.location || training.maps_url ? (
-          <MapLocationLink name={training.location} mapsUrl={training.maps_url} compact={compact} />
-        ) : null}
-
-        {training.cancelled ? (
-          <div className="border-danger text-danger flex items-start gap-2 rounded-xl border bg-red-50 px-3 py-2.5 text-sm font-bold">
-            <X className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-            <p className="min-w-0 break-words">
-              <span className="font-black">Cancelado.</span>{" "}
-              {training.cancellation_reason || "Sin motivo especificado"}
-            </p>
-          </div>
-        ) : null}
-
-        {isCoach && !training.cancelled ? (
-          <div>
+          {(training.can_manage ?? isCoach) && (
             <Link
-              href={`/attendance/${training.id}` as Route}
-              className="bg-pool-deep text-paper hover:bg-pool-blue focus-visible:ring-pool-blue flex min-h-12 w-full touch-manipulation items-center justify-between rounded-xl px-3.5 text-sm font-extrabold transition-[background-color,color] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none motion-reduce:transition-none"
+              href={`/attendance/${training.id}${returnParams ? `?${returnParams}` : ""}` as Route}
+              className={action}
             >
-              <span>Pasar lista</span>
+              Pasar lista
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Link>
-          </div>
-        ) : null}
-      </div>
+          )}
+        </>
+      )}
     </article>
   );
 }
-
 export function MatchRow({
   match,
+  returnParams,
   compact = false,
 }: {
-  match: NonNullable<CalendarEventDay["matches"][number]>;
-  isCoach: boolean;
+  match: CalendarMatch;
+  returnParams?: string;
+  isCoach?: boolean;
   compact?: boolean;
 }) {
-  const href = `/matches/${match.id}` as Route;
-  const homeTeam = match.is_home ? "Morvedre" : match.opponent;
-  const awayTeam = match.is_home ? match.opponent : "Morvedre";
-
+  const home = match.is_home ? "Morvedre" : match.opponent;
+  const away = match.is_home ? match.opponent : "Morvedre";
   return (
-    <article className="border-pool-blue/20 bg-pool-ice hover:shadow-elev-2 relative overflow-hidden rounded-2xl border shadow-sm transition-shadow motion-reduce:transition-none">
-      <span
-        aria-hidden="true"
-        className="absolute top-0 bottom-0 left-0 w-1.5"
-        style={{ backgroundColor: match.team_color }}
-      />
-
-      <div
-        className={cn(
-          "flex flex-col",
-          compact ? "gap-3 py-3 pr-3 pl-4 sm:p-4 sm:pl-5" : "gap-3.5 py-4 pr-4 pl-5 sm:p-4 sm:pl-5",
-        )}
-      >
-        {compact ? (
-          <div className="flex min-w-0 items-center justify-between gap-2">
-            <span className="text-pool-blue min-w-0 truncate text-xs font-black tracking-[0.08em] uppercase">
-              {match.team_label}
-            </span>
-            <EventBadge className="border-ink-300 bg-paper text-ink-600 min-h-7 shrink-0 px-2 text-xs">
-              <CalendarMarker kind="match" /> Partido ·{" "}
-              {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-            </EventBadge>
-          </div>
-        ) : (
-          <EventCardHeader teamLabel={match.team_label}>
-            <EventBadge className="border-ink-300 bg-paper text-ink-600">
-              <CalendarMarker kind="match" /> Partido ·{" "}
-              {COMPETITION_LABELS[match.competition_type] ?? match.competition_type}
-            </EventBadge>
-          </EventCardHeader>
-        )}
-
-        {match.status === "cancelled" ||
-        match.status === "postponed" ||
-        match.status === "played" ||
-        match.status === "in_progress" ? (
-          <div className="text-ink-700 flex items-center gap-2 text-sm font-bold">
-            {match.status === "cancelled" ? (
-              <CalendarMarker kind="cancelled" />
-            ) : match.status === "postponed" ? (
-              <CalendarMarker kind="postponed" />
-            ) : null}
-            {match.status === "cancelled"
-              ? "Partido cancelado"
-              : match.status === "postponed"
-                ? "Partido aplazado · pendiente de nueva fecha"
-                : match.status === "played"
-                  ? "Partido jugado"
-                  : "Partido en juego"}
-          </div>
-        ) : null}
-
-        {compact ? (
-          <div className="bg-paper-sunk grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-3 py-2.5 select-none">
-            <div className="min-w-0">
-              <p className="text-ink-600 text-xs font-bold">
-                Morvedre · {match.is_home ? "local" : "visitante"}
-              </p>
-              <h3 className="text-pool-deep mt-0.5 text-base leading-tight font-black text-pretty">
-                <span className="text-ink-500 font-bold">vs </span>
-                {match.opponent}
-              </h3>
-            </div>
-            <div className="shrink-0">
-              {match.status === "played" &&
-              match.final_score_us != null &&
-              match.final_score_them != null ? (
-                <span className="bg-pool-deep text-paper border-pool-deep inline-flex rounded-lg border px-2.5 py-1 font-mono text-sm font-black tracking-wider shadow-sm">
-                  {match.final_score_us}-{match.final_score_them}
-                </span>
-              ) : (
-                <time className="bg-paper-card text-pool-deep border-ink-200 inline-flex rounded-lg border px-2 py-1 font-mono text-sm font-black">
-                  {formatTimeOfDay(match.scheduled_at)}
-                </time>
-              )}
-            </div>
-          </div>
-        ) : (
-          <>
-            <h3 className="sr-only">
-              {homeTeam} contra {awayTeam}
-            </h3>
-
-            <div className="border-ink-200/70 bg-paper-card grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl border px-3 py-3 select-none">
-              <div className="flex min-w-0 items-center gap-1">
-                <Gorro
-                  className="h-[18px] w-[18px] shrink-0"
-                  accent={match.is_home ? match.team_color : "#718096"}
-                  aria-hidden="true"
-                />
-                <span className="text-ink-950 truncate text-xs font-black">{homeTeam}</span>
-              </div>
-
-              <div className="flex min-w-12 shrink-0 justify-center">
-                {match.status === "played" &&
-                match.final_score_us != null &&
-                match.final_score_them != null ? (
-                  <span className="bg-pool-deep text-paper border-pool-deep rounded-lg border px-3 py-1 font-mono text-sm font-black tracking-widest shadow-sm md:text-base">
-                    {match.is_home ? match.final_score_us : match.final_score_them}-
-                    {match.is_home ? match.final_score_them : match.final_score_us}
-                  </span>
-                ) : (
-                  <span className="bg-ink-100 text-pool-deep border-ink-200 rounded-lg border px-2 py-1 font-mono text-xs font-black md:text-sm">
-                    {formatTimeOfDay(match.scheduled_at)}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex min-w-0 items-center justify-end gap-1 text-right">
-                <span className="text-ink-950 truncate text-xs font-black">{awayTeam}</span>
-                <Gorro
-                  className="h-[18px] w-[18px] shrink-0"
-                  accent={match.is_home ? "#718096" : match.team_color}
-                  aria-hidden="true"
-                />
-              </div>
-            </div>
-          </>
-        )}
-
-        {match.pool_name || match.location || match.maps_url ? (
-          <MapLocationLink
-            name={match.pool_name || match.location}
-            address={match.location}
-            mapsUrl={match.maps_url}
-            compact={compact}
-          />
-        ) : null}
-
-        <div className="select-none">
-          <Button
-            asChild
-            size="sm"
-            variant="deep"
-            className={cn(
-              "flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-xl font-extrabold",
-              "min-h-12 text-sm",
-            )}
-          >
-            <Link href={href}>
-              <span>{compact ? "Ver convocatoria" : "Ver convocatoria completa"}</span>
-              <ChevronRight className="h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
-          </Button>
-        </div>
+    <article
+      className={cn(
+        "border-pool-deep/65 text-pool-deep flex flex-col gap-3 rounded-xl border-2 bg-white p-3",
+        compact && "p-2.5",
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-2 text-sm font-extrabold">
+          <CalendarMarker kind="match" />
+          Partido · {labels[match.competition_type] ?? "Competición"}
+        </span>
+        <time dateTime={match.scheduled_at} className="font-extrabold tabular-nums">
+          {formatTimeOfDay(match.scheduled_at)}
+        </time>
       </div>
+      <TeamLabel label={match.team_label} color={match.team_color} />
+      <h3 className="sr-only">
+        {home} contra {away}
+      </h3>
+      <div className="border-pool-deep/65 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-xl border bg-blue-50 p-3 text-center">
+        <span className="min-w-0 text-sm leading-snug font-extrabold">{home}</span>
+        <strong className="whitespace-nowrap">
+          {match.status === "played" &&
+          match.final_score_us !== null &&
+          match.final_score_them !== null
+            ? `${match.is_home ? match.final_score_us : match.final_score_them}–${match.is_home ? match.final_score_them : match.final_score_us}`
+            : "vs"}
+        </strong>
+        <span className="min-w-0 text-sm leading-snug font-extrabold">{away}</span>
+      </div>
+      {match.status === "cancelled" || match.status === "postponed" ? (
+        <p className="rounded-lg border border-red-800 bg-red-50 p-2.5 text-sm font-bold text-red-900">
+          {match.status === "cancelled"
+            ? "Partido cancelado"
+            : "Aplazado · pendiente de nueva fecha"}
+        </p>
+      ) : match.status === "in_progress" ? (
+        <p className="rounded-lg bg-blue-50 p-2.5 text-sm font-extrabold">Partido en juego</p>
+      ) : null}
+      {!!match.callups?.length ? (
+        <ul className="grid gap-2">
+          {match.callups.map((person) => (
+            <li
+              key={person.player_id}
+              className="border-pool-deep/65 rounded-lg border bg-blue-50 p-2.5 text-sm"
+            >
+              <p className="font-extrabold">{person.name}</p>
+              <p className="mt-1 font-semibold">
+                En la convocatoria{person.cap_number ? ` · Gorro ${person.cap_number}` : ""}
+              </p>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        match.callup_status && (
+          <p className="border-pool-deep/65 rounded-lg border bg-blue-50 p-2.5 text-sm font-extrabold">
+            En la convocatoria{match.cap_number ? ` · Gorro ${match.cap_number}` : ""}
+          </p>
+        )
+      )}
+      {(match.pool_name || match.location || match.maps_url) && (
+        <MapLocationLink
+          name={match.pool_name || match.location}
+          address={match.location}
+          mapsUrl={match.maps_url}
+          className="border-pool-deep/65 border-2"
+        />
+      )}
+      <Link
+        href={`/matches/${match.id}${returnParams ? `?${returnParams}` : ""}` as Route}
+        className={action}
+      >
+        {match.status === "played" ? "Ver partido y acta" : "Ver partido"}
+        <ChevronRight className="h-4 w-4" aria-hidden="true" />
+      </Link>
     </article>
   );
 }

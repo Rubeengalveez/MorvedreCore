@@ -1,15 +1,14 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { UsersRound } from "lucide-react";
 
-import { PageHeader, PageShell } from "@/components/ui/page-shell";
-import { Card } from "@/components/ui/card";
-import { EmptyState } from "@/components/ui/empty-state";
-import { TeamListCard } from "@/components/team/team-list-card";
+import { PageShell } from "@/components/ui/page-shell";
+
+import { TeamDirectory } from "@/components/team/team-directory";
+import { TeamHeading, TeamEmpty } from "@/components/team/team-ui";
 import { getActiveProfileContext } from "@/server/queries/active-profile";
 import { getCurrentSeason } from "@/server/queries/seasons";
 import { getAllTeamsInSeason } from "@/server/queries/teams";
-import type { CategoryCode } from "@/lib/domain/categories";
+import { TEAM_CATEGORY_ORDER } from "@/lib/domain/team-presentation";
 import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
@@ -19,16 +18,6 @@ export const metadata: Metadata = {
   title: "Equipos — Morvedre Core",
   description: "Equipos, plantillas y partidos del Waterpolo Morvedre.",
 };
-
-const CATEGORY_ORDER: CategoryCode[] = [
-  "escuela",
-  "benjamin",
-  "alevin",
-  "infantil",
-  "cadete",
-  "juvenil",
-  "absoluto",
-];
 
 function firstName(name: string): string {
   return name.trim().split(/\s+/)[0] ?? name;
@@ -42,9 +31,8 @@ export default async function TeamPage() {
   if (!season) {
     return (
       <PageShell width="md" className="gap-4 pb-6">
-        <PageHeader title="Equipos" />
-        <EmptyState
-          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+        <TeamHeading title="Equipos" />
+        <TeamEmpty
           title="Sin temporada activa"
           description="La temporada activa todavía no está configurada."
         />
@@ -73,6 +61,8 @@ export default async function TeamPage() {
   ]);
 
   const linkedIds = new Set(ctx.linkedProfiles.map((profile) => profile.id));
+  if (staffResult.error || rostersResult.error)
+    throw new Error("No pudimos cargar tus equipos. Vuelve a intentarlo.");
   const playerTeamIds = new Set<string>();
   const familyPlayersByTeam = new Map<string, string[]>();
   for (const row of rostersResult.data ?? []) {
@@ -100,55 +90,36 @@ export default async function TeamPage() {
       })
       .map((item) => item.team_id),
   );
-  const orderedTeams = CATEGORY_ORDER.flatMap((code) =>
+  const orderedTeams = TEAM_CATEGORY_ORDER.flatMap((code) =>
     allTeams.filter((team) => team.category_code === code),
   );
 
   return (
     <PageShell width="md" className="gap-4 pb-6">
-      <PageHeader
-        eyebrow={`Temporada ${season.label}`}
-        title="Equipos"
-        description="Todos los equipos del club, ordenados de Escuela a Absoluto."
-        icon={<UsersRound className="h-5 w-5" aria-hidden="true" />}
-      />
+      <TeamHeading title="Equipos" subtitle={`Temporada ${season.label}`} />
 
       {allTeams.length === 0 ? (
-        <EmptyState
-          icon={<UsersRound className="h-6 w-6" aria-hidden="true" />}
+        <TeamEmpty
           title="Todavía no hay equipos"
           description="Los equipos de la temporada aparecerán aquí cuando estén configurados."
         />
       ) : (
-        <section aria-labelledby="team-directory-heading">
-          <div className="mb-2.5 flex min-h-8 items-center justify-between gap-3 px-1">
-            <h2
-              id="team-directory-heading"
-              className="text-pool-deep text-sm font-extrabold tracking-[0.04em] uppercase"
-            >
-              {orderedTeams.length} {orderedTeams.length === 1 ? "equipo" : "equipos"}
-            </h2>
-            <span className="text-ink-500 shrink-0 text-sm font-bold">De menor a mayor</span>
-          </div>
-          <Card className="divide-ink-200 divide-y">
-            {orderedTeams.map((team) => (
-              <TeamListCard
-                key={team.id}
-                team={team}
-                relationship={
-                  playerTeamIds.has(team.id) && coachTeamIds.has(team.id)
-                    ? "both"
-                    : coachTeamIds.has(team.id)
-                      ? "coach"
-                      : playerTeamIds.has(team.id)
-                        ? "player"
-                        : null
-                }
-                familyPlayerNames={familyPlayersByTeam.get(team.id) ?? []}
-              />
-            ))}
-          </Card>
-        </section>
+        <TeamDirectory
+          teams={orderedTeams.map((team) => ({
+            ...team,
+            playerCount: team.player_count,
+            coachName: team.coach_name,
+            relationship:
+              playerTeamIds.has(team.id) && coachTeamIds.has(team.id)
+                ? "both"
+                : coachTeamIds.has(team.id)
+                  ? "coach"
+                  : playerTeamIds.has(team.id)
+                    ? "player"
+                    : null,
+            familyPlayerNames: familyPlayersByTeam.get(team.id) ?? [],
+          }))}
+        />
       )}
     </PageShell>
   );

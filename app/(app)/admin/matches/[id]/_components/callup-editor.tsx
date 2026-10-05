@@ -22,6 +22,7 @@ import {
   type RosterTransfer,
 } from "@/lib/domain/live-match-roster-edit";
 import type { LiveSheet } from "@/lib/domain/live-match";
+import { rosterRequirementError } from "@/lib/domain/live-match-rules";
 import { replaceMatchCallupResult } from "@/server/actions/admin/matches";
 
 import { CapNumberButton, CapNumberOptions } from "./cap-number-picker";
@@ -32,6 +33,7 @@ export type { CallupCandidate, CallupPick } from "@/lib/domain/callup-selection"
 interface CallupEditorProps {
   matchId: string;
   teamLabel: string;
+  category?: string;
   opponent: string;
   scheduledAt: string;
   initial: CallupPick[];
@@ -63,6 +65,7 @@ function normalizeSearch(value: string): string {
 export function CallupEditor({
   matchId,
   teamLabel,
+  category,
   opponent,
   scheduledAt,
   initial,
@@ -125,9 +128,11 @@ export function CallupEditor({
   const invalidCaps = draft
     .map((player) => player.cap_number)
     .filter((cap): cap is number => cap != null && (cap < 1 || cap > 14));
-  const missingKeeper =
-    Boolean(onSaveLive) &&
-    !draft.some((player) => player.cap_number === 1 || player.cap_number === 13);
+  const rosterError = rosterRequirementError(
+    liveSheet?.category ?? category,
+    draft.map((p) => p.cap_number),
+  );
+  const missingKeeper = Boolean(rosterError);
   const selected = [...draft].sort(
     (a, b) =>
       (a.cap_number ?? 99) - (b.cap_number ?? 99) ||
@@ -328,7 +333,7 @@ export function CallupEditor({
       return;
     }
     if (missingKeeper) {
-      setError("Asigna el gorro 1 o 13 a un portero antes de guardar.");
+      setError(rosterError);
       return;
     }
     setError("");
@@ -371,7 +376,7 @@ export function CallupEditor({
     <section
       aria-labelledby="callup-title"
       className={cn(
-        editable && dirty
+        editable && (dirty || error)
           ? onSaveLive
             ? error || missingCaps > 0 || invalidCaps.length > 0 || missingKeeper
               ? "pb-32"
@@ -432,7 +437,7 @@ export function CallupEditor({
         </button>
       ) : null}
 
-      {error ? (
+      {error && !editable ? (
         <div className="mt-3" role="alert">
           <Alert variant="danger" title="Revisa la convocatoria">
             {error}
@@ -539,6 +544,15 @@ export function CallupEditor({
                           setVisibleCount(8);
                           return;
                         }
+                        const next = draft.filter((item) => item.player_id !== pick.player_id);
+                        const requirement = rosterRequirementError(
+                          liveSheet?.category ?? category,
+                          next.map((p) => p.cap_number),
+                        );
+                        if (requirement) {
+                          setError(requirement);
+                          return;
+                        }
                         setDraft((current) =>
                           current.filter((item) => item.player_id !== pick.player_id),
                         );
@@ -585,7 +599,7 @@ export function CallupEditor({
         </ul>
       )}
 
-      {editable && dirty ? (
+      {editable && (dirty || error) ? (
         <div
           className={cn(
             "border-pool-blue/30 bg-paper-card shadow-elev-2 fixed inset-x-4 z-20 mx-auto max-w-xl rounded-2xl border-2 p-2.5",
@@ -595,7 +609,10 @@ export function CallupEditor({
           )}
         >
           {error ? (
-            <p className="px-1 pb-1 text-sm font-bold text-red-800" role="alert">
+            <p
+              className="border-pool-deep text-pool-deep mb-2 rounded-xl border-2 bg-amber-100 px-3 py-2 text-base font-bold"
+              role="alert"
+            >
               {error}
             </p>
           ) : unassignedWithHistory ? (
@@ -613,8 +630,11 @@ export function CallupEditor({
               Reasigna los gorros {invalidCaps.join(", ")}: solo existen del 1 al 14
             </p>
           ) : missingKeeper ? (
-            <p className="px-1 pb-1 text-sm font-bold text-red-800">
-              Asigna el gorro 1 o 13 a un portero
+            <p
+              className="border-pool-deep text-pool-deep mb-2 rounded-xl border-2 bg-amber-100 px-3 py-2 text-base font-bold"
+              role="alert"
+            >
+              {rosterError}
             </p>
           ) : null}
           <Button
@@ -622,7 +642,9 @@ export function CallupEditor({
             size="lg"
             variant="deep"
             onClick={() => setSaveOpen(true)}
-            disabled={pending || missingCaps > 0 || invalidCaps.length > 0 || missingKeeper}
+            disabled={
+              pending || !dirty || missingCaps > 0 || invalidCaps.length > 0 || missingKeeper
+            }
             className="w-full rounded-xl"
           >
             {pending ? (

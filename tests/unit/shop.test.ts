@@ -12,14 +12,14 @@ import {
 } from "@/lib/domain/shop";
 
 describe("resolveShopContactPhone", () => {
-  it("reuses the phone already saved by an adult", () => {
+  it("uses the contact chosen for this order without overriding the profile", () => {
     expect(
       resolveShopContactPhone({
         storedPhone: "+34611111111",
         submittedPhone: "+34622222222",
         deferToGuardian: false,
       }),
-    ).toBe("+34611111111");
+    ).toBe("+34622222222");
   });
 
   it("uses the newly submitted phone when the adult profile has none", () => {
@@ -88,7 +88,6 @@ describe("parseProduct", () => {
       image_url: null,
       sizes: ["S", "M", "L"],
       available: true,
-      max_per_order: 5,
       currency: "EUR",
     });
     expect(r.ok).toBe(true);
@@ -127,22 +126,6 @@ describe("parseProduct", () => {
     ).toBe(false);
   });
 
-  it("rechaza max_per_order fuera de rango", () => {
-    expect(
-      parseProduct({ title: "x", description: "x", category: "x", price_eur: 10, max_per_order: 0 })
-        .ok,
-    ).toBe(false);
-    expect(
-      parseProduct({
-        title: "x",
-        description: "x",
-        category: "x",
-        price_eur: 10,
-        max_per_order: 99,
-      }).ok,
-    ).toBe(false);
-  });
-
   it("convierte precio a centavos", () => {
     const r = parseProduct({ title: "x", description: "x", category: "x", price_eur: 12.99 });
     if (r.ok) expect(r.value?.price_cents).toBe(1299);
@@ -164,14 +147,15 @@ describe("parseCartItem", () => {
   });
   it("rechaza quantity fuera de rango", () => {
     expect(parseCartItem({ product_id: validId, quantity: 0 }).ok).toBe(false);
-    expect(parseCartItem({ product_id: validId, quantity: 99 }).ok).toBe(false);
+    expect(parseCartItem({ product_id: validId, quantity: 99 }).ok).toBe(true);
+    expect(parseCartItem({ product_id: validId, quantity: 1.5 }).ok).toBe(false);
   });
 });
 
 describe("summarizeCart", () => {
   const products = [
-    { id: "a", price_cents: 1000, available: true, max_per_order: 10 },
-    { id: "b", price_cents: 2000, available: true, max_per_order: 10 },
+    { id: "a", price_cents: 1000, available: true },
+    { id: "b", price_cents: 2000, available: true },
   ];
   it("rechaza carrito vacio", () => {
     expect(summarizeCart([], products).ok).toBe(false);
@@ -194,9 +178,9 @@ describe("summarizeCart", () => {
     const r = summarizeCart([{ product_id: "c", size: null, quantity: 1 }], products);
     expect(r.ok).toBe(false);
   });
-  it("rechaza si excede max_per_order", () => {
-    const r = summarizeCart([{ product_id: "a", size: null, quantity: 11 }], products);
-    expect(r.ok).toBe(false);
+  it("permite cantidades bajo demanda sin límite comercial", () => {
+    const r = summarizeCart([{ product_id: "a", size: null, quantity: 99 }], products);
+    expect(r.ok).toBe(true);
   });
   it("exige una talla válida cuando el producto tiene tallas", () => {
     const sizedProducts = [
@@ -205,7 +189,6 @@ describe("summarizeCart", () => {
         title: "Bañador",
         price_cents: 1000,
         available: true,
-        max_per_order: 1,
         sizes: ["S", "M"],
       },
     ];
@@ -226,7 +209,6 @@ describe("summarizeCart", () => {
         title: "Sudadera",
         price_cents: 1000,
         available: true,
-        max_per_order: 1,
         personalization_enabled: true,
         personalization_max_length: 12,
       },
@@ -282,10 +264,13 @@ describe("canManagerTransitionShopOrder", () => {
     expect(canManagerTransitionShopOrder("pending_parent", "cancelled")).toBe(true);
   });
 
-  it("solo avanza los pedidos operativos en secuencia", () => {
+  it("permite entregar directamente y conserva las transiciones antiguas", () => {
     expect(canManagerTransitionShopOrder("pending_admin", "ordered")).toBe(true);
     expect(canManagerTransitionShopOrder("ordered", "received")).toBe(true);
     expect(canManagerTransitionShopOrder("received", "delivered")).toBe(true);
-    expect(canManagerTransitionShopOrder("pending_admin", "delivered")).toBe(false);
+    expect(canManagerTransitionShopOrder("pending_admin", "delivered")).toBe(true);
+    expect(canManagerTransitionShopOrder("ordered", "delivered")).toBe(true);
+    expect(canManagerTransitionShopOrder("delivered", "pending_admin")).toBe(true);
+    expect(canManagerTransitionShopOrder("pending_parent", "delivered")).toBe(false);
   });
 });

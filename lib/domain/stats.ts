@@ -38,6 +38,8 @@ export interface MatchStatLite {
 }
 
 export interface TrainingSessionLite {
+  joint_id?: string | null;
+  player_ids?: string[] | null;
   id: string;
   team_id: string;
   cancelled: boolean;
@@ -117,13 +119,21 @@ export function computePlayerStats(
   const playerTeamSessions = allSessions.filter(
     (session) =>
       relevantTeamIds.has(session.team_id) &&
+      (!session.player_ids || session.player_ids.includes(playerId)) &&
       !session.cancelled &&
       session.scheduled_at <= throughIso,
   );
   const sessionIds = new Set(playerTeamSessions.map((s) => s.id));
-  const playerAttendance = allAttendance.filter(
+  const uniqueAttendance = new Map<string, TrainingAttendanceLite>();
+  for (const row of allAttendance.filter(
     (a) => a.player_id === playerId && sessionIds.has(a.session_id),
-  );
+  )) {
+    const session = playerTeamSessions.find((s) => s.id === row.session_id)!;
+    const key = `${session.joint_id ?? session.id}/${session.scheduled_at}`;
+    const previous = uniqueAttendance.get(key);
+    if (!previous || row.present) uniqueAttendance.set(key, row);
+  }
+  const playerAttendance = [...uniqueAttendance.values()];
   const trainings_attended = playerAttendance.filter((a) => a.present).length;
   const trainings_total = playerAttendance.length;
   const attendance_pct = trainings_total > 0 ? (trainings_attended / trainings_total) * 100 : 0;

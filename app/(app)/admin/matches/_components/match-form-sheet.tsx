@@ -1,108 +1,41 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { CalendarPlus, ChevronDown, Loader2 } from "lucide-react";
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { useForm, useWatch } from "react-hook-form";
-import { z } from "zod";
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Loader2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useId, useRef, useState, useTransition, type ReactNode, type FormEvent } from "react";
+import { FormProvider, useForm } from "react-hook-form";
+import { Slot } from "@radix-ui/react-slot";
 
-import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { ActaGuardSheet } from "@/components/matches/acta-guard-sheet";
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { formatDateTimeLocal, parseDateTimeLocal } from "@/lib/utils/format";
-import { mapsUrlInputSchema } from "@/lib/domain/maps";
+  matchEditorSchema,
+  matchFormPayload,
+  type MatchEditorValues,
+} from "@/lib/domain/admin-matches";
 import { HOME_LEAGUE_LOCATION, HOME_LEAGUE_MAPS_URL } from "@/lib/domain/match-venue";
 import { createMatch, type Team } from "@/server/actions/admin";
 
-const COMPETITION_OPTIONS = [
-  { value: "league", label: "Liga" },
-  { value: "cup", label: "Copa" },
-  { value: "tournament", label: "Torneo" },
-  { value: "friendly", label: "Amistoso" },
-] as const;
-
-const formSchema = z.object({
-  team_id: z.string().uuid("Selecciona un equipo."),
-  opponent: z.string().trim().min(2, "Mínimo 2 caracteres.").max(100, "Máximo 100 caracteres."),
-  competition_type: z.enum(["league", "cup", "tournament", "friendly"]),
-  is_home: z.boolean(),
-  location: z.string().trim().max(200, "Máximo 200 caracteres.").optional(),
-  maps_url: mapsUrlInputSchema.optional(),
-  scheduled_at_local: z.string().min(1, "Fecha y hora obligatorias."),
-  notes: z.string().trim().max(2000, "Máximo 2000 caracteres.").optional(),
-});
-
-type FormValues = z.infer<typeof formSchema>;
-
-type ActionState = { ok: true; matchId: string } | { ok: false; error: string } | null;
-
-type TeamOption = Team & { season_label: string };
-
-async function submitAction(_prev: ActionState, formData: FormData): Promise<ActionState> {
-  try {
-    const localStr = String(formData.get("scheduled_at_local") ?? "");
-    const dt = parseDateTimeLocal(localStr);
-    if (!dt) {
-      return { ok: false, error: "Fecha u hora inválidas." };
-    }
-    const seasonId = String(formData.get("season_id") ?? "");
-    if (!seasonId) {
-      return { ok: false, error: "Falta la temporada del partido." };
-    }
-    const match = await createMatch({
-      season_id: seasonId,
-      team_id: String(formData.get("team_id") ?? ""),
-      opponent: String(formData.get("opponent") ?? ""),
-      competition_type: String(formData.get("competition_type") ?? "league") as
-        "league" | "cup" | "tournament" | "friendly",
-      is_home: formData.get("is_home") === "true",
-      location: String(formData.get("location") ?? "") || undefined,
-      maps_url: String(formData.get("maps_url") ?? "") || undefined,
-      scheduled_at: dt.toISOString(),
-      notes: String(formData.get("notes") ?? "") || undefined,
-    });
-    return { ok: true, matchId: match.id };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : "No pudimos guardar." };
-  }
-}
-
-function SubmitButton({ label, pending }: { label: string; pending: boolean }) {
-  return (
-    <Button type="submit" form="match-form-new" size="lg" className="w-full" disabled={pending}>
-      {pending ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" /> : null}
-      {pending ? "Guardando..." : label}
-    </Button>
-  );
-}
+import {
+  MatchIdentityFields,
+  MatchLocationFields,
+  MatchReview,
+  MatchScheduleFields,
+  MatchTextField,
+  matchActionClass,
+  matchSecondaryClass,
+} from "./match-editor-fields";
+import { MatchManagementSheet } from "./match-management-sheet";
+import { useMatchVenue } from "./use-match-venue";
 
 export interface MatchFormSheetProps {
-  teams: TeamOption[];
+  teams: Array<Team & { season_label: string }>;
   defaultTeamId: string | null;
   defaultSeasonId: string | null;
-  trigger: React.ReactNode;
+  trigger: ReactNode;
 }
+
+const steps = ["Equipos", "Fecha", "Revisar"];
 
 export function MatchFormSheet({
   teams,
@@ -111,356 +44,265 @@ export function MatchFormSheet({
   trigger,
 }: MatchFormSheetProps) {
   const router = useRouter();
+  const params = useSearchParams();
   const [open, setOpen] = useState(false);
-  const [state, formAction] = useActionState<ActionState, FormData>(submitAction, null);
-  const [isSaving, startTransition] = useTransition();
-  const previousVenueRef = useRef("true:league");
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(formSchema),
+  const [step, setStep] = useState(0);
+  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const formId = useId();
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const form = useForm<MatchEditorValues>({
+    resolver: zodResolver(matchEditorSchema),
     defaultValues: {
       team_id: defaultTeamId ?? teams[0]?.id ?? "",
       opponent: "",
       competition_type: "league",
+      status: "scheduled",
       is_home: true,
       location: HOME_LEAGUE_LOCATION,
       maps_url: HOME_LEAGUE_MAPS_URL,
-      scheduled_at_local: formatDateTimeLocal(new Date()),
+      scheduled_at_local: "",
       notes: "",
     },
   });
+  useMatchVenue(form, teams);
+  const dirty = form.formState.isDirty;
 
-  const isHome = useWatch({ control: form.control, name: "is_home" });
-  const competition = useWatch({ control: form.control, name: "competition_type" });
+  function requestClose(next: boolean) {
+    if (pending) return;
+    if (!next && dirty) setLeaveOpen(true);
+    else setOpen(next);
+  }
 
-  useEffect(() => {
-    const venue = `${isHome}:${competition}`;
-    const changed = previousVenueRef.current !== venue;
-    previousVenueRef.current = venue;
-    if (isHome && competition === "league") {
-      const location = form.getValues("location");
-      if (changed || !location) form.setValue("location", HOME_LEAGUE_LOCATION);
-      if (
-        changed ||
-        ((!location || location === HOME_LEAGUE_LOCATION) && !form.getValues("maps_url"))
-      ) {
-        form.setValue("maps_url", HOME_LEAGUE_MAPS_URL);
-      }
-    } else {
-      if (form.getValues("location") === HOME_LEAGUE_LOCATION) form.setValue("location", "");
-      if (form.getValues("maps_url") === HOME_LEAGUE_MAPS_URL) form.setValue("maps_url", "");
-    }
-  }, [isHome, competition, form]);
+  function start() {
+    const selected = params.get("team");
+    if (selected && teams.some((team) => team.id === selected) && !dirty)
+      form.setValue("team_id", selected);
+    setOpen(true);
+  }
 
-  useEffect(() => {
-    if (state?.ok) {
-      router.push(`/admin/matches/${state.matchId}?from=admin`);
-    }
-  }, [state, router]);
+  function goTo(next: number) {
+    setStep(next);
+    setError(null);
+    requestAnimationFrame(() => headingRef.current?.focus());
+  }
 
-  const onSubmit = form.handleSubmit((values) => {
-    const fd = new FormData();
-    const selectedTeam = teams.find((team) => team.id === values.team_id);
-    fd.append("season_id", selectedTeam?.season_id ?? defaultSeasonId ?? "");
-    fd.append("team_id", values.team_id);
-    fd.append("opponent", values.opponent);
-    fd.append("competition_type", values.competition_type);
-    fd.append("is_home", values.is_home ? "true" : "false");
-    if (values.location && values.location.trim() !== "") {
-      fd.append("location", values.location);
+  async function continueStep() {
+    const fields =
+      step === 0
+        ? (["team_id", "opponent", "competition_type", "is_home"] as const)
+        : (["scheduled_at_local", "location", "maps_url"] as const);
+    const valid = await form.trigger([...fields], { shouldFocus: true });
+    if (step === 0 && !teams.some((team) => team.id === form.getValues("team_id"))) {
+      form.setError(
+        "team_id",
+        { message: "Elige un equipo de esta temporada." },
+        { shouldFocus: true },
+      );
+      return;
     }
-    if (values.maps_url && values.maps_url.trim() !== "") {
-      fd.append("maps_url", values.maps_url);
-    }
-    fd.append("scheduled_at_local", values.scheduled_at_local);
-    if (values.notes && values.notes.trim() !== "") {
-      fd.append("notes", values.notes);
-    }
-    startTransition(() => {
-      formAction(fd);
-    });
-  });
+    if (valid) goTo(step + 1);
+    else
+      requestAnimationFrame(() => {
+        const field = fields.find((name) => form.getFieldState(name).error);
+        if (field) form.setFocus(field);
+      });
+  }
+
+  function submit(event: FormEvent<HTMLFormElement>) {
+    void form.handleSubmit(
+      (values) => {
+        const team = teams.find((item) => item.id === values.team_id);
+        if (!team) {
+          goTo(0);
+          form.setError("team_id", { message: "Elige un equipo de esta temporada." });
+          return;
+        }
+        setError(null);
+        startTransition(async () => {
+          try {
+            const match = await createMatch({
+              ...matchFormPayload(values),
+              team_id: values.team_id,
+              season_id: team.season_id ?? defaultSeasonId ?? "",
+            });
+            form.reset(values);
+            setOpen(false);
+            router.push(`/admin/matches/${match.id}?from=admin`);
+            router.refresh();
+          } catch (err) {
+            setError(
+              err instanceof Error
+                ? err.message
+                : "No pudimos crear el partido. Inténtalo de nuevo.",
+            );
+          }
+        });
+      },
+      (errors) => {
+        const next =
+          errors.opponent || errors.team_id
+            ? 0
+            : errors.scheduled_at_local || errors.location || errors.maps_url
+              ? 1
+              : 2;
+        goTo(next);
+      },
+    )(event);
+  }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger asChild>{trigger}</SheetTrigger>
-      <SheetContent size="lg">
-        <SheetHeader>
-          <span className="bg-pool-foam text-pool-blue mb-2 flex h-11 w-11 items-center justify-center rounded-xl">
-            <CalendarPlus className="h-5 w-5" aria-hidden="true" />
-          </span>
-          <SheetTitle>Nuevo partido</SheetTitle>
-          <SheetDescription>
-            Añade los datos del encuentro. Después podrás revisar la convocatoria del equipo.
-          </SheetDescription>
-        </SheetHeader>
-        <SheetBody>
-          <Form {...form}>
-            <form
-              id="match-form-new"
-              onSubmit={onSubmit}
-              className="flex flex-col gap-5 pb-2"
-              noValidate
+    <>
+      <Slot onClick={start} aria-haspopup="dialog" aria-expanded={open}>
+        {trigger}
+      </Slot>
+      <MatchManagementSheet
+        open={open}
+        onOpenChange={requestClose}
+        pending={pending}
+        title="Nuevo partido"
+      >
+        <FormProvider {...form}>
+          <nav
+            aria-label="Pasos para crear un partido"
+            className="grid shrink-0 grid-cols-3 gap-1.5 bg-white px-4 py-3"
+          >
+            {steps.map((label, index) => (
+              <button
+                key={label}
+                type="button"
+                disabled={pending || index > step}
+                aria-current={index === step ? "step" : undefined}
+                onClick={() => goTo(index)}
+                className={`focus-visible:outline-pool-blue flex min-h-12 items-center justify-center gap-1.5 rounded-xl border-2 px-1 text-sm font-bold focus-visible:outline-2 disabled:cursor-default ${index === step ? "border-pool-deep bg-pool-deep text-white" : "border-slate-500 bg-white text-slate-700"}`}
+              >
+                <span aria-hidden="true">
+                  {index < step ? <Check className="h-4 w-4" /> : index + 1}
+                </span>
+                {label}
+              </button>
+            ))}
+          </nav>
+          <div key={step} className="min-h-0 overflow-y-auto overscroll-contain px-4 py-4">
+            <h2
+              ref={headingRef}
+              tabIndex={-1}
+              className={`${step < 2 ? "sr-only" : "mb-3 text-lg font-extrabold"} outline-none`}
             >
-              {state?.ok === false ? (
-                <Alert variant="danger" title="No pudimos guardar">
-                  {state.error}
-                </Alert>
-              ) : null}
-
-              <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="text-pool-deep text-base font-extrabold">Partido</h3>
-                  <p className="text-ink-600 text-xs">Lo necesario para publicarlo</p>
-                </div>
-                <div className="mt-3 space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="team_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Equipo</FormLabel>
-                        <FormControl>
-                          <Select
-                            value={field.value}
-                            onChange={(event) => {
-                              field.onChange(event);
-                              const team = teams.find((item) => item.id === event.target.value);
-                              if (
-                                form.getValues("is_home") &&
-                                form.getValues("competition_type") !== "league" &&
-                                team?.home_pool
-                              ) {
-                                form.setValue("location", team.home_pool);
-                              }
-                            }}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          >
-                            {teams.map((team) => (
-                              <option key={team.id} value={team.id}>
-                                {team.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <FormDescription>
-                          Solo aparecen equipos de la temporada actual.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="opponent"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Rival</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Ejemplo: CW Elche"
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="is_home"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>¿Dónde jugáis?</FormLabel>
-                        <FormControl>
-                          <div className="border-ink-200 bg-paper grid grid-cols-2 rounded-xl border p-1">
-                            <button
-                              type="button"
-                              aria-pressed={field.value}
-                              onClick={() => {
-                                field.onChange(true);
-                                const team = teams.find(
-                                  (item) => item.id === form.getValues("team_id"),
-                                );
-                                if (
-                                  form.getValues("competition_type") !== "league" &&
-                                  team?.home_pool
-                                )
-                                  form.setValue("location", team.home_pool);
-                              }}
-                              className={`focus-visible:ring-pool-blue min-h-12 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none ${field.value ? "bg-pool-deep text-paper" : "text-ink-600"}`}
-                            >
-                              Local
-                            </button>
-                            <button
-                              type="button"
-                              aria-pressed={!field.value}
-                              onClick={() => field.onChange(false)}
-                              className={`focus-visible:ring-pool-blue min-h-12 rounded-lg px-3 text-sm font-extrabold focus-visible:ring-2 focus-visible:outline-none ${!field.value ? "bg-pool-deep text-paper" : "text-ink-600"}`}
-                            >
-                              Visitante
-                            </button>
-                          </div>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </section>
-
-              <section className="border-ink-200 bg-paper-card shadow-elev-1 rounded-2xl border p-4">
-                <div className="flex items-baseline justify-between gap-3">
-                  <h3 className="text-pool-deep text-base font-extrabold">Cuándo se juega</h3>
-                  <p className="text-ink-600 text-xs">Fecha y competición</p>
-                </div>
-                <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="scheduled_at_local"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Fecha y hora</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="datetime-local"
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="competition_type"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Competición</FormLabel>
-                        <FormControl>
-                          <Select
-                            value={field.value}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          >
-                            {COMPETITION_OPTIONS.map((c) => (
-                              <option key={c.value} value={c.value}>
-                                {c.label}
-                              </option>
-                            ))}
-                          </Select>
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </section>
-
-              <details className="border-ink-200 bg-paper-card group rounded-2xl border">
-                <summary className="focus-visible:ring-pool-blue flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 rounded-2xl px-4 font-extrabold focus-visible:ring-2 focus-visible:outline-none">
-                  Lugar y notas
-                  <ChevronDown
-                    className="h-5 w-5 transition-transform group-open:rotate-180"
+              {["¿Contra quién jugáis?", "¿Cuándo y dónde?", "Comprueba los datos"][step]}
+            </h2>
+            <form
+              id={formId}
+              noValidate
+              onSubmit={(event) => {
+                if (step < 2) {
+                  event.preventDefault();
+                  void continueStep();
+                } else void submit(event);
+              }}
+              className="grid gap-3"
+            >
+              <fieldset disabled={pending} className="grid min-w-0 gap-3">
+                {step === 0 && <MatchIdentityFields teams={teams} />}
+                {step === 1 && (
+                  <>
+                    <MatchScheduleFields />
+                    <MatchLocationFields />
+                  </>
+                )}
+                {step === 2 && (
+                  <>
+                    <MatchReview
+                      teamLabel={
+                        teams.find((team) => team.id === form.getValues("team_id"))?.label ??
+                        "Morvedre"
+                      }
+                      onEdit={goTo}
+                    />
+                    <details
+                      open={form.formState.errors.notes ? true : undefined}
+                      className="border-pool-deep/60 group rounded-2xl border-2 bg-white px-4"
+                    >
+                      <summary className="focus-visible:outline-pool-blue flex min-h-14 cursor-pointer list-none items-center justify-between gap-2 text-base font-bold focus-visible:outline-2">
+                        Añadir notas (opcional)
+                        <ChevronDown className="h-5 w-5 group-open:rotate-180" aria-hidden="true" />
+                      </summary>
+                      <div className="pb-4">
+                        <MatchTextField
+                          name="notes"
+                          label="Notas para el equipo (opcional)"
+                          placeholder="Hora de llegada, material que hay que llevar…"
+                          helper="Las verán jugadores y familias."
+                        />
+                      </div>
+                    </details>
+                  </>
+                )}
+              </fieldset>
+            </form>
+          </div>
+          <div className="grid shrink-0 gap-2 bg-white px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]">
+            {error && (
+              <p
+                role="alert"
+                className="rounded-xl border-2 border-red-800 bg-red-50 p-3 font-bold text-red-900"
+              >
+                {error}
+              </p>
+            )}
+            <div className={`grid gap-2 ${step > 0 ? "grid-cols-[auto_1fr]" : "grid-cols-1"}`}>
+              {step > 0 && (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => goTo(step - 1)}
+                  className={matchSecondaryClass}
+                >
+                  <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                  Atrás
+                </button>
+              )}
+              <button type="submit" form={formId} disabled={pending} className={matchActionClass}>
+                {pending ? (
+                  <Loader2
+                    className="h-5 w-5 animate-spin motion-reduce:animate-none"
                     aria-hidden="true"
                   />
-                </summary>
-                <div className="space-y-4 p-4 pt-0">
-                  <FormField
-                    control={form.control}
-                    name="location"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Lugar</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Piscina del Puerto"
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="maps_url"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Enlace de Google Maps (opcional)</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="url"
-                            inputMode="url"
-                            autoCapitalize="none"
-                            autoCorrect="off"
-                            placeholder="https://maps.app.goo.gl/..."
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          En Google Maps, toca Compartir y copia aquí el enlace de la piscina.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="notes"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Notas (opcional)</FormLabel>
-                        <FormControl>
-                          <textarea
-                            rows={3}
-                            placeholder="Información útil para el equipo"
-                            value={field.value ?? ""}
-                            onChange={field.onChange}
-                            onBlur={field.onBlur}
-                            name={field.name}
-                            ref={field.ref}
-                            className="border-ink-300 bg-paper text-ink-900 placeholder:text-ink-600/70 focus-visible:border-pool-blue focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex w-full rounded border px-4 py-3 text-base transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-              </details>
-            </form>
-          </Form>
-        </SheetBody>
-        <SheetFooter>
-          <SubmitButton label="Crear partido" pending={isSaving} />
-        </SheetFooter>
-      </SheetContent>
-    </Sheet>
+                ) : step < 2 ? (
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                ) : (
+                  <Check className="h-5 w-5" aria-hidden="true" />
+                )}
+                {pending ? "Creando partido…" : step < 2 ? "Continuar" : "Crear partido"}
+              </button>
+            </div>
+          </div>
+        </FormProvider>
+      </MatchManagementSheet>
+      <ActaGuardSheet
+        open={leaveOpen}
+        onOpenChange={setLeaveOpen}
+        context="Nuevo partido"
+        title="¿Dejarlo para después?"
+        summary="El partido aún no está creado"
+        description="Si sales, se borrarán los datos que has rellenado."
+        icon="warning"
+        actions={[
+          { label: "Seguir rellenando", tone: "primary", onClick: () => setLeaveOpen(false) },
+          {
+            label: "Descartar y cerrar",
+            tone: "subtle",
+            onClick: () => {
+              form.reset();
+              setStep(0);
+              setError(null);
+              setLeaveOpen(false);
+              setOpen(false);
+            },
+          },
+        ]}
+      />
+    </>
   );
 }

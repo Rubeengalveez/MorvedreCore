@@ -132,9 +132,11 @@ export async function setTreasuryConceptActive(input: {
   if (!parsed.success) throw new Error("Concepto inválido.");
   const admin = createAdminClient();
   const raw = db(admin);
-  const { error } = await (raw.from("treasury_concepts").update({ active: parsed.data.active }) as {
-    eq: (column: string, value: string) => Promise<{ error: Error | null }>;
-  }).eq("id", parsed.data.concept_id);
+  const { error } = await (
+    raw.from("treasury_concepts").update({ active: parsed.data.active }) as {
+      eq: (column: string, value: string) => Promise<{ error: Error | null }>;
+    }
+  ).eq("id", parsed.data.concept_id);
   if (error) throw new Error("No pudimos actualizar el concepto: " + errorMessage(error));
   revalidatePath("/admin/treasury");
 }
@@ -144,13 +146,17 @@ export async function setTreasuryAssignmentActive(input: {
   active: boolean;
 }): Promise<void> {
   await requirePermission("manage_treasury");
-  const parsed = z.object({ assignment_id: z.string().uuid(), active: z.boolean() }).safeParse(input);
+  const parsed = z
+    .object({ assignment_id: z.string().uuid(), active: z.boolean() })
+    .safeParse(input);
   if (!parsed.success) throw new Error("Asignación inválida.");
   const admin = createAdminClient();
   const raw = db(admin);
-  const { error } = await (raw.from("treasury_profile_concepts").update({ active: parsed.data.active }) as {
-    eq: (column: string, value: string) => Promise<{ error: Error | null }>;
-  }).eq("id", parsed.data.assignment_id);
+  const { error } = await (
+    raw.from("treasury_profile_concepts").update({ active: parsed.data.active }) as {
+      eq: (column: string, value: string) => Promise<{ error: Error | null }>;
+    }
+  ).eq("id", parsed.data.assignment_id);
   if (error) throw new Error("No pudimos actualizar la asignación: " + errorMessage(error));
   revalidatePath("/admin/treasury");
 }
@@ -231,9 +237,12 @@ export async function buildTreasuryPeriodClosure(input: {
       readAllRows("pedidos", (from, to) =>
         admin
           .from("shop_orders")
-          .select("id, requested_by, total_cents, requested_at, status", { count: "exact" })
-          .gte("requested_at", period.from)
-          .lt("requested_at", period.until)
+          .select("id, requested_by, total_cents, requested_at, approved_at, status", {
+            count: "exact",
+          })
+          .or(
+            `and(approved_at.gte.${period.from},approved_at.lt.${period.until}),and(approved_at.is.null,requested_at.gte.${period.from},requested_at.lt.${period.until})`,
+          )
           .order("id")
           .range(from, to),
       ),

@@ -40,8 +40,9 @@ export function AdaptivePlayerName({ name }: { name: string }) {
     };
   }, [name]);
   return (
-    <span ref={container} title={name} aria-label={name} className="relative block w-full min-w-0">
-      <span className="block overflow-hidden text-ellipsis whitespace-nowrap">
+    <span ref={container} title={name} className="relative block w-full min-w-0">
+      <span className="sr-only">{name}</span>
+      <span aria-hidden="true" className="block overflow-hidden text-ellipsis whitespace-nowrap">
         {variants[choice] ?? name}
       </span>
       <span

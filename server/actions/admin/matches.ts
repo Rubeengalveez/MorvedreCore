@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
-import { insertNotificationsWithPush } from "./notification-dispatch";
+import { scheduleNotificationPush } from "@/server/notification-push";
 import type { Tables } from "@/types/database";
 import {
   createCallupSchema,
@@ -27,7 +27,8 @@ import {
   type TeamForCallup,
 } from "@/lib/domain/callups";
 import { safeInferCategory, type CategoryCode } from "@/lib/domain/categories";
-import { exclusionLimit } from "@/lib/domain/live-match-rules";
+import { getSeasonCategoryYear } from "@/server/queries/seasons";
+import { exclusionLimit, rosterRequirementError } from "@/lib/domain/live-match-rules";
 
 import { requireMatchManagerOf, requireMatchStaffOf } from "./_helpers";
 
@@ -84,14 +85,6 @@ async function requireCurrentMatchSeason(
   if (!team || team.season_id !== seasonId || !season) {
     throw new Error("Solo puedes crear partidos para un equipo de la temporada actual.");
   }
-}
-
-function notificationTitle(opponent: string, status: string): string {
-  if (status === "confirmed") return "Convocatoria confirmada";
-  if (status === "declined") return "Has rechazado la convocatoria";
-  if (status === "withdrawn") return "Te has dado de baja de la convocatoria";
-  if (status === "no_show") return "No te has presentado al partido";
-  return `Convocatoria: ${opponent}`;
 }
 
 function localIsoDate(iso: string): string {
@@ -181,6 +174,7 @@ export async function createMatch(input: {
     throw new Error("No pudimos crear el partido. Inténtalo de nuevo.");
   }
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath("/admin");
 
@@ -243,6 +237,7 @@ export async function updateMatch(
     throw new Error("No pudimos actualizar el partido. Inténtalo de nuevo.");
   }
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${id}`);
 
@@ -268,6 +263,7 @@ export async function deleteMatch(id: string): Promise<void> {
 
   throwIfError(error, "No pudimos eliminar el partido. Inténtalo de nuevo.");
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
 }
 
@@ -285,7 +281,7 @@ export async function createCallup(input: {
   const supabase = await createClient();
   const { data: match, error: matchError } = await supabase
     .from("matches")
-    .select("id, team_id, scheduled_at, opponent, teams(id, category_code, label)")
+    .select("id, season_id, team_id, scheduled_at, opponent, teams(id, category_code, label)")
     .eq("id", parsed.data.match_id)
     .maybeSingle();
 
@@ -367,7 +363,7 @@ export async function createCallup(input: {
     throw new Error("Regla B: este jugador no puede subir a este equipo.");
   }
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = await getSeasonCategoryYear(match.season_id, supabase);
   const playerCategory = safeInferCategory(player.birth_year, currentYear);
   if (playerCategory && !canCallUpTo(playerCategory, targetTeam.category_code as CategoryCode)) {
     throw new Error("El jugador no puede ser convocado en este equipo (categoría no compatible).");
@@ -432,24 +428,7 @@ export async function createCallup(input: {
     throw new Error("No pudimos añadir la convocatoria. Inténtalo de nuevo.");
   }
 
-  const scheduledDate = new Date(match.scheduled_at);
-  const dateLabel = scheduledDate.toLocaleDateString("es-ES", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-  });
-  const { error: notifyError } = await insertNotificationsWithPush({
-    recipient_id: parsed.data.player_id,
-    kind: "convocatoria",
-    title: notificationTitle(match.opponent, "called"),
-    body: `${dateLabel} · ${targetTeam.label}\nRival: ${match.opponent}`,
-    href: `/matches/${parsed.data.match_id}`,
-    related_match_id: parsed.data.match_id,
-  });
-  if (notifyError) {
-    console.error("No pudimos avisar al jugador convocado", notifyError);
-  }
-
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${parsed.data.match_id}`);
 
@@ -574,6 +553,7 @@ export async function updateCallup(
     throw new Error("No pudimos actualizar la convocatoria. Inténtalo de nuevo.");
   }
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${matchId}`);
 
@@ -603,6 +583,7 @@ export async function deleteCallup(matchId: string, playerId: string): Promise<v
 
   throwIfError(error, "No pudimos eliminar la convocatoria. Inténtalo de nuevo.");
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${matchId}`);
 }
@@ -643,6 +624,7 @@ export async function setMatchStatus(
     throw new Error("No pudimos actualizar el estado del partido. Inténtalo de nuevo.");
   }
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${matchId}`);
 
@@ -728,6 +710,7 @@ export async function recordMatchStat(input: {
     throw new Error("No pudimos guardar la estadística. Inténtalo de nuevo.");
   }
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${parsed.data.match_id}`);
 
@@ -771,6 +754,7 @@ export async function validateMatchStats(matchId: string): Promise<void> {
     // No bloqueamos la validación si el recompute falla.
   });
 
+  scheduleNotificationPush();
   revalidatePath("/admin/matches");
   revalidatePath(`/admin/matches/${parsed.data.match_id}`);
   revalidatePath("/rankings");
@@ -869,7 +853,7 @@ export async function suggestCallupForMatch(
     currentTeamByPlayer.set(r.player_id, r.team_id);
   }
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = await getSeasonCategoryYear(match.season_id, supabase);
   const players: PlayerForCallup[] = (profiles ?? []).map((p) => {
     const birth = p.birth_year;
     const category =
@@ -941,7 +925,7 @@ export async function replaceMatchCallupResult(
     const supabase = await createClient();
     const { data: match, error: matchError } = await supabase
       .from("matches")
-      .select("team_id, scheduled_at, status")
+      .select("team_id, scheduled_at, status, teams(category_code)")
       .eq("id", parsed.data.match_id)
       .maybeSingle();
     throwIfError(matchError, "No pudimos cargar el partido.");
@@ -950,6 +934,11 @@ export async function replaceMatchCallupResult(
     if (match.status !== "scheduled" && match.status !== "postponed") {
       throw new Error("La convocatoria ya no se puede cambiar desde aquí.");
     }
+    const requirement = rosterRequirementError(
+      match.teams?.category_code,
+      parsed.data.players.map((p) => p.cap_number),
+    );
+    if (requirement) throw new Error(requirement);
     const [{ data: existing, error: existingError }, suggestions] = await Promise.all([
       supabase
         .from("match_callups")
@@ -986,8 +975,13 @@ export async function replaceMatchCallupResult(
       );
     }
     revalidatePath(`/admin/matches/${parsed.data.match_id}`);
+    if (parsed.data.save_template) {
+      revalidatePath(`/admin/teams/${match.team_id}`);
+      revalidatePath(`/team/${match.team_id}`);
+    }
     revalidatePath(`/matches/${parsed.data.match_id}`);
-    revalidatePath("/admin/matches");
+    scheduleNotificationPush();
+  revalidatePath("/admin/matches");
     revalidatePath("/calendar");
     return { ok: true };
   } catch (error) {

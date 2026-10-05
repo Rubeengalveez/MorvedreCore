@@ -1,0 +1,38 @@
+{
+  "calendarAxe": {
+    "scope": "main",
+    "tags": [
+      "wcag2a",
+      "wcag2aa",
+      "wcag21aa",
+      "wcag22aa"
+    ],
+    "violations": [],
+    "passes": 16,
+    "incomplete": []
+  },
+  "viewports": [
+    {
+      "width": 393,
+      "height": 852,
+      "sixWeekDocumentHeight": 852,
+      "documentWidth": 393
+    },
+    {
+      "width": 412,
+      "height": 915,
+      "documentHeight": 915,
+      "documentWidth": 412
+    }
+  ],
+  "keyboard": {
+    "arrowRight": "2 septiembre → 3 septiembre",
+    "escape": "Cierra selector y devuelve foco al botón del mes"
+  },
+  "footerTextLayout": {
+    "Hoy": 1,
+    "Leyenda": 1,
+    "Asistencia": 1
+  },
+  "realAttendanceWrites": false
+}

@@ -27,7 +27,7 @@ const nextConfig: NextConfig = {
   experimental: {
     cpus: 2,
     optimizePackageImports: ["lucide-react", "react-icons"],
-    serverActions: {},
+    serverActions: { bodySizeLimit: "42mb" },
   },
   images: {
     formats: ["image/avif", "image/webp"],

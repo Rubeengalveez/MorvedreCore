@@ -1,7 +1,9 @@
 import { activeEvents, playerTotals, type LiveSheet, type Side } from "./live-match";
+import { emergencyKeeperCaps } from "./live-match-goalkeeper-role";
 import {
   exclusionLimit,
   matchRules,
+  rosterRequirementError,
   type Participation,
   type PeriodLineup,
 } from "./live-match-rules";
@@ -42,9 +44,85 @@ export function participants(sheet: LiveSheet, side: Side) {
     : sheet.opponentCaps.map((cap) => ({ key: String(cap), cap, name: `Gorro ${cap}` }));
 }
 
+export function soleKeeper(sheet: LiveSheet, side: Side) {
+  const keepers = keeperOptions(sheet, side).filter((p) => {
+    const totals = playerTotals(sheet, side, p.cap);
+    return !totals.red && totals.exclusions < exclusionLimit(sheet);
+  });
+  return keepers.length === 1 ? keepers[0].key : null;
+}
+
+export function keeperOptions(sheet: LiveSheet, side: Side, period = sheet.period) {
+  const emergency = emergencyKeeperCaps(sheet, side, period);
+  return participants(sheet, side).filter(
+    (p) => [1, 13].includes(p.cap) || emergency.includes(p.cap),
+  );
+}
+
+export function fieldPlayersNeeded(sheet: LiveSheet, side: Side, period = sheet.period) {
+  const keepers = new Set(keeperOptions(sheet, side, period).map((p) => p.key));
+  const available = participants(sheet, side).filter(
+    (p) => !keepers.has(p.key) && !expelledBeforePeriod(sheet, side, p.cap, period),
+  );
+  return Math.min(matchRules(sheet.category).fieldPlayers, available.length);
+}
+
+export function currentKeeperKey(sheet: LiveSheet, side: Side, period = sheet.period) {
+  let key = lineupFor(sheet, side, period)?.keeper;
+  for (const change of validChanges(sheet, side, period))
+    if (change.outgoing === key) key = change.incoming;
+  return key;
+}
+
+export function replacementCandidates(
+  sheet: LiveSheet,
+  side: Side,
+  outgoing: string,
+  period = sheet.period,
+) {
+  const current = currentParticipants(sheet, side, period);
+  const keeper = currentKeeperKey(sheet, side, period) === outgoing;
+  const available = participants(sheet, side).filter((p) => {
+    const totals = playerTotals(sheet, side, p.cap);
+    return p.key !== outgoing && !totals.red && totals.exclusions < exclusionLimit(sheet);
+  });
+  if (keeper) {
+    const goalkeepers = available.filter((p) =>
+      keeperOptions(sheet, side, period).some((k) => k.key === p.key),
+    );
+    if (goalkeepers.length) return goalkeepers.filter((p) => !current?.has(p.key));
+    return available.filter((p) => ![1, 13].includes(p.cap));
+  }
+  return available.filter(
+    (p) => !current?.has(p.key) && !keeperOptions(sheet, side, period).some((k) => k.key === p.key),
+  );
+}
+
+export function expelledBeforePeriod(sheet: LiveSheet, side: Side, cap: number, period: number) {
+  const totals = playerTotals(
+    { ...sheet, events: sheet.events.filter((e) => e.period < period) },
+    side,
+    cap,
+  );
+  return totals.red || totals.exclusions >= exclusionLimit(sheet);
+}
+
+export function lineupEligibilityIssues(sheet: LiveSheet, lineup: PeriodLineup) {
+  const selected = new Set([lineup.keeper, ...lineup.field]);
+  return participants(sheet, lineup.side)
+    .filter(
+      (p) => selected.has(p.key) && expelledBeforePeriod(sheet, lineup.side, p.cap, lineup.period),
+    )
+    .map(
+      (p) =>
+        `${lineup.side === "us" ? "Morvedre" : "Rival"}: el gorro ${p.cap} está expulsado y no puede empezar este cuarto.`,
+    );
+}
+
 function validChanges(sheet: LiveSheet, side: Side, period: number) {
   const lineup = lineupFor(sheet, side, period);
   const keys = new Set(lineup ? [lineup.keeper, ...lineup.field] : []);
+  let keeper = lineup?.keeper;
   return (sheet.participation?.changes ?? [])
     .filter(
       (change) =>
@@ -62,9 +140,14 @@ function validChanges(sheet: LiveSheet, side: Side, period: number) {
           )),
     )
     .filter((change) => {
-      if (!keys.has(change.outgoing) || keys.has(change.incoming)) return false;
+      if (
+        !keys.has(change.outgoing) ||
+        (keys.has(change.incoming) && !(change.outgoing === keeper && change.reason === "sanction"))
+      )
+        return false;
       keys.delete(change.outgoing);
       keys.add(change.incoming);
+      if (change.outgoing === keeper) keeper = change.incoming;
       return true;
     });
 }
@@ -139,26 +222,8 @@ export function eligibleForAction(
   return (
     !totals.red &&
     totals.exclusions < exclusionLimit(sheet) &&
-    participantIsPlaying(sheet, side, cap, period) &&
-    !(period === 5 && mustRestFifth(sheet, side).includes(participantKey(sheet, side, cap)))
+    participantIsPlaying(sheet, side, cap, period)
   );
-}
-
-export function mustRestFifth(sheet: LiveSheet, side: Side) {
-  if (!matchRules(sheet.category).compulsoryReplacement) return [];
-  return participants(sheet, side)
-    .filter(
-      (p) =>
-        playedPeriods(sheet, side, p.key).length === 4 &&
-        (sheet.participation?.changes ?? []).some(
-          (c) =>
-            c.reason === "sanction" &&
-            c.side === side &&
-            c.incoming === p.key &&
-            validChanges(sheet, side, c.period).includes(c),
-        ),
-    )
-    .map((p) => p.key);
 }
 
 export function rotationAdvice(
@@ -171,7 +236,7 @@ export function rotationAdvice(
   const complete = Array.from({ length: period - 1 }, (_, i) =>
     lineupFor(sheet, side, i + 1),
   ).every(Boolean);
-  const fixed = sheet.participation?.fixedKeepers[side];
+  const fixed = soleKeeper(sheet, side);
   const advice: {
     key: string;
     name: string;
@@ -198,13 +263,69 @@ export function rotationAdvice(
       (p) => !selected.has(p.key) && playedPeriods(sheet, side, p.key, period).length === 0,
     );
     const remaining = 4 - period;
-    const keepers = unplayed.filter((p) => [1, 13].includes(p.cap)).length;
+    const keepers = unplayed.filter((p) =>
+      keeperOptions(sheet, side, period).some((k) => k.key === p.key),
+    ).length;
     const field = unplayed.length - keepers;
     const fieldPlaces = remaining * matchRules(sheet.category).fieldPlayers;
-    if (keepers > remaining || field > fieldPlaces) {
+    const team = side === "us" ? "Morvedre" : "Rival";
+    const capacityReasons: string[] = [];
+    if (remaining > 0) {
+      for (const goalkeeper of [false, true]) {
+        const pool = participants(sheet, side).filter(
+          (p) => keeperOptions(sheet, side, period).some((k) => k.key === p.key) === goalkeeper,
+        );
+        const places = goalkeeper ? 1 : matchRules(sheet.category).fieldPlayers;
+        const eligible = pool.filter((p) => !expelledBeforePeriod(sheet, side, p.cap, period + 1));
+        const counts = new Map(
+          pool.map((p) => [
+            p.key,
+            playedPeriods(sheet, side, p.key, period).length + Number(selected.has(p.key)),
+          ]),
+        );
+        const available = eligible.filter((p) => p.key === fixed || counts.get(p.key)! < 3);
+        const resting = eligible.filter((p) => p.key !== fixed && counts.get(p.key)! >= 3);
+        const label = goalkeeper ? "porteros" : "jugadores de campo";
+        if (available.length < places) {
+          const restingLabel =
+            resting.length === 1 ? (goalkeeper ? "portero" : "jugador de campo") : label;
+          const availableLabel =
+            available.length === 1
+              ? goalkeeper
+                ? "portero disponible"
+                : "jugador de campo disponible"
+              : `${label} disponibles`;
+          capacityReasons.push(
+            `${team}: ${resting.length ? `con esta selección, ${resting.length} ${restingLabel} ${resting.length === 1 ? "habrá jugado 3 cuartos y deberá" : "habrán jugado 3 cuartos y deberán"} descansar. ` : ""}Solo quedarían ${available.length} ${availableLabel} para ${places} ${places === 1 ? "plaza" : "plazas"} en el cuarto ${period + 1}.`,
+          );
+        } else {
+          const capacity = available.reduce(
+            (total, p) =>
+              total +
+              Math.min(
+                remaining,
+                p.key === fixed ? remaining : Math.max(0, 3 - counts.get(p.key)!),
+              ),
+            0,
+          );
+          const possibleFromStart =
+            pool.some((p) => p.key === fixed) || pool.length * 3 >= places * 4;
+          if (possibleFromStart && capacity < remaining * places)
+            capacityReasons.push(
+              `${team}: después de esta selección, el descanso obligatorio y las expulsiones dejarían solo ${capacity} participaciones posibles de ${label} para ${remaining * places} plazas entre los cuartos ${period + 1} y 4.`,
+            );
+        }
+        const unableToPlay = pool.filter((p) => counts.get(p.key) === 0 && !eligible.includes(p));
+        if (unableToPlay.length)
+          capacityReasons.push(
+            `${team}: ${unableToPlay.length} ${label} aún no han jugado y están expulsados. No podrán cumplir la participación antes del cuarto 5.`,
+          );
+      }
+    }
+    if (keepers > remaining || field > fieldPlaces || capacityReasons.length) {
       const team = side === "us" ? "Morvedre" : "Rival";
       const nextPeriods = remaining === 1 ? "el cuarto 4" : "los cuartos que quedan hasta el 4";
-      const reasons: string[] = [];
+      const reasons: string[] = [...capacityReasons];
       if (field > fieldPlaces)
         reasons.push(
           remaining === 0
@@ -230,9 +351,11 @@ export function rotationAdvice(
       }
       advice.push({
         key: "capacity",
-        name: "No todos podrán jugar",
+        name: "Revisa las plazas y el descanso",
         kind: "capacity",
-        message: `${team}: ${reasons.join("\n\n")}`,
+        message: reasons
+          .map((reason) => (reason.startsWith(`${team}:`) ? reason : `${team}: ${reason}`))
+          .join("\n\n"),
       });
     }
   }
@@ -252,11 +375,7 @@ export function rotationCompletion(sheet: LiveSheet) {
         return [
           `${side === "us" ? "Morvedre" : "Rival"} · ${p.name}: no consta que haya jugado. Avísalo al entrenador o árbitro.`,
         ];
-      if (
-        count === 4 &&
-        sheet.participation?.fixedKeepers[side] !== p.key &&
-        !mustRestFifth(sheet, side).includes(p.key)
-      )
+      if (count === 4 && soleKeeper(sheet, side) !== p.key)
         return [
           `${side === "us" ? "Morvedre" : "Rival"} · ${p.name}: ha jugado los cuatro sin descansar. Avísalo al árbitro.`,
         ];
@@ -268,12 +387,15 @@ export function rotationCompletion(sheet: LiveSheet) {
 export function lineupIssues(sheet: LiveSheet, lineup: PeriodLineup) {
   const options = participants(sheet, lineup.side);
   const keys = [lineup.keeper, ...lineup.field];
-  const rules = matchRules(sheet.category);
   const keeper = options.find((p) => p.key === lineup.keeper);
   const issues: string[] = [];
-  if (!keeper || ![1, 13].includes(keeper.cap)) issues.push("Elige un portero con gorro 1 o 13.");
-  if (lineup.field.length !== rules.fieldPlayers)
-    issues.push(`Elige ${rules.fieldPlayers} jugadores de campo.`);
+  if (
+    !keeper ||
+    !keeperOptions(sheet, lineup.side, lineup.period).some((p) => p.key === keeper.key)
+  )
+    issues.push("Elige un portero con gorro 1 o 13, o el sustituto registrado.");
+  const needed = fieldPlayersNeeded(sheet, lineup.side, lineup.period);
+  if (lineup.field.length !== needed) issues.push(`Elige ${needed} jugadores de campo.`);
   if (new Set(keys).size !== keys.length || keys.some((key) => !options.some((p) => p.key === key)))
     issues.push("Revisa los jugadores seleccionados.");
   if (lineup.field.some((key) => [1, 13].includes(options.find((p) => p.key === key)?.cap ?? 0)))
@@ -284,8 +406,9 @@ export function lineupIssues(sheet: LiveSheet, lineup: PeriodLineup) {
 export function lineupSelectionMessage(sheet: LiveSheet, lineup: PeriodLineup) {
   const team = lineup.side === "us" ? "Morvedre" : "Rival";
   const keeper = participants(sheet, lineup.side).find((player) => player.key === lineup.keeper);
-  const missing = matchRules(sheet.category).fieldPlayers - lineup.field.length;
-  const needsKeeper = !keeper || ![1, 13].includes(keeper.cap);
+  const missing = fieldPlayersNeeded(sheet, lineup.side, lineup.period) - lineup.field.length;
+  const needsKeeper =
+    !keeper || !keeperOptions(sheet, lineup.side, lineup.period).some((p) => p.key === keeper.key);
   if (needsKeeper && missing > 0)
     return `${team}: elige un portero (1 o 13) y ${missing} ${missing === 1 ? "jugador de campo más" : "jugadores de campo más"}.`;
   if (needsKeeper) return `${team}: falta el portero. Elige el gorro 1 o 13.`;
@@ -323,6 +446,16 @@ export function saveLineups(
   if (mode === "correct" && period > sheet.period)
     throw new Error("Ese cuarto todavía no ha empezado.");
   for (const lineup of lineups) {
+    const eligibility = lineupEligibilityIssues(sheet, lineup);
+    if (eligibility.length) throw new Error(eligibility[0]);
+    if (mode === "start") {
+      const requirement = rosterRequirementError(
+        sheet.category,
+        participants(sheet, lineup.side).map((p) => p.cap),
+        lineup.side,
+      );
+      if (requirement) throw new Error(requirement);
+    }
     const issues = lineupIssues(sheet, lineup);
     if (issues.length && !incident) throw new Error(issues[0]);
     const keys = [lineup.keeper, ...lineup.field];
@@ -339,7 +472,14 @@ export function saveLineups(
       ...participation,
       lineups: [
         ...participation.lineups.filter((l) => l.period !== period),
-        ...lineups.map((l) => ({ ...l, incident })),
+        ...lineups.map((l) => ({
+          ...l,
+          incident:
+            incident ??
+            (l.field.length < matchRules(sheet.category).fieldPlayers
+              ? "Equipo con menos jugadores disponibles por expulsión"
+              : undefined),
+        })),
       ],
     },
   };
@@ -366,7 +506,10 @@ export function outstandingReplacement(sheet: LiveSheet) {
   for (const side of ["us", "them"] as const) {
     const keys = currentParticipants(sheet, side);
     for (const event of activeEvents(sheet)) {
-      if (!matchRules(sheet.category).compulsoryReplacement && ![1, 13].includes(event.cap ?? 0))
+      if (
+        !matchRules(sheet.category).compulsoryReplacement &&
+        participantKey(sheet, side, event.cap ?? 0) !== currentKeeperKey(sheet, side)
+      )
         continue;
       if (
         event.side !== side ||
@@ -381,7 +524,8 @@ export function outstandingReplacement(sheet: LiveSheet) {
         (event.kind === "red" ||
           exclusionsAt(sheet, side, event.cap, sheet.period, event.id) >= exclusionLimit(sheet))
       )
-        return { side, key, eventId: event.id, cap: event.cap };
+        if (replacementCandidates(sheet, side, key).length)
+          return { side, key, eventId: event.id, cap: event.cap };
     }
   }
   return null;
@@ -400,19 +544,12 @@ export function replaceParticipant(
   const keys = currentParticipants(sheet, input.side);
   if (
     !keys?.has(input.outgoing) ||
-    keys.has(input.incoming) ||
+    !replacementCandidates(sheet, input.side, input.outgoing).some(
+      (p) => p.key === input.incoming,
+    ) ||
     !participants(sheet, input.side).some((p) => p.key === input.incoming)
   )
     throw new Error("Elige un sustituto que no esté jugando.");
-  const from = participants(sheet, input.side).find((p) => p.key === input.outgoing)!;
-  const to = participants(sheet, input.side).find((p) => p.key === input.incoming)!;
-  if ([1, 13].includes(from.cap) !== [1, 13].includes(to.cap))
-    throw new Error("Elige un sustituto del mismo puesto.");
-  if (
-    playerTotals(sheet, input.side, to.cap).red ||
-    playerTotals(sheet, input.side, to.cap).exclusions >= exclusionLimit(sheet)
-  )
-    throw new Error("Ese jugador ha quedado expulsado.");
   let next = {
     ...sheet,
     participation: {
@@ -450,9 +587,24 @@ export function reviseReplacement(
   if (
     !to ||
     (to.key === change.outgoing && incoming !== null) ||
-    [1, 13].includes(to.cap) !== [1, 13].includes(from.cap)
+    (incoming !== null &&
+      !replacementCandidates(
+        {
+          ...sheet,
+          participation: {
+            ...sheet.participation!,
+            changes: sheet.participation!.changes.slice(
+              0,
+              sheet.participation!.changes.findIndex((c) => c.id === id),
+            ),
+          },
+        },
+        change.side,
+        change.outgoing,
+        change.period,
+      ).some((p) => p.key === incoming))
   )
-    throw new Error("Elige un sustituto del mismo puesto.");
+    throw new Error("Revisa las sustituciones y el puesto del jugador elegido.");
   let next: LiveSheet = {
     ...sheet,
     participation: {
@@ -469,7 +621,15 @@ export function reviseReplacement(
     prior.some((c) => c.id !== id && !revised.some((n) => n.id === c.id))
   )
     throw new Error("Revisa primero las sustituciones posteriores de este cuarto.");
-  if (change.side === "us" && [1, 13].includes(from.cap))
+  if (
+    change.side === "us" &&
+    sheet.keeperStints?.some(
+      (stint) =>
+        stint.period === change.period &&
+        stint.cap === old.cap &&
+        stint.afterEventId === (change.afterEventId ?? change.eventId ?? null),
+    )
+  )
     next = correctKeeperReplacement(
       next,
       change.period,
@@ -492,6 +652,8 @@ export function editOpponentCaps(sheet: LiveSheet, caps: number[]): LiveSheet {
     throw new Error("Elige gorros distintos del 1 al 14.");
   if (!caps.some((cap) => cap === 1 || cap === 13))
     throw new Error("Marca el gorro 1 o 13 del portero rival.");
+  const requirement = rosterRequirementError(sheet.category, caps, "them");
+  if (requirement) throw new Error(requirement);
   const removed = sheet.opponentCaps.find(
     (cap) =>
       !caps.includes(cap) &&

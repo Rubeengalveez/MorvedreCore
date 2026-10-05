@@ -120,7 +120,7 @@ it("muestra solo el acta en directo", () => {
   expect(screen.getByRole("link", { name: "Ver acta" })).toBeVisible();
   expect(screen.queryByRole("link", { name: /Solo goles y expulsiones/ })).toBeNull();
 });
-it("solo una asignación de delegado del equipo concede acceso", () => {
+it("una asignación de entrenador o delegado del equipo concede acceso", () => {
   for (const role of ["admin", "coach", "delegate"]) {
     const access = deriveAdminCapabilities({
       isAdmin: role === "admin",
@@ -128,7 +128,7 @@ it("solo una asignación de delegado del equipo concede acceso", () => {
       roles: [{ role, scope_team_id: id }],
       staff: [],
     });
-    expect(canUseLiveMatch(access, id)).toBe(role === "delegate");
+    expect(canUseLiveMatch(access, id)).toBe(role === "delegate" || role === "coach");
     expect(canUseLiveMatch(access, "otro-equipo")).toBe(false);
   }
   expect(

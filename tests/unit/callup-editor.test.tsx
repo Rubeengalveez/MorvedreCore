@@ -52,7 +52,10 @@ const CANDIDATES: CallupCandidate[] = [
   },
 ];
 
-const INITIAL_PICKS: CallupPick[] = [{ player_id: "p1", cap_number: 7 }];
+const INITIAL_PICKS: CallupPick[] = [
+  { player_id: "p1", cap_number: 7 },
+  { player_id: "p3", cap_number: 1 },
+];
 
 function openNormalSave(backHref: "/admin/matches" | "/matches/match-1" = "/admin/matches") {
   mockPush.mockClear();
@@ -77,6 +80,64 @@ function openNormalSave(backHref: "/admin/matches" | "/matches/match-1" = "/admi
 }
 
 describe("CallupEditor", () => {
+  it.each([
+    ["benjamin", 8],
+    ["alevin", 8],
+    ["infantil", 9],
+  ] as const)("impide reducir %s por debajo de %i convocados", (category, minimum) => {
+    const candidates = Array.from({ length: minimum }, (_, index) => ({
+      player_id: `min-${index + 1}`,
+      full_name: `Jugador ${index + 1}`,
+      cap_number: index + 1,
+      has_conflict: false,
+      is_current_team: true,
+    }));
+    render(
+      <CallupEditor
+        matchId="minimum-test"
+        teamLabel="Equipo"
+        category={category}
+        opponent="Rival"
+        scheduledAt="2026-09-30T18:00:00.000Z"
+        initial={candidates.map((p) => ({ player_id: p.player_id, cap_number: p.cap_number }))}
+        candidates={candidates}
+        template={[]}
+        editable
+        backHref="/admin/matches"
+        backLabel="Volver"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Quitar a Jugador 2" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(`mínimo ${minimum}`);
+    expect(screen.getByLabelText(`${minimum} de 14 jugadores convocados`)).toBeVisible();
+  });
+  it("impide quitar al último portero aunque sobren jugadores", () => {
+    const candidates = Array.from({ length: 9 }, (_, index) => ({
+      player_id: `keeper-${index + 1}`,
+      full_name: `Jugador ${index + 1}`,
+      cap_number: index + 1,
+      has_conflict: false,
+      is_current_team: true,
+    }));
+    render(
+      <CallupEditor
+        matchId="keeper-test"
+        teamLabel="Alevín"
+        category="alevin"
+        opponent="Rival"
+        scheduledAt="2026-09-30T18:00:00.000Z"
+        initial={candidates.map((p) => ({ player_id: p.player_id, cap_number: p.cap_number }))}
+        candidates={candidates}
+        template={[]}
+        editable
+        backHref="/admin/matches"
+        backLabel="Volver"
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Quitar a Jugador 1" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("portero con gorro 1 o 13");
+    expect(screen.getByLabelText("9 de 14 jugadores convocados")).toBeVisible();
+  });
   it.each(["/admin/matches", "/matches/match-1"] as const)(
     "guardar solo este partido vuelve al origen %s después de persistir",
     async (backHref) => {
@@ -421,6 +482,7 @@ describe("CallupEditor", () => {
         initial={[
           { player_id: "p1", cap_number: 7 },
           { player_id: "p2", cap_number: 3 },
+          { player_id: "p3", cap_number: 1 },
         ]}
         candidates={CANDIDATES}
         template={[]}
@@ -452,6 +514,7 @@ describe("CallupEditor", () => {
         initial={[
           { player_id: "p1", cap_number: null },
           { player_id: "p2", cap_number: 3 },
+          { player_id: "p3", cap_number: 1 },
         ]}
         candidates={CANDIDATES}
         template={[]}
@@ -717,14 +780,14 @@ describe("CallupEditor", () => {
       />,
     );
 
-    expect(screen.getByLabelText("1 de 14 jugadores convocados")).toBeInTheDocument();
+    expect(screen.getByLabelText("2 de 14 jugadores convocados")).toBeInTheDocument();
     expect(screen.getAllByText("Rubén Galvillo")[0]).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Gorro de Rubén Galvillo: 7/ })).toBeVisible();
     expect(screen.queryByText("Pau Martínez")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
     expect(screen.getByRole("dialog", { name: "Añadir jugador" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Añadir a Pau Martínez" })).toBeVisible();
-    expect(screen.getByRole("button", { name: "Añadir a Lucas Gómez" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Añadir a Lucas Gómez" })).toBeNull();
     expect(screen.getByText("No disponible")).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Cerrar selección de jugador" }));
     expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
@@ -751,7 +814,7 @@ describe("CallupEditor", () => {
     const addPauButton = screen.getByRole("button", { name: "Añadir a Pau Martínez" });
     fireEvent.click(addPauButton);
 
-    expect(screen.getByLabelText("2 de 14 jugadores convocados")).toBeInTheDocument();
+    expect(screen.getByLabelText("3 de 14 jugadores convocados")).toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Añadir jugador" })).toBeNull();
     expect(screen.queryByText("Pau Martínez añadido con el gorro 3.")).toBeNull();
     expect(screen.getByRole("button", { name: /Gorro de Pau Martínez: 3/ })).toBeVisible();
@@ -783,7 +846,7 @@ describe("CallupEditor", () => {
     });
     fireEvent.click(removeButton);
 
-    expect(screen.getByLabelText("0 de 14 jugadores convocados")).toBeInTheDocument();
+    expect(screen.getByLabelText("1 de 14 jugadores convocados")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Añadir jugador" }));
     expect(screen.getByRole("button", { name: "Añadir a Rubén Galvillo" })).toBeVisible();
   });
@@ -836,8 +899,8 @@ describe("CallupEditor", () => {
     const confirmClear = screen.getByRole("button", { name: "Quitar gorros" });
     fireEvent.click(confirmClear);
 
-    expect(screen.getByText("Sin nº")).toBeInTheDocument();
-    expect(screen.getByText(/Falta 1 gorro por asignar/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Sin nº")).toHaveLength(2);
+    expect(screen.getByText(/Faltan 2 gorros por asignar/i)).toBeInTheDocument();
   });
 
   it("pide confirmación al pulsar volver si hay cambios sin guardar", () => {

@@ -1,6 +1,7 @@
 import { activeEvents, playerTotals, type LivePlayer, type LiveSheet } from "./live-match";
 import { identifyLiveSheet } from "./live-match-identity";
 import { reconcileLiveRoster } from "./live-match-roster";
+import { rosterRequirementError } from "./live-match-rules";
 
 export interface RosterTransfer {
   fromPlayerId: string;
@@ -80,6 +81,11 @@ export function editLiveRoster(
   if (source.pending)
     throw new Error("Completa la jugada pendiente antes de editar la convocatoria.");
   const sheet = identifyLiveSheet(source);
+  const requirement = rosterRequirementError(
+    sheet.category,
+    current.filter((p) => !p.retired).map((p) => p.cap),
+  );
+  if (requirement) throw new Error(requirement);
   if (!current.some((player) => player.cap === 1 || player.cap === 13))
     throw new Error("Asigna el gorro 1 o 13 a un portero antes de guardar.");
   const selected = new Set(current.map((player) => player.id));

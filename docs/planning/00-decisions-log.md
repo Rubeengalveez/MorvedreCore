@@ -1051,3 +1051,202 @@ Rubén aprueba íntegramente el plan 39, incluido Benjamín y el formato Benjam�
 ### 2026-09-30 · Revisión visual de la participación juvenil
 
 Rubén pide pulir la primera implementación. La selección de jugadores y las consultas usan el panel blanco de juego; las decisiones y confirmaciones conservan el panel con cabecera azul. «Revisar participación» se mantiene dentro de «Corregir» y deja de ocupar espacio sobre la tabla principal. La revisión usa tablas ordenadas por gorro, alternando Morvedre/Rival, y nombres adaptativos en una sola línea. Las marcas de cuartos no cambian la altura de las filas y distinguen la participación actual. Los errores de selección quedan junto al botón inferior, siempre visibles. Se retiran «Faltan jugadores: registrar incidencia» y el acceso a sustituciones por lesión; no se eliminan los datos históricos de sustituciones. El selector de acciones muestra únicamente quienes están jugando durante los cuartos controlados; las correcciones históricas siguen permitiendo revisar a todos. Se conserva la confirmación de una rotación incorrecta para registrar lo ocurrido realmente.
+
+### 2026-09-30 · Mínimos de convocatoria y portero único automático
+
+Rubén establece un mínimo de 8 convocados por equipo en Benjamín y Alevín, y 9 en Infantil. Siempre debe estar inscrito un portero con gorro 1 o 13. El editor y la selección rival impiden quitar un jugador cuando el resultado incumple el mínimo o elimina el último portero, y explican el motivo. Se comprueba también al guardar y al empezar el partido. La falta de gorro sigue siendo un estado temporal del editor y nunca una convocatoria guardada válida.
+
+La excepción de descanso del único portero se calcula automáticamente por equipo, incluido Benjamín: si solo está inscrito uno de los gorros 1/13, puede jugar los cuatro primeros cuartos sin confirmar una casilla ni recibir avisos de descanso. Si hay dos porteros inscritos se mantiene la rotación. Esta decisión sustituye la activación manual anterior.
+
+Solo en la demo, por falta de niños y para un torneo no oficial, Rubén autoriza que Morvedre Benjamín tenga 7 convocados. El rival de Benjamín en la demo sigue necesitando 8. Core mantiene el mínimo de 8 para ambos equipos. La excepción y la lista de seis categorías de la demo quedan documentadas en `docs/decisions.md` de la demo independiente.
+
+### 2026-10-01 · Correcciones de la beta trasladadas a Core
+
+Rubén solicita trasladar a Core las correcciones y diseños aprobados en la demo, utilizando esta solo como referencia. Respaldo previo del código y sus cambios pendientes: `8972f408d77427d16a7295eff1d2f7e59cdab48c`, referencia `codex/core-before-demo-sync-2026-10-01`. Se conservan las rutas, permisos, Server Actions y sincronización de Core; no se importa el almacenamiento de partidas de la demo ni su excepción de siete Benjamines propios.
+
+Una expulsión definitiva bloquea los cuartos posteriores y no puede confirmarse como una excepción de descanso. La previsión de rotación distingue equipo, campo, portería, sanciones y plazas. Los borradores utilizan una revisión propia y una comprobación atómica en IndexedDB para evitar sobrescrituras entre pestañas. Los parciales conservan el mismo orden local–visitante que el marcador.
+
+Se sustituye expresamente la decisión anterior sobre descanso excepcional en el quinto: desde el cuarto 5 no se aplican restricciones de participación ni un descanso por haber jugado los cuatro primeros. Las expulsiones definitivas siguen vigentes. El PDF no incluye un anexo de participación; conserva el relato del partido y la tanda.
+
+Si una sanción requiere sustitución y hay candidatos, la elección y su confirmación son obligatorias. No se permite cerrar ni posponer. Si no hay candidatos, se juega con uno menos sin abrir un selector vacío. Si el expulsado era el único portero disponible, un jugador de campo puede asumir la portería. La migración `20261001125450_acta_demo_parity_emergency_keeper` permite sincronizar ese caso respaldado por alineación y sanción válidas, sin cambiar las demás comprobaciones o permisos.
+
+La sustitución utiliza la cabecera azul de decisiones, la ficha del expulsado con fondo rojo sutil y altura adaptable. Los pasos Morvedre/Rival son botones accesibles y conservan lo seleccionado. Se actualiza la guía oficial. Detalle del traslado y pruebas: `docs/audits/2026-10-01-demo-core-parity.md`.
+
+### 2026-10-01 · Rediseño de la gestión administrativa de partidos
+
+Rubén pide rehacer el listado, la creación y la edición de partidos con la claridad y los componentes visuales del acta. El listado separa Por jugar, Jugados y Cancelados; conserva los filtros en la URL y regresa a ellos tras editar. Se muestran equipos competitivos de la temporada actual, conforme a la separación existente de Escuela sin partidos.
+
+Crear un partido se divide en Equipos, Fecha y Revisar. La fecha se elige expresamente; Maps y notas son opcionales. La lámina bloquea el desplazamiento del fondo y protege los datos al cerrar. La edición comparte controles y ofrece Datos, Piscina y Notas, con guardado visible y confirmación antes de cancelar un partido. La sede introducida manualmente y la piscina histórica se conservan al modificar otros datos.
+
+Se mantiene el backend, la autorización y las Server Actions existentes. No se modifica la demo. Revisión móvil en 393 × 852 y 412 × 915 px y evidencias en `docs/audits/2026-10-01-admin-matches-redesign.md`.
+
+### 2026-10-01 · Filtros unificados de partidos
+
+Tras probar el rediseño, Rubén solicita una vista inicial más limpia: todos los partidos y categorías, búsqueda y botón Filtros. Estado, equipo y competición se reúnen en un panel con selectores nativos. El botón destaca en azul oscuro y muestra cuántos filtros se aplican, incluso con el panel cerrado. Se retiran las pestañas visibles y el contador gris. La búsqueda admite fragmentos y palabras combinadas, sin distinguir tildes ni mayúsculas, en rival, categoría, competición, estado y sede. Las tarjetas muestran solo Morvedre, sin repetir categoría junto al nombre, y conservan el orden local–visitante sin rótulos visibles.
+
+### 2026-10-01 · Tienda sencilla para Sol
+
+La gestión de tienda se organiza en Pedidos y Productos. Sol trabaja con Pendientes y Entregados, con confirmación de entrega y posibilidad de devolver un pedido a pendientes. Los productos se separan en Publicados y Ocultos; añadir y editar usa los pasos Producto, Opciones y Revisar. Se conserva la aprobación familiar de pedidos de menores y la compatibilidad con los estados internos anteriores.
+
+Los pedidos muestran el nombre completo y, para jugadores, la categoría derivada de su nacimiento y temporada actual, independientemente del equipo. El PDF permite todos los pendientes o una selección y excluye entregados. Se mejoran los correos y se prepara el recordatorio mensual con el mismo PDF, deduplicación y reintentos.
+
+Rubén acuerda usar temporalmente `galvillo9@gmail.com` como destinatario de pruebas. Core sigue en local; la URL pública, destinatario definitivo y programación del envío mensual se configurarán al desplegar. El envío programado todavía no se activa. Se aplican permisos de tienda a productos ocultos, edición y galerías, y se protege la sustitución de fotos ante fallos. Detalle y verificaciones en `docs/audits/2026-10-01-admin-shop-redesign.md`.
+
+### 2026-10-01 · Pulido de tienda tras la prueba de Rubén
+
+Productos pasa a ser la pestaña inicial y queda a la izquierda de Pedidos. Ambos listados comparten búsqueda y filtros, con estados y contadores separados. El PDF se concentra en un botón que abre una decisión con cabecera azul: descargar todos los pendientes o elegir tarjetas completas. Las confirmaciones de tienda reutilizan la lámina azul del acta, conforme a la petición explícita de Rubén.
+
+Se añade historial por persona/familia, reuniendo padres e hijos mediante sus vínculos, con fechas, estados, recuentos y precios originales. Los nombres de pedido se abrevian progresivamente para compartir línea con la categoría. Los productos ocultos permanecen recuperables en administración.
+
+Solo se ofrecen Camisetas, Pantalones, Sudaderas, Bañadores y Accesorios. Las fotos se acumulan hasta ocho, admiten eliminación y orden por arrastre o flechas; la primera es portada. Las tallas se eligen expresamente entre Sin talla, Talla única o Elegir tallas. La personalización conserva el campo Nombre y añade un consejo breve al comprador. Se elimina el máximo comercial por pedido: los artículos se encargan bajo demanda.
+
+Los correos usan las etiquetas Categoría y Correo y no adjuntan el PDF en cada pedido. El recordatorio mensual conserva el PDF y queda pendiente de activar al desplegar. Se mejora la maquetación del PDF con pedidos delimitados, artículos, contactos y totales. Detalle y pruebas: `docs/audits/2026-10-01-shop-polish-checklist.md`.
+
+### 2026-10-01 · Sustitución por expulsión en las tres categorías inferiores
+
+Rubén detecta en la demo que Alevín no abre el selector de sustituto de un jugador alineado y expulsado definitivamente. La condición estaba limitada a Infantil y también existía en Core. Se corrige para Benjamín, Alevín e Infantil durante los cuartos 1–4, tanto en Morvedre como en el rival, manteniendo los límites de sanción por categoría, el caso sin sustitutos y la liberación desde el quinto. Se conserva el modal obligatorio y su diseño aprobado. Regresión y evidencias en `docs/audits/2026-10-01-youth-sanction-replacement.md`.
+
+### 2026-10-02 · Tienda pública y confirmación segura
+
+Rubén solicita rediseñar toda la tienda pública con los componentes y la claridad de administración, orientada a familias con poca experiencia tecnológica. Se unifican Productos, Carrito y Mis pedidos; las imágenes se muestran completas y los precios tienen prioridad. Añadir al carrito no envía el pedido: se revisa el importe y se confirma expresamente en la lámina azul. El resultado permanece visible con referencia y enlace al pedido. Las decisiones familiares usan el mismo sistema.
+
+La confirmación pasa a una operación transaccional exclusiva del servidor, con validación de precios y disponibilidad, contacto elegido para el pedido y clave de idempotencia persistida. Se conservan título, foto y precios originales para el historial. El historial reúne pedidos propios y de hijos vinculados, incluyendo aprobación pendiente y rechazados. El cierre mensual toma la fecha de aprobación y conserva compatibilidad con solicitudes antiguas sin esa fecha, evitando perder pedidos aprobados otro mes.
+
+Se mantienen el encargo bajo demanda, la ausencia de pagos en la aplicación, RLS, aprobación de menores y separación de la demo. La revisión completa y sus límites están en `docs/audits/2026-10-02-public-shop-redesign.md`.
+
+### 2026-10-02 · Tarjetas uniformes en el catálogo
+
+Rubén solicita que todas las tarjetas de producto tengan el mismo tamaño. Las miniaturas del catálogo se recortan dentro de un marco cuadrado uniforme, sin que las dimensiones originales de la foto afecten a la tarjeta. La cuadrícula iguala también las alturas entre filas y conserva el título y el precio. Dentro del producto se sigue mostrando la imagen completa.
+
+### 2026-10-02 · Detalle de producto y ayuda de Sol
+
+Se elimina el rótulo superpuesto Ampliar: tocar la imagen o activarla con el teclado abre la foto completa. Se conserva solo el precio y se refuerza la legibilidad de los detalles. El contacto con Sol usa un botón compartido de WhatsApp verde oscuro con borde y aparece en producto, catálogo, carrito, pedidos y revisión familiar, con mensaje contextual sin envío automático.
+
+Se corrige la animación de salida compartida: la captura anterior no conservaba su opacidad final y reaparecía bajo la pantalla de carga o la página siguiente. Se mantiene oculta hasta finalizar la transición. Evidencia y verificaciones en `docs/audits/2026-10-02-shop-detail-polish.md`.
+
+### 2026-10-02 · Equipos con el diseño compartido de tienda y acta
+
+Rubén solicita renovar Equipo, gestión administrativa y sus pantallas vinculadas para familias con poca experiencia tecnológica. Se adopta el sistema de cabeceras azules, superficies blancas, contornos oscuros, controles grandes y confirmaciones con la lámina azul del acta. Los directorios comparten búsqueda sin distinción de tildes y filtros agrupados. Administración separa Plantilla, Personal y Datos; la ficha pública conserva Resumen, Plantilla, Partidos y Tiempos.
+
+Se priorizan los jugadores en la plantilla pública, se añade búsqueda y se conservan los integrantes con edades desconocidas o excepciones. La categoría se calcula con la temporada del equipo. Se mantienen Escuela y los permisos existentes. Los tiempos de nado comparten el estilo, bloquean cambios durante el guardado y conservan la identidad del reintento. No se modifica la demo ni se publica. Auditoría, correcciones funcionales y evidencias: `docs/audits/2026-10-02-teams-redesign.md`.
+
+### 2026-10-02 · Equipos: simplificación pública y consulta deportiva
+
+A petición de Rubén, el directorio público conserva solo Todos / Mis equipos, sin búsqueda ni filtros. Las tarjetas y cabeceras reducen el protagonismo de entrenadores y contadores. Se elimina la distinción visible de género también en la edición; el campo técnico existente se conserva para mantener compatibilidad, sin modificar los datos históricos.
+
+Los partidos del equipo se muestran en listas plegables con ampliación de cinco en cinco y conservan el origen al volver desde una ficha. La ficha del jugador añade estadísticas derivadas de las actas finalizadas, indicando el alcance de medias y eficacia. El gorro deja de cubrir la foto. Evidencia y límites en `docs/audits/2026-10-02-teams-polish.md`.
+
+### 2026-10-02 · Equipos: categorías visibles y personal con acceso deportivo común
+
+Rubén solicita retirar también la búsqueda, los filtros y el distintivo de temporada del directorio administrativo. Se muestran los equipos de la temporada actual. La cabecera de cada ficha evita repetir la categoría y conserva una altura compacta. Las categorías derivadas de la edad usan sus propios colores en refuerzos, candidatos y plantilla administrativa. Añadir jugadores permite elegir un gorro entre 1 y 14, con los ocupados desactivados y la opción expresa Sin asignar. Se retiran las notas internas de la interfaz y el color se edita directamente.
+
+Ver equipo se coloca arriba. La ficha pública conserva la pestaña administrativa de origen al cambiar sus pestañas y al consultar jugadores o partidos. Los nombres y el vs de los encuentros pendientes comparten el centro vertical.
+
+El personal nuevo se elige solo como Entrenador o Delegado. Por petición expresa de Rubén, ambos tienen acceso deportivo a partidos, actas, horarios y tiempos de nado de sus equipos; pasar lista queda reservado al entrenador. No se conceden permisos de tienda, tesorería ni otros equipos. Asignar, cambiar o retirar personal sincroniza el rol del equipo mediante un trigger transaccional, manteniendo compatibilidad con asignaciones antiguas. La migración `20261002150000_team_official_shared_access` se aplica en Supabase y se verifica con fixtures temporales descartados mediante rollback. Esta decisión sustituye la diferencia anterior entre entrenador y delegado para gestión deportiva. Detalle y evidencias: `docs/audits/2026-10-02-teams-refinement.md`.
+
+### 2026-10-02 · Inicio de Administración sencillo y limitado por permisos
+
+Rubén solicita actualizar el menú de Administración al estilo de tienda, acta y equipos. Se retiran el saludo, los contadores generales y las consultas que los generaban; no hay búsqueda ni filtros. Los accesos completos tienen contorno oscuro, icono, título, descripción breve y flecha, agrupados por Gestión diaria, Personas y Organización cuando hay varios grupos visibles.
+
+Se conserva el filtrado de servidor por los permisos del usuario autenticado. Sol, con permiso exclusivo de tienda, recibe solo Tienda; Mónica, con permiso exclusivo de tesorería, recibe solo Tesorería. No se alteran sus roles ni permisos. Las rutas mantienen su comprobación independiente de acceso. Auditoría y evidencia en `docs/audits/2026-10-02-admin-home.md`.
+
+### 2026-10-02 · Cabecera del equipo y estadísticas del jugador
+
+A petición de Rubén, se retira la temporada de la cabecera del equipo y se amplía el contador de jugadores. La ficha deportiva destaca Partidos, Goles y Asistencias, con tarjetas de altura uniforme y cifras centradas. Expulsiones se mantiene en el bloque secundario, Tiros sustituye a Tiros registrados y se retira la explicación inferior. Paradas y Goles recibidos se muestran independientemente solo cuando su valor es positivo. Se conservan los cálculos y el alcance de las actas existentes.
+
+La foto subida se puede ampliar tocándola y cerrar con un botón visible, regresando al mismo perfil y restaurando el foco. Sin foto no se ofrece un control vacío. Verificación: 25 pruebas correctas, TypeScript y ESLint, revisión móvil a 393 × 852 px y evidencias en `docs/audits/evidence/player-profile-2026-10-02/`.
+
+### 2026-10-02 · Retirada de la importación de jugadores
+
+Por petición expresa de Rubén, se elimina íntegramente la sección /admin/players/import: página, accesos administrativos, panel, acciones de servidor, esquema, plantilla y pruebas exclusivas. Se conserva la gestión habitual de jugadores, sus datos y permisos. La biblioteca Excel sigue siendo necesaria para las exportaciones de tienda y tesorería. Las referencias de auditorías anteriores describen el estado histórico.
+
+### 2026-10-02 · Crear equipos en la temporada actual y editar gorros por defecto
+
+Rubén solicita retirar la elección de temporada al crear equipos. La creación usa siempre la temporada actual, comprobada en servidor y en la política de inserción; sin temporada actual no se ofrece crear un equipo.
+
+Plantilla permite editar los gorros de la convocatoria por defecto con los controles del acta: números del 1 al 14, Sin gorro, limpieza e intercambio confirmado. Se conservan los refuerzos guardados y la pertenencia a los equipos. Los integrantes fuera de la lista por defecto aparecen sin número; asignarles uno los añade si hay plaza. El primer guardado inicializa la lista cuando aún no existe, con hasta 14 jugadores y prioridad para los gorros asignados. La lista admite gorros pendientes de asignación, sin saltarse las validaciones del partido.
+
+Guardar desde Plantilla y guardar Este y los próximos desde Editar convocatoria sincronizan los gorros propios. No se modifican las convocatorias de partidos ya creados ni los gorros de un refuerzo en su equipo de origen. Las escrituras son transaccionales, con rechazo de cambios desactualizados. Evidencia y pruebas en `docs/audits/2026-10-02-team-default-caps.md`.
+
+### 2026-10-03 · Gestión de jugadores con el estilo de tienda, equipos y acta
+
+Rubén solicita rehacer la gestión de jugadores para administradores con poca experiencia tecnológica. El directorio muestra solo perfiles con rol de jugador, con búsqueda sin tildes y filtros agrupados por estado, categoría por edad y equipo. Se conserva la importación eliminada. El alta presenta nombre, año y equipo principal, dejando foto, contacto y otros datos en secciones desplegables. Se revisa antes de guardar y se confirma la salida con cambios y la activación o desactivación.
+
+Las fotos se seleccionan como archivos. El registro de perfil, rol y equipo se realiza mediante una transacción exclusiva del servidor; se comprueban temporada actual, elegibilidad, duplicados y gorros. Las ediciones guardan solo cambios efectivos. El gorro preferido de la ficha se mantiene separado de la convocatoria por defecto, que se gestiona en Equipos. Se controla la abreviación de nombres, la alineación de datos y las acciones en una línea en móvil. Auditoría, pruebas y límites en `docs/audits/2026-10-03-admin-players-redesign.md`. No se modifica la demo ni se publica.
+
+### 2026-10-03 · Categorías por temporada y simplificación de la ficha de jugador
+
+Rubén confirma que en 2025/2026 los nacidos en 2010 y 2011 son Cadetes; en 2026/2027, 2010 es Juvenil de primer año y 2011 Cadete de segundo año. Se corrige el cálculo compartido con el año de inicio de la temporada: Benjamín hasta diferencia 9, Alevín hasta 11, Infantil hasta 13, Cadete hasta 15, Juvenil hasta 17 y Absoluto después. En 2025/2026 corresponden Benjamín 2016 en adelante, Alevín 2014–2015, Infantil 2012–2013, Cadete 2010–2011, Juvenil 2008–2009 y Absoluto 2007 o anterior. Cada temporada desplaza estos años uno hacia adelante.
+
+Las convocatorias y los rankings usan la temporada del partido o de la consulta; tiempos de natación convierte su año final al año inicial. El alta transaccional y el futuro archivo de temporada usan los mismos límites. Se corrige la agrupación por categoría de los rankings existentes conservando sus cifras. No se cambian años de nacimiento ni se mueve a los jugadores de equipo automáticamente.
+
+Se retiran Género y Notas internas del formulario de alta y edición, de su validación y de los datos enviados. Los valores históricos almacenados se conservan. Verificación y evidencias en `docs/audits/2026-10-03-player-categories.md`.
+
+### 2026-10-03 · Perfil personal, familia y ajustes actualizados
+
+Rubén solicita renovar Perfil y sus flujos con el estilo de Tienda, Equipo y Acta, para niños y familias con poca experiencia tecnológica. La portada reúne identidad, edición, actividad, familia y cuenta. Los accesos de administración y asistencia dependen de los permisos propios; los hijos vinculados no amplían las facultades de la cuenta.
+
+La edición permite nombre, foto y contacto privado, además del gorro preferido para jugadores. El año de nacimiento queda a cargo del club porque determina categorías y reglas de menores. Se revisan los cambios antes de guardar y se protege la salida con borrador, incluido el gesto Atrás. Los cambios de foto se preparan sin alterar la foto guardada, con verificación del resultado y protección frente a ediciones simultáneas.
+
+Familia conserva la vinculación existente y ofrece ficha deportiva, asistencia, tiempos, pedidos por autorizar y cuotas. Los ajustes agrupan notificaciones, contraseña y calendario personal. Se mantienen los orígenes de navegación desde el perfil al visitar otras secciones. Auditoría, evidencias y límites en `docs/audits/2026-10-03-profile-redesign.md`.
+
+
+### 2026-10-03 · Perfil, actividad y avisos móviles
+
+Rubén pide dar más espacio a la foto y al nombre del perfil, retirar el texto de gestión del nacimiento y reunir los controles de cuenta en la portada. El nacimiento sigue siendo gestionado por el club. Calendario pasa a actividad deportiva; la antigua ruta de ajustes redirige a Perfil. Cuotas, historial de asistencia y tiempos de nado adoptan los componentes y criterios visuales compartidos.
+
+El buzón pertenece a la cuenta propia; los avisos deportivos del jugador se generan también para los familiares vinculados. Se separan Sin leer y Todas, con detalle y paginación. Las preferencias por tema controlan la entrega al móvil; los avisos se conservan siempre en el buzón. La suscripción se activa y desactiva por dispositivo, y el botón de prueba comprueba el envío real al dispositivo actual.
+
+Se centralizan eventos de partidos, convocatorias, entrenamientos, asistencias y pedidos en la base de datos. Cada aviso se entrega por una cola persistente a los dispositivos activos, con contenido propio, comprobación de preferencias y reintentos limitados. El trabajador y la generación de recordatorios son exclusivos del servidor. Se necesita programar el procesador periódico al publicar Core; no se crea una automatización temporal contra localhost ni se da por probada la recepción nativa sin dispositivos físicos y HTTPS.
+
+Auditoría y pruebas: `docs/audits/2026-10-03-profile-notifications.md`. Preparación operativa: `docs/guides/notificaciones.md`. No se modifica la demo ni se publica Core.
+
+### 2026-10-04 · Horarios conjuntos y gestión de fechas de entrenamiento
+
+Rubén solicita renovar Entrenamientos con el estilo de tienda y acta y simplificar su gestión para personas con poca experiencia tecnológica. Se separan Fechas y Horario semanal. El alta sigue Equipos, Horario y Revisar, con confirmación, protección del borrador, controles contrastados y acciones visibles. Los tipos nuevos son únicamente Agua, Físico/seco y Reunión.
+
+Un horario puede reunir varios equipos, varias franjas y vacaciones; también admite días sueltos y jugadores concretos. Los cambios por fechas pueden afectar a un día o un periodo sin alterar el horario habitual. Se conservan cancelaciones, excepciones, historial y asistencia al editar, renovar o finalizar. Finalizar cancela las fechas futuras pendientes, con confirmación.
+
+Se mantienen registros por equipo para permisos y asistencia, unidos por metadatos de horario y sesión conjunta. Calendario, actividad, estadísticas y resumen familiar evitan duplicar una sesión compartida. Los avisos se dirigen a los participantes y familiares; gestionar horarios no concede al delegado permisos de asistencia. Las mutaciones se validan en servidor y se ejecutan de forma transaccional bajo RLS, con rechazo de solapamientos y cambios no autorizados.
+
+Estado previo conservado localmente; no se cambian automáticamente la temporada ni los horarios reales del club. Auditoría y evidencias en `docs/audits/2026-10-04-admin-trainings.md`, guía en `docs/guides/entrenamientos.md`. No se modifica la demo ni se publica Core.
+
+
+### 2026-10-04 · Inicio centrado en actividad, familia y acciones pendientes
+
+Rubén solicita replantear Inicio con la identidad y los componentes de las pantallas renovadas. La portada reúne escudo, saludo, agenda personal o familiar, tareas reales, estadísticas de actas finalizadas, último resultado y noticias. Se retiran resúmenes vacíos y enlaces de relleno. Las acciones de acta y gestión dependen de los permisos propios; los hijos no conceden facultades de administración.
+
+La agenda incorpora entrenamientos conjuntos y convocatorias como refuerzo, con elección de hijo y fichas accesibles. Las estadísticas incluyen actas de otras categorías donde la persona está inscrita. El resultado con penaltis comparte el cálculo de la ficha del partido. Se conserva el origen Inicio al abrir los flujos relacionados y se presentan de forma distinta la ausencia de actividad y los errores de carga.
+
+Se conserva una copia local del Inicio anterior. Auditoría, evidencias y límites en `docs/audits/2026-10-04-dashboard.md`. No se cambian la temporada ni los horarios reales, no se modifica la demo ni se publica Core.
+
+
+## 4 de octubre de 2026 · Calendario y asistencia
+
+Se conserva el calendario mensual compacto y se retira su modo semanal para centrar el flujo en entrenamientos, partidos y asistencia. La leyenda y el detalle usan las láminas actuales del acta. La asistencia familiar conserva el registro de cada persona; una sesión sin lista no se cuenta como falta. Las convocatorias de refuerzo aparecen aunque sean de otro equipo, salvo filtro explícito por equipo. Los enlaces de regreso conservan mes, persona, categoría y día.
+
+Abrir una lista nueva de asistencia ya no registra automáticamente a todos como presentes: prepara la selección y solo guarda por una elección explícita o al pulsar guardar. El resumen técnico conserva sus periodos semana/mes. Evidencias y límites en `docs/audits/2026-10-04-calendar.md`.
+
+### 2026-10-04 · Rankings del club y ajuste de podio y tarjetas
+
+Rubén solicita una sección coherente de Rankings, Rachas y Leyendas con jugadores, equipos y un resumen de posiciones por persona. Las clasificaciones deportivas priorizan el acta finalizada sobre los registros manuales, evitan duplicados y separan el resultado con tanda de las estadísticas individuales. Los datos avanzados requieren una fuente que realmente los registre. Se conservan los empates y mínimos de muestra para medias y eficacia.
+
+Nado mantiene el último registro por defecto y permite consultar el mejor. Leyendas conserva los intentos históricos y su categoría de entonces; los archivos anteriores no duplican la temporada actual. La asistencia técnica depende de los permisos propios y no considera una lista sin registrar como ausencia.
+
+Tras revisar el primer resultado, Rubén aprueba la navegación y funcionalidad y pide rehacer únicamente las tarjetas y el podio: filas compactas, superficie de categoría y cifra azul, y podio escalonado de oro, plata y bronce. Se conserva el resumen al pulsar y la navegación aprobada. Auditoría y evidencias: `docs/audits/2026-10-04-rankings.md`. Copia previa fuera del proyecto. No se modifica la demo ni se publica Core.
+
+### 2026-10-05 · Estadísticas compactas, empates y acumulados de rankings
+
+Rubén pide mantener las estadísticas secundarias de las tarjetas, con abreviaturas e integración compacta, y sustituir los puestos visibles del podio por esos datos. Los empates tienen exactamente el mismo color y dimensiones. Se amplían las zonas de paginación y se utiliza «partidos» en las comparaciones. MVP muestra porcentaje de partidos como MVP.
+
+La tanda pasa a contar en las estadísticas de Ranking y Leyendas: goles, tiros, paradas y goles recibidos, por identidad del jugador o portero. Se incorporan partidos jugados y expulsiones y más rachas de contribuciones, paradas, disciplina y resultados. Una roja corta la racha sin sanciones. Cada clasificación mantiene ayuda propia.
+
+Leyendas ofrece las métricas de Ranking con nombres simples y acumula temporadas mediante una fila por jugador y temporada. El cierre conserva contadores compactos de estadísticas completas y asistencia sin duplicar entrenamientos conjuntos. Los datos antiguos ausentes no se reconstruyen con ceros inventados. Las medias se calculan con totales, no promediando temporadas. Se aplican las migraciones de resumen compacto y asistencia histórica; se conservan los archivos existentes y la temporada actual. Auditoría y verificación: `docs/audits/2026-10-05-rankings-refinements.md`. No se publica Core.
+
+### 2026-10-05 · Resumen visual y asistencia provisional
+
+Rubén solicita búsqueda de jugadores, tarjetas separadas y calendario mensual individual al pulsar una persona en Ver resumen. Los días distinguen asistencia confirmada, falta y entrenamiento sin revisar por color; el detalle conserva hora, categoría y motivo dentro de la misma lámina.
+
+Se cambia expresamente el criterio anterior de excluir listas sin revisar de los recuentos: cada participante elegible se considera presente de forma provisional hasta registrar su ausencia. La lista continúa sin revisar; consultar el resumen o abrir Pasar lista no escribe presencias automáticas. Solo un registro explícito cambia la revisión individual. No se cuentan sesiones futuras, canceladas, fuera de las fechas de pertenencia o ajenas a una convocatoria específica.
+
+El criterio se comparte entre resumen, historial personal, familia, calendario, rankings y acumulados históricos. Las sesiones conjuntas se deduplican por persona y prevalece la última revisión explícita. El resumen semanal conserva sus propios totales, pero ofrece el calendario del mes completo. Se aplica la migración de asistencia provisional sin alterar RLS ni crear registros de asistencia. Auditoría y evidencias: `docs/audits/2026-10-05-attendance-summary.md`.

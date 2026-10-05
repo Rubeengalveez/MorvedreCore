@@ -3,6 +3,7 @@ import type { Route } from "next";
 
 import { AdminPageShell } from "@/components/admin/admin-page";
 import { createClient } from "@/lib/supabase/server";
+import { adminMatchesReturnPath } from "@/lib/domain/admin-matches";
 import { canManageTeam } from "@/lib/domain/permissions";
 import { getRenderAdminAccess } from "@/server/actions/admin/_helpers";
 import type { MatchRow } from "@/server/actions/admin";
@@ -12,15 +13,17 @@ import { MatchDetailsForm } from "../_components/match-details-form";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+export const metadata = { title: "Editar partido — Admin — Morvedre Core" };
+
 export default async function EditMatchPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; returnTo?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
+  const { from, returnTo } = await searchParams;
   const supabase = await createClient();
   const { data, error } = await supabase.from("matches").select("*").eq("id", id).maybeSingle();
   if (error || !data) notFound();
@@ -34,7 +37,8 @@ export default async function EditMatchPage({
   if (teamError || !team) notFound();
   const match = data as MatchRow;
   const origin = from === "match" ? "match" : "admin";
-  const backHref = origin === "match" ? (`/matches/${id}` as Route) : "/admin/matches";
+  const backHref =
+    origin === "match" ? (`/matches/${id}` as Route) : (adminMatchesReturnPath(returnTo) as Route);
 
   return (
     <AdminPageShell className="gap-3">

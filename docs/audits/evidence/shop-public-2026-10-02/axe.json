@@ -1,0 +1,45 @@
+[
+  {
+    "incomplete": [],
+    "passes": 20,
+    "route": "/shop",
+    "violations": []
+  },
+  {
+    "incomplete": [],
+    "passes": 16,
+    "route": "/shop/60838eea-1bad-4f3e-9d87-d844e16c7bd4",
+    "violations": []
+  },
+  {
+    "incomplete": [],
+    "passes": 17,
+    "route": "/shop/cart",
+    "violations": []
+  },
+  {
+    "incomplete": [
+      {
+        "id": "color-contrast",
+        "nodes": [
+          [
+            ".min-h-0 > div:nth-child(1) > .space-y-4.text-pool-deep > .bg-blue-50.p-3.border"
+          ]
+        ]
+      }
+    ],
+    "passes": 18,
+    "route": "confirmacion",
+    "violations": []
+  },
+  {
+    "incomplete": [],
+    "passes": 20,
+    "route": "/shop",
+    "viewport": [
+      393,
+      852
+    ],
+    "violations": []
+  }
+]

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAttendanceDayKey } from "@/lib/domain/attendance";
 
 export interface CalendarTraining {
   id: string;
@@ -12,6 +13,18 @@ export interface CalendarTraining {
   maps_url: string | null;
   cancelled: boolean;
   cancellation_reason: string | null;
+  joint_id?: string | null;
+  training_kind?: string;
+  upcoming?: boolean;
+  team_ids?: string[];
+  session_ids?: string[];
+  can_manage?: boolean;
+  attendance?: Array<{
+    player_id: string;
+    name: string;
+    present: boolean | null;
+    reason?: string | null;
+  }>;
 }
 
 export interface CalendarMatch {
@@ -31,6 +44,7 @@ export interface CalendarMatch {
   final_score_them: number | null;
   callup_status: string | null;
   cap_number: number | null;
+  callups?: Array<{ player_id: string; name: string; status: string; cap_number: number | null }>;
 }
 
 export interface CalendarEventDay {
@@ -49,10 +63,7 @@ function extractJoined<T>(value: T | T[] | null | undefined): T | null {
 function localDateOnly(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso.slice(0, 10);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+  return getAttendanceDayKey(d);
 }
 
 export async function getCalendarData(input: {
@@ -60,6 +71,7 @@ export async function getCalendarData(input: {
   startIso: string;
   endIso: string;
   profileId: string;
+  includeCalledMatches?: boolean;
 }): Promise<CalendarData> {
   const { teamIds, startIso, endIso, profileId } = input;
   const map: CalendarData = new Map();
@@ -70,11 +82,11 @@ export async function getCalendarData(input: {
 
   const supabase = await createClient();
 
-  const [trainingsRes, matchesRes] = await Promise.all([
+  const [trainingsRes, matchesRes, staffRes] = await Promise.all([
     supabase
       .from("training_sessions")
       .select(
-        "id, team_id, scheduled_at, duration_minutes, location, maps_url, cancelled, cancellation_reason, training_blocks(label), teams!training_sessions_team_id_fkey(label, color)",
+        "id, team_id, joint_id, player_ids, label, kind, scheduled_at, duration_minutes, location, maps_url, cancelled, cancellation_reason, training_blocks(label), teams!training_sessions_team_id_fkey(label, color)",
       )
       .in("team_id", teamIds)
       .gte("scheduled_at", startIso)
@@ -89,7 +101,32 @@ export async function getCalendarData(input: {
       .gte("scheduled_at", startIso)
       .lte("scheduled_at", endIso)
       .order("scheduled_at", { ascending: true }),
+    supabase
+      .from("team_staff")
+      .select("team_id")
+      .eq("profile_id", profileId)
+      .in("team_id", teamIds),
   ]);
+
+  if (trainingsRes.error || matchesRes.error || staffRes.error)
+    throw new Error("No pudimos cargar las actividades del calendario.");
+
+  const { data: calledRows, error: calledError } = await supabase
+    .from("match_callups")
+    .select(
+      "match_id, status, cap_number, matches!inner(id, team_id, opponent, is_home, competition_type, status, scheduled_at, location, maps_url, pool_name, final_score_us, final_score_them, teams!matches_team_id_fkey(label, color))",
+    )
+    .eq("player_id", profileId)
+    .in("status", ["called", "confirmed"])
+    .gte("matches.scheduled_at", startIso)
+    .lte("matches.scheduled_at", endIso);
+  if (calledError) throw new Error("No pudimos cargar tus convocatorias.");
+  const matchRows = new Map((matchesRes.data ?? []).map((row) => [row.id, row]));
+  if (input.includeCalledMatches !== false)
+    for (const callup of calledRows ?? []) {
+      const match = extractJoined(callup.matches);
+      if (match) matchRows.set(match.id, match);
+    }
 
   for (const row of trainingsRes.data ?? []) {
     const r = row as {
@@ -101,9 +138,19 @@ export async function getCalendarData(input: {
       maps_url: string | null;
       cancelled: boolean;
       cancellation_reason: string | null;
+      player_ids: string[] | null;
+      joint_id: string | null;
+      label: string | null;
+      kind: string;
       training_blocks: unknown;
       teams: unknown;
     };
+    if (
+      r.player_ids &&
+      !r.player_ids.includes(profileId) &&
+      !staffRes.data?.some((staff) => staff.team_id === r.team_id)
+    )
+      continue;
     const team = extractJoined(r.teams) as { label?: string; color?: string } | null;
     const block = extractJoined(r.training_blocks) as { label?: string } | null;
     const training: CalendarTraining = {
@@ -111,7 +158,10 @@ export async function getCalendarData(input: {
       team_id: r.team_id,
       team_label: team?.label ?? "Equipo",
       team_color: team?.color ?? "#1E5AA8",
-      block_label: block?.label ?? null,
+      block_label: r.label ?? block?.label ?? null,
+      joint_id: r.joint_id,
+      training_kind: r.kind,
+      upcoming: new Date(r.scheduled_at).getTime() > Date.now(),
       scheduled_at: r.scheduled_at,
       duration_minutes: r.duration_minutes,
       location: r.location,
@@ -125,7 +175,7 @@ export async function getCalendarData(input: {
     map.set(key, day);
   }
 
-  for (const row of matchesRes.data ?? []) {
+  for (const row of matchRows.values()) {
     const r = row as {
       id: string;
       team_id: string;
@@ -166,36 +216,15 @@ export async function getCalendarData(input: {
     map.set(key, day);
   }
 
-  const matchIds = Array.from(
-    new Set(((matchesRes.data ?? []) as Array<{ id: string }>).map((m) => m.id)),
-  );
-  if (matchIds.length > 0) {
-    const { data: callupsData } = await supabase
-      .from("match_callups")
-      .select("match_id, player_id, status, cap_number")
-      .eq("player_id", profileId)
-      .in("match_id", matchIds)
-      .in("status", ["called", "confirmed"]);
-
-    for (const c of (callupsData ?? []) as Array<{
-      match_id: string;
-      player_id: string;
-      status: string;
-      cap_number: number | null;
-    }>) {
-      const key = localDateOnly(
-        ((matchesRes.data ?? []) as Array<{ id: string; scheduled_at: string }>).find(
-          (m) => m.id === c.match_id,
-        )?.scheduled_at ?? "",
-      );
-      if (!key) continue;
-      const day = map.get(key);
-      if (!day) continue;
-      const match = day.matches.find((m) => m.id === c.match_id);
-      if (match) {
-        match.callup_status = c.status;
-        match.cap_number = c.cap_number;
-      }
+  for (const c of calledRows ?? []) {
+    const row = matchRows.get(c.match_id);
+    if (!row) continue;
+    const match = map
+      .get(localDateOnly(row.scheduled_at))
+      ?.matches.find((m) => m.id === c.match_id);
+    if (match) {
+      match.callup_status = c.status;
+      match.cap_number = c.cap_number;
     }
   }
 
@@ -228,10 +257,18 @@ export async function getNextEventForProfile(input: {
 
   const supabase = await createClient();
 
+  const { data: staff } = await supabase
+    .from("team_staff")
+    .select("team_id")
+    .eq("profile_id", profileId)
+    .in("team_id", teamIds);
+  const staffIds = (staff ?? []).map((s) => s.team_id);
+  const audience = `player_ids.is.null,player_ids.cs.{${profileId}}${staffIds.length ? `,team_id.in.(${staffIds.join(",")})` : ""}`;
   const [trainingRes, matchRes, callupsRes] = await Promise.all([
     supabase
       .from("training_sessions")
       .select("id, scheduled_at, location, teams!training_sessions_team_id_fkey(label, color)")
+      .or(audience)
       .in("team_id", teamIds)
       .eq("cancelled", false)
       .gte("scheduled_at", nowIso)

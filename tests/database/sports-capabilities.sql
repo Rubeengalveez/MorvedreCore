@@ -60,7 +60,7 @@ begin
   delete from public.user_roles where profile_id = actor_profile;
   insert into public.team_staff(team_id, profile_id, role) values(team_a, actor_profile, 'delegate');
   execute 'set local role authenticated';
-  if not public.is_match_staff_of(team_a) or public.can_manage_match_of(team_a) or public.is_match_staff_of(team_b) then
+  if not public.is_match_staff_of(team_a) or not public.can_manage_match_of(team_a) or public.can_manage_training_of(team_b) then
     raise exception 'FAIL: alcance delegado';
   end if;
   update public.matches set status = 'played', final_score_us = 7, final_score_them = 5 where id = match_a;
@@ -76,22 +76,20 @@ begin
   update public.match_stats set goals = 3 where match_id = match_a and player_id = player;
   get diagnostics affected = row_count;
   if affected <> 0 then raise exception 'FAIL: delegado modifica acta validada'; end if;
-  denied := false;
-  begin update public.matches set opponent = 'Cambio no permitido' where id = match_a;
-  exception when insufficient_privilege then denied := true; end;
-  if not denied then raise exception 'FAIL: delegado cambia programación'; end if;
-  denied := false;
-  begin update public.matches set status = 'cancelled' where id = match_a;
-  exception when insufficient_privilege then denied := true; end;
-  if not denied then raise exception 'FAIL: delegado cancela partido'; end if;
-  denied := false;
-  begin insert into public.matches(season_id, team_id, opponent, scheduled_at)
-    values(season, team_a, 'No permitido', '2097-10-03T12:00:00Z');
-  exception when insufficient_privilege then denied := true; end;
-  if not denied then raise exception 'FAIL: delegado crea partido'; end if;
+  update public.matches set opponent = 'Cambio delegado' where id = match_a;
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'FAIL: delegado no cambia programación'; end if;
+  update public.matches set status = 'cancelled' where id = match_a;
+  get diagnostics affected = row_count;
+  if affected <> 1 then raise exception 'FAIL: delegado no cancela partido'; end if;
+  insert into public.matches(season_id, team_id, opponent, scheduled_at)
+    values(season, team_a, 'Permitido', '2097-10-03T12:00:00Z');
+  update public.matches set opponent = 'No permitido' where id = match_b;
+  get diagnostics affected = row_count;
+  if affected <> 0 then raise exception 'FAIL: delegado modifica otro equipo'; end if;
   delete from public.matches where id = match_a;
   get diagnostics affected = row_count;
-  if affected <> 0 then raise exception 'FAIL: delegado elimina partido'; end if;
+  if affected <> 1 then raise exception 'FAIL: delegado no elimina partido'; end if;
   execute 'reset role';
 
   delete from public.team_staff where profile_id = actor_profile;

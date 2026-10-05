@@ -7,8 +7,10 @@ import {
   type RankingRow,
   type RankingScope,
 } from "@/lib/domain/rankings";
-import type { CategoryCode } from "@/lib/domain/categories";
+import { safeInferCategory, type CategoryCode } from "@/lib/domain/categories";
+import { getSeasonCategoryYear } from "@/server/queries/seasons";
 import { contributionsFromFinishedActa } from "@/lib/domain/ranking-acta";
+import { playerActaPerformance } from "@/lib/domain/player-acta-performance";
 import type { TypedSupabaseClient } from "@/lib/supabase/types";
 
 export interface RankingQueryInput {
@@ -55,22 +57,25 @@ function scopeKindOf(scope: RankingScope): "season" | "category" | "team" {
   return "team";
 }
 
-async function getSeasonActaStats(
+export async function getSeasonActaStats(
   supabase: TypedSupabaseClient,
   seasonId: string,
-  teamId?: string,
+  teamId?: string | string[],
+  onDocument?: (document: unknown) => void,
+  participantIds?: readonly string[],
 ): Promise<Map<string, { goals: number; assists: number; matches: number }>> {
   const totals = new Map<string, { goals: number; assists: number; matches: number }>();
   const matchIds: string[] = [];
 
   for (let offset = 0; ; offset += 500) {
-    let query = supabase
-      .from("matches")
-      .select("id")
-      .eq("season_id", seasonId)
-      .eq("status", "played")
-      .order("id");
-    if (teamId) query = query.eq("team_id", teamId);
+    const matchesQuery = supabase.from("matches");
+    let query = participantIds?.length
+      ? matchesQuery.select("id,match_callups!inner(player_id)")
+      : matchesQuery.select("id");
+    query = query.eq("season_id", seasonId).eq("status", "played").order("id");
+    if (Array.isArray(teamId)) query = query.in("team_id", teamId);
+    else if (teamId) query = query.eq("team_id", teamId);
+    if (participantIds?.length) query = query.in("match_callups.player_id", [...participantIds]);
     const { data, error } = await query.range(offset, offset + 499);
     if (error) throw new Error("No pudimos cargar los partidos del ranking.");
     matchIds.push(...(data ?? []).map((match) => match.id));
@@ -85,6 +90,7 @@ async function getSeasonActaStats(
     if (error) throw new Error("No pudimos cargar las asistencias del ranking.");
 
     for (const row of data ?? []) {
+      onDocument?.(row.document);
       for (const contribution of contributionsFromFinishedActa(row.document)) {
         const previous = totals.get(contribution.playerId) ?? { goals: 0, assists: 0, matches: 0 };
         totals.set(contribution.playerId, {
@@ -103,10 +109,13 @@ export async function getPlayerTeamActaStats(input: {
   seasonId: string;
   teamId: string;
   playerId: string;
-}): Promise<{ goals: number; assists: number; matches: number }> {
+}): Promise<ReturnType<typeof playerActaPerformance>> {
   const supabase = await createClient();
-  const totals = await getSeasonActaStats(supabase, input.seasonId, input.teamId);
-  return totals.get(input.playerId) ?? { goals: 0, assists: 0, matches: 0 };
+  const documents: unknown[] = [];
+  await getSeasonActaStats(supabase, input.seasonId, input.teamId, (document) =>
+    documents.push(document),
+  );
+  return playerActaPerformance(documents, input.playerId);
 }
 
 export async function getRankings(input: RankingQueryInput): Promise<RankingResult> {
@@ -204,14 +213,14 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
     }
   }
 
-  const currentYear = new Date().getFullYear();
+  const currentYear = await getSeasonCategoryYear(input.season_id, supabase);
   const players: PlayerStatsInput[] = ((snapshots ?? []) as SnapshotRow[]).map((s) => {
     const profile = profileMap.get(s.player_id);
     const team = teamByPlayer.get(s.player_id) ?? null;
     const birthYear = profile?.birth_year ?? null;
     const inferredCategory: CategoryCode =
       birthYear != null
-        ? (ageToCategory(currentYear - birthYear) ??
+        ? (safeInferCategory(birthYear, currentYear) ??
           (team?.category_code as CategoryCode) ??
           "cadete")
         : ((team?.category_code as CategoryCode) ?? "cadete");
@@ -262,15 +271,6 @@ export async function getRankings(input: RankingQueryInput): Promise<RankingResu
     my_position,
     total_players: rows.length,
   };
-}
-
-function ageToCategory(age: number): CategoryCode | null {
-  if (age <= 11) return "benjamin";
-  if (age <= 13) return "alevin";
-  if (age <= 15) return "infantil";
-  if (age <= 17) return "cadete";
-  if (age <= 19) return "juvenil";
-  return "absoluto";
 }
 
 export interface RankingsPageMeta {

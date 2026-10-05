@@ -95,7 +95,7 @@ async function loadMatches(teamScope: string[] | null): Promise<LoadResult> {
   const currentSeason = seasons.find((s) => s.is_current) ?? null;
   const teamsAll = (teamsData ?? []) as Array<Team & { created_at: string; updated_at: string }>;
   const teams: TeamRow[] = teamsAll
-    .filter((team) => team.season_id === currentSeason?.id)
+    .filter((team) => team.season_id === currentSeason?.id && team.team_type === "competitive")
     .map((t) => ({
       ...t,
       season_label: seasons.find((s) => s.id === t.season_id)?.label ?? "Sin temporada",
@@ -154,13 +154,9 @@ export default async function MatchesPage() {
   const currentEditableTeams = editableTeams.filter((team) => team.season_id === currentSeasonId);
   const editableDefaultTeam =
     currentEditableTeams.find((team) => team.id === defaultTeamId) ?? currentEditableTeams[0];
-  const scheduledCount = matches.filter((match) =>
-    ["scheduled", "in_progress", "postponed"].includes(match.status),
-  ).length;
-  const playedCount = matches.filter((match) => match.status === "played").length;
   const currentSeason = seasons.find((season) => season.is_current) ?? null;
 
-  if (seasons.length === 0) {
+  if (!error && seasons.length === 0) {
     return (
       <AdminPageShell>
         <AdminPageHeader
@@ -183,69 +179,60 @@ export default async function MatchesPage() {
   }
 
   return (
-    <AdminPageShell>
-      <AdminPageHeader
-        title="Partidos"
-        description="Partidos y convocatorias de cada equipo."
-        icon={<CalendarDays className="h-6 w-6" aria-hidden="true" />}
-        action={
-          currentEditableTeams.length > 0 ? (
+    <AdminPageShell className="gap-4">
+      <header className="border-pool-deep/65 text-pool-deep rounded-2xl border-2 bg-white p-4">
+        <div className="flex items-center gap-3">
+          <span className="bg-pool-deep flex h-12 w-12 shrink-0 items-center justify-center rounded-xl text-white">
+            <CalendarDays className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-slate-700">
+              {currentSeason?.label ?? "Temporada actual"}
+            </p>
+            <h1 className="font-display text-2xl font-extrabold">Partidos</h1>
+          </div>
+        </div>
+        <p className="mt-3 text-base leading-snug text-slate-700">
+          Organiza los encuentros y su convocatoria.
+        </p>
+        {currentEditableTeams.length > 0 && (
+          <div className="mt-4">
             <MatchFormSheet
               teams={currentEditableTeams}
               defaultTeamId={editableDefaultTeam?.id ?? null}
               defaultSeasonId={editableDefaultTeam?.season_id ?? defaultSeasonId}
               trigger={
-                <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
+                <Button
+                  variant="deep"
+                  size="lg"
+                  className="border-pool-deep min-h-14 w-full rounded-xl border-2 text-base font-extrabold"
+                >
                   <MdAdd className="h-6 w-6" aria-hidden="true" />
                   <span>Nuevo partido</span>
                 </Button>
               }
             />
-          ) : undefined
-        }
-      />
-
-      <section className="bg-pool-deep text-paper shadow-elev-1 relative overflow-hidden rounded-2xl p-4">
-        <span className="lane-pattern absolute inset-0 opacity-15" aria-hidden="true" />
-        <div className="relative flex flex-col gap-4">
-          <div>
-            <p className="text-ball-gold text-xs font-extrabold tracking-[0.12em] uppercase">
-              {currentSeason?.label ?? "Temporada actual"}
-            </p>
-            <h2 className="mt-1 text-xl font-extrabold">Operativa de partidos</h2>
-            <p className="text-paper/75 mt-1 text-sm">
-              Crea, convoca y registra solo los partidos en curso.
-            </p>
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
-              <p className="text-paper/70 text-xs font-bold">Por jugar</p>
-              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">
-                {scheduledCount}
-              </p>
-            </div>
-            <div className="border-paper/15 bg-paper/10 rounded-xl border p-3">
-              <p className="text-paper/70 text-xs font-bold">Jugados</p>
-              <p className="mt-1 font-mono text-2xl font-extrabold tabular-nums">{playedCount}</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
+        )}
+      </header>
       {error ? (
         <Alert variant="danger" title="No pudimos cargar los partidos">
-          {error}
+          Vuelve a cargar la página. Si sigue fallando, inténtalo dentro de unos minutos.
         </Alert>
       ) : null}
-
-      {!error && currentEditableTeams.length === 0 ? (
-        <Alert variant="info" title="No tienes equipos editables en la temporada actual">
-          Puedes consultar los partidos, pero para crear uno necesitas el permiso de gestión del
-          equipo.
+      {!error && currentEditableTeams.length === 0 && (
+        <Alert variant="info" title="Puedes consultar los partidos">
+          Para añadir o editar un partido necesitas permiso de gestión de su equipo.
         </Alert>
-      ) : null}
-
-      <MatchesList teams={teams} matches={matches} defaultTeamId={defaultTeamId} />
+      )}
+      {!error && (
+        <MatchesList
+          teams={teams}
+          matches={matches}
+          defaultTeamId={defaultTeamId}
+          editableTeamIds={currentEditableTeams.map((team) => team.id)}
+        />
+      )}
     </AdminPageShell>
   );
 }

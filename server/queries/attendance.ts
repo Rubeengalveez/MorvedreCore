@@ -1,16 +1,22 @@
 import {
   buildAttendanceTeamReports,
+  getMonthRange,
   type AttendanceHistoryRecord,
   type AttendanceReportTeam,
   type AttendanceTeamReport,
 } from "@/lib/domain/attendance-history";
 import { getAttendanceDayKey } from "@/lib/domain/attendance";
+import { addDaysIso } from "@/lib/domain/calendar";
 import { createClient } from "@/lib/supabase/server";
+import { readAllRows } from "@/lib/supabase/read-all-rows";
+import { buildAttendanceOccurrences } from "@/lib/domain/attendance-occurrences";
 
 interface SessionRow {
+  joint_id?: string | null;
   id: string;
   team_id: string;
   scheduled_at: string;
+  player_ids?: string[] | null;
 }
 
 interface AttendanceRow {
@@ -20,6 +26,8 @@ interface AttendanceRow {
   reason: string | null;
   marked_at: string;
   updated_at: string;
+  unreviewed?: boolean;
+  joint_id?: string | null;
 }
 
 function rangeIso(date: string, edge: "start" | "end"): string {
@@ -71,15 +79,18 @@ async function getSessionsForRange(
   const requestedEnd = rangeIso(to, "end");
   const effectiveEnd =
     new Date(requestedEnd).getTime() < through.getTime() ? requestedEnd : through.toISOString();
-  const { data, error } = await supabase
-    .from("training_sessions")
-    .select("id, team_id, scheduled_at")
-    .in("team_id", teamIds)
-    .eq("cancelled", false)
-    .gte("scheduled_at", rangeIso(from, "start"))
-    .lte("scheduled_at", effectiveEnd)
-    .order("scheduled_at", { ascending: true });
-  if (error) throw new Error("No pudimos cargar los entrenamientos de este periodo.");
+  const data = await readAllRows("los entrenamientos de este periodo", (start, end) =>
+    supabase
+      .from("training_sessions")
+      .select("id, team_id, scheduled_at, joint_id, player_ids", { count: "exact" })
+      .in("team_id", teamIds)
+      .eq("cancelled", false)
+      .gte("scheduled_at", rangeIso(addDaysIso(from, -1), "start"))
+      .lte("scheduled_at", effectiveEnd)
+      .order("scheduled_at", { ascending: true })
+      .order("id")
+      .range(start, end),
+  );
   return ((data ?? []) as SessionRow[]).filter((session) => {
     const day = getAttendanceDayKey(session.scheduled_at);
     return day >= from && day <= to;
@@ -92,14 +103,19 @@ async function getAttendanceRows(
 ): Promise<AttendanceRow[]> {
   if (sessionIds.length === 0 || playerIds?.length === 0) return [];
   const supabase = await createClient();
-  let query = supabase
-    .from("training_attendance")
-    .select("session_id, player_id, present, reason, marked_at, updated_at")
-    .in("session_id", sessionIds);
-  if (playerIds) query = query.in("player_id", playerIds);
-  const { data, error } = await query;
-  if (error) throw new Error("No pudimos cargar la asistencia registrada.");
-  return (data ?? []) as AttendanceRow[];
+  const rows: AttendanceRow[] = [];
+  for (let offset = 0; offset < sessionIds.length; offset += 100) {
+    const batch = await readAllRows("la asistencia registrada", (from, to) => {
+      let query = supabase
+        .from("training_attendance")
+        .select("session_id, player_id, present, reason, marked_at, updated_at", { count: "exact" })
+        .in("session_id", sessionIds.slice(offset, offset + 100));
+      if (playerIds) query = query.in("player_id", playerIds);
+      return query.order("session_id").order("player_id").range(from, to);
+    });
+    rows.push(...batch);
+  }
+  return rows;
 }
 
 export async function getAttendanceHistory(input: {
@@ -119,7 +135,34 @@ export async function getAttendanceHistory(input: {
     sessions.map((session) => session.id),
     input.playerIds,
   );
-  return toHistoryRecords(rows, sessions, teams);
+  const supabase = await createClient();
+  const { data: rosters, error } = await supabase
+    .from("team_rosters")
+    .select("team_id,player_id,joined_at,left_at")
+    .in(
+      "team_id",
+      teams.map((team) => team.id),
+    )
+    .in("player_id", input.playerIds)
+    .lte("joined_at", input.to)
+    .or(`left_at.is.null,left_at.gte.${input.from}`);
+  if (error) throw new Error("No pudimos comprobar los entrenamientos de este jugador.");
+  const occurrences = buildAttendanceOccurrences({
+    sessions,
+    rosters: rosters ?? [],
+    entries: rows,
+    playerIds: input.playerIds,
+  });
+  return toHistoryRecords(
+    occurrences.map((record) => ({
+      ...record,
+      reason: record.reason ?? null,
+      marked_at: record.marked_at ?? "",
+      updated_at: record.updated_at ?? "",
+    })),
+    sessions,
+    teams,
+  );
 }
 
 export async function getCoachAttendanceReport(input: {
@@ -131,14 +174,16 @@ export async function getCoachAttendanceReport(input: {
   if (input.teams.length === 0) return [];
   const teamIds = input.teams.map((team) => team.id);
   const supabase = await createClient();
+  const calendarFrom = getMonthRange(input.from.slice(0, 7)).from;
+  const calendarTo = getMonthRange(input.to.slice(0, 7)).to;
   const [sessions, rosterResult] = await Promise.all([
-    getSessionsForRange(teamIds, input.from, input.to, input.now),
+    getSessionsForRange(teamIds, calendarFrom, calendarTo, input.now),
     supabase
       .from("team_rosters")
       .select("team_id, player_id, joined_at, left_at")
       .in("team_id", teamIds)
-      .lte("joined_at", input.to)
-      .or(`left_at.is.null,left_at.gte.${input.from}`),
+      .lte("joined_at", calendarTo)
+      .or(`left_at.is.null,left_at.gte.${calendarFrom}`),
   ]);
   if (rosterResult.error) throw new Error("No pudimos cargar las plantillas de este periodo.");
 
@@ -148,7 +193,7 @@ export async function getCoachAttendanceReport(input: {
   const [rows, profileResult] = await Promise.all([
     getAttendanceRows(sessions.map((session) => session.id)),
     playerIds.length > 0
-      ? supabase.from("profiles").select("id, full_name, photo_url").in("id", playerIds)
+      ? supabase.from("profiles_public").select("id, full_name, photo_url").in("id", playerIds)
       : Promise.resolve({ data: [], error: null }),
   ]);
   if (profileResult.error) throw new Error("No pudimos cargar los jugadores de este periodo.");
@@ -158,7 +203,12 @@ export async function getCoachAttendanceReport(input: {
     teams: input.teams,
     sessions,
     rosters: rosterResult.data ?? [],
-    players: profileResult.data ?? [],
+    players: (profileResult.data ?? [])
+      .filter((p) => p.id != null)
+      .map((p) => ({ id: p.id!, full_name: p.full_name ?? "Jugador", photo_url: p.photo_url })),
     records,
+    from: input.from,
+    to: input.to,
+    now: input.now,
   });
 }

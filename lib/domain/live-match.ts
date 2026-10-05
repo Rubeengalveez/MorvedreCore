@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { emergencyKeeperCaps } from "./live-match-goalkeeper-role";
 import {
   exclusionLimit,
   matchCategorySchema,
@@ -197,7 +198,13 @@ export const sheetSchema = z
     }
     if (s.pending && s.phase !== "playing")
       fail("Completa la jugada pendiente antes de cambiar de fase.");
-    if (s.version >= 3 && s.keeper !== null && s.keeper !== 1 && s.keeper !== 13)
+    if (
+      s.version >= 3 &&
+      s.keeper !== null &&
+      s.keeper !== 1 &&
+      s.keeper !== 13 &&
+      !emergencyKeeperCaps(s as LiveSheet, "us").includes(s.keeper)
+    )
       fail("El portero en juego debe llevar el gorro 1 o 13.");
     if (s.phase === "shootout" && !s.shootout) fail("Falta preparar la tanda.");
     if (s.shootout) {

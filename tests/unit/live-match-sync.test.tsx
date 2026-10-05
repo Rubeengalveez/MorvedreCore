@@ -55,14 +55,64 @@ beforeEach(() => {
     },
   });
   mocks.read.mockImplementation(async () => structuredClone(stored));
-  mocks.write.mockImplementation(async (r: StoredMatch) => {
-    stored = structuredClone(r);
-  });
+  mocks.write.mockImplementation(
+    async (r: StoredMatch, expected?: { mutation: string; draftRevision: number }) => {
+      if (
+        expected &&
+        (stored.mutation !== expected.mutation ||
+          (stored.draftRevision ?? 0) !== expected.draftRevision)
+      )
+        throw new Error("La selección ha cambiado en otra pestaña.");
+      stored = structuredClone(r);
+    },
+  );
   mocks.load.mockResolvedValue({ ok: true, data: structuredClone(record) });
   mocks.sync.mockImplementation(async (input: { revision: number }) => ({
     ok: true,
     data: { revision: input.revision + 1, owner: record.owner },
   }));
+});
+
+it("guarda borradores consecutivos propios sin confundirlos con una pestaña externa", async () => {
+  const { result } = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(result.current.writable).toBe(true));
+  await act(async () => {
+    expect(await result.current.saveLineupDraft({ ...lineupDraft(), baseDraftRevision: 0 })).toBe(
+      true,
+    );
+    expect(
+      await result.current.saveLineupDraft({
+        ...lineupDraft(),
+        step: "them",
+        baseDraftRevision: 1,
+      }),
+    ).toBe(true);
+  });
+  expect(result.current.record?.draftRevision).toBe(2);
+  expect(result.current.record?.mutation).toBe(record.mutation);
+  expect(result.current.error).toBe("");
+});
+
+it("rechaza un borrador externo obsoleto y carga la selección actual sin sobrescribirla", async () => {
+  Object.defineProperty(navigator, "locks", { configurable: true, value: undefined });
+  const { result } = renderHook(() => useLiveMatch());
+  await waitFor(() => expect(result.current.writable).toBe(true));
+  stored = { ...stored, draftRevision: 1, lineupDraft: { ...lineupDraft(), step: "them" } };
+  await act(async () => {
+    expect(await result.current.saveLineupDraft({ ...lineupDraft(), baseDraftRevision: 0 })).toBe(
+      false,
+    );
+  });
+  expect(stored.lineupDraft?.step).toBe("them");
+  expect(result.current.record?.draftRevision).toBe(1);
+  expect(result.current.error).toContain("otra pestaña");
+  await act(async () => {
+    expect(await result.current.change(record.sheet, { expectedDraftRevision: 0 })).toBe(false);
+    expect(await result.current.saveLineupDraft({ ...lineupDraft(), baseDraftRevision: 1 })).toBe(
+      true,
+    );
+  });
+  expect(stored.draftRevision).toBe(2);
 });
 afterEach(() => cleanup());
 const goal = (id: string) => ({

@@ -29,15 +29,18 @@ describe("ParentDecisionForm", () => {
     render(<ParentDecisionForm orderId={orderId} initialPhone="+34611111111" />);
 
     fireEvent.click(screen.getByRole("button", { name: "Aprobar" }));
+    expect(decideShopOrderMock).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Tu teléfono para Sol")).toHaveValue("+34611111111");
+    fireEvent.click(screen.getByRole("button", { name: "Aprobar pedido" }));
 
     await waitFor(() =>
       expect(decideShopOrderMock).toHaveBeenCalledWith({
         order_id: orderId,
         decision: "approve",
-        contact_phone: undefined,
+        contact_phone: "+34611111111",
       }),
     );
-    expect(screen.queryByLabelText("Tu teléfono de contacto")).not.toBeInTheDocument();
+    expect(await screen.findByRole("status")).toHaveTextContent("Decisión guardada");
   });
 
   it("asks once for the approving parent's phone and sends it normalized", async () => {
@@ -46,10 +49,10 @@ describe("ParentDecisionForm", () => {
     fireEvent.click(screen.getByRole("button", { name: "Aprobar" }));
     expect(decideShopOrderMock).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("Tu teléfono de contacto"), {
+    fireEvent.change(screen.getByLabelText("Tu teléfono para Sol"), {
       target: { value: "612 345 678" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar teléfono y aprobar" }));
+    fireEvent.click(screen.getByRole("button", { name: "Aprobar pedido" }));
 
     await waitFor(() =>
       expect(decideShopOrderMock).toHaveBeenCalledWith({

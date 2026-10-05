@@ -9,7 +9,12 @@ import { Megafone } from "@/components/brand/pictograms";
 import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import type { ProfileSummary } from "@/server/queries/profile-types";
 import { Avatar } from "@/components/ui/avatar";
-import { CATEGORY_COLORS, safeInferCategory } from "@/lib/domain/categories";
+import {
+  calendarSeasonStartYear,
+  CATEGORY_COLORS,
+  safeInferCategory,
+} from "@/lib/domain/categories";
+import { getCurrentSeason } from "@/server/queries/seasons";
 import { getUnreadNotificationsCount } from "@/server/queries/notifications";
 
 const utilityActionClass =
@@ -20,9 +25,10 @@ export interface TopBarProps {
 }
 
 export async function TopBar({ profile }: TopBarProps) {
-  const [unread, access] = await Promise.all([
+  const [unread, access, season] = await Promise.all([
     getUnreadNotificationsCount(profile.id).catch(() => 0),
     getRenderAdminAccess(),
+    getCurrentSeason(),
   ]);
 
   const isPrivileged = canAccessAdminArea(access);
@@ -30,7 +36,10 @@ export async function TopBar({ profile }: TopBarProps) {
   const category =
     profile.birth_year == null
       ? null
-      : safeInferCategory(profile.birth_year, new Date().getFullYear());
+      : safeInferCategory(
+          profile.birth_year,
+          season ? Number(season.start_date.slice(0, 4)) : calendarSeasonStartYear(),
+        );
   const teamColor = category
     ? CATEGORY_COLORS[category]
     : (profile.team_color ?? "var(--pool-blue)");

@@ -1,0 +1,1 @@
+drop policy if exists shop_product_images_select_authenticated on public.shop_product_images; create policy shop_product_images_select_authenticated on public.shop_product_images for select to authenticated using (exists (select 1 from public.shop_products p where p.id=shop_product_images.product_id and (p.available=true or public.has_permission('manage_shop'))));

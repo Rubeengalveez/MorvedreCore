@@ -25,6 +25,18 @@ import { rosterPlayer, unrosterPlayer } from "./teams";
 
 export type Player = Tables<"profiles">;
 
+async function requirePlayerTarget(id: string) {
+  const db = createAdminClient();
+  const { data, error } = await db
+    .from("user_roles")
+    .select("profile_id")
+    .eq("profile_id", id)
+    .eq("role", "player")
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) throw new Error("No pudimos localizar la ficha del jugador.");
+}
+
 const personnelProfileSchema = z.object({
   full_name: z.string().trim().min(2).max(100),
   email: z.string().trim().toLowerCase().email(),
@@ -40,19 +52,30 @@ export async function createPersonnelProfile(input: unknown): Promise<void> {
   const parsed = personnelProfileSchema.safeParse(input);
   if (!parsed.success) throw new Error("Revisa el nombre y el correo de la persona.");
   const admin = createAdminClient();
-  const { data: existing } = await admin.from("profiles").select("id")
-    .ilike("email_contact", parsed.data.email).limit(1).maybeSingle();
-  if (existing) throw new Error("Ese correo ya figura en un perfil. Asigna los permisos al perfil existente.");
-  const { data: person, error } = await admin.from("profiles").insert({
-    full_name: parsed.data.full_name,
-    email_contact: parsed.data.email,
-    must_change_password: false,
-    is_active: true,
-  }).select("id").single();
+  const { data: existing } = await admin
+    .from("profiles")
+    .select("id")
+    .ilike("email_contact", parsed.data.email)
+    .limit(1)
+    .maybeSingle();
+  if (existing)
+    throw new Error("Ese correo ya figura en un perfil. Asigna los permisos al perfil existente.");
+  const { data: person, error } = await admin
+    .from("profiles")
+    .insert({
+      full_name: parsed.data.full_name,
+      email_contact: parsed.data.email,
+      must_change_password: false,
+      is_active: true,
+    })
+    .select("id")
+    .single();
   if (error || !person) throw new Error("No pudimos crear a esta persona.");
   if (parsed.data.directiva) {
     const { error: roleError } = await admin.from("user_roles").insert({
-      profile_id: person.id, role: "directiva", scope_team_id: null,
+      profile_id: person.id,
+      role: "directiva",
+      scope_team_id: null,
     });
     if (roleError) {
       await admin.from("profiles").delete().eq("id", person.id);
@@ -62,41 +85,58 @@ export async function createPersonnelProfile(input: unknown): Promise<void> {
   revalidatePath("/admin/staff");
 }
 
-export async function provisionPersonnelAccess(input: unknown): Promise<{ email: string; temporaryPassword: string | null }> {
+export async function provisionPersonnelAccess(
+  input: unknown,
+): Promise<{ email: string; temporaryPassword: string | null }> {
   await requireAdmin();
   const parsed = personnelAccessSchema.safeParse(input);
   if (!parsed.success) throw new Error("Selecciona una persona y escribe un correo válido.");
   const admin = createAdminClient();
-  const { data: profile } = await admin.from("profiles")
+  const { data: profile } = await admin
+    .from("profiles")
     .select("id, email_contact, auth_user_id, is_active")
-    .eq("id", parsed.data.profileId).maybeSingle();
+    .eq("id", parsed.data.profileId)
+    .maybeSingle();
   if (!profile?.is_active || profile.auth_user_id) {
     throw new Error("Esta persona necesita un perfil activo sin acceso previo.");
   }
   const [{ data: role }, { data: assignment }] = await Promise.all([
-    admin.from("user_roles").select("id").eq("profile_id", profile.id)
-      .in("role", ["coach", "delegate", "directiva", "admin"]).limit(1),
+    admin
+      .from("user_roles")
+      .select("id")
+      .eq("profile_id", profile.id)
+      .in("role", ["coach", "delegate", "directiva", "admin"])
+      .limit(1),
     admin.from("team_staff").select("team_id").eq("profile_id", profile.id).limit(1),
   ]);
   if (!role?.length && !assignment?.length) {
     throw new Error("Asigna primero su función en un equipo o en la directiva.");
   }
-  const { data: existingAuth, error: lookupError } = await admin.rpc("get_auth_user_id_by_email", {
-    p_email: parsed.data.email,
-  }).maybeSingle();
+  const { data: existingAuth, error: lookupError } = await admin
+    .rpc("get_auth_user_id_by_email", {
+      p_email: parsed.data.email,
+    })
+    .maybeSingle();
   if (lookupError) throw new Error("No pudimos verificar si el correo ya tiene acceso.");
   let authUserId: string;
   let temporaryPassword: string | null = null;
   if (existingAuth) {
     const { data: account, error } = await admin.auth.admin.getUserById(existingAuth);
-    if (error || !account.user?.email_confirmed_at ||
+    if (
+      error ||
+      !account.user?.email_confirmed_at ||
       !account.user.identities?.some((identity) => identity.provider === "google") ||
-      account.user.email?.toLowerCase() !== parsed.data.email) {
+      account.user.email?.toLowerCase() !== parsed.data.email
+    ) {
       throw new Error("Ese correo ya tiene cuenta. Usa el perfil existente o recupera su acceso.");
     }
-    const { data: linkedProfile } = await admin.from("profiles").select("id")
-      .eq("auth_user_id", existingAuth).maybeSingle();
-    if (linkedProfile) throw new Error("Esa cuenta ya está vinculada a otro perfil. Asigna allí su función.");
+    const { data: linkedProfile } = await admin
+      .from("profiles")
+      .select("id")
+      .eq("auth_user_id", existingAuth)
+      .maybeSingle();
+    if (linkedProfile)
+      throw new Error("Esa cuenta ya está vinculada a otro perfil. Asigna allí su función.");
     authUserId = existingAuth;
   } else {
     temporaryPassword = `Mc-${randomBytes(12).toString("base64url")}9aA`;
@@ -108,10 +148,17 @@ export async function provisionPersonnelAccess(input: unknown): Promise<{ email:
     if (createError || !account.user) throw new Error("No pudimos crear la cuenta.");
     authUserId = account.user.id;
   }
-  const { data: linked, error: linkError } = await admin.from("profiles")
-    .update({ auth_user_id: authUserId, email_contact: parsed.data.email,
-      must_change_password: temporaryPassword !== null })
-    .eq("id", profile.id).is("auth_user_id", null).select("id").maybeSingle();
+  const { data: linked, error: linkError } = await admin
+    .from("profiles")
+    .update({
+      auth_user_id: authUserId,
+      email_contact: parsed.data.email,
+      must_change_password: temporaryPassword !== null,
+    })
+    .eq("id", profile.id)
+    .is("auth_user_id", null)
+    .select("id")
+    .maybeSingle();
   if (linkError || !linked) {
     if (temporaryPassword) await admin.auth.admin.deleteUser(authUserId);
     throw new Error("No pudimos vincular la cuenta con su perfil.");
@@ -149,70 +196,30 @@ export async function createPlayer(input: {
   }
 
   const supabase = createAdminClient();
-  const { data: team } = await supabase
-    .from("teams")
-    .select("id, category_code, season:seasons!teams_season_id_fkey(start_date, is_current)")
-    .eq("id", parsed.data.team_id)
-    .maybeSingle();
-  if (!team?.season?.is_current) {
-    throw new Error("Selecciona un equipo de la temporada actual.");
+  const { data, error } = await supabase.rpc("register_admin_player", { p_input: parsed.data });
+  if (error) {
+    const safeMessages = [
+      "Ya existe un jugador",
+      "Ese gorro ya está asignado",
+      "La convocatoria por defecto",
+      "Selecciona un equipo",
+      "El año de nacimiento",
+      "Revisa el nombre",
+    ];
+    throw new Error(
+      safeMessages.some((message) => error.message.startsWith(message))
+        ? error.message
+        : "No pudimos completar el alta. Inténtalo de nuevo.",
+    );
   }
-  const seasonYear = new Date(`${team.season.start_date}T12:00:00`).getFullYear();
-  if (!canRosterPlayer(parsed.data.birth_year, team.category_code as CategoryCode, seasonYear)) {
-    throw new Error("El año de nacimiento no encaja con ese equipo.");
-  }
-  const { data, error } = await supabase
-    .from("profiles")
-    .insert({
-      auth_user_id: null,
-      full_name: parsed.data.full_name,
-      birth_year: parsed.data.birth_year,
-      gender: parsed.data.gender ?? "prefer_not_to_say",
-      cap_number: parsed.data.cap_number ?? null,
-      phone_e164: parsed.data.phone_e164 ?? null,
-      email_contact: parsed.data.email_contact ?? null,
-      photo_url: parsed.data.photo_url ?? null,
-      team_color: parsed.data.team_color ?? null,
-      school_enrolled: parsed.data.school_enrolled ?? false,
-      school_payment_paid: parsed.data.school_payment_paid ?? false,
-      must_change_password: false,
-      license_active: true,
-      is_active: true,
-      notes: parsed.data.notes ?? null,
-    })
-    .select("*")
-    .single();
-
-  throwIfError(error, "No pudimos crear el jugador. Inténtalo de nuevo.");
-  if (!data) {
-    throw new Error("No pudimos crear el jugador. Inténtalo de nuevo.");
-  }
-
-  const { error: rosterError } = await supabase.from("team_rosters").insert({
-    team_id: parsed.data.team_id,
-    player_id: data.id,
-    squad_number: parsed.data.cap_number ?? null,
-  });
-  if (rosterError) {
-    await supabase.from("profiles").delete().eq("id", data.id);
-    throw new Error("No pudimos asignar el equipo principal. Inténtalo de nuevo.");
-  }
-  const { error: roleError } = await supabase.from("user_roles").insert({
-    profile_id: data.id,
-    role: "player",
-    scope_team_id: null,
-  });
-  if (roleError) {
-    await supabase.from("profiles").delete().eq("id", data.id);
-    throw new Error("No pudimos completar el alta del jugador. Inténtalo de nuevo.");
-  }
-
+  if (!data) throw new Error("No pudimos completar el alta. Inténtalo de nuevo.");
   revalidatePath("/admin/players");
+  revalidatePath("/admin/teams");
+  revalidatePath(`/admin/teams/${parsed.data.team_id}`);
+  revalidatePath("/team", "layout");
   revalidatePath("/admin");
-
-  return data;
+  return data as unknown as Player;
 }
-
 export async function updatePlayer(
   id: string,
   input: {
@@ -231,7 +238,7 @@ export async function updatePlayer(
     is_active?: boolean;
   },
 ): Promise<Player> {
-  await requirePermission("manage_players");
+  const actor = await requirePermission("manage_players");
 
   const parsedId = idSchema.safeParse({ id });
   if (!parsedId.success) {
@@ -243,7 +250,33 @@ export async function updatePlayer(
     throw new Error(parsed.error.issues[0]?.message ?? "Datos inválidos.");
   }
 
+  if (parsed.data.is_active === false && actor.id === id)
+    throw new Error("No puedes desactivar tu propio perfil desde aquí.");
+  await requirePlayerTarget(parsedId.data.id);
   const supabase = createAdminClient();
+  if (parsed.data.birth_year != null) {
+    if (parsed.data.birth_year > new Date().getFullYear())
+      throw new Error("El año de nacimiento no puede ser futuro.");
+    const { data: rosters, error: rosterError } = await supabase
+      .from("team_rosters")
+      .select(
+        "team:teams!team_rosters_team_id_fkey(category_code, season:seasons!teams_season_id_fkey(start_date, is_current))",
+      )
+      .eq("player_id", id)
+      .is("left_at", null);
+    if (rosterError) throw new Error("No pudimos comprobar sus equipos. Inténtalo de nuevo.");
+    for (const roster of rosters ?? []) {
+      if (!roster.team?.season?.is_current) continue;
+      const year = Number(roster.team.season.start_date.slice(0, 4));
+      if (
+        parsed.data.birth_year > year ||
+        !canRosterPlayer(parsed.data.birth_year, roster.team.category_code as CategoryCode, year)
+      )
+        throw new Error(
+          "Ese año no encaja con sus equipos actuales. Revisa la plantilla en Equipos antes de cambiarlo.",
+        );
+    }
+  }
   const updates: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(parsed.data)) {
     if (value !== undefined) updates[key] = value;
@@ -263,6 +296,9 @@ export async function updatePlayer(
   revalidatePath("/admin/players");
   revalidatePath(`/admin/players/${parsedId.data.id}`);
   revalidatePath(`/profile/${parsedId.data.id}`);
+  revalidatePath("/team", "layout");
+  revalidatePath("/admin/teams", "layout");
+  revalidatePath("/rankings");
 
   return data;
 }
@@ -271,16 +307,22 @@ export async function setPlayerActive(input: {
   profile_id: string;
   active: boolean;
 }): Promise<void> {
-  await requirePermission("manage_players");
+  const actor = await requirePermission("manage_players");
   const parsed = z.object({ profile_id: z.string().uuid(), active: z.boolean() }).safeParse(input);
   if (!parsed.success) throw new Error("Jugador inválido.");
 
+  if (!parsed.data.active && actor.id === parsed.data.profile_id)
+    throw new Error("No puedes desactivar tu propio perfil desde aquí.");
+  await requirePlayerTarget(parsed.data.profile_id);
   const supabase = createAdminClient();
-  const { error } = await supabase
+  const { error, data } = await supabase
     .from("profiles")
     .update({ is_active: parsed.data.active })
-    .eq("id", parsed.data.profile_id);
+    .eq("id", parsed.data.profile_id)
+    .select("id")
+    .single();
   throwIfError(error, "No pudimos cambiar el estado del jugador.");
+  if (!data) throw new Error("No pudimos localizar la ficha del jugador.");
 
   revalidatePath("/admin/players");
   revalidatePath("/team");

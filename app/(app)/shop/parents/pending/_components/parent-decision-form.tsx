@@ -1,173 +1,141 @@
 "use client";
-
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Phone, X } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Alert } from "@/components/ui/alert";
+import { Check, X } from "lucide-react";
 import { normalizeSpanishPhone } from "@/lib/domain/phone";
-import {
-  Sheet,
-  SheetBody,
-  SheetContent,
-  SheetDescription,
-  SheetFooter,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { shopMoney } from "@/lib/domain/shop-management";
+import { ShopDecisionSheet } from "@/components/shop/shop-decision-sheet";
+import { shopControl, shopPrimary, shopSecondary } from "@/components/shop/shop-ui";
 import { decideShopOrder } from "@/server/actions/admin/shop";
-
 export interface ParentDecisionFormProps {
   orderId: string;
   initialPhone: string | null;
+  totalCents?: number;
 }
-
-export function ParentDecisionForm({ orderId, initialPhone }: ParentDecisionFormProps) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [phone, setPhone] = useState(initialPhone ?? "");
-  const [phoneOpen, setPhoneOpen] = useState(false);
-
-  function decide(decision: "approve" | "reject", contactPhone?: string) {
+export function ParentDecisionForm({ orderId, initialPhone, totalCents }: ParentDecisionFormProps) {
+  const router = useRouter(),
+    [pending, startTransition] = useTransition(),
+    [error, setError] = useState<string | null>(null),
+    [phone, setPhone] = useState(initialPhone ?? ""),
+    [decision, setDecision] = useState<"approve" | "reject" | null>(null),
+    [done, setDone] = useState(false);
+  const submitting = useRef(false);
+  function decide() {
+    if (!decision || submitting.current) return;
+    const normalized = normalizeSpanishPhone(phone);
+    if (decision === "approve" && !normalized) {
+      setError("Escribe tu teléfono para que Sol pueda contactar contigo.");
+      return;
+    }
+    if (!navigator.onLine) {
+      setError("Necesitas conexión para confirmar. Vuelve a intentarlo cuando estés conectado.");
+      return;
+    }
     setError(null);
+    submitting.current = true;
     startTransition(async () => {
       try {
-        await decideShopOrder({ order_id: orderId, decision, contact_phone: contactPhone });
-        setPhoneOpen(false);
+        await decideShopOrder({ order_id: orderId, decision, contact_phone: normalized });
+        setDecision(null);
+        setDone(true);
         router.refresh();
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Ha habido un problema.");
+      } catch (caught) {
+        setError(caught instanceof Error ? caught.message : "No pudimos guardar tu decisión.");
+      } finally {
+        submitting.current = false;
       }
     });
   }
-
-  function handleApprove() {
-    if (initialPhone) {
-      decide("approve");
-      return;
-    }
-    setPhoneOpen(true);
-  }
-
+  if (done)
+    return (
+      <p
+        role="status"
+        className="border-pool-deep/65 text-pool-deep rounded-xl border-2 bg-blue-50 p-4 font-bold"
+      >
+        Decisión guardada. El estado del pedido está actualizado.
+      </p>
+    );
   return (
-    <div className="mt-3">
-      {error ? (
-        <Alert variant="danger" title="No se ha podido guardar" className="mb-3">
-          {error}
-        </Alert>
-      ) : null}
-      <div className="grid grid-cols-2 gap-2">
-        <Button
+    <>
+      <div className="grid grid-cols-2 gap-3">
+        <button
           type="button"
-          variant="primary"
-          size="md"
           disabled={pending}
-          onClick={handleApprove}
+          onClick={() => {
+            setDecision("approve");
+            setError(null);
+          }}
+          className={shopPrimary}
         >
-          <Check className="h-4 w-4" aria-hidden="true" />
+          <Check className="h-5 w-5" aria-hidden="true" />
           Aprobar
-        </Button>
-        <Sheet>
-          <SheetTrigger asChild>
-            <Button type="button" variant="danger" size="md" disabled={pending}>
-              <X className="h-4 w-4" aria-hidden="true" />
-              Rechazar
-            </Button>
-          </SheetTrigger>
-          <SheetContent size="sm">
-            <SheetHeader>
-              <SheetTitle>¿Rechazar este pedido?</SheetTitle>
-              <SheetDescription>
-                La familia verá el pedido como rechazado. Comprueba los datos antes de continuar.
-              </SheetDescription>
-            </SheetHeader>
-            <SheetBody />
-            <SheetFooter>
-              <Button
-                type="button"
-                variant="danger"
-                size="lg"
-                disabled={pending}
-                onClick={() => decide("reject")}
-              >
-                {pending ? "Rechazando…" : "Sí, rechazar pedido"}
-              </Button>
-            </SheetFooter>
-          </SheetContent>
-        </Sheet>
+        </button>
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            setDecision("reject");
+            setError(null);
+          }}
+          className={`${shopSecondary} border-red-800 bg-red-50 text-red-900`}
+        >
+          <X className="h-5 w-5" aria-hidden="true" />
+          No aprobar
+        </button>
       </div>
-
-      <Sheet open={phoneOpen} onOpenChange={setPhoneOpen}>
-        <SheetContent size="md">
-          <SheetHeader>
-            <span className="bg-pool-foam text-pool-blue mb-2 flex h-11 w-11 items-center justify-center rounded-xl">
-              <Phone className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <SheetTitle>Teléfono de la persona que aprueba</SheetTitle>
-            <SheetDescription>
-              La tienda usará tu teléfono, no el del menor. Lo guardaremos en tu perfil para los
-              próximos pedidos.
-            </SheetDescription>
-          </SheetHeader>
-          <SheetBody>
-            <label
-              htmlFor={`parent-shop-phone-${orderId}`}
-              className="text-pool-deep text-sm font-extrabold"
-            >
-              Tu teléfono de contacto
-            </label>
-            <Input
-              id={`parent-shop-phone-${orderId}`}
-              name="contact_phone"
-              type="tel"
-              inputMode="tel"
-              autoComplete="tel"
-              value={phone}
-              aria-invalid={Boolean(phone && !normalizeSpanishPhone(phone))}
-              aria-describedby={`parent-shop-phone-help-${orderId}`}
-              onChange={(event) => {
-                setPhone(event.target.value);
-                setError(null);
-              }}
-              placeholder="Ejemplo: 612 345 678"
-              className="mt-2"
-            />
-            <p
-              id={`parent-shop-phone-help-${orderId}`}
-              role={phone && !normalizeSpanishPhone(phone) ? "alert" : undefined}
-              className={`${phone && !normalizeSpanishPhone(phone) ? "text-goggle-red" : "text-ink-600"} mt-2 text-sm font-semibold`}
-            >
-              {phone && !normalizeSpanishPhone(phone)
-                ? "Escribe un teléfono válido de 9 cifras o con prefijo internacional."
-                : "Escribe 9 cifras o incluye el prefijo internacional."}
-            </p>
-            {error ? (
-              <p role="alert" className="text-goggle-red mt-2 text-sm font-semibold">
-                {error}
-              </p>
+      <ShopDecisionSheet
+        open={decision !== null}
+        onOpenChange={(open) => !open && setDecision(null)}
+        title={decision === "approve" ? "¿Aprobar y enviar a Sol?" : "¿No aprobar este pedido?"}
+        icon={decision === "approve" ? "saved" : "warning"}
+        pending={pending}
+        error={error}
+        body={
+          <div className="text-pool-deep space-y-4">
+            {totalCents != null ? (
+              <div className="border-pool-deep/65 flex items-center justify-between gap-3 rounded-xl border-2 bg-white p-4">
+                <span className="font-extrabold">Total del pedido</span>
+                <strong className="text-2xl tabular-nums">{shopMoney(totalCents)}</strong>
+              </div>
             ) : null}
-          </SheetBody>
-          <SheetFooter>
-            <Button
-              type="button"
-              size="lg"
-              disabled={pending || !normalizeSpanishPhone(phone)}
-              onClick={() => {
-                const normalized = normalizeSpanishPhone(phone);
-                if (!normalized) return;
-                setPhone(normalized);
-                decide("approve", normalized);
-              }}
-            >
-              {pending ? "Aprobando…" : "Guardar teléfono y aprobar"}
-            </Button>
-          </SheetFooter>
-        </SheetContent>
-      </Sheet>
-    </div>
+            <p className="border-pool-deep/65 rounded-xl border bg-blue-50 p-3 font-semibold">
+              {decision === "approve"
+                ? "Se enviará a Sol. No pagas ahora; el importe se incluirá en el cierre mensual del club."
+                : "Sol no recibirá este pedido y no se tramitará."}
+            </p>
+            {decision === "approve" ? (
+              <div className="space-y-2">
+                <label htmlFor={`phone-${orderId}`} className="block font-extrabold">
+                  Tu teléfono para Sol
+                </label>
+                <input
+                  id={`phone-${orderId}`}
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
+                  value={phone}
+                  disabled={pending}
+                  onChange={(event) => {
+                    setPhone(event.target.value);
+                    setError(null);
+                  }}
+                  className={shopControl}
+                  placeholder="612 345 678"
+                  aria-invalid={Boolean(error && !normalizeSpanishPhone(phone))}
+                />
+              </div>
+            ) : null}
+          </div>
+        }
+        actions={[
+          {
+            label: decision === "approve" ? "Aprobar pedido" : "No aprobar pedido",
+            tone: decision === "approve" ? "primary" : "danger",
+            onClick: decide,
+          },
+          { label: "Volver a revisar", tone: "secondary", onClick: () => setDecision(null) },
+        ]}
+      />
+    </>
   );
 }

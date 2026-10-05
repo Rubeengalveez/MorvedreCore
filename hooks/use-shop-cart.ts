@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { generateUuid } from "@/lib/utils/uuid";
 
 export interface CartItem {
   productId: string;
@@ -32,7 +33,7 @@ function normalizeStoredItems(value: unknown): CartItem[] {
       size: typeof item.size === "string" ? item.size || null : null,
       personalization:
         typeof item.personalization === "string" ? item.personalization.trim() || null : null,
-      quantity: 1,
+      quantity: Number.isSafeInteger(item.quantity) && item.quantity > 0 ? item.quantity : 1,
     }));
 }
 
@@ -48,22 +49,28 @@ function readFromStorage(profileId: string): CartItem[] {
 
 function discardUnscopedCarts(): void {
   if (typeof window === "undefined") return;
-  for (const key of OBSOLETE_STORAGE_KEYS) {
-    window.localStorage.removeItem(key);
-  }
+  try {
+    for (const key of OBSOLETE_STORAGE_KEYS) {
+      window.localStorage.removeItem(key);
+    }
+  } catch {}
 }
 
-function writeToStorage(profileId: string, items: CartItem[]): void {
-  if (typeof window === "undefined") return;
+function writeToStorage(profileId: string, items: CartItem[]): boolean {
+  if (typeof window === "undefined") return false;
   try {
     window.localStorage.setItem(storageKey(profileId), JSON.stringify(items));
     window.dispatchEvent(new CustomEvent(CART_EVENT, { detail: { profileId } }));
-  } catch {}
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function useShopCart(profileId: string) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -103,8 +110,14 @@ export function useShopCart(profileId: string) {
 
   const persist = useCallback(
     (next: CartItem[]) => {
-      setItems(next);
-      writeToStorage(profileId, next);
+      const saved = writeToStorage(profileId, next);
+      setError(
+        saved
+          ? null
+          : "No pudimos guardar el carrito en este móvil. Revisa el espacio disponible y vuelve a intentarlo.",
+      );
+      if (saved) setItems(next);
+      return saved;
     },
     [profileId],
   );
@@ -121,10 +134,12 @@ export function useShopCart(profileId: string) {
       const next =
         index >= 0
           ? current.map((existing, itemIndex) =>
-              itemIndex === index ? { ...existing, quantity: 1 } : existing,
+              itemIndex === index
+                ? { ...existing, quantity: existing.quantity + item.quantity }
+                : existing,
             )
-          : [...current, { ...item, quantity: 1 }];
-      persist(next);
+          : [...current, item];
+      return persist(next);
     },
     [persist, profileId],
   );
@@ -147,14 +162,57 @@ export function useShopCart(profileId: string) {
   );
 
   const clear = useCallback(() => {
-    persist([]);
-  }, [persist]);
+    const cleared = persist([]);
+    try {
+      if (cleared) window.localStorage.removeItem(`${storageKey(profileId)}:checkout`);
+    } catch {}
+  }, [persist, profileId]);
+
+  const setQuantity = useCallback(
+    (item: CartItem, quantity: number) => {
+      if (!Number.isSafeInteger(quantity) || quantity < 1) return;
+      persist(
+        readFromStorage(profileId).map((existing) =>
+          existing.productId === item.productId &&
+          existing.size === item.size &&
+          existing.personalization === item.personalization
+            ? { ...existing, quantity }
+            : existing,
+        ),
+      );
+    },
+    [persist, profileId],
+  );
+  const checkoutKey = useCallback(
+    (fingerprint: string) => {
+      const key = `${storageKey(profileId)}:checkout`;
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (raw) {
+          const previous = JSON.parse(raw);
+          if (previous.fingerprint === fingerprint && typeof previous.id === "string")
+            return previous.id as string;
+        }
+        const id = generateUuid();
+        window.localStorage.setItem(key, JSON.stringify({ fingerprint, id }));
+        return id;
+      } catch {
+        throw new Error(
+          "No pudimos preparar el envío. Revisa el almacenamiento del móvil y vuelve a intentarlo.",
+        );
+      }
+    },
+    [profileId],
+  );
 
   return {
     items,
     hydrated,
+    error,
     addItem,
     removeItem,
     clear,
+    setQuantity,
+    checkoutKey,
   };
 }

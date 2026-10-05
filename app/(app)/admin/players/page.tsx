@@ -1,221 +1,173 @@
-import { MdAdd, MdUploadFile } from "react-icons/md";
-import { UserRound } from "lucide-react";
-import Link from "next/link";
-import type { Route } from "next";
-
-import { AdminPageHeader, AdminPageShell } from "@/components/admin/admin-page";
-import { Button } from "@/components/ui/button";
-import { CATEGORY_LABELS, inferCategory } from "@/lib/domain/categories";
-import { Alert } from "@/components/ui/alert";
+import { AdminPageShell } from "@/components/admin/admin-page";
+import { TeamHeading, TeamError } from "@/components/team/team-ui";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/server/actions/admin/_helpers";
-
-import { PlayerFormSheet } from "./_components/player-form-sheet";
+import {
+  categorySearchLabel,
+  matchesPlayerSearch,
+  playerCategory,
+  type PlayerFilters,
+} from "@/lib/domain/admin-players";
+import { calendarSeasonStartYear, CATEGORY_LABELS } from "@/lib/domain/categories";
 import { PlayersTable, type PlayerRow } from "./_components/players-table";
+import { PlayerFormSheet } from "./_components/player-form-sheet";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const metadata = { title: "Jugadores — Admin — Morvedre Core" };
 
-export const metadata = {
-  title: "Jugadores — Admin — Morvedre Core",
-};
-
-const PAGE_SIZE = 24;
-
-type PlayerFilters = {
-  page: number;
-  query: string;
-  status: "active" | "inactive" | "all";
-  teamId: string;
-};
-
-function categoryLabelFor(birthYear: number | null, currentYear: number): string {
-  if (birthYear == null) return "—";
-  try {
-    const code = inferCategory(birthYear, currentYear);
-    return CATEGORY_LABELS[code];
-  } catch {
-    return "—";
-  }
-}
-
-async function loadPlayers(filters: PlayerFilters): Promise<{
-  players: PlayerRow[];
-  teams: Array<{ id: string; label: string }>;
-  total: number;
-  totalPages: number;
-  error: string | null;
-}> {
+async function loadPlayers(filters: PlayerFilters) {
   await requirePermission("manage_players");
-  const supabase = createAdminClient();
-
-  const { data: currentSeasonData, error: seasonError } = await supabase
-    .from("seasons")
-    .select("id, start_date")
-    .eq("is_current", true)
-    .maybeSingle();
-  if (seasonError) {
-    return { players: [], teams: [], total: 0, totalPages: 0, error: seasonError.message };
-  }
-  const currentSeasonId = currentSeasonData?.id ?? null;
-  const { data: teamsData, error: teamsError } = currentSeasonId
-    ? await supabase
+  const db = createAdminClient();
+  const [seasonResult, rolesResult] = await Promise.all([
+    db.from("seasons").select("id, start_date").eq("is_current", true).maybeSingle(),
+    db.from("user_roles").select("profile_id").eq("role", "player"),
+  ]);
+  if (seasonResult.error || rolesResult.error)
+    throw new Error("No pudimos cargar los jugadores. Vuelve a intentarlo.");
+  const season = seasonResult.data;
+  const seasonYear = season ? Number(season.start_date.slice(0, 4)) : calendarSeasonStartYear();
+  const teamResult = season
+    ? await db
         .from("teams")
-        .select("id, label")
-        .eq("season_id", currentSeasonId)
-        .order("label", { ascending: true })
+        .select("id, label, category_code")
+        .eq("season_id", season.id)
+        .order("label")
     : { data: [], error: null };
-  if (teamsError) {
-    return { players: [], teams: [], total: 0, totalPages: 0, error: teamsError.message };
-  }
-  const teams = teamsData ?? [];
-
-  let selectedPlayerIds: string[] | null = null;
-  if (filters.teamId && teams.some((team) => team.id === filters.teamId)) {
-    const { data: rosterForTeam, error: rosterForTeamError } = await supabase
-      .from("team_rosters")
-      .select("player_id")
-      .eq("team_id", filters.teamId)
-      .is("left_at", null);
-    if (rosterForTeamError) {
-      return { players: [], teams, total: 0, totalPages: 0, error: rosterForTeamError.message };
-    }
-    selectedPlayerIds = (rosterForTeam ?? []).map((row) => row.player_id);
-  }
-
-  if (selectedPlayerIds && selectedPlayerIds.length === 0) {
-    return { players: [], teams, total: 0, totalPages: 1, error: null };
-  }
-
-  let profilesQuery = supabase
-    .from("profiles")
-    .select(
-      "id, full_name, birth_year, gender, photo_url, cap_number, phone_e164, email_contact, notes, school_enrolled, school_payment_paid, is_active",
-      { count: "exact" },
-    )
-    .order("full_name", { ascending: true });
-  if (filters.status !== "all")
-    profilesQuery = profilesQuery.eq("is_active", filters.status === "active");
-  if (filters.query) profilesQuery = profilesQuery.ilike("full_name", `%${filters.query}%`);
-  if (selectedPlayerIds) profilesQuery = profilesQuery.in("id", selectedPlayerIds);
-  const first = (filters.page - 1) * PAGE_SIZE;
-  const {
-    data: profilesData,
-    error: profilesError,
-    count,
-  } = await profilesQuery.range(first, first + PAGE_SIZE - 1);
-  if (profilesError) {
-    return { players: [], teams, total: 0, totalPages: 0, error: profilesError.message };
-  }
-
-  const profileIds = (profilesData ?? []).map((profile) => profile.id);
-  const { data: rosterData, error: rosterError } =
-    currentSeasonId && profileIds.length > 0 && teams.length > 0
-      ? await supabase
+  if (teamResult.error) throw new Error("No pudimos cargar los equipos.");
+  const teams = teamResult.data ?? [];
+  filters.teamId =
+    filters.teamId === "unassigned" || teams.some((team) => team.id === filters.teamId)
+      ? filters.teamId
+      : "";
+  filters.category = filters.category in CATEGORY_LABELS ? filters.category : "";
+  const ids = [...new Set((rolesResult.data ?? []).map((role) => role.profile_id))];
+  const [indexResult, rosterResult, templatesResult] = await Promise.all([
+    ids.length
+      ? db
+          .from("profiles")
+          .select("id, full_name, birth_year, cap_number, is_active, school_enrolled")
+          .in("id", ids)
+          .order("full_name")
+      : Promise.resolve({ data: [], error: null }),
+    teams.length
+      ? db
           .from("team_rosters")
-          .select("player_id, team_id")
-          .in("player_id", profileIds)
+          .select("player_id, team_id, squad_number")
           .in(
             "team_id",
             teams.map((team) => team.id),
           )
           .is("left_at", null)
-      : { data: [], error: null };
-  if (rosterError) {
-    return { players: [], teams, total: 0, totalPages: 0, error: rosterError.message };
-  }
-
-  const teamsByPlayer = new Map<string, string[]>();
-  const teamLabels = new Map(teams.map((team) => [team.id, team.label]));
-  for (const row of rosterData ?? []) {
-    const label = teamLabels.get(row.team_id);
-    if (label) {
-      const labels = teamsByPlayer.get(row.player_id) ?? [];
-      labels.push(label);
-      teamsByPlayer.set(row.player_id, labels);
-    }
-  }
-
-  const currentYear = currentSeasonData?.start_date
-    ? new Date(`${currentSeasonData.start_date}T12:00:00`).getFullYear()
-    : new Date().getFullYear();
-  const players = (
-    (profilesData ?? []) as Array<Omit<PlayerRow, "currentTeam" | "categoryLabel">>
-  ).map((p) => ({
-    ...p,
-    currentTeam: teamsByPlayer.get(p.id)?.join(" · ") ?? null,
-    categoryLabel: categoryLabelFor(p.birth_year, currentYear),
+      : Promise.resolve({ data: [], error: null }),
+    teams.length
+      ? db
+          .from("team_callup_templates")
+          .select("team_id, cap_number")
+          .in(
+            "team_id",
+            teams.map((team) => team.id),
+          )
+      : Promise.resolve({ data: [], error: null }),
+  ]);
+  if (indexResult.error || rosterResult.error || templatesResult.error)
+    throw new Error("No pudimos cargar la plantilla.");
+  const memberships = new Map<string, string[]>();
+  for (const row of rosterResult.data ?? [])
+    memberships.set(row.player_id, [...(memberships.get(row.player_id) ?? []), row.team_id]);
+  const labels = new Map(teams.map((team) => [team.id, team.label]));
+  const index = (indexResult.data ?? []).filter((player) => {
+    const category = playerCategory(player.birth_year, seasonYear, player.school_enrolled);
+    const teamIds = memberships.get(player.id) ?? [];
+    return (
+      (filters.status === "all" || player.is_active === (filters.status === "active")) &&
+      (!filters.teamId ||
+        (filters.teamId === "unassigned" ? !teamIds.length : teamIds.includes(filters.teamId))) &&
+      (!filters.category || category === filters.category) &&
+      matchesPlayerSearch(filters.query, [
+        player.full_name,
+        player.birth_year,
+        player.cap_number,
+        categorySearchLabel(category),
+        ...teamIds.map((id) => labels.get(id) ?? ""),
+      ])
+    );
+  });
+  const total = index.length;
+  const totalPages = Math.max(1, Math.ceil(total / 24));
+  filters.page = Math.min(totalPages, filters.page);
+  const pageIds = index
+    .slice((filters.page - 1) * 24, filters.page * 24)
+    .map((player) => player.id);
+  const profiles = pageIds.length
+    ? await db
+        .from("profiles")
+        .select(
+          "id, full_name, birth_year, gender, photo_url, cap_number, phone_e164, email_contact, notes, school_enrolled, school_payment_paid, is_active",
+        )
+        .in("id", pageIds)
+    : { data: [], error: null };
+  if (profiles.error) throw new Error("No pudimos abrir las fichas de los jugadores.");
+  const byId = new Map((profiles.data ?? []).map((player) => [player.id, player]));
+  const players: PlayerRow[] = pageIds.flatMap((id) => {
+    const player = byId.get(id);
+    if (!player) return [];
+    const category = playerCategory(player.birth_year, seasonYear, player.school_enrolled);
+    return [
+      {
+        ...player,
+        category,
+        categoryLabel: categorySearchLabel(category),
+        currentTeam:
+          (memberships.get(id) ?? []).map((teamId) => labels.get(teamId)).join(" · ") || null,
+      },
+    ];
+  });
+  const formTeams = teams.map((team) => ({
+    ...team,
+    occupiedCaps: (templatesResult.data ?? []).some((row) => row.team_id === team.id)
+      ? (templatesResult.data ?? [])
+          .filter((row) => row.team_id === team.id)
+          .flatMap((row) => (row.cap_number == null ? [] : [row.cap_number]))
+      : (rosterResult.data ?? [])
+          .filter((row) => row.team_id === team.id)
+          .flatMap((row) => (row.squad_number == null ? [] : [row.squad_number])),
   }));
-  const total = count ?? 0;
-  return {
-    players,
-    teams,
-    total,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-    error: null,
-  };
+  return { players, teams: formTeams, total, totalPages, seasonYear };
 }
 
 export default async function PlayersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; query?: string; status?: string; team?: string }>;
+  searchParams: Promise<Record<string, string | undefined>>;
 }) {
   const params = await searchParams;
-  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const filters: PlayerFilters = {
-    page,
+    page: Math.min(10000, Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1)),
     query: (params.query ?? "").trim().slice(0, 100),
-    status: params.status === "inactive" || params.status === "all" ? params.status : "active",
+    status: params.status === "all" || params.status === "inactive" ? params.status : "active",
     teamId: params.team ?? "",
+    category: params.category ?? "",
   };
-  const { players, teams, total, totalPages, error } = await loadPlayers(filters);
-
+  let data: Awaited<ReturnType<typeof loadPlayers>>;
+  try {
+    data = await loadPlayers(filters);
+  } catch (error) {
+    return (
+      <AdminPageShell className="pt-0 sm:pt-0">
+        <TeamHeading title="Jugadores" />
+        <TeamError>
+          {error instanceof Error ? error.message : "No pudimos cargar los jugadores."}
+        </TeamError>
+      </AdminPageShell>
+    );
+  }
   return (
-    <AdminPageShell>
-      <AdminPageHeader
+    <AdminPageShell className="pt-0 sm:pt-0">
+      <TeamHeading
         title="Jugadores"
-        description="Altas, ediciones y asignación a equipos."
-        icon={<UserRound className="h-6 w-6" aria-hidden="true" />}
-        action={
-          <div className="flex w-full flex-col gap-2 min-[360px]:grid min-[360px]:grid-cols-2 sm:flex sm:w-auto">
-            <Button
-              asChild
-              size="md"
-              variant="secondary"
-              className="w-full shrink-0 justify-center sm:w-auto"
-            >
-              <Link href={"/admin/players/import" as Route}>
-                <MdUploadFile className="h-5 w-5" aria-hidden="true" />
-                <span>Importar</span>
-              </Link>
-            </Button>
-            <PlayerFormSheet
-              teams={teams}
-              trigger={
-                <Button size="md" className="w-full shrink-0 justify-center sm:w-auto">
-                  <MdAdd className="h-6 w-6" aria-hidden="true" />
-                  <span>Nuevo jugador</span>
-                </Button>
-              }
-            />
-          </div>
-        }
+        action={<PlayerFormSheet teams={data.teams} seasonYear={data.seasonYear} />}
       />
-
-      {error ? (
-        <Alert variant="danger" title="No pudimos cargar los jugadores">
-          {error}
-        </Alert>
-      ) : (
-        <PlayersTable
-          players={players}
-          teams={teams}
-          total={total}
-          totalPages={totalPages}
-          filters={filters}
-        />
-      )}
+      <PlayersTable key={JSON.stringify(filters)} {...data} filters={filters} />
     </AdminPageShell>
   );
 }

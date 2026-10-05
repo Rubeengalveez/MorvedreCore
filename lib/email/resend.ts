@@ -22,12 +22,14 @@ export async function sendEmail({
   text,
   html,
   attachments,
+  idempotencyKey,
 }: {
   to: string;
   subject: string;
   text: string;
   html?: string;
   attachments?: EmailAttachment[];
+  idempotencyKey?: string;
 }): Promise<{ success: boolean; error?: string }> {
   if (!API_KEY || !FROM_EMAIL) {
     console.warn("[email] Resend no configurado.");
@@ -40,6 +42,7 @@ export async function sendEmail({
       headers: {
         Authorization: `Bearer ${API_KEY}`,
         "Content-Type": "application/json",
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body: JSON.stringify({
         from: FROM_EMAIL,

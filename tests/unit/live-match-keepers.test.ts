@@ -12,7 +12,7 @@ const players = [1, 13, 2].map((cap) => ({ id: crypto.randomUUID(), cap, name: `
 const sheet = (): LiveSheet => ({
   version: 2,
   players,
-  opponentCaps: [3],
+  opponentCaps: [1, 3],
   periods: 4,
   period: 1,
   phase: "ready",

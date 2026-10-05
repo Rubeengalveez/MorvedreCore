@@ -8,6 +8,7 @@ import styles from "@/components/matches/live-match.module.css";
 import { useActaDialogFocus } from "./use-acta-dialog-focus";
 
 interface ActaGuardAction {
+  disabled?: boolean;
   label: string;
   detail?: string;
   tone: "primary" | "secondary" | "subtle" | "danger";
@@ -30,6 +31,7 @@ export interface ActaGuardSheetProps {
   stickyActions?: boolean;
   scrollKey?: string | number;
   tall?: boolean;
+  dismissible?: boolean;
 }
 
 const actionClasses = {
@@ -55,19 +57,25 @@ export function ActaGuardSheet({
   stickyActions = false,
   scrollKey,
   tall = false,
+  dismissible = true,
 }: ActaGuardSheetProps) {
   const focus = useActaDialogFocus();
   return (
-    <Dialog.Root open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(next) => !pending && (next || dismissible) && onOpenChange(next)}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className={styles.overlay} />
         <Dialog.Content
           {...focus}
           className={`${styles.panel} ${styles.panelGuard} ${tall ? "max-h-[min(94dvh,52rem)]" : "max-h-[min(92dvh,38rem)]"}`}
-          onEscapeKeyDown={(event) => pending && event.preventDefault()}
-          onPointerDownOutside={(event) => pending && event.preventDefault()}
+          onEscapeKeyDown={(event) => (pending || !dismissible) && event.preventDefault()}
+          onPointerDownOutside={(event) => (pending || !dismissible) && event.preventDefault()}
         >
-          <div className="bg-pool-deep text-paper flex shrink-0 items-start justify-between gap-3 px-5 pt-5 pb-4">
+          <div
+            className={`${styles.guardHeader} flex shrink-0 items-start justify-between gap-3 px-5 pt-5 pb-4`}
+          >
             <div className="min-w-0">
               <p className="text-ball-gold text-sm font-extrabold tracking-wider uppercase">
                 {context}
@@ -76,16 +84,18 @@ export function ActaGuardSheet({
                 {title}
               </Dialog.Title>
             </div>
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                aria-label="Cerrar aviso"
-                disabled={pending}
-                className="border-paper/60 text-paper focus-visible:ring-ball-gold focus-visible:ring-offset-pool-deep flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
-              >
-                <X className="h-5 w-5" aria-hidden="true" />
-              </button>
-            </Dialog.Close>
+            {dismissible && (
+              <Dialog.Close asChild>
+                <button
+                  type="button"
+                  aria-label="Cerrar aviso"
+                  disabled={pending}
+                  className="border-paper/60 text-paper focus-visible:ring-ball-gold focus-visible:ring-offset-pool-deep flex min-h-12 min-w-12 shrink-0 items-center justify-center rounded-xl border-2 focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50"
+                >
+                  <X className="h-5 w-5" aria-hidden="true" />
+                </button>
+              </Dialog.Close>
+            )}
           </div>
 
           <div
@@ -143,7 +153,10 @@ export function ActaGuardSheet({
             </div>
             <div className={`mt-4 grid shrink-0 gap-2.5 ${stickyActions ? "bg-paper-card" : ""}`}>
               {error && stickyActions ? (
-                <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm font-bold text-red-900">
+                <p
+                  role="alert"
+                  className="rounded-xl border-2 border-red-800 bg-red-50 p-3 text-base font-bold text-red-900"
+                >
                   {error}
                 </p>
               ) : null}
@@ -151,7 +164,7 @@ export function ActaGuardSheet({
                 <button
                   key={action.label}
                   type="button"
-                  disabled={pending}
+                  disabled={pending || action.disabled}
                   onClick={() => void action.onClick()}
                   className={`${actionClasses[action.tone]} ${action.tone === "subtle" ? "font-semibold" : "font-extrabold"} focus-visible:ring-pool-blue focus-visible:ring-offset-paper flex min-h-14 w-full items-center justify-center gap-2 rounded-xl border-2 px-4 py-3 text-center text-base leading-tight transition-colors focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:opacity-50`}
                 >

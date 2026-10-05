@@ -1,12 +1,8 @@
-import {
-  lineupFor,
-  participants as participationPlayers,
-  playedPeriods,
-} from "./live-match-participation";
 import { jsPDF } from "jspdf";
 import { actaAnalysis, actaPlayerTotals } from "./acta-analysis";
 import { finalScore, isGoal, playerTotals, type LiveRecord, type ActionKind } from "./live-match";
 import { validCapNumber } from "./cap-number";
+import { fitPlayerName } from "./player-name";
 
 type Color = [number, number, number];
 const NAVY: Color = [10, 46, 92];
@@ -750,10 +746,21 @@ export function createActaPdf(record: LiveRecord): File {
     if (y + h > bottom()) y = newPage("Nuestra portería");
     fill(14, y, 182, nameHeight, NAVY);
     text(capCell(p.cap), 20, y + 9, 15, true, WHITE);
-    text(p.name, 30, y + 8, 10, true, WHITE);
     const quarterWidth = sheet.periods <= 4 ? 7 : 4.7;
     const quarterStart = 190 - sheet.periods * quarterWidth;
-    text(`Jugó ${p.quarters.length} cuartos`, quarterStart - 2, y + 8, 9, true, WHITE, "right");
+    const quarterLabel = `Jugó ${p.quarters.length} cuartos`;
+    doc.setFontSize(9);
+    const nameEnd = quarterStart - 2 - doc.getTextWidth(quarterLabel) - 3;
+    doc.setFontSize(10);
+    text(
+      fitPlayerName(p.name, nameEnd - 30, (value) => doc.getTextWidth(value)),
+      30,
+      y + 8,
+      10,
+      true,
+      WHITE,
+    );
+    text(quarterLabel, quarterStart - 2, y + 8, 9, true, WHITE, "right");
     for (let q = 1; q <= sheet.periods; q++) {
       const active = p.quarters.includes(q);
       const x = quarterStart + (q - 1) * quarterWidth;
@@ -1013,46 +1020,6 @@ export function createActaPdf(record: LiveRecord): File {
         text(`${us} - ${them}`, 24, startY + (y - startY) / 2 + 1, 10, true, WHITE, "center");
       }
     });
-  }
-  if (sheet.participation?.lineups.length) {
-    y = newPage("Participación · Cuartos 1–4");
-    for (const side of ["us", "them"] as const) {
-      text(side === "us" ? "Morvedre" : record.opponent, 14, y, 12, true, NAVY);
-      y += 7;
-      const widths = [108, 16, 16, 16, 16];
-      y = tableRow(["Jugador", "1", "2", "3", "4"], widths, 14, y, {
-        header: true,
-        height: 9,
-        size: 9,
-      });
-      for (const player of participationPlayers(sheet, side)) {
-        if (y + 10 > bottom()) {
-          y = newPage("Participación · Cuartos 1–4");
-          y = tableRow(["Jugador", "1", "2", "3", "4"], widths, 14, y, {
-            header: true,
-            height: 9,
-            size: 9,
-          });
-        }
-        y = tableRow(
-          [
-            String(player.cap) + " · " + player.name,
-            ...[1, 2, 3, 4].map((period) =>
-              !lineupFor(sheet, side, period)
-                ? "?"
-                : playedPeriods(sheet, side, player.key).includes(period)
-                  ? "Sí"
-                  : "—",
-            ),
-          ],
-          widths,
-          14,
-          y,
-          { height: 8, size: 9 },
-        );
-      }
-      y += 8;
-    }
   }
   const pages = doc.getNumberOfPages();
   for (let page = 1; page <= pages; page++) {

@@ -1,0 +1,14 @@
+{
+  "list": {
+    "passes": 30,
+    "violations": []
+  },
+  "edit": {
+    "passes": 21,
+    "violations": []
+  },
+  "createReview": {
+    "passes": 18,
+    "violations": []
+  }
+}

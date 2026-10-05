@@ -90,6 +90,7 @@ export interface TreasuryShopOrderInput {
   requested_by: string;
   total_cents: number;
   requested_at: string;
+  approved_at?: string | null;
   status: string;
 }
 
@@ -205,7 +206,7 @@ export function buildPeriodClosure(input: {
 
   for (const order of input.shopOrders) {
     if (!["pending_admin", "ordered", "received", "delivered"].includes(order.status)) continue;
-    const date = getAttendanceDayKey(order.requested_at);
+    const date = getAttendanceDayKey(order.approved_at ?? order.requested_at);
     if (date < input.periodStart || date > input.periodEnd) continue;
     lines.push({
       profile_id: order.requested_by,

@@ -1,4 +1,8 @@
 import { getAttendanceDayKey } from "./attendance";
+import {
+  buildAttendanceOccurrences,
+  type AttendanceOccurrenceSession,
+} from "./attendance-occurrences";
 
 export type AttendancePeriod = "week" | "month";
 
@@ -13,6 +17,8 @@ export interface AttendanceHistoryRecord {
   team_id: string;
   team_label: string;
   team_color: string;
+  unreviewed?: boolean;
+  joint_id?: string | null;
 }
 
 export interface AttendanceHistorySummary {
@@ -20,6 +26,7 @@ export interface AttendanceHistorySummary {
   absent: number;
   total: number;
   percentage: number | null;
+  unreviewed: number;
 }
 
 export interface AttendanceReportPlayer {
@@ -34,11 +41,7 @@ export interface AttendanceReportTeam {
   color: string;
 }
 
-export interface AttendanceReportSession {
-  id: string;
-  team_id: string;
-  scheduled_at: string;
-}
+export type AttendanceReportSession = AttendanceOccurrenceSession;
 
 export interface AttendanceReportRoster {
   team_id: string;
@@ -51,6 +54,7 @@ export interface AttendancePlayerReport extends AttendanceHistorySummary {
   id: string;
   full_name: string;
   photo_url: string | null;
+  records: AttendanceHistoryRecord[];
 }
 
 export interface AttendanceTeamReport {
@@ -134,7 +138,7 @@ export function shiftAttendancePeriod(
 }
 
 export function summarizeAttendance(
-  records: Pick<AttendanceHistoryRecord, "present">[],
+  records: Array<Pick<AttendanceHistoryRecord, "present" | "unreviewed">>,
 ): AttendanceHistorySummary {
   const attended = records.filter((record) => record.present).length;
   const absent = records.length - attended;
@@ -143,6 +147,7 @@ export function summarizeAttendance(
     absent,
     total: records.length,
     percentage: records.length > 0 ? Math.round((attended / records.length) * 100) : null,
+    unreviewed: records.filter((record) => record.unreviewed).length,
   };
 }
 
@@ -152,24 +157,66 @@ export function buildAttendanceTeamReports(input: {
   rosters: AttendanceReportRoster[];
   players: AttendanceReportPlayer[];
   records: AttendanceHistoryRecord[];
+  from?: string;
+  to?: string;
+  now?: Date;
 }): AttendanceTeamReport[] {
   const playerById = new Map(input.players.map((player) => [player.id, player]));
   const recordsByTeamPlayer = new Map<string, AttendanceHistoryRecord[]>();
   const reviewedSessionsByTeam = new Map<string, Set<string>>();
+  const recordsBySession = new Map<string, AttendanceHistoryRecord[]>();
 
-  for (const record of input.records) {
+  const teams = new Map(input.teams.map((team) => [team.id, team]));
+  const occurrences = buildAttendanceOccurrences({
+    sessions: input.sessions,
+    rosters: input.rosters,
+    entries: input.records,
+    through: input.now,
+    deduplicate: false,
+  });
+  for (const occurrence of occurrences) {
+    const team = teams.get(occurrence.team_id);
+    if (!team) continue;
+    const record: AttendanceHistoryRecord = {
+      ...occurrence,
+      reason: occurrence.reason ?? null,
+      marked_at: occurrence.marked_at ?? "",
+      updated_at: occurrence.updated_at ?? "",
+      team_label: team.label,
+      team_color: team.color,
+    };
     const key = `${record.team_id}:${record.player_id}`;
     const records = recordsByTeamPlayer.get(key) ?? [];
     records.push(record);
     recordsByTeamPlayer.set(key, records);
-    const reviewed = reviewedSessionsByTeam.get(record.team_id) ?? new Set<string>();
-    reviewed.add(record.session_id);
-    reviewedSessionsByTeam.set(record.team_id, reviewed);
+    const day = getAttendanceDayKey(record.scheduled_at);
+    if ((!input.from || day >= input.from) && (!input.to || day <= input.to)) {
+      recordsBySession.set(record.session_id, [
+        ...(recordsBySession.get(record.session_id) ?? []),
+        record,
+      ]);
+    }
   }
+  for (const records of recordsBySession.values())
+    if (records.length && records.every((record) => !record.unreviewed)) {
+      const first = records[0]!;
+      const reviewed = reviewedSessionsByTeam.get(first.team_id) ?? new Set<string>();
+      reviewed.add(first.session_id);
+      reviewedSessionsByTeam.set(first.team_id, reviewed);
+    }
 
   return input.teams
     .map((team) => {
-      const sessionCount = input.sessions.filter((session) => session.team_id === team.id).length;
+      const sessionCount = input.sessions.filter((session) => {
+        const day = getAttendanceDayKey(session.scheduled_at);
+        return (
+          session.team_id === team.id &&
+          !session.cancelled &&
+          new Date(session.scheduled_at).getTime() <= (input.now ?? new Date()).getTime() &&
+          (!input.from || day >= input.from) &&
+          (!input.to || day <= input.to)
+        );
+      }).length;
       const rosterPlayerIds = Array.from(
         new Set(
           input.rosters
@@ -181,10 +228,14 @@ export function buildAttendanceTeamReports(input: {
         .map((playerId) => {
           const player = playerById.get(playerId);
           if (!player) return null;
+          const records = recordsByTeamPlayer.get(`${team.id}:${playerId}`) ?? [];
           const summary = summarizeAttendance(
-            recordsByTeamPlayer.get(`${team.id}:${playerId}`) ?? [],
+            records.filter((record) => {
+              const day = getAttendanceDayKey(record.scheduled_at);
+              return (!input.from || day >= input.from) && (!input.to || day <= input.to);
+            }),
           );
-          return { ...player, ...summary };
+          return { ...player, ...summary, records };
         })
         .filter((player): player is AttendancePlayerReport => player !== null)
         .sort((a, b) => a.full_name.localeCompare(b.full_name, "es"));

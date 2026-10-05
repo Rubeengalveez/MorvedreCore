@@ -1,3 +1,4 @@
+import { scheduleNotificationPush } from "@/server/notification-push";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Route } from "next";
@@ -21,6 +22,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     ? await hasCurrentAttendancePermission(ctx.ownProfile.id, season.id)
     : false;
 
+  scheduleNotificationPush();
   return (
     <AppShell profile={ctx.ownProfile} showAttendance={showAttendance}>
       {children}
