@@ -452,9 +452,7 @@ describe("interfaz del acta", () => {
       render(<LiveMatchClient />);
       fireEvent.click(screen.getByRole("button", { name: /^Entrenador:/ }));
       expect(screen.queryByRole("button", { name: "Tiempo muerto" })).toBeNull();
-      expect(screen.getByRole("note")).toHaveTextContent(
-        "En esta categoría ningún equipo puede pedirlos.",
-      );
+      expect(screen.getByRole("note")).toHaveTextContent("Tiempos muertos no permitidos");
       fireEvent.click(screen.getByRole("button", { name: "Tarjeta al entrenador" }));
       expect(
         screen.getByRole("heading", { name: "¿Qué entrenador recibe la tarjeta?" }),

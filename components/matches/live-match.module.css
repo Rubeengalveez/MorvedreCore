@@ -712,14 +712,9 @@
   white-space: nowrap;
 }
 
-.timeoutConditions {
-  border: 2px solid #062048;
-  border-radius: 12px;
-  padding: 12px;
-  background: #ffffff;
-  color: #334155;
-  font-size: 16px;
-  font-weight: 600;
+.timeoutNotice {
+  padding: 10px 12px;
+  font-size: 14px;
 }
 
 .timeoutAvailable {
@@ -736,7 +731,7 @@
   padding: 12px;
   background: #fff1f2;
   color: #881337;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
 }
 

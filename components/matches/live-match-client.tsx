@@ -2095,7 +2095,8 @@ export function LiveMatchClient() {
                           )}
                         </div>
 
-                        {side === "them" && button("Tarjeta roja", () => void add("red"))}
+                        {side === "them" &&
+                          button("Tarjeta roja", () => void add("red"), styles.actionSanctionRed)}
 
                         {side === "us" && (cap === 1 || cap === 13 || cap === s.keeper) && (
                           <button
@@ -2214,7 +2215,6 @@ export function LiveMatchClient() {
                     {!timeoutStatus(s, "us").limit ? (
                       <div className={styles.timeoutNotice} role="note">
                         <strong>Tiempos muertos no permitidos</strong>
-                        <p>En esta categoría ningún equipo puede pedirlos.</p>
                       </div>
                     ) : (
                       <div className="grid gap-2">
@@ -2224,7 +2224,7 @@ export function LiveMatchClient() {
                             <p key={team} className={styles.timeoutNotice}>
                               {team === "us" ? "Morvedre" : "Rival"}:{" "}
                               {state.limit
-                                ? `${state.used} de ${state.limit} pedidos · ${state.remaining ? `${state.remaining} disponibles` : "SIN TIEMPOS"}`
+                                ? `${state.used}/${state.limit} usados · ${state.remaining ? `Quedan ${state.remaining}` : "SIN TIEMPOS"}`
                                 : "No permitidos en esta categoría"}
                             </p>
                           );
@@ -2257,8 +2257,7 @@ export function LiveMatchClient() {
                           </strong>
                           {benchKind === "timeout" && (
                             <span className="mt-1 block text-sm">
-                              {timeoutStatus(s, team).used} de {timeoutStatus(s, team).limit}{" "}
-                              pedidos ·{" "}
+                              {timeoutStatus(s, team).used}/{timeoutStatus(s, team).limit} usados ·{" "}
                               <strong
                                 className={
                                   timeoutStatus(s, team).remaining
@@ -2267,7 +2266,7 @@ export function LiveMatchClient() {
                                 }
                               >
                                 {timeoutStatus(s, team).remaining
-                                  ? `${timeoutStatus(s, team).remaining} disponibles`
+                                  ? `Quedan ${timeoutStatus(s, team).remaining}`
                                   : "SIN TIEMPOS"}
                               </strong>
                             </span>
@@ -2286,13 +2285,11 @@ export function LiveMatchClient() {
                 {activePanel === "timeout-confirm" && (
                   <div className={styles.actionList}>
                     <p className={styles.timeoutNotice}>
-                      {timeoutStatus(s, side, editing?.id).remaining} disponibles de{" "}
-                      {timeoutStatus(s, side, editing?.id).limit} por partido.
-                    </p>
-                    <p className={styles.timeoutConditions}>
-                      Regístralo si el árbitro lo ha concedido. El equipo debe tener la posesión del
-                      balón o corresponderle el saque; también puede pedirlo antes de un penalti. No
-                      se permite entre cuartos ni durante VAR.
+                      Disponibles: {timeoutStatus(s, side, editing?.id).remaining}/
+                      {timeoutStatus(s, side, editing?.id).limit}
+                      <span className="mt-1 block font-normal">
+                        Registra solo el concedido por el árbitro.
+                      </span>
                     </p>
                     {button(
                       "Registrar tiempo muerto concedido",

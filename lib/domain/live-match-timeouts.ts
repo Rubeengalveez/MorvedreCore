@@ -22,11 +22,10 @@ export function timeoutRegistrationError(sheet: LiveSheet, side: Side, excluding
   )
     return "";
   const state = timeoutStatus(sheet, side, excludingId);
-  if (!state.limit) return "En esta categoría no puedes pedir tiempos muertos.";
+  if (!state.limit) return "Tiempos muertos no permitidos en esta categoría.";
   if (!state.allowed)
-    return `${side === "us" ? "Morvedre" : "El rival"} ya ha usado sus ${state.limit} tiempos muertos. No puedes registrar otro. Si hay un error, corrige o anula el anterior en Corregir.`;
-  if (!excludingId && sheet.phase !== "playing")
-    return "No puedes pedir un tiempo muerto entre cuartos ni en la tanda de penaltis.";
+    return `${side === "us" ? "Morvedre" : "Rival"}: ${state.used}/${state.limit} usados. No puedes registrar otro.`;
+  if (!excludingId && sheet.phase !== "playing") return "Tiempos muertos solo durante el cuarto.";
   return "";
 }
 

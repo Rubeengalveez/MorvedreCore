@@ -107,16 +107,13 @@ for (const category of ["benjamin", "alevin"] as const) {
     await page.getByRole("button", { name: /^Entrenador:/ }).click();
     await expect(page.getByRole("button", { name: "Tiempo muerto", exact: true })).toHaveCount(0);
     await expect(page.getByRole("note")).toHaveCount(1);
-    await expect(page.getByRole("note")).toContainText(
-      "En esta categoría ningún equipo puede pedirlos.",
-    );
+    await expect(page.getByRole("note")).toContainText("Tiempos muertos no permitidos");
     await capture(page, `${category}-no-timeouts-320`);
     const colors = await page.getByRole("note").evaluate((element) => {
       const style = getComputedStyle(element);
       return {
         foreground: style.color,
         background: style.backgroundColor,
-        paragraph: getComputedStyle(element.querySelector("p")!).color,
         border: style.borderTopColor,
         borderWidth: style.borderTopWidth,
       };
@@ -124,7 +121,6 @@ for (const category of ["benjamin", "alevin"] as const) {
     expect(colors).toEqual({
       foreground: "rgb(6, 32, 72)",
       background: "rgb(232, 241, 252)",
-      paragraph: "rgb(6, 32, 72)",
       border: "rgb(6, 32, 72)",
       borderWidth: "2px",
     });

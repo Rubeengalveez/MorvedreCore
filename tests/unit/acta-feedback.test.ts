@@ -155,7 +155,7 @@ describe("feedback de delegados del acta", () => {
       ),
     ).toThrow();
     expect(timeoutRegistrationError({ ...sheet, events: [], phase: "break" }, "us")).toContain(
-      "entre cuartos",
+      "solo durante el cuarto",
     );
   });
 
