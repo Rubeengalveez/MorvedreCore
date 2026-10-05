@@ -6,7 +6,16 @@ import { LiveMatchEntryState } from "./live-match-entry-state";
 
 import * as Dialog from "@radix-ui/react-dialog";
 
-import { Check, ChevronLeft, Download, MessageCircle, Pencil, Trash2, X } from "lucide-react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  MessageCircle,
+  Pencil,
+  Trash2,
+  X,
+} from "lucide-react";
 
 import {
   actionLabels,
@@ -1362,8 +1371,8 @@ export function LiveMatchClient() {
               );
             })()
           ) : (
-            <div className={styles.keeperSwapList}>
-              <p className={styles.keeperSwapIntro}>
+            <div className="space-y-2">
+              <p className="mb-3 text-base font-semibold">
                 Elige quién intercambia su gorro con el portero.
               </p>
               {keeperSwapCandidates(s).map((player) => (
@@ -1373,14 +1382,23 @@ export function LiveMatchClient() {
                   disabled={!enabled}
                   onClick={() => setKeeperSwapId(player.id)}
                   aria-label={`Gorro ${player.cap} · ${player.name}`}
-                  className={styles.keeperSwapChoice}
+                  className="border-pool-deep/70 text-pool-deep flex h-16 w-full items-center gap-3 rounded-xl border-2 bg-white px-3 text-left transition-colors active:bg-blue-50 disabled:opacity-50 motion-reduce:transition-none"
                 >
-                  <span className={styles.keeperSwapCap} aria-hidden="true">
+                  <strong
+                    className="border-pool-deep bg-pool-deep grid h-10 w-10 shrink-0 place-items-center rounded-lg border text-xl font-extrabold text-white"
+                    aria-hidden="true"
+                  >
                     {player.cap}
+                  </strong>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-base font-extrabold">
+                      <ActaPlayerName name={player.name} />
+                    </span>
+                    <span className="text-pool-blue mt-0.5 block text-sm font-medium">
+                      Se pone en portería
+                    </span>
                   </span>
-                  <span className={styles.keeperSwapName}>
-                    <ActaPlayerName name={player.name} />
-                  </span>
+                  <ChevronRight size={20} aria-hidden="true" className="text-pool-blue shrink-0" />
                 </button>
               ))}
             </div>

@@ -151,3 +151,8 @@ Aplicados en Core y demo: aviso de tiempos muertos no permitidos centrado, con l
 Demo recompilada tras estos ajustes: `morvedre-acta-demo-d3ee1225472f`, 84 recursos; paridad de los 19 archivos compartidos comprobada.
 
 Comprobación de esta revisión: 39 pruebas unitarias de Core y 12 pruebas de feedback de la demo correctas; TypeScript en ambas aplicaciones y ESLint de los archivos TypeScript de Core correctos. Demo: 24 pruebas de navegador correctas a 320 px, una prueba entre versiones omitida porque su servidor aislado no se ha iniciado en esta revisión. La actualización entre versiones del 5 de octubre sigue documentada como evidencia histórica.
+
+
+Ajuste visual solicitado después: Cambiar gorro con un jugador utiliza exactamente las clases de las filas de sustitutos: superficie blanca, contorno azul, gorro azul oscuro, nombre, indicación «Se pone en portería» y flecha. Se elimina el diseño azul anterior. La lista completa de convocados disponibles y la confirmación se mantienen. Aplicado en Core y demo.
+
+Demo con el estilo final recompilada: `morvedre-acta-demo-55a2e0a34987`, 74 recursos sin conexión. TypeScript y ESLint correctos; paridad de 19 archivos con Core.
