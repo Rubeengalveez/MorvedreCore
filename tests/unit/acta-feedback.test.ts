@@ -17,6 +17,8 @@ import {
   replaceParticipant,
 } from "@/lib/domain/live-match-participation";
 import { keeperQuarters } from "@/lib/domain/live-match-keepers";
+import { rankingPlayerTotals } from "@/lib/domain/club-rankings";
+import { playerActaPerformance } from "@/lib/domain/player-acta-performance";
 import { startYouth, youthSheet, youthKey } from "@/tests/fixtures/youth-acta";
 
 const event = (kind: MatchEvent["kind"], extra: Partial<MatchEvent> = {}): MatchEvent => ({
@@ -67,6 +69,38 @@ describe("feedback de delegados del acta", () => {
     expect(analysis.rivalShots).toBe(1);
     expect(analysis.players.find((p) => p.cap === 1)?.totals.received).toBe(0);
     expect(analysis.players.find((p) => p.cap === 3)?.totals.assists).toBe(1);
+    const player = sheet.players.find((p) => p.cap === 2)!;
+    expect(rankingPlayerTotals(sheet, player)).toMatchObject({ goals: 1, shotGoals: 1, shots: 5 });
+    const performance = playerActaPerformance([{ ...sheet, phase: "finished" }], player.id);
+    expect(performance).toMatchObject({ goals: 1, shotGoals: 1, shots: 5, shootingPercent: 20 });
+  });
+
+  it("compara la superioridad rival con expulsiones propias sin contar penaltis ni eventos anulados", () => {
+    const current = identifyLiveSheet({
+      ...startYouth(youthSheet(), 1),
+      events: [
+        event("exclusion"),
+        event("exclusion", { cap: 3 }),
+        event("exclusion", { deleted: true }),
+        event("penalty", { cap: 4 }),
+        event("goal_extra", { side: "them", cap: 2, keeper: 1 }),
+        event("goal_extra", { side: "them", cap: 3, keeper: 1, deleted: true }),
+        event("goal", { side: "them", cap: 4, keeper: 1 }),
+      ],
+    });
+    expect(sheetSchema.safeParse(current).success).toBe(true);
+    expect(actaAnalysis(current)).toMatchObject({
+      rivalExtraGoals: 1,
+      rivalExtraOpportunities: 2,
+      rivalExtraRate: 50,
+      goalsThem: 2,
+    });
+    expect(playerTotals(current, "us", 1)).toMatchObject({ conceded: 2, received: 2 });
+    expect(actaAnalysis({ ...current, events: [] })).toMatchObject({
+      rivalExtraGoals: 0,
+      rivalExtraOpportunities: 0,
+      rivalExtraRate: null,
+    });
   });
 
   it.each(["benjamin", "alevin", "infantil", "cadete", "juvenil", "absoluto"] as const)(

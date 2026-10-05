@@ -330,9 +330,16 @@ export const sheetSchema = z
       }
       if (
         event.side === "them" &&
-        !["goal", "exclusion", "penalty", "red", "timeout", "coach_yellow", "coach_red"].includes(
-          event.kind,
-        )
+        ![
+          "goal",
+          "goal_extra",
+          "exclusion",
+          "penalty",
+          "red",
+          "timeout",
+          "coach_yellow",
+          "coach_red",
+        ].includes(event.kind)
       ) {
         fail("Acción rival no válida.");
       }

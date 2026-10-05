@@ -1,5 +1,71 @@
 import { test, expect } from "@playwright/test";
 import { fixture, id, openLocal, readLocal, capture } from "./helpers/acta";
+import { actaAnalysis } from "../../lib/domain/acta-analysis";
+import { sheetSchema } from "../../lib/domain/live-match";
+
+test("superioridad rival: cuatro acciones, normal o 1+, portero y corrección sin conexión", async ({
+  page,
+  context,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  const record = fixture();
+  record.sheet.category = "absoluto";
+  record.sheet.participation = undefined;
+  record.sheet.periods = 4;
+  record.sheet.phase = "playing";
+  record.sheet.events = [2, 3].map((cap) => ({
+    id: id(400 + cap),
+    side: "us",
+    cap,
+    playerId: id(cap),
+    kind: "exclusion",
+    period: 1,
+    keeper: null,
+    deleted: false,
+  }));
+  expect(sheetSchema.safeParse(record.sheet).success).toBe(true);
+  await openLocal(page, record);
+  await page.getByRole("button", { name: /Rival, gorro 4,/ }).click();
+  for (const name of ["Gol", "Expulsión", "Penalti", "Tarjeta roja"])
+    await expect(page.getByRole("dialog").getByRole("button", { name, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Gol", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Gol de contraataque", exact: true })).toHaveCount(
+    0,
+  );
+  await capture(page, "rival-superiority-options-320");
+  await page.getByRole("button", { name: "Gol en superioridad · 1+", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const current = (await readLocal(page)).sheet;
+  expect(sheetSchema.safeParse(current).success).toBe(true);
+  expect(current.events.at(-1)).toMatchObject({
+    kind: "goal_extra",
+    side: "them",
+    cap: 4,
+    keeper: 1,
+  });
+  expect(current.pending).toBeNull();
+  expect(actaAnalysis(current)).toMatchObject({
+    rivalExtraGoals: 1,
+    rivalExtraOpportunities: 2,
+    rivalExtraRate: 50,
+    goalsThem: 1,
+  });
+  await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+  await context.setOffline(true);
+  await page.reload();
+  await page.getByRole("button", { name: "Corregir jugadas" }).click();
+  await page.getByRole("button", { name: /Jugadas de Rival/ }).click();
+  const goal = page.getByRole("listitem").filter({ hasText: "Gol en superioridad · 1+" });
+  await goal.getByRole("button", { name: "Corregir", exact: true }).click();
+  await page.getByRole("button", { name: "Gol", exact: true }).click();
+  await page.getByRole("button", { name: "Gol normal", exact: true }).click();
+  expect(actaAnalysis((await readLocal(page)).sheet)).toMatchObject({
+    rivalExtraGoals: 0,
+    rivalExtraOpportunities: 2,
+    rivalExtraRate: 0,
+    goalsThem: 1,
+  });
+});
 
 test("feedback: contra con asistencia, tiro bloqueado, defensa y cupos a 320px sin conexión", async ({
   page,

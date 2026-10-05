@@ -233,6 +233,7 @@ export function createActaPdf(record: LiveRecord): File {
     );
   const counterGoalColumn = a.counterGoals > 0;
   const defensiveBlockColumn = a.defensiveBlocks > 0;
+  const rivalExtraGoalColumn = a.rivalExtraGoals > 0;
   const ownHead = [
     "Gorro",
     "Jugador",
@@ -250,7 +251,8 @@ export function createActaPdf(record: LiveRecord): File {
   const rivalHead = [
     "Gorro",
     "Goles",
-    rivalCards ? "Exp." : "Expulsiones",
+    ...(rivalExtraGoalColumn ? ["G. 1+"] : []),
+    rivalCards || rivalExtraGoalColumn ? "Exp." : "Expulsiones",
     "Penalti",
     ...(rivalCards ? ["Tarjetas"] : []),
   ];
@@ -300,6 +302,7 @@ export function createActaPdf(record: LiveRecord): File {
       ? [
           String(cap),
           String(t.goals),
+          ...(rivalExtraGoalColumn ? [String(t.goalsExtra)] : []),
           String(t.exclusions - t.penaltiesCommitted),
           String(t.penaltiesCommitted),
           ...(rivalCards ? [cards(t.yellow, t.red)] : []),
@@ -506,9 +509,16 @@ export function createActaPdf(record: LiveRecord): File {
   y = 39 + comparisons.length * 7.7 + 6;
   const shots = a.ownShooting;
   const penaltyAttempts = shots.penaltyGoals + shots.penaltyMisses;
-  const outlinedBar = (x: number, by: number, w: number, value: number, total: number) => {
+  const outlinedBar = (
+    x: number,
+    by: number,
+    w: number,
+    value: number,
+    total: number,
+    color: Color = BLUE,
+  ) => {
     fill(x, by, w, 4, [183, 197, 210]);
-    if (value > 0 && total > 0) fill(x, by, w * Math.min(1, value / total), 4, BLUE);
+    if (value > 0 && total > 0) fill(x, by, w * Math.min(1, value / total), 4, color);
     doc.setDrawColor(...NAVY);
     doc.setLineWidth(0.25);
     doc.rect(x, by, w, 4);
@@ -521,35 +531,59 @@ export function createActaPdf(record: LiveRecord): File {
     value: number,
     total: number,
     detail: string,
+    color: Color = BLUE,
   ) => {
     doc.setDrawColor(...NAVY);
     doc.setLineWidth(0.4);
     doc.rect(x, my, w, 29);
     text(title, x + 4, my + 6, 10, true);
-    text(pct(total ? (value / total) * 100 : null), x + 4, my + 17, 24, true, BLUE);
+    text(pct(total ? (value / total) * 100 : null), x + 4, my + 17, total ? 24 : 14, true, color);
     text(`${value} de ${total}`, x + w - 4, my + 16, 14, true, NAVY, "right");
     text(detail, x + w - 4, my + 21, 8.5, true, NAVY, "right");
-    outlinedBar(x + 4, my + 24, w - 8, value, total);
+    outlinedBar(x + 4, my + 24, w - 8, value, total, color);
   };
-  metric(
-    14,
-    y,
-    penaltyAttempts ? 88 : 182,
-    "GOLES DE 1+ / SUPERIORIDAD",
-    a.extraGoals,
-    a.extraOpportunities,
-    "expulsiones rivales",
-  );
-  if (penaltyAttempts)
+  const rivalExtraMetric = a.rivalExtraOpportunities > 0 || a.rivalExtraGoals > 0;
+  const gameMetrics: [string, number, number, string][] = [
+    [
+      rivalExtraMetric ? "GOLES DE 1+ MORVEDRE" : "GOLES DE 1+ / SUPERIORIDAD",
+      a.extraGoals,
+      a.extraOpportunities,
+      "expulsiones rivales",
+    ],
+    ...(rivalExtraMetric
+      ? [
+          [
+            "GOLES DE 1+ RIVAL",
+            a.rivalExtraGoals,
+            a.rivalExtraOpportunities,
+            "expulsiones Morvedre",
+          ] as [string, number, number, string],
+        ]
+      : []),
+    ...(penaltyAttempts
+      ? [
+          ["PENALTIS MARCADOS", shots.penaltyGoals, penaltyAttempts, "penaltis lanzados"] as [
+            string,
+            number,
+            number,
+            string,
+          ],
+        ]
+      : []),
+  ];
+  const metricWidth = (182 - (gameMetrics.length - 1) * 6) / gameMetrics.length;
+  gameMetrics.forEach(([title, value, total, detail], i) =>
     metric(
-      108,
+      14 + i * (metricWidth + 6),
       y,
-      88,
-      "PENALTIS MARCADOS",
-      shots.penaltyGoals,
-      penaltyAttempts,
-      "penaltis lanzados",
-    );
+      metricWidth,
+      title,
+      value,
+      total,
+      detail,
+      title === "GOLES DE 1+ RIVAL" ? ORANGE : BLUE,
+    ),
+  );
   y += 39;
   fill(14, y, 182, 11, NAVY);
   text("Nuestros lanzamientos", 18, y + 7.5, 16, true, WHITE);

@@ -134,7 +134,8 @@ export function rankingPlayerTotals(sheet: LiveSheet, player: LiveSheet["players
     (s) => s.side === "them" && (s.keeperId ? s.keeperId === player.id : s.keeper === player.cap),
   );
   const scored = taken.filter((s) => s.outcome === "goal").length;
-  const shotGoals = totals.goalsNormal + totals.goalsExtra + totals.goalsPenalty + scored;
+  const shotGoals =
+    totals.goalsNormal + totals.goalsExtra + totals.goalsCounter + totals.goalsPenalty + scored;
   return {
     player_id: player.id,
     goals: totals.goals + scored,

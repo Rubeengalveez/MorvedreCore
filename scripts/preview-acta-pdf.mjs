@@ -122,6 +122,7 @@ if (process.argv.includes("--feedback")) {
   add(4, "us", 2, "goal_counter");
   add(4, "us", 3, "shot_deflected");
   add(4, "us", 4, "defensive_block");
+  add(4, "them", 5, "goal_extra", { keeper: 13 });
 }
 if (process.argv.includes("--single-keeper")) {
   sheet.keeper = 1;

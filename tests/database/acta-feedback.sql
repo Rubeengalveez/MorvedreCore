@@ -36,7 +36,8 @@ begin
     events := jsonb_build_array(
       jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','goal_counter','period',1,'keeper',null,'deleted',false),
       jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','shot_deflected','period',1,'keeper',null,'deleted',false),
-      jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','defensive_block','period',1,'keeper',null,'deleted',false)
+      jsonb_build_object('id',gen_random_uuid(),'side','us','cap',1,'kind','defensive_block','period',1,'keeper',null,'deleted',false),
+      jsonb_build_object('id',gen_random_uuid(),'side','them','cap',2,'kind','goal_extra','period',1,'keeper',1,'deleted',false)
     );
     doc := jsonb_build_object('version',1,'category',category,'players',players,'opponentCaps','[1,2]'::jsonb,
       'periods',4,'period',1,'phase','playing','keeper',1,'baseline','[]'::jsonb,'baselineThem',0,'events',events);
@@ -73,7 +74,8 @@ begin
       doc := jsonb_set(doc,'{players}',jsonb_build_array(
         jsonb_build_object('id',player,'cap',2,'name','Jugador de prueba'),
         jsonb_build_object('id',second_player,'cap',1,'name','Segundo jugador de prueba')));
-      select jsonb_agg(case when e->>'side'='us' and e->>'cap'='1' then e || jsonb_build_object('cap',2,'playerId',player,'capAtEvent',1) else e end)
+      select jsonb_agg(case when e->>'side'='us' and e->>'cap'='1' then e || jsonb_build_object('cap',2,'playerId',player,'capAtEvent',1)
+        when e->>'side'='them' and e->>'keeper'='1' then e || jsonb_build_object('keeper',2,'keeperId',player,'keeperCapAtEvent',1) else e end)
         into events from jsonb_array_elements(doc->'events') e;
       doc := jsonb_set(doc,'{events}',events);
       rev := public.save_live_match_sheet(mid,actor,device,rev,gen_random_uuid(),doc,false,true);
@@ -82,12 +84,12 @@ begin
     else
       rev := public.save_live_match_sheet(mid,actor,device,rev,gen_random_uuid(),doc);
     end if;
-    if not exists(select 1 from public.matches where id=mid and final_score_us=1 and status='played')
+    if not exists(select 1 from public.matches where id=mid and final_score_us=1 and final_score_them=1 and status='played')
       then raise exception 'FAIL counter final score'; end if;
     execute 'reset role';
   end loop;
   select totals into row_totals from private.season_ranking_totals(season) where profile_id=player;
-  if (row_totals->>'goals')::integer <> 6 or (row_totals->>'shots')::integer <> 12
+  if (row_totals->>'goals')::integer <> 6 or (row_totals->>'shots')::integer <> 12 or (row_totals->>'conceded')::integer <> 6
     then raise exception 'FAIL rankings totals: %', row_totals; end if;
   if has_function_privilege('authenticated','public.save_live_match_sheet(uuid,uuid,uuid,integer,uuid,jsonb,boolean,boolean)','execute')
     then raise exception 'FAIL direct client write'; end if;

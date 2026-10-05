@@ -120,6 +120,47 @@ function testRecord(sheet = testSheet()): LiveRecord {
 }
 
 describe("createActaPdf", () => {
+  it("integra la eficacia rival en inferioridad antes de los lanzamientos y su G. 1+ en la tabla rival", async () => {
+    const sheet = testSheet();
+    sheet.events.push(
+      {
+        id: "own-exclusion-1",
+        kind: "exclusion",
+        side: "us",
+        cap: 4,
+        period: 1,
+        keeper: null,
+        deleted: false,
+      },
+      {
+        id: "own-exclusion-2",
+        kind: "exclusion",
+        side: "us",
+        cap: 7,
+        period: 1,
+        keeper: null,
+        deleted: false,
+      },
+      {
+        id: "rival-extra",
+        kind: "goal_extra",
+        side: "them",
+        cap: 5,
+        period: 1,
+        keeper: 1,
+        deleted: false,
+      },
+    );
+    const source = await createActaPdf(testRecord(sheet)).text();
+    const firstPage = source.slice(0, source.indexOf("(Lectura del partido)"));
+    expect(firstPage.match(/\(G\. 1\+\) Tj/g)).toHaveLength(2);
+    expect(source).toContain("(GOLES DE 1+ RIVAL)");
+    expect(source).toContain("(1 de 2)");
+    expect(source).toContain("(50%)");
+    expect(source.indexOf("(GOLES DE 1+ RIVAL)")).toBeLessThan(
+      source.indexOf("(Nuestros lanzamientos)"),
+    );
+  });
   it("integra métricas nuevas solo cuando existen y no añade un segundo portero vacío", async () => {
     const sheet = testSheet();
     sheet.keeper = 1;

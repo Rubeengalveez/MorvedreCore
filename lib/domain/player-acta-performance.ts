@@ -18,7 +18,8 @@ export function playerActaPerformance(documents: unknown[], playerId: string) {
     const player = sheet.players.find((player) => player.id === playerId);
     if (!player) continue;
     const stats = playerTotals(sheet, "us", player.cap);
-    const shotGoals = stats.goalsNormal + stats.goalsExtra + stats.goalsPenalty;
+    const shotGoals =
+      stats.goalsNormal + stats.goalsExtra + stats.goalsCounter + stats.goalsPenalty;
     totals.matches += 1;
     totals.goals += stats.goals;
     totals.assists += stats.assists;

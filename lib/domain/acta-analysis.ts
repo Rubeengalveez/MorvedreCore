@@ -181,6 +181,9 @@ export function actaAnalysis(sheet: LiveSheet) {
     defensiveBlocks: count("us", "defensive_block"),
     extraOpportunities: count("them", "exclusion"),
     extraRate: ratio(count("us", "goal_extra"), count("them", "exclusion")),
+    rivalExtraGoals: count("them", "goal_extra"),
+    rivalExtraOpportunities: count("us", "exclusion"),
+    rivalExtraRate: ratio(count("them", "goal_extra"), count("us", "exclusion")),
     unassignedConceded:
       events.filter(
         (e) => e.side === "them" && isGoal(e.kind) && !players.some((p) => p.cap === e.keeper),

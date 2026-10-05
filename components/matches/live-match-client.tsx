@@ -2054,11 +2054,7 @@ export function LiveMatchClient() {
                             </>
                           )}
 
-                          {button(
-                            "Gol",
-                            () => (side === "them" ? void add("goal") : setPanel("goal")),
-                            styles.actionGoal,
-                          )}
+                          {button("Gol", () => setPanel("goal"), styles.actionGoal)}
 
                           {side === "us" &&
                             button("Tiro", () => setPanel("shot"), styles.actionShot)}
@@ -2121,11 +2117,12 @@ export function LiveMatchClient() {
                       () => void add("goal_extra"),
                       styles.actionGoalExtra,
                     )}
-                    {button(
-                      actionLabels["goal_counter"],
-                      () => void add("goal_counter"),
-                      styles.actionGoalPenalty,
-                    )}
+                    {side === "us" &&
+                      button(
+                        actionLabels["goal_counter"],
+                        () => void add("goal_counter"),
+                        styles.actionGoalPenalty,
+                      )}
                   </div>
                 )}
 

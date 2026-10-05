@@ -404,9 +404,29 @@ describe("interfaz del acta", () => {
     render(<LiveMatchClient />);
     fireEvent.click(screen.getByRole("button", { name: /Rival, gorro 4,/ }));
     fireEvent.click(screen.getByRole("button", { name: "Gol" }));
+    fireEvent.click(screen.getByRole("button", { name: "Gol normal" }));
     expect(screen.getByRole("heading", { name: "Portero en juego" })).toBeInTheDocument();
     expect(screen.getByText(/Elige quién está de portero/)).toBeInTheDocument();
     expect(mock.change).not.toHaveBeenCalled();
+  });
+
+  it("mantiene cuatro acciones rivales y registra superioridad sin pedir asistencia", async () => {
+    render(<LiveMatchClient />);
+    fireEvent.click(screen.getByRole("button", { name: /Rival, gorro 4,/ }));
+    const actions = screen.getByRole("dialog");
+    for (const label of ["Gol", "Expulsión", "Penalti", "Tarjeta roja"])
+      expect(within(actions).getByRole("button", { name: label })).toBeInTheDocument();
+    expect(within(actions).queryByRole("button", { name: /superioridad/ })).toBeNull();
+    fireEvent.click(within(actions).getByRole("button", { name: "Gol" }));
+    expect(screen.getByRole("button", { name: "Gol normal" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Gol de contraataque" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Gol en superioridad · 1+" }));
+    await waitFor(() => expect(mock.change).toHaveBeenCalledOnce());
+    expect(mock.change.mock.calls[0][0]).toMatchObject({
+      events: [expect.objectContaining({ side: "them", cap: 4, kind: "goal_extra", keeper: 1 })],
+      pending: null,
+    });
+    expect(screen.queryByRole("heading", { name: /asistencia/i })).toBeNull();
   });
 
   it("muestra entrenador, tiempos y tarjetas en pasos claros", () => {
